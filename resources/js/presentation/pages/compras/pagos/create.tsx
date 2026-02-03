@@ -29,45 +29,25 @@ interface Props extends InertiaPageProps {
     cuentaSeleccionada?: CuentaPorPagar;
 }
 
-const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSeleccionada }) => {
-    const [cuentaSeleccionadaLocal, setCuentaSeleccionadaLocal] = useState<CuentaPorPagar | null>(cuentaSeleccionada || null);
-    const [montoMaximo, setMontoMaximo] = useState<number>(0);
+const PagosCreate: React.FC<Props> = ({
+    cuentasPorPagar = [],
+    tiposPago = [],
+    cuentaSeleccionada
+}) => {
+    // Filtrar tipos de pago para excluir CREDITO (incoherente para pagos de compras)
+    const tiposPagoFiltrados = tiposPago.filter(
+        tipo => !tipo.codigo || !tipo.codigo.toUpperCase().includes('CREDITO')
+    );
 
-    // Estados para validación de caja abierta
-    interface CajaInfo {
-        tiene_caja_abierta: boolean;
-        es_de_hoy?: boolean;
-        dias_atras?: number;
-        caja_nombre?: string;
-        usuario_caja?: string;
-        mensaje?: string;
-    }
+    // Si no hay cuenta seleccionada, usar la primera disponible
+    const cuentaDefault = cuentaSeleccionada ||
+        (Array.isArray(cuentasPorPagar) && cuentasPorPagar.length > 0 ? cuentasPorPagar[0] : null);
 
-    const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
-    const [cargandoCaja, setCargandoCaja] = useState(true);
-
-    // Verificar si hay caja abierta (de cualquier día)
-    useEffect(() => {
-        const verificarCaja = async () => {
-            try {
-                const response = await fetch('/compras/pagos/check-caja-abierta');
-                const data = await response.json();
-                setCajaInfo(data);
-                console.log('✅ Estado de caja (Pagos):', data);
-            } catch (error) {
-                console.error('❌ Error verificando caja (Pagos):', error);
-                // Si hay error, permitir acceso (mejor UX que bloquear)
-                setCajaInfo({ tiene_caja_abierta: true });
-            } finally {
-                setCargandoCaja(false);
-            }
-        };
-
-        verificarCaja();
-    }, []);
+    const [cuentaSeleccionadaLocal, setCuentaSeleccionadaLocal] = useState<CuentaPorPagar | null>(cuentaDefault || null);
+    const [montoMaximo, setMontoMaximo] = useState<number>(cuentaDefault?.saldo_pendiente || 0);
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        cuenta_por_pagar_id: cuentaSeleccionada?.id || '',
+        cuenta_por_pagar_id: cuentaDefault?.id?.toString() || '',
         monto: '',
         fecha_pago: new Date().toISOString().split('T')[0],
         tipo_pago_id: '',
@@ -78,12 +58,12 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
     });
 
     useEffect(() => {
-        if (cuentaSeleccionada) {
-            setCuentaSeleccionadaLocal(cuentaSeleccionada);
-            setMontoMaximo(cuentaSeleccionada.saldo_pendiente);
-            setData('cuenta_por_pagar_id', cuentaSeleccionada.id.toString());
+        if (cuentaDefault) {
+            setCuentaSeleccionadaLocal(cuentaDefault);
+            setMontoMaximo(cuentaDefault.saldo_pendiente);
+            setData('cuenta_por_pagar_id', cuentaDefault.id.toString());
         }
-    }, [cuentaSeleccionada, setData]);
+    }, [cuentaDefault, setData]);
 
     const handleCuentaChange = (cuentaId: string) => {
         const cuenta = cuentasPorPagar.find(c => c.id.toString() === cuentaId);
@@ -109,7 +89,7 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
     };
 
     const getTipoReferenciaField = () => {
-        const tipoSeleccionado = tiposPago.find(t => t.id.toString() === data.tipo_pago_id);
+        const tipoSeleccionado = tiposPagoFiltrados.find(t => t.id.toString() === data.tipo_pago_id);
         if (!tipoSeleccionado) return null;
 
         const codigo = tipoSeleccionado.codigo?.toLowerCase();
@@ -165,33 +145,6 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
         return null;
     };
 
-    // Mostrar alert si no hay caja abierta
-    if (!cargandoCaja && !cajaInfo?.tiene_caja_abierta) {
-        return (
-            <AppLayout breadcrumbs={[
-                { title: 'Compras', href: '/compras' },
-                { title: 'Pagos', href: '/compras/pagos' },
-                { title: 'Registrar Pago', href: '#' }
-            ]}>
-                <Head title="Registrar Pago" />
-                <div className="p-6 space-y-4">
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-500 rounded-lg p-4">
-                        <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">🚫 Caja Cerrada</h3>
-                        <p className="text-red-600 dark:text-red-300 mt-2">
-                            No puedes registrar un pago sin una caja abierta. Por favor, abre una caja primero desde el módulo de Cajas.
-                        </p>
-                    </div>
-                    <Button
-                        onClick={() => router.visit('/cajas')}
-                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-                    >
-                        Ir a Cajas
-                    </Button>
-                </div>
-            </AppLayout>
-        );
-    }
-
     return (
         <AppLayout breadcrumbs={[
             { title: 'Compras', href: '/compras' },
@@ -201,46 +154,6 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
             <Head title="Registrar Pago" />
 
             <div className="space-y-6 p-6">
-                {/* Indicador de verificación de caja */}
-                {cargandoCaja && (
-                    <Card>
-                        <CardContent className="pt-4">
-                            <div className="text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                                <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
-                                Verificando estado de caja...
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Indicador de caja abierta */}
-                {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
-                    <Card className={cajaInfo.es_de_hoy ? '' : ''}>
-                        <CardContent className={`pt-4 ${
-                            cajaInfo.es_de_hoy
-                                ? 'bg-green-50 dark:bg-green-900/20'
-                                : 'bg-yellow-50 dark:bg-yellow-900/20'
-                        }`}>
-                            <div className={`flex items-center gap-2 ${
-                                cajaInfo.es_de_hoy
-                                    ? 'text-green-700 dark:text-green-300'
-                                    : 'text-yellow-700 dark:text-yellow-300'
-                            }`}>
-                                <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
-                                <div>
-                                    <strong>{cajaInfo.mensaje}</strong>
-                                    {cajaInfo.caja_nombre && (
-                                        <div className="text-sm mt-1">
-                                            Caja: <strong>{cajaInfo.caja_nombre}</strong>
-                                            {cajaInfo.usuario_caja && ` • Operador: ${cajaInfo.usuario_caja}`}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
@@ -270,20 +183,24 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Seleccionar Cuenta *</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Seleccionar Cuenta *</label>
                                         <select
-                                            className="w-full p-3 border border-gray-300 rounded-md"
+                                            className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md"
                                             value={data.cuenta_por_pagar_id}
                                             onChange={(e) => handleCuentaChange(e.target.value)}
                                             required
                                         >
                                             <option value="">Seleccione una cuenta por pagar</option>
-                                            {cuentasPorPagar.filter(c => c.estado !== 'PAGADO').map((cuenta) => (
-                                                <option key={cuenta.id} value={cuenta.id}>
-                                                    {cuenta.compra?.proveedor?.nombre} - {cuenta.compra?.numero}
-                                                    (Saldo: {formatCurrency(cuenta.saldo_pendiente)})
-                                                </option>
-                                            ))}
+                                            {Array.isArray(cuentasPorPagar) && cuentasPorPagar.length > 0 ? (
+                                                cuentasPorPagar.filter(c => c.estado !== 'PAGADO').map((cuenta) => (
+                                                    <option key={cuenta.id} value={cuenta.id}>
+                                                        {cuenta.compra?.proveedor?.nombre} - {cuenta.compra?.numero}
+                                                        (Saldo: {formatCurrency(cuenta.saldo_pendiente)})
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                <option disabled>No hay cuentas por pagar disponibles</option>
+                                            )}
                                         </select>
                                         {errors.cuenta_por_pagar_id && (
                                             <p className="text-sm text-red-600">{errors.cuenta_por_pagar_id}</p>
@@ -336,7 +253,7 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                 <CardContent className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">Monto *</label>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Monto *</label>
                                             <Input
                                                 type="number"
                                                 step="0.01"
@@ -349,17 +266,17 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                                 className={!esMontoValido() && data.monto ? 'border-red-500' : ''}
                                             />
                                             {!esMontoValido() && data.monto && (
-                                                <p className="text-sm text-red-600">
+                                                <p className="text-sm text-red-600 dark:text-red-400">
                                                     El monto debe ser mayor a 0 y no puede exceder {formatCurrency(montoMaximo)}
                                                 </p>
                                             )}
                                             {errors.monto && (
-                                                <p className="text-sm text-red-600">{errors.monto}</p>
+                                                <p className="text-sm text-red-600 dark:text-red-400">{errors.monto}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">Fecha de Pago *</label>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha de Pago *</label>
                                             <Input
                                                 type="date"
                                                 value={data.fecha_pago}
@@ -367,27 +284,27 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                                 required
                                             />
                                             {errors.fecha_pago && (
-                                                <p className="text-sm text-red-600">{errors.fecha_pago}</p>
+                                                <p className="text-sm text-red-600 dark:text-red-400">{errors.fecha_pago}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">Tipo de Pago *</label>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Pago *</label>
                                             <select
-                                                className="w-full p-2 border border-gray-300 rounded-md"
+                                                className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md"
                                                 value={data.tipo_pago_id}
                                                 onChange={(e) => setData('tipo_pago_id', e.target.value)}
                                                 required
                                             >
                                                 <option value="">Seleccione el tipo de pago</option>
-                                                {tiposPago.map((tipo) => (
+                                                {tiposPagoFiltrados.map((tipo) => (
                                                     <option key={tipo.id} value={tipo.id}>
                                                         {tipo.nombre}
                                                     </option>
                                                 ))}
                                             </select>
                                             {errors.tipo_pago_id && (
-                                                <p className="text-sm text-red-600">{errors.tipo_pago_id}</p>
+                                                <p className="text-sm text-red-600 dark:text-red-400">{errors.tipo_pago_id}</p>
                                             )}
                                         </div>
 
@@ -395,16 +312,16 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Observaciones</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Observaciones</label>
                                         <textarea
-                                            className="w-full p-2 border border-gray-300 rounded-md"
+                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md"
                                             rows={3}
                                             value={data.observaciones}
                                             onChange={(e) => setData('observaciones', e.target.value)}
                                             placeholder="Observaciones adicionales del pago..."
                                         />
                                         {errors.observaciones && (
-                                            <p className="text-sm text-red-600">{errors.observaciones}</p>
+                                            <p className="text-sm text-red-600 dark:text-red-400">{errors.observaciones}</p>
                                         )}
                                     </div>
                                 </CardContent>
@@ -422,21 +339,21 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                         <>
                                             <div className="space-y-2">
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Saldo Actual:</span>
-                                                    <span className="font-medium text-red-600">
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">Saldo Actual:</span>
+                                                    <span className="font-medium text-red-600 dark:text-red-400">
                                                         {formatCurrency(cuentaSeleccionadaLocal.saldo_pendiente)}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Monto a Pagar:</span>
-                                                    <span className="font-medium text-blue-600">
+                                                    <span className="text-sm text-gray-600 dark:text-gray-400">Monto a Pagar:</span>
+                                                    <span className="font-medium text-blue-600 dark:text-blue-400">
                                                         {data.monto ? formatCurrency(parseFloat(data.monto.toString())) : formatCurrency(0)}
                                                     </span>
                                                 </div>
-                                                <hr />
+                                                <hr className="dark:border-gray-600" />
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm font-medium text-gray-900">Saldo Restante:</span>
-                                                    <span className="font-bold text-green-600">
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white">Saldo Restante:</span>
+                                                    <span className="font-bold text-green-600 dark:text-green-400">
                                                         {data.monto
                                                             ? formatCurrency(cuentaSeleccionadaLocal.saldo_pendiente - parseFloat(data.monto.toString()))
                                                             : formatCurrency(cuentaSeleccionadaLocal.saldo_pendiente)
@@ -458,10 +375,10 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                         </>
                                     )}
 
-                                    <div className="space-y-2 pt-4 border-t">
+                                    <div className="space-y-2 pt-4 border-t dark:border-gray-600">
                                         <Button
                                             type="submit"
-                                            className="w-full bg-green-600 hover:bg-green-700"
+                                            className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                                             disabled={processing || !esMontoValido() || !data.cuenta_por_pagar_id || !data.tipo_pago_id}
                                         >
                                             <Save className="w-4 h-4 mr-2" />
@@ -489,7 +406,7 @@ const PagosCreate: React.FC<Props> = ({ cuentasPorPagar, tiposPago, cuentaSelecc
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-sm text-gray-600 space-y-2">
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                                         <p>• Seleccione la cuenta por pagar correspondiente</p>
                                         <p>• El monto no puede exceder el saldo pendiente</p>
                                         <p>• Complete los datos de referencia según el tipo de pago</p>

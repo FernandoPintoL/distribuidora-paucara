@@ -13,6 +13,8 @@ import VehiculoController from './VehiculoController'
 import ClienteController from './ClienteController'
 import DireccionClienteApiController from './DireccionClienteApiController'
 import FotoLugarClienteController from './FotoLugarClienteController'
+import CreditoImportController from './CreditoImportController'
+import CreditoController from './CreditoController'
 import LocalidadController from './LocalidadController'
 import CategoriaClienteController from './CategoriaClienteController'
 import EntregaController from './EntregaController'
@@ -46,6 +48,7 @@ import LoteVencimientoController from './LoteVencimientoController'
 import ReporteComprasController from './ReporteComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
+import CuentaPorCobrarController from './CuentaPorCobrarController'
 import ProformaController from './ProformaController'
 import CajaController from './CajaController'
 import GastoController from './GastoController'
@@ -85,6 +88,8 @@ VehiculoController,
 ClienteController,
 DireccionClienteApiController,
 FotoLugarClienteController,
+CreditoImportController,
+CreditoController,
 LocalidadController,
 CategoriaClienteController,
 EntregaController,
@@ -118,6 +123,7 @@ LoteVencimientoController,
 ReporteComprasController,
 DetalleCompraController,
 DetalleVentaController,
+CuentaPorCobrarController,
 ProformaController,
 CajaController,
 GastoController,

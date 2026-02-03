@@ -1,6 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import creditos from './creditos'
 /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
 export const imageBackup = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -14,7 +15,7 @@ imageBackup.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
 imageBackup.url = (options?: RouteQueryOptions) => {
@@ -22,7 +23,7 @@ imageBackup.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
 imageBackup.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -30,7 +31,7 @@ imageBackup.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
 imageBackup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -39,7 +40,7 @@ imageBackup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
     const imageBackupForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -48,7 +49,7 @@ imageBackup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
         imageBackupForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -56,7 +57,7 @@ imageBackup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:158
+ * @see [serialized-closure]:2
  * @route '/admin/image-backup'
  */
         imageBackupForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -149,7 +150,8 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     dashboard.form = dashboardForm
 const admin = {
-    imageBackup,
+    creditos,
+imageBackup,
 dashboard,
 }
 

@@ -82,6 +82,7 @@ export const ModalComprasDiferenciaCostoComponent: React.FC<ModalComprasDiferenc
         preciosPropuestos,
         error: errorCascada,
         calcularCascada,
+        inicializarConPreciosActuales, // ✅ Nueva función para no auto-calcular
         actualizarPrecioPropuesto,
         actualizarGananciaPropuesta,
         validarCambios
@@ -91,12 +92,14 @@ export const ModalComprasDiferenciaCostoComponent: React.FC<ModalComprasDiferenc
         precioCostoNuevo
     );
 
-    // Calcular cascada cuando los precios se cargan o cambian los datos
+    // ✅ MODIFICADO: Inicializar con precios actuales (SIN calcular cascada automáticamente)
+    // El usuario verá los precios registrados y podrá decidir manualmente cuáles actualizar
     useEffect(() => {
-        if (isOpen && preciosCompletos && preciosCompletos.length > 0 && precioCostoNuevo !== null && precioActual !== null) {
-            calcularCascada();
+        if (isOpen && preciosCompletos && preciosCompletos.length > 0) {
+            // Inicializar precios propuestos con los valores ACTUALES (sin calcular cascada)
+            inicializarConPreciosActuales();
         }
-    }, [isOpen, preciosCompletos, precioCostoNuevo, precioActual, calcularCascada]);
+    }, [isOpen, preciosCompletos, inicializarConPreciosActuales]);
 
     // Handler: Cambio de precio propuesto
     const handleCambioPrecioPropuesto = (index: number, nuevoValor: number) => {

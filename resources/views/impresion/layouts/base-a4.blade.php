@@ -349,8 +349,6 @@
             font-weight: bold;
         }
 
-        @yield('estilos-adicionales')
-
     </style>
 </head>
 <body>

@@ -6,6 +6,7 @@ use App\Models\Pago;
 use App\Models\TipoPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PagoController extends Controller
@@ -92,80 +93,9 @@ class PagoController extends Controller
         $tiposPago = TipoPago::all();
 
         return Inertia::render('compras/pagos/create', [
-            'cuentas_por_pagar' => $cuentasPorPagar,
-            'tipos_pago'        => $tiposPago,
+            'cuentasPorPagar' => $cuentasPorPagar,
+            'tiposPago'       => $tiposPago,
         ]);
-    }
-
-    /**
-     * Verificar si hay caja abierta (para validación frontend)
-     * GET /compras/pagos/check-caja-abierta
-     *
-     * Busca cajas abiertas de CUALQUIER DÍA, no solo del día actual
-     */
-    public function checkCajaAbierta(Request $request)
-    {
-        try {
-            $user = Auth::user();
-
-            if (!$user) {
-                return response()->json([
-                    'tiene_caja_abierta' => false,
-                    'mensaje' => 'Usuario no autenticado',
-                ]);
-            }
-
-            // ✅ SIMPLIFICADO: Buscar directamente caja abierta del usuario por user_id
-            $apertura = \App\Models\AperturaCaja::where('user_id', $user->id)
-                ->whereDoesntHave('cierre')
-                ->with('caja', 'usuario') // ✅ CORREGIDO: La relación se llama 'usuario', no 'user'
-                ->latest('fecha')
-                ->first();
-
-            // Si el usuario tiene caja abierta
-            if ($apertura) {
-                $hoy = today();
-                $fechaApertura = $apertura->fecha instanceof \Carbon\Carbon
-                    ? $apertura->fecha
-                    : \Carbon\Carbon::parse($apertura->fecha);
-
-                $esDeHoy = $fechaApertura->isSameDay($hoy);
-                // ✅ CORREGIDO: Calcular días correctamente
-                $diasAtras = $esDeHoy ? 0 : abs($fechaApertura->diffInDays($hoy));
-
-                return response()->json([
-                    'tiene_caja_abierta' => true,
-                    'caja_id' => $apertura->caja_id,
-                    'caja_nombre' => $apertura->caja?->nombre,
-                    'apertura_id' => $apertura->id,
-                    'apertura_fecha' => $apertura->fecha,
-                    'es_de_hoy' => $esDeHoy,
-                    'dias_atras' => $diasAtras,
-                    'usuario_caja' => $apertura->usuario?->name ?? 'Desconocido', // ✅ CORREGIDO: usuario, no user
-                    'mensaje' => $esDeHoy
-                        ? '✅ Caja abierta hoy'
-                        : "⚠️ Caja abierta desde hace {$diasAtras} día(s)",
-                ]);
-            }
-
-            return response()->json([
-                'tiene_caja_abierta' => false,
-                'mensaje' => 'No hay caja abierta para este usuario',
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error en checkCajaAbierta:', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-
-            return response()->json([
-                'tiene_caja_abierta' => false,
-                'error' => true,
-                'mensaje' => 'Error al verificar el estado de la caja',
-                'debug' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
     }
 
     public function store(Request $request)
@@ -192,9 +122,11 @@ class PagoController extends Controller
 
         // Crear el pago
         $pago = Pago::create([
+            'numero_pago'          => Pago::generarNumeroPago(),
             'cuenta_por_pagar_id'  => $request->cuenta_por_pagar_id,
             'tipo_pago_id'         => $request->tipo_pago_id,
             'monto'                => $request->monto,
+            'fecha'                => now(),
             'fecha_pago'           => $request->fecha_pago,
             'numero_recibo'        => $request->numero_recibo,
             'numero_transferencia' => $request->numero_transferencia,
@@ -210,39 +142,16 @@ class PagoController extends Controller
             'estado'          => $nuevoSaldo == 0 ? 'PAGADO' : 'PARCIAL',
         ]);
 
-        // ✅ REGISTRAR MOVIMIENTO DE CAJA (EGRESO) PARA PAGO DE COMPRA
-        try {
-            $user = Auth::user();
-            $cajaAbierta = $user->empleado?->cajaAbierta();
-
-            if ($cajaAbierta) {
-                $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'COMPRA')->first();
-
-                if ($tipoOperacion) {
-                    \App\Models\MovimientoCaja::create([
-                        'caja_id' => $cajaAbierta->id,
-                        'tipo_operacion_id' => $tipoOperacion->id,
-                        'numero_documento' => $pago->numero_recibo ?? $pago->numero_transferencia ?? "PAGO-{$pago->id}",
-                        'descripcion' => "Pago Compra #{$cuentaPorPagar->compra->numero} - Proveedor: {$cuentaPorPagar->compra->proveedor?->nombre}",
-                        'monto' => -$request->monto,
-                        'fecha' => $request->fecha_pago,
-                        'user_id' => Auth::id(),
-                        'observaciones' => $request->observaciones,
-                    ]);
-
-                    Log::info("✅ MovimientoCaja (EGRESO) registrado", [
-                        'pago_id' => $pago->id,
-                        'monto' => $request->monto,
-                    ]);
-                }
-            } else {
-                Log::warning("⚠️ Usuario no tiene caja abierta", [
-                    'pago_id' => $pago->id,
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error("❌ Error registrando MovimientoCaja: " . $e->getMessage());
-        }
+        // ✅ NUEVA POLÍTICA: NO SE REGISTRA MOVIMIENTO DE CAJA PARA CUENTAS POR PAGAR
+        // Los pagos de compras a crédito NO generan movimientos de caja
+        // El dinero se movió cuando se registró la compra a crédito (CuentaPorPagar creada)
+        Log::info("✅ Pago de CuentaPorPagar registrado (sin movimiento de caja)", [
+            'pago_id' => $pago->id,
+            'cuenta_por_pagar_id' => $cuentaPorPagar->id,
+            'compra_numero' => $cuentaPorPagar->compra->numero,
+            'monto' => $request->monto,
+            'nuevo_saldo' => $nuevoSaldo,
+        ]);
 
         return redirect()->route('compras.pagos.index')
             ->with('success', 'Pago registrado correctamente.');

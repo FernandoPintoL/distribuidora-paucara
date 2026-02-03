@@ -534,6 +534,13 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('cliente/{clienteId}/resumen', [ClienteController::class, 'obtenerResumenCredito'])->name('api.creditos.resumen');
         Route::get('estadisticas', [ClienteController::class, 'obtenerEstadisticasCreditos'])->name('api.creditos.estadisticas');
         Route::get('exportar', [ClienteController::class, 'exportarReporteCreditos'])->name('api.creditos.exportar');
+
+        // ✅ IMPORTACION DE CREDITOS HISTORICOS (SOLO ADMIN)
+        Route::post('importar/validar', [\App\Http\Controllers\CreditoImportController::class, 'validar'])->name('api.creditos.validar');
+        Route::post('importar', [\App\Http\Controllers\CreditoImportController::class, 'importar'])->name('api.creditos.importar');
+
+        // ✅ CREAR CREDITO MANUAL (SOLO ADMIN)
+        Route::post('crear', [\App\Http\Controllers\CreditoController::class, 'store'])->name('api.creditos.crear');
     });
 
     Route::group(['prefix' => 'localidades'], function () {

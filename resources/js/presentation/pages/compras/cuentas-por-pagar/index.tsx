@@ -601,6 +601,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     onPagoRegistrado={handlePagoRegistrado}
                     cuentaIdPreseleccionada={cuentaSeleccionadaPago?.id}
                     tipo="compras"
+                    verificarCaja={false}
                 />
             </div>
         </AppLayout>

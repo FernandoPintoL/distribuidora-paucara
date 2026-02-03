@@ -60,12 +60,12 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
             {!pagos ? (
                 <div className="p-6">
                     <div className="animate-pulse">
-                        <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/4 mb-8"></div>
+                        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-8"></div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="h-32 bg-gray-200 rounded"></div>
-                            <div className="h-32 bg-gray-200 rounded"></div>
-                            <div className="h-32 bg-gray-200 rounded"></div>
+                            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
                         </div>
                     </div>
                 </div>
@@ -91,11 +91,11 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center">
-                                    <div className="p-3 bg-green-100 rounded-lg">
-                                        <CreditCard className="w-6 h-6 text-green-600" />
+                                    <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                                        <CreditCard className="w-6 h-6 text-green-600 dark:text-green-400" />
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-600">Total Pagos Hoy</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Pagos Hoy</p>
                                         <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                             {(pagos?.pagos?.data || []).filter(p =>
                                                 new Date(p.fecha_pago).toDateString() === new Date().toDateString()
@@ -109,11 +109,11 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center">
-                                    <div className="p-3 bg-blue-100 rounded-lg">
-                                        <Calculator className="w-6 h-6 text-blue-600" />
+                                    <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                        <Calculator className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-600">Monto Total</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto Total</p>
                                         <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                             {formatCurrency((pagos?.pagos?.data || []).reduce((sum, p) => sum + p.monto, 0))}
                                         </p>
@@ -125,11 +125,11 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center">
-                                    <div className="p-3 bg-purple-100 rounded-lg">
-                                        <Receipt className="w-6 h-6 text-purple-600" />
+                                    <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                                        <Receipt className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-600">Promedio por Pago</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Promedio por Pago</p>
                                         <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                             {formatCurrency(
                                                 (pagos?.pagos?.data || []).length > 0
@@ -148,18 +148,19 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                         <CardContent className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Buscar</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
                                     <Input
                                         value={filtros.q || ''}
                                         onChange={(e) => handleFiltroChange('q', e.target.value)}
                                         placeholder="Buscar por número, observaciones..."
+                                        className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                     />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Tipo de Pago</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Pago</label>
                                     <select
-                                        className="w-full p-2 border border-gray-300 rounded-md"
+                                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
                                         value={filtros.tipo_pago_id || ''}
                                         onChange={(e) => handleFiltroChange('tipo_pago_id', e.target.value)}
                                     >
@@ -173,9 +174,9 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Cuenta por Pagar</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Cuenta por Pagar</label>
                                     <select
-                                        className="w-full p-2 border border-gray-300 rounded-md"
+                                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
                                         value={filtros.cuenta_por_pagar_id || ''}
                                         onChange={(e) => handleFiltroChange('cuenta_por_pagar_id', e.target.value)}
                                     >
@@ -191,19 +192,21 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Fecha desde</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha desde</label>
                                     <Input
                                         type="date"
                                         value={filtros.fecha_desde || ''}
                                         onChange={(e) => handleFiltroChange('fecha_desde', e.target.value)}
+                                        className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Fecha hasta</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha hasta</label>
                                     <Input
                                         type="date"
                                         value={filtros.fecha_hasta || ''}
                                         onChange={(e) => handleFiltroChange('fecha_hasta', e.target.value)}
+                                        className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                                     />
                                 </div>
                             </div>
@@ -222,36 +225,36 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                     {/* Tabla de Pagos */}
                     <Card>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead className="bg-gray-50 dark:bg-gray-800">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Fecha
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Proveedor
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Compra
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Monto
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Tipo de Pago
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             N° Referencia
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Usuario
                                         </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Acciones
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
+                                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                     {(pagos?.pagos?.data || []).map((pago) => (
                                         <tr key={pago.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -280,12 +283,12 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900 dark:text-white">
+                                                <div className="text-sm text-gray-600 dark:text-gray-400">
                                                     {pago.numero_recibo || pago.numero_cheque || pago.numero_transferencia || '-'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900 dark:text-white">
+                                                <div className="text-sm text-gray-600 dark:text-gray-400">
                                                     {pago.usuario?.name || 'Sistema'}
                                                 </div>
                                             </td>
@@ -316,9 +319,9 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
 
                         {(pagos?.pagos?.data || []).length === 0 && (
                             <div className="text-center py-12">
-                                <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
+                                <CreditCard className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
                                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay pagos registrados</h3>
-                                <p className="mt-1 text-sm text-gray-500">No se encontraron pagos con los filtros aplicados.</p>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No se encontraron pagos con los filtros aplicados.</p>
                             </div>
                         )}
                     </Card>
@@ -336,37 +339,37 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Fecha de Pago</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha de Pago</label>
                                             <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                 {formatDate(modalDetalle.pago.fecha_pago)}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Monto</label>
-                                            <p className="mt-1 text-sm font-medium text-green-600">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto</label>
+                                            <p className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
                                                 {formatCurrency(modalDetalle.pago.monto)}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Proveedor</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Proveedor</label>
                                             <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                 {modalDetalle.pago.cuenta_por_pagar?.compra?.proveedor?.nombre || 'Sin proveedor'}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Compra</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Compra</label>
                                             <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                 {modalDetalle.pago.cuenta_por_pagar?.compra?.numero || `#${modalDetalle.pago.cuenta_por_pagar_id}`}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Tipo de Pago</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Pago</label>
                                             <Badge variant="secondary">
                                                 {modalDetalle.pago.tipo_pago?.nombre || 'Sin tipo'}
                                             </Badge>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Usuario</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuario</label>
                                             <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                 {modalDetalle.pago.usuario?.name || 'Sistema'}
                                             </p>
@@ -377,7 +380,7 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {modalDetalle.pago.numero_recibo && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">N° Recibo</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Recibo</label>
                                                 <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                     {modalDetalle.pago.numero_recibo}
                                                 </p>
@@ -385,7 +388,7 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                         )}
                                         {modalDetalle.pago.numero_cheque && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">N° Cheque</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Cheque</label>
                                                 <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                     {modalDetalle.pago.numero_cheque}
                                                 </p>
@@ -393,7 +396,7 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                         )}
                                         {modalDetalle.pago.numero_transferencia && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">N° Transferencia</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Transferencia</label>
                                                 <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                     {modalDetalle.pago.numero_transferencia}
                                                 </p>
@@ -403,7 +406,7 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
 
                                     {modalDetalle.pago.observaciones && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Observaciones</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Observaciones</label>
                                             <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                 {modalDetalle.pago.observaciones}
                                             </p>
@@ -411,17 +414,17 @@ const PagosIndex: React.FC<Props> = ({ pagos }) => {
                                     )}
 
                                     {/* Información de la cuenta por pagar */}
-                                    <div className="border-t pt-4">
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                         <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Información de la Cuenta por Pagar</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Monto Original</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto Original</label>
                                                 <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                     {formatCurrency(modalDetalle.pago.cuenta_por_pagar?.monto_original || 0)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Saldo Pendiente</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Saldo Pendiente</label>
                                                 <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                                     {formatCurrency(modalDetalle.pago.cuenta_por_pagar?.saldo_pendiente || 0)}
                                                 </p>

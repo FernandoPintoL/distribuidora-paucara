@@ -12,6 +12,7 @@ interface CuentaPendiente {
     id: number;
     venta_id: number;
     numero_venta: string;
+    referencia_documento?: string;
     fecha_venta: string;
     monto_original: number;
     saldo_pendiente: number;
@@ -27,6 +28,8 @@ interface RegistrarPagoModalProps {
     cuentasPendientes: CuentaPendiente[];
     onPagoRegistrado: () => void;
     cuentaIdPreseleccionada?: number;
+    tipo?: 'compras' | 'ventas';
+    verificarCaja?: boolean;
 }
 
 export default function RegistrarPagoModal({
@@ -36,7 +39,16 @@ export default function RegistrarPagoModal({
     cuentasPendientes,
     onPagoRegistrado,
     cuentaIdPreseleccionada,
+    tipo = 'compras',
+    verificarCaja = true,
 }: RegistrarPagoModalProps) {
+
+    console.log('✅ RegistrarPagoModal abierto:', {
+        show,
+        clienteId,
+        cuentaIdPreseleccionada,
+        cuentasDisponibles: cuentasPendientes.length,
+    });
     const [formData, setFormData] = useState({
         cuenta_id: '',
         tipo_pago_id: '1',  // ✅ Por defecto: Efectivo
@@ -90,20 +102,27 @@ export default function RegistrarPagoModal({
                 ...prev,
                 cuenta_id: String(cuentaIdPreseleccionada),
             }));
+            console.log('✅ Cuenta preseleccionada en modal:', {
+                cuentaIdPreseleccionada,
+                cuentasDisponibles: cuentasPendientes.length,
+            });
         }
-    }, [cuentaIdPreseleccionada, show]);
+    }, [cuentaIdPreseleccionada, show, cuentasPendientes]);
 
-    // ✅ NUEVO: Verificar si hay caja abierta cuando se abre el modal
+    // ✅ NUEVO: Verificar si hay caja abierta cuando se abre el modal (solo si verificarCaja es true)
     useEffect(() => {
-        if (show) {
+        if (show && verificarCaja) {
             verificarCajaAbierta();
         }
-    }, [show]);
+    }, [show, verificarCaja]);
 
     const verificarCajaAbierta = async () => {
         try {
             setCargandoCaja(true);
-            const response = await fetch('/compras/pagos/check-caja-abierta');
+            const ruta = tipo === 'ventas'
+                ? '/ventas/cuentas-por-cobrar/check-caja-abierta'
+                : '/compras/pagos/check-caja-abierta';
+            const response = await fetch(ruta);
             const data = await response.json();
             setCajaInfo(data);
             console.log('✅ Estado de caja (Modal Pagos):', data);
@@ -181,17 +200,39 @@ export default function RegistrarPagoModal({
             setLoading(true);
             setError('');
 
-            const response = await axios.post(`/api/clientes/${clienteId}/pagos`, {
-                cuenta_por_cobrar_id: Number(formData.cuenta_id),
-                tipo_pago_id: Number(formData.tipo_pago_id),
-                monto: parseFloat(formData.monto),
-                fecha_pago: formData.fecha_pago,
-                numero_recibo: formData.numero_recibo || null,
-                numero_transferencia: formData.numero_transferencia || null,
-                numero_cheque: formData.numero_cheque || null,
-                observaciones: formData.observaciones || null,
-                moneda_id: 1,  // ✅ Moneda por defecto: BOB
-            });
+            // Usar endpoint diferente según tipo de pago
+            let url: string;
+            let payload: any;
+
+            if (tipo === 'ventas') {
+                // Para cuentas por cobrar (ventas)
+                url = `/ventas/cuentas-por-cobrar/${formData.cuenta_id}/registrar-pago`;
+                payload = {
+                    tipo_pago_id: Number(formData.tipo_pago_id),
+                    monto: parseFloat(formData.monto),
+                    fecha_pago: formData.fecha_pago,
+                    numero_recibo: formData.numero_recibo || null,
+                    numero_transferencia: formData.numero_transferencia || null,
+                    numero_cheque: formData.numero_cheque || null,
+                    observaciones: formData.observaciones || null,
+                };
+            } else {
+                // Para cuentas por pagar (compras) - mantener estructura antigua
+                url = `/api/clientes/${clienteId}/pagos`;
+                payload = {
+                    cuenta_por_cobrar_id: Number(formData.cuenta_id),
+                    tipo_pago_id: Number(formData.tipo_pago_id),
+                    monto: parseFloat(formData.monto),
+                    fecha_pago: formData.fecha_pago,
+                    numero_recibo: formData.numero_recibo || null,
+                    numero_transferencia: formData.numero_transferencia || null,
+                    numero_cheque: formData.numero_cheque || null,
+                    observaciones: formData.observaciones || null,
+                    moneda_id: 1,  // ✅ Moneda por defecto: BOB
+                };
+            }
+
+            const response = await axios.post(url, payload);
 
             // ✅ NUEVO: Mostrar información del pago registrado en toast
             if (response.data.success && response.data.data?.pago) {
@@ -302,8 +343,8 @@ export default function RegistrarPagoModal({
                         </Alert>
                     )}
 
-                    {/* Indicador de caja no abierta */}
-                    {!cargandoCaja && cajaInfo && !cajaInfo.tiene_caja_abierta && (
+                    {/* Indicador de caja no abierta - solo si verificarCaja es true */}
+                    {verificarCaja && !cargandoCaja && cajaInfo && !cajaInfo.tiene_caja_abierta && (
                         <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200">
                             <AlertTriangle className="h-4 w-4" />
                             <AlertDescription className="text-xs">
@@ -312,11 +353,11 @@ export default function RegistrarPagoModal({
                         </Alert>
                     )}
 
-                    {/* Indicador de caja abierta (hoy o días anteriores) */}
-                    {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
+                    {/* Indicador de caja abierta (hoy o días anteriores) - solo si verificarCaja es true */}
+                    {verificarCaja && !cargandoCaja && cajaInfo?.tiene_caja_abierta && (
                         <Alert className={`border text-xs ${cajaInfo.es_de_hoy
-                                ? 'border-green-300 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200'
-                                : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200'
+                            ? 'border-green-300 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200'
+                            : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200'
                             }`}>
                             <AlertDescription className="flex items-center gap-2">
                                 <span>{cajaInfo.es_de_hoy ? '✅' : '⚠️'}</span>
@@ -343,7 +384,9 @@ export default function RegistrarPagoModal({
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Cuenta Pendiente */}
                         <div className="space-y-2">
-                            <Label htmlFor="cuenta_id" className="text-gray-700 dark:text-gray-300">Seleccionar Cuenta</Label>
+                            <Label htmlFor="cuenta_id" className="text-gray-700 dark:text-gray-300">
+                                {tipo === 'ventas' ? 'Seleccionar Cuenta por Cobrar' : 'Seleccionar Cuenta por Pagar'}
+                            </Label>
                             <select
                                 id="cuenta_id"
                                 name="cuenta_id"
@@ -353,12 +396,37 @@ export default function RegistrarPagoModal({
                                 className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-950 text-gray-900 dark:text-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">-- Seleccionar --</option>
-                                {Array.isArray(cuentasPendientes) && cuentasPendientes.map((cuenta) => (
-                                    <option key={cuenta.id} value={String(cuenta.id)}>
-                                        Venta #{cuenta.numero_venta} - {formatCurrency(cuenta.saldo_pendiente)} - Vence:{' '}
-                                        {new Date(cuenta.fecha_vencimiento).toLocaleDateString('es-BO')}
-                                    </option>
-                                ))}
+                                {Array.isArray(cuentasPendientes) && cuentasPendientes.map((cuenta) => {
+                                    let displayLabel = '';
+
+                                    if (tipo === 'ventas') {
+                                        if (cuenta.numero_venta) {
+                                            displayLabel = `Venta-${cuenta.numero_venta} | Cuenta-${cuenta.id}`;
+                                        } else {
+                                            displayLabel = `Crédito #${cuenta.id} | #${cuenta.referencia_documento || 'N/A'}`;
+                                        }
+                                    } else {
+                                        if (cuenta.numero_venta) {
+                                            displayLabel = `Compra #${cuenta.numero_venta} | Cuenta #${cuenta.id}`;
+                                        } else {
+                                            displayLabel = `Deuda #${cuenta.id}`;
+                                        }
+                                    }
+
+                                    return (
+                                        <option key={cuenta.id} value={String(cuenta.id)}>
+                                            {displayLabel} - {formatCurrency(cuenta.saldo_pendiente)} - Vence:{' '}
+                                            {new Date(cuenta.fecha_vencimiento).toLocaleDateString('es-BO')}
+                                        </option>
+                                    );
+                                })}
+                                {/* Fallback: Si la cuenta preseleccionada no está en la lista, mostrarla de todas formas */}
+                                {cuentaIdPreseleccionada &&
+                                    !cuentasPendientes.find((c) => c.id === cuentaIdPreseleccionada) && (
+                                        <option key={`selected-${cuentaIdPreseleccionada}`} value={String(cuentaIdPreseleccionada)}>
+                                            Cuenta #{cuentaIdPreseleccionada} (Seleccionada)
+                                        </option>
+                                    )}
                             </select>
                         </div>
 
@@ -511,10 +579,10 @@ export default function RegistrarPagoModal({
                             !formData.tipo_pago_id ||
                             !formData.monto ||
                             cargandoCaja ||
-                            !cajaInfo?.tiene_caja_abierta
+                            (verificarCaja && !cajaInfo?.tiene_caja_abierta)
                         }
                         className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title={!cajaInfo?.tiene_caja_abierta ? 'Abre una caja para registrar pagos' : ''}
+                        title={verificarCaja && !cajaInfo?.tiene_caja_abierta ? 'Abre una caja para registrar pagos' : ''}
                     >
                         {loading ? (
                             <>

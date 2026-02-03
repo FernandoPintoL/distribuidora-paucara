@@ -84,6 +84,15 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         return \Inertia\Inertia::render('creditos/index');
     })->name('creditos.index');
 
+    // ✅ NUEVO: Ruta para importar créditos históricos (solo Admin)
+    Route::get('admin/creditos/importar', function () {
+        return \Inertia\Inertia::render('admin/creditos/importar');
+    })->middleware('permission:admin.creditos.importar')->name('admin.creditos.importar');
+
+    // ✅ NUEVO: Ruta para crear crédito manual (solo Admin)
+    Route::get('admin/creditos/crear', [\App\Http\Controllers\CreditoController::class, 'create'])
+        ->middleware('permission:admin.creditos.importar')->name('admin.creditos.crear');
+
     // ⚠️ RUTAS ESPECÍFICAS DEBEN IR ANTES DEL RESOURCE
     // Rutas para carga masiva de productos
     Route::get('productos/carga-masiva', function () {
@@ -248,8 +257,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // Sistema de Pagos
         Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
-        // ✅ Ruta específica para verificar caja abierta (ANTES de create para evitar conflictos)
-        Route::get('pagos/check-caja-abierta', [\App\Http\Controllers\PagoController::class, 'checkCajaAbierta'])->name('pagos.check-caja-abierta');
         Route::get('pagos/create', [\App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
         Route::post('pagos', [\App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
         Route::get('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'show'])->name('pagos.show');
@@ -269,9 +276,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     });
 
     // Rutas para gestión de compras (después de rutas específicas para evitar conflictos)
-    // ✅ Ruta específica para verificar caja abierta (ANTES del resource para evitar conflictos)
-    Route::get('compras/check-caja-abierta', [\App\Http\Controllers\CompraController::class, 'checkCajaAbierta'])->name('compras.check-caja-abierta');
-
     // ✅ NUEVO: Ruta para anular compras
     Route::post('compras/{compra}/anular', [\App\Http\Controllers\CompraController::class, 'anular'])->name('compras.anular');
 
@@ -299,8 +303,14 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // ✅ Ruta específica para verificar caja abierta (ANTES del resource para evitar conflictos)
     Route::get('ventas/check-caja-abierta', [\App\Http\Controllers\VentaController::class, 'checkCajaAbierta'])->name('ventas.check-caja-abierta');
 
+    // ✅ Rutas para cuentas por cobrar
+    Route::get('ventas/cuentas-por-cobrar/check-caja-abierta', [\App\Http\Controllers\CuentaPorCobrarController::class, 'checkCajaAbierta'])->name('cuentas-por-cobrar.check-caja-abierta');
+    Route::post('ventas/cuentas-por-cobrar/{cuentaPorCobrar}/registrar-pago', [\App\Http\Controllers\CuentaPorCobrarController::class, 'registrarPago'])->name('cuentas-por-cobrar.registrar-pago');
+    Route::post('ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}', [\App\Http\Controllers\CuentaPorCobrarController::class, 'anularPago'])->name('cuentas-por-cobrar.anular-pago');
+
     // ✅ NUEVO: Aplicar middleware CheckCajaAbierta para validar que hay caja abierta
-    Route::resource('ventas', \App\Http\Controllers\VentaController::class)->middleware('caja.abierta');
+    // Excluir 'show' porque lo definiremos después de las rutas específicas
+    Route::resource('ventas', \App\Http\Controllers\VentaController::class)->except(['show'])->middleware('caja.abierta');
 
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
@@ -311,9 +321,17 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('{stock}/exportar-pdf', [\App\Http\Controllers\InventarioController::class, 'exportarPdf'])->name('exportar-pdf')->middleware('permission:inventario.dashboard');
     });
 
+    // ==========================================
+    // RUTAS ADICIONALES PARA MÓDULO DE VENTAS
+    // ==========================================
     Route::prefix('ventas')->name('ventas.')->group(function () {
+        // Rutas sin parámetros dinámicos PRIMERO
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
+
+        // Gestión de Cuentas por Cobrar
+        Route::get('cuentas-por-cobrar', [\App\Http\Controllers\CuentaPorCobrarController::class, 'index'])->name('cuentas-por-cobrar.index');
+        Route::get('cuentas-por-cobrar/{cuentaPorCobrar}/show', [\App\Http\Controllers\CuentaPorCobrarController::class, 'show'])->name('cuentas-por-cobrar.show');
 
         // Acciones personalizadas (POST)
         Route::post('{venta}/anular', [\App\Http\Controllers\VentaController::class, 'anular'])->name('anular');
@@ -326,6 +344,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
         Route::get('{venta}/exportar-excel', [\App\Http\Controllers\VentaController::class, 'exportarExcel'])->name('exportar-excel');
         Route::get('{venta}/exportar-pdf', [\App\Http\Controllers\VentaController::class, 'exportarPdf'])->name('exportar-pdf');
+
+        // Show debe ir AL FINAL para no capturar otras rutas
+        Route::get('{id}', [\App\Http\Controllers\VentaController::class, 'show'])->name('show')->where('id', '[0-9]+');
     });
 
     // Rutas para gestión de stock en ventas

@@ -297,6 +297,7 @@ class ProductoController extends Controller
             // Crear el producto
             $producto = Producto::create([
                 'nombre'           => $data['nombre'],
+                'sku'              => $data['sku'] ?? null, // ✨ NUEVO: Respeta el SKU del usuario, o null para generarlo automáticamente
                 'descripcion'      => $data['descripcion'] ?? null,
                 'peso'             => $data['peso'] ?? 0,
                 'unidad_medida_id' => $data['unidad_medida_id'] ?? null,

@@ -231,7 +231,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'configuracion-global.reset', 'configuracion-global.ganancias', 'configuracion-global.ganancias.update',
             ],
             'admin'          => [
-                'admin.config', 'admin.system', 'admin.image-backup.manage',
+                'admin.config', 'admin.system', 'admin.image-backup.manage', 'admin.creditos.importar',
+            ],
+            'creditos'       => [
+                'admin.creditos.importar',
             ],
         ];
     }
@@ -497,6 +500,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'label'       => 'Admin del Sistema (Crítico - Solo Super Admin)',
                 'description' => 'Capacidad para cambios críticos del sistema',
                 'icon'        => '🛡️',
+            ],
+            'creditos'       => [
+                'label'       => 'Gestionar Créditos (Importación histórica)',
+                'description' => 'Capacidad para importar créditos históricos desde otros sistemas',
+                'icon'        => '📥',
             ],
         ];
     }

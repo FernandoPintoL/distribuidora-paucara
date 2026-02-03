@@ -240,6 +240,41 @@ export function useCascadaPreciosCompra(
     }, [preciosPropuestos]);
 
     /**
+     * ✅ NUEVO: Inicializa precios propuestos con los valores actuales (SIN calcular cascada)
+     * El usuario podrá editar manualmente cuáles actualizar
+     */
+    const inicializarConPreciosActuales = useCallback((): void => {
+        setError(null);
+
+        if (!precios || precios.length === 0) {
+            return;
+        }
+
+        try {
+            const preciosIniciales: PrecioPropuesto[] = precios.map((precio) => ({
+                id: precio.id,
+                tipo_precio_id: precio.tipo_precio_id,
+                tipo_nombre: precio.tipo.nombre,
+                tipo_codigo: precio.tipo.codigo,
+                tipo_color: precio.tipo.color,
+                tipo_es_ganancia: precio.tipo.es_ganancia,
+                precio_actual: precio.precio_actual,
+                precio_propuesto: precio.precio_actual, // ✅ Usa el precio actual como propuesto
+                porcentaje_ganancia_actual: precio.porcentaje_ganancia,
+                porcentaje_ganancia_propuesto: precio.porcentaje_ganancia, // ✅ Usa la ganancia actual
+            }));
+
+            setPreciosPropuestos(preciosIniciales);
+        } catch (err) {
+            const mensaje = err instanceof Error ? err.message : 'Error desconocido al inicializar precios';
+            setError({
+                tipo: 'calculo',
+                mensaje
+            });
+        }
+    }, [precios]);
+
+    /**
      * Restaura los precios originales
      */
     const restaurarPreciosOriginales = useCallback((): void => {
@@ -251,6 +286,7 @@ export function useCascadaPreciosCompra(
         preciosPropuestos,
         error,
         calcularCascada,
+        inicializarConPreciosActuales, // ✅ Nueva función
         actualizarPrecioPropuesto,
         actualizarGananciaPropuesta,
         validarCambios,

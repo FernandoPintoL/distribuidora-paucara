@@ -15,10 +15,17 @@ class CuentaPorCobrar extends Model
         'venta_id',
         'cliente_id',
         'monto_original',
+        'monto_total',
+        'monto_pagado',
         'saldo_pendiente',
         'fecha_vencimiento',
         'dias_vencido',
         'estado',
+        'referencia_documento',
+        'tipo',
+        'observaciones',
+        'usuario_id',
+        'es_migracion',
     ];
 
     protected function casts(): array
