@@ -64,16 +64,19 @@ fi
 echo ""
 
 # 4. Archivos existentes
-echo "📁 4. Archivos Existentes en storage/app/public"
+echo "📁 4. Archivos por Carpeta"
 echo "─────────────────────────────────────────────────────────────────"
-echo "Total de archivos:"
+echo "Total de archivos en storage/app/public:"
 find storage/app/public -type f 2>/dev/null | wc -l
 echo ""
-echo "Archivos en clientes/:"
-find storage/app/public/clientes -type f 2>/dev/null | wc -l
-echo ""
-echo "Primeros 5 archivos:"
-find storage/app/public/clientes -type f 2>/dev/null | head -5 | sed 's/^/  /'
+
+for folder in clientes empresas productos; do
+    path="storage/app/public/$folder"
+    count=$(find "$path" -type f 2>/dev/null | wc -l)
+    echo "📂 $folder/: $count archivos"
+    find "$path" -type f 2>/dev/null | head -3 | sed 's/^/   /'
+    [ "$count" -gt 0 ] && echo "" || echo "   (vacío)"
+done
 echo ""
 
 # 5. Verificar symlink
