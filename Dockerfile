@@ -45,17 +45,27 @@ COPY . /app/
 # Build frontend assets
 RUN npm run build
 
-# Run Laravel setup
-RUN php artisan package:discover --ansi && \
+# Run Laravel setup (storage:link will be done at runtime in supervisord)
+RUN echo "🏗️  [BUILD] Inicializando Laravel..." && \
+    php artisan package:discover --ansi && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \
-    php artisan storage:unlink || true && \
-    php artisan storage:link && \
-    php artisan optimize
+    php artisan optimize && \
+    echo "✅ [BUILD] Laravel inicializado"
 
 # Set permissions
-RUN chmod -R 777 storage/ public/ bootstrap/cache
+RUN echo "🔐 [BUILD] Ajustando permisos..." && \
+    chmod -R 777 storage/ public/ bootstrap/cache && \
+    echo "✅ [BUILD] Permisos ajustados"
+
+# Verify directories exist for volume mount
+RUN echo "📁 [BUILD] Verificando estructura de directorios..." && \
+    mkdir -p storage/app/public && \
+    echo "   - storage/app/public existe: $(ls -ld storage/app/public | awk '{print $1, $9}')" && \
+    mkdir -p public/bootstrap/cache && \
+    echo "   - public/bootstrap/cache existe: $(ls -ld public/bootstrap/cache | awk '{print $1, $9}')" && \
+    echo "✅ [BUILD] Estructura de directorios verificada"
 
 # Create necessary directories
 RUN mkdir -p /run/nginx /var/log/supervisor

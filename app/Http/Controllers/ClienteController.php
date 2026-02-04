@@ -336,35 +336,55 @@ class ClienteController extends Controller
                 }
             }
 
-            // Procesar archivos de imagen (tanto para web como API)
+            // Procesar archivos de imagen con ruta dinámica (consistente con store())
+            Log::info('📸 Procesando archivos en UPDATE del cliente', [
+                'cliente_id'     => $cliente->id,
+                'has_foto'       => $request->hasFile('foto_perfil'),
+                'has_ci_anverso' => $request->hasFile('ci_anverso'),
+                'has_ci_reverso' => $request->hasFile('ci_reverso'),
+            ]);
+
             $updates = [];
             if ($request->hasFile('foto_perfil') && $request->file('foto_perfil')->isValid()) {
                 if ($cliente->foto_perfil) {
                     Storage::disk('public')->delete($cliente->foto_perfil);
+                    Log::info('🗑️ Foto anterior eliminada', ['path' => $cliente->foto_perfil]);
                 }
                 $folderName             = $this->generateClientFolderName($cliente);
                 $path                   = $request->file('foto_perfil')->store($folderName, 'public');
                 $data['foto_perfil']    = $path;
                 $updates['foto_perfil'] = $path;
+                Log::info('✅ Foto de perfil guardada en UPDATE', ['path' => $path]);
             }
             if ($request->hasFile('ci_anverso') && $request->file('ci_anverso')->isValid()) {
                 if ($cliente->ci_anverso) {
                     Storage::disk('public')->delete($cliente->ci_anverso);
+                    Log::info('🗑️ CI anverso anterior eliminado', ['path' => $cliente->ci_anverso]);
                 }
                 $folderName            = $this->generateClientFolderName($cliente);
                 $path                  = $request->file('ci_anverso')->store($folderName, 'public');
                 $data['ci_anverso']    = $path;
                 $updates['ci_anverso'] = $path;
+                Log::info('✅ CI anverso guardado en UPDATE', ['path' => $path]);
             }
             if ($request->hasFile('ci_reverso') && $request->file('ci_reverso')->isValid()) {
                 if ($cliente->ci_reverso) {
                     Storage::disk('public')->delete($cliente->ci_reverso);
+                    Log::info('🗑️ CI reverso anterior eliminado', ['path' => $cliente->ci_reverso]);
                 }
                 $folderName            = $this->generateClientFolderName($cliente);
                 $path                  = $request->file('ci_reverso')->store($folderName, 'public');
                 $data['ci_reverso']    = $path;
                 $updates['ci_reverso'] = $path;
+                Log::info('✅ CI reverso guardado en UPDATE', ['path' => $path]);
             }
+
+            // Log de los datos que se van a actualizar
+            Log::info('💾 Datos a actualizar en cliente', [
+                'cliente_id' => $cliente->id,
+                'has_updates' => !empty($updates),
+                'updates_keys' => array_keys($updates),
+            ]);
 
             // ✅ CRÉDITO: Capturar valores anteriores para auditoría de crédito
             $creditoAnterior = [
