@@ -86,10 +86,8 @@ RUN echo "📁 [BUILD] Verificando estructura de directorios..." && \
     echo "   - public/bootstrap/cache existe: $(ls -ld public/bootstrap/cache | awk '{print $1, $9}')" && \
     echo "✅ [BUILD] Estructura de directorios verificada"
 
-# Clean up any symlink from previous builds (will be recreated at runtime)
-RUN echo "🧹 [BUILD] Limpiando symlinks previos..." && \
-    rm -f public/storage 2>/dev/null || true && \
-    echo "✅ [BUILD] Limpieza completada"
+# Note: DO NOT create symlink here - it will be done at RUNTIME in supervisord
+# This ensures it points correctly to the volume-mounted directory
 
 # Create necessary directories
 RUN mkdir -p /run/nginx /var/log/supervisor
