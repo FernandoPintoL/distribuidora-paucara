@@ -36,3 +36,5 @@ nul
 !/storage/app/public/productos/**
 !/storage/app/public/empresas/
 !/storage/app/public/empresas/**
+!/storage/app/public/clientes/
+!/storage/app/public/clientes/**
