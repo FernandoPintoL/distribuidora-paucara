@@ -1048,6 +1048,7 @@ class ProductoController extends Controller
             'marca:id,nombre',
             'proveedor:id,nombre,razon_social',
             'unidad:id,nombre',
+            'imagenes:id,producto_id,url,es_principal,orden', // Cargar imágenes del producto
             'precios'      => function ($q) {
                 // Cargar SOLO precios activos con relación a tipo de precio
                 $q->where('activo', true)
@@ -1103,6 +1104,14 @@ class ProductoController extends Controller
             ->orderBy('nombre')
             ->paginate($perPage)
             ->through(function ($producto) use ($almacenId, $almacenPrincipal, $tipoPrecioVentaId) {
+                // 🔍 DEBUGGING: Verificar si las imagenes están cargadas
+                Log::info('🔍 [indexApi] DEBUGGING PRODUCTO', [
+                    'producto_id' => $producto->id,
+                    'producto_nombre' => $producto->nombre,
+                    'imagenes_count' => $producto->imagenes?->count() ?? 0,
+                    'imagenes_data' => $producto->imagenes ? $producto->imagenes->toArray() : [],
+                ]);
+
                 // Consolidar stock por almacén (suma de lotes)
                 $stockConsolidado = $producto->stock->groupBy('almacen_id')->map(function ($stocks) {
                     $primero = $stocks->first();
@@ -1169,6 +1178,7 @@ class ProductoController extends Controller
                     'marca'               => $producto->marca,
                     'proveedor'           => $producto->proveedor,
                     'unidad'              => $producto->unidad,
+                    'imagenes'            => $producto->imagenes ?? [], // Imágenes del producto
                                                                   // 'precios' => $producto->precios,
                     'codigos_barra'       => $segundoCodigoBarra, // String simple del segundo código
 

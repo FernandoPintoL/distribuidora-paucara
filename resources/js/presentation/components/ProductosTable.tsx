@@ -112,6 +112,8 @@ export default function ProductosTable({
     const [incluirCombos, setIncluirCombos] = useState(false);
     // ✅ NUEVO: Estado para controlar qué combos están expandidos
     const [expandedCombos, setExpandedCombos] = useState<Record<number, boolean>>({});
+    // ✅ NUEVO: Mapa de combo_items actualizados por índice (se mantiene aunque detalles cambien)
+    const [comboItemsMap, setComboItemsMap] = useState<Record<number, Array<any>>>({});
 
     // ✅ NUEVO: Estado para modal de cascada de precios
     const [modalCascadaState, setModalCascadaState] = useState<{
@@ -129,6 +131,7 @@ export default function ProductosTable({
         detalleIndex: null,
         productoData: null
     });
+
 
     // ✅ NUEVO: Función para buscar productos manualmente (botón o Enter)
     const buscarProductos = async (searchTerm?: string) => {
@@ -246,7 +249,7 @@ export default function ProductosTable({
 
             // ✅ NUEVO: Si hay exactamente 1 resultado válido, agregarlo automáticamente
             if (productosValidos.length === 1) {
-                handleAddProduct(productosValidos[0]);
+                onAddProduct(productosValidos[0]);
             }
         } catch (error) {
             console.error('Error buscando productos:', error);
@@ -385,38 +388,62 @@ export default function ProductosTable({
 
     // Función para actualizar detalle
     const handleUpdateDetail = (index: number, field: keyof DetalleProducto, value: number | string) => {
+        // ✅ NUEVO: Si se actualiza cantidad de un combo, propagar a componentes
+        if (field === 'cantidad' && detalles[index]?.producto && (detalles[index].producto as any).es_combo) {
+            const cantidadAnterior = detalles[index].cantidad;
+            const cantidadNueva = typeof value === 'number' ? value : parseInt(value as string, 10);
+
+            console.log(`🔄 [COMBO] Cambio de cantidad detectado:`, {
+                index,
+                esCombo: true,
+                cantidadAnterior,
+                cantidadNueva,
+                productoNombre: (detalles[index].producto as any)?.nombre,
+                totalDetalles: detalles.length,
+            });
+
+            if (!isNaN(cantidadNueva) && cantidadAnterior !== cantidadNueva) {
+                console.log(`📊 Cantidad del combo: ${cantidadAnterior} → ${cantidadNueva}`);
+
+                // ✅ Actualizar cantidades en combo_items (componentes incrustados)
+                const comboItems = ((detalles[index].producto as any).combo_items || []) as Array<any>;
+                console.log(`🎁 Componentes del combo encontrados: ${comboItems.length}`, comboItems.map(item => ({ nombre: item.producto_nombre, cantidadOriginal: item.cantidad })));
+
+                // ✅ CORRECTO: Multiplicar cantidad del combo × cantidad original del componente
+                const comboItemsActualizados = comboItems.map((item) => {
+                    const cantidadComponenteOriginal = item.cantidad; // Cantidad original en el combo (ej: 2, 1, etc)
+                    const cantidadComponenteNueva = cantidadNueva * cantidadComponenteOriginal; // Cantidad final = combo_qty × componente_original_qty
+
+                    console.log(`  ✏️  Actualizando componente: ${item.producto_nombre}`, {
+                        cantidadOriginal: cantidadComponenteOriginal,
+                        cantidadDelCombo: cantidadNueva,
+                        cantidadFinal: cantidadComponenteNueva,
+                    });
+
+                    return {
+                        ...item,
+                        cantidad: cantidadComponenteNueva,
+                    };
+                });
+
+                console.log(`✅ Actualización de combo completada - componentes actualizados:`,
+                    comboItemsActualizados.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad })));
+
+                // ✅ CRÍTICO: Guardar combo_items en mapa (persisten aunque detalles cambien)
+                setComboItemsMap(prev => ({
+                    ...prev,
+                    [index]: comboItemsActualizados
+                }));
+
+                // ✅ IMPORTANTE: Llamar a onUpdateDetail UNA SOLA VEZ para actualizar cantidad del combo
+                onUpdateDetail(index, field, value);
+
+                return;
+            }
+        }
+
         onUpdateDetail(index, field, value);
     };
-
-    // Función para eliminar detalle
-    const handleRemoveDetail = (index: number) => {
-        onRemoveDetail(index);
-    };
-
-    // Función para agregar producto desde la búsqueda
-    const handleAddProduct = (producto: Producto) => {
-        onAddProduct(producto);
-        // ✅ Limpiar búsqueda y sugerencias completamente después de agregar
-        setProductSearch('');
-        setProductosDisponibles([]);
-        setSearchError(null);
-    };
-
-    // ✅ NUEVO: Handler para abrir modal de cascada de precios
-    const handleAbrirModalCascada = useCallback((index: number, detalle: DetalleProducto) => {
-        const precioCosto = detalle.precio_costo || detalle.producto?.precio_costo || 0;
-
-        // Validar que el producto tenga precios
-        // Abrir modal
-        setModalCascadaState({
-            isOpen: true,
-            productoId: detalle.producto_id as number,
-            precioActual: precioCosto,
-            precioCostoNuevo: detalle.precio_unitario,
-            detalleIndex: index,
-            productoData: detalle.producto
-        });
-    }, []);
 
     // ✅ NUEVO: Handler para guardar precios desde modal
     const handleGuardarPreciosModal = useCallback(async (
@@ -558,7 +585,7 @@ export default function ProductosTable({
                                     key={producto.id}
                                     type="button"
                                     disabled={readOnly}
-                                    onClick={() => handleAddProduct(producto)}
+                                    onClick={() => onAddProduct(producto)}
                                     className="w-full text-left px-2.5 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <div className="font-medium text-xs text-gray-900 dark:text-white">
@@ -1039,7 +1066,7 @@ export default function ProductosTable({
                                             <button
                                                 type="button"
                                                 disabled={readOnly}
-                                                onClick={() => handleRemoveDetail(index)}
+                                                onClick={() => onRemoveDetail(index)}
                                                 className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title="Eliminar producto"
                                             >
@@ -1053,11 +1080,14 @@ export default function ProductosTable({
 
                                 // Si es combo, envolver en Fragment con componentes
                                 if (esCombo && expandedCombos[index]) {
+                                    // ✅ CRÍTICO: Usar combo_items del mapa si existen, sino usar los originales
+                                    const itemsAMostrar = comboItemsMap[index] || ((productoInfo as any).combo_items || []);
+
                                     return (
                                         <Fragment key={`combo-${index}`}>
                                             {content}
                                             {/* Mostrar componentes del combo */}
-                                            {((productoInfo as any).combo_items || []).map((item: any, itemIndex: number) => (
+                                            {itemsAMostrar.map((item: any, itemIndex: number) => (
                                                 <tr key={`combo-item-${index}-${itemIndex}`} className="bg-purple-50 dark:bg-purple-900/10 border-l-4 border-purple-400">
                                                     <td className="px-4 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
