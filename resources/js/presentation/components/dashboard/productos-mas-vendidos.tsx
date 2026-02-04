@@ -72,7 +72,7 @@ export function ProductosMasVendidos({ productos, loading = false, className = '
             </div>
 
             <div className="space-y-4">
-                {productos.map((producto) => {
+                {productos.map((producto, index) => {
                     const porcentaje = (producto.total_vendido / maxVendido) * 100;
 
                     return (
