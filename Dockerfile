@@ -54,10 +54,29 @@ RUN echo "🏗️  [BUILD] Inicializando Laravel..." && \
     php artisan optimize && \
     echo "✅ [BUILD] Laravel inicializado"
 
-# Set permissions
+# Set permissions (crucial for volume mount)
 RUN echo "🔐 [BUILD] Ajustando permisos..." && \
-    chmod -R 777 storage/ public/ bootstrap/cache && \
-    echo "✅ [BUILD] Permisos ajustados"
+    chmod -R 777 storage/ && \
+    chmod -R 777 public/ && \
+    chmod -R 777 bootstrap/cache && \
+    echo "✅ [BUILD] storage/ => 777" && \
+    echo "✅ [BUILD] public/ => 777" && \
+    echo "✅ [BUILD] bootstrap/cache/ => 777"
+
+# Ensure specific directories are writable
+RUN echo "📁 [BUILD] Creando directorios de almacenamiento..." && \
+    mkdir -p storage/app/private && \
+    mkdir -p storage/app/public && \
+    mkdir -p storage/app/public/clientes && \
+    mkdir -p storage/app/public/productos && \
+    mkdir -p storage/app/public/empresas && \
+    mkdir -p storage/logs && \
+    mkdir -p storage/framework && \
+    mkdir -p storage/framework/cache && \
+    mkdir -p storage/framework/sessions && \
+    mkdir -p storage/framework/views && \
+    chmod -R 777 storage/ && \
+    echo "✅ [BUILD] Directorios de almacenamiento creados con permisos 777"
 
 # Verify directories exist for volume mount
 RUN echo "📁 [BUILD] Verificando estructura de directorios..." && \
