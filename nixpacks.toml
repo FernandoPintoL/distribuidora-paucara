@@ -1,5 +1,5 @@
-[setup]
-pkgs = ["supervisor"]
+[install]
+cmds = ["apk add --no-cache supervisor"]
 
 [build]
 cmds = [
