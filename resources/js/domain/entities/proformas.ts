@@ -45,6 +45,7 @@ export interface Proforma extends BaseEntity {
     cliente_id: Id;
     cliente_nombre: string;
     usuario_id?: Id;
+    usuario_creador_id?: Id; // ID del usuario que creó la proforma
     estado_documento_id?: Id;
     moneda_id?: Id;
     moneda?: Moneda; // ✅ NUEVO: Objeto de moneda con código y símbolo
@@ -92,6 +93,7 @@ export interface Proforma extends BaseEntity {
     cliente: Cliente; // ✅ OBLIGATORIO - Una proforma siempre tiene un cliente
     usuario?: Usuario;
     usuarioCreador?: Usuario; // Usuario del sistema que creó la proforma
+    usuario_creador?: { id: Id; name: string; email: string }; // Datos del usuario creador desde backend
     estado_documento?: EstadoDocumento;
     detalles: ProformaDetalle[]; // ✅ OBLIGATORIO - Una proforma siempre tiene detalles
 

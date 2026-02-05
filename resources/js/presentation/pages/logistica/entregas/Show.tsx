@@ -7,6 +7,7 @@ import type { Entrega, VehiculoCompleto, EstadoEntrega } from '@/domain/entities
 
 import EntregaFlujoCarga from './components/EntregaFlujoCarga';
 import VentasEntregaSection from './components/VentasEntregaSection';
+import ProductosAgrupados from './components/ProductosAgrupados';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
 import EntregaHistorialCambios from '@/presentation/components/logistica/EntregaHistorialCambios';
@@ -386,21 +387,19 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                                     </p>
                                 </div>
                             </div>
-
-                            <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 mt-4">
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                                    ℹ️ Esta entrega es parte de un lote. Va en el mismo viaje que otros pedidos.
-                                </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
-                                    El reporte asociado contiene todas las entregas que viajan juntas. Ver sección de
-                                    "Reportes Asociados" para más detalles.
-                                </p>
-                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Ventas en la Entrega */}
+
+                {/* Productos Agrupados - Consolidación de productos de todas las ventas */}
+                {entrega.id && (
+                    <ProductosAgrupados
+                        entregaId={entrega.id as number}
+                        mostrarDetalleVentas={true}
+                    />
+                )}
+
                 {entrega.ventas && entrega.ventas.length > 0 && (
                     <VentasEntregaSection
                         entrega={entrega}
@@ -408,6 +407,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                         totalVentas={entrega.ventas.length}
                     />
                 )}
+
 
                 {/* Flujo de Carga - Mostrar si está en ese estado */}
                 {isInCargoFlow && (

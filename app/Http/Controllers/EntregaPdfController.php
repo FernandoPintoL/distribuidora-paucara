@@ -365,6 +365,135 @@ class EntregaPdfController extends Controller
     }
 
     /**
+     * Obtener productos agrupados de una entrega
+     *
+     * Agrupa productos de todas las ventas consolidando cantidades
+     *
+     * GET /api/entregas/{entrega}/productos-agrupados
+     *
+     * @param Entrega $entrega
+     * @return \Illuminate\Http\JsonResponse
+     *
+     * EJEMPLO DE RESPUESTA:
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "entrega_id": 10,
+     *     "numero_entrega": "ENT-20260121-10",
+     *     "productos": [
+     *       {
+     *         "producto_id": 1,
+     *         "producto_nombre": "Agua Alma 500ml (BOLSITA)",
+     *         "codigo_producto": "A500B",
+     *         "cantidad_total": 4,
+     *         "precio_unitario": "15.00",
+     *         "subtotal": "60.00",
+     *         "unidad_medida": "Paquete",
+     *         "ventas": [
+     *           {
+     *             "venta_id": 20,
+     *             "venta_numero": "VEN20260121-0004",
+     *             "cantidad": 1,
+     *             "cliente_id": 27,
+     *             "cliente_nombre": "Fernando Pinto"
+     *           },
+     *           {
+     *             "venta_id": 19,
+     *             "venta_numero": "VEN20260121-0003",
+     *             "cantidad": 3,
+     *             "cliente_id": 27,
+     *             "cliente_nombre": "Fernando Pinto"
+     *           }
+     *         ]
+     *       }
+     *     ],
+     *     "total_items": 1,
+     *     "cantidad_total": 4
+     *   }
+     * }
+     */
+    public function obtenerProductosAgrupados(Entrega $entrega)
+    {
+        try {
+            // Cargar relaciones necesarias
+            $entrega->load([
+                'ventas.cliente',
+                'ventas.detalles.producto.unidad',
+            ]);
+
+            // Agrupar productos consolidando cantidades
+            $productosAgrupados = [];
+            $cantidadTotal = 0;
+
+            foreach ($entrega->ventas as $venta) {
+                foreach ($venta->detalles as $detalle) {
+                    $productoId = $detalle->producto_id;
+
+                    // Si el producto ya existe en el array, sumar cantidad
+                    if (isset($productosAgrupados[$productoId])) {
+                        $productosAgrupados[$productoId]['cantidad_total'] += (float) $detalle->cantidad;
+                        $productosAgrupados[$productoId]['subtotal'] = bcadd(
+                            $productosAgrupados[$productoId]['subtotal'],
+                            bcmul($detalle->cantidad, $detalle->precio_unitario, 2),
+                            2
+                        );
+                        // Agregar venta a la lista
+                        $productosAgrupados[$productoId]['ventas'][] = [
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                            'cantidad' => (float) $detalle->cantidad,
+                            'cliente_id' => $venta->cliente_id,
+                            'cliente_nombre' => $venta->cliente?->nombre ?? 'Sin cliente',
+                        ];
+                    } else {
+                        // Crear nuevo producto en el array
+                        $productosAgrupados[$productoId] = [
+                            'producto_id' => $productoId,
+                            'producto_nombre' => $detalle->producto?->nombre ?? 'Producto desconocido',
+                            'codigo_producto' => $detalle->producto?->codigo_barras ?? '',
+                            'cantidad_total' => (float) $detalle->cantidad,
+                            'precio_unitario' => (float) $detalle->precio_unitario,
+                            'subtotal' => bcmul($detalle->cantidad, $detalle->precio_unitario, 2),
+                            'unidad_medida' => $detalle->producto?->unidad?->nombre ?? 'Unidad',
+                            'ventas' => [
+                                [
+                                    'venta_id' => $venta->id,
+                                    'venta_numero' => $venta->numero,
+                                    'cantidad' => (float) $detalle->cantidad,
+                                    'cliente_id' => $venta->cliente_id,
+                                    'cliente_nombre' => $venta->cliente?->nombre ?? 'Sin cliente',
+                                ]
+                            ]
+                        ];
+                    }
+
+                    $cantidadTotal += (float) $detalle->cantidad;
+                }
+            }
+
+            // Reindexar array para que sea una lista en lugar de object
+            $productosAgrupados = array_values($productosAgrupados);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'entrega_id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'productos' => $productosAgrupados,
+                    'total_items' => count($productosAgrupados),
+                    'cantidad_total' => $cantidadTotal,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error obteniendo productos agrupados',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Exportar entrega a Excel
      *
      * GET /api/entregas/{entrega}/exportar-excel

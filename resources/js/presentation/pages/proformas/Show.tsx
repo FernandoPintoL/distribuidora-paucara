@@ -1296,6 +1296,14 @@ export default function ProformasShow({ item: proforma }: Props) {
                                         </div>
                                     )}
 
+                                    {/* Usuario Creador */}
+                                    {proforma.usuario_creador && (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium">Creado por</span>
+                                            <span className="font-medium text-foreground">{proforma.usuario_creador.name}</span>
+                                        </div>
+                                    )}
+
                                     {/* ✅ Dirección de Entrega (Solicitada o Confirmada) */}
                                     {(proforma.direccion_solicitada || proforma.direccion_confirmada) && (
                                         <div className="flex flex-col">

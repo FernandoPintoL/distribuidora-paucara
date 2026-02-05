@@ -917,40 +917,21 @@ class EntregaService
      */
     public function confirmarCarga(int $entregaId): EntregaResponseDTO
     {
-        $entrega = $this->transaction(function () use ($entregaId) {
-            $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
+        $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-            // Validar que esté en PREPARACION_CARGA
-            if ($entrega->estado !== Entrega::ESTADO_PREPARACION_CARGA) {
-                throw EstadoInvalidoException::transicionInvalida(
-                    'Entrega',
-                    $entregaId,
-                    $entrega->estado,
-                    Entrega::ESTADO_EN_CARGA
-                );
-            }
-
-            $estadoAnterior = $entrega->estado;
-
-            // Actualizar a EN_CARGA
-            $entrega->update([
-                'estado'                   => Entrega::ESTADO_EN_CARGA,
+        // Cambiar a LISTO_PARA_ENTREGA (desde PREPARACION_CARGA o EN_CARGA)
+        $entrega = $this->cambiarEstadoNormalizado(
+            $entrega,
+            Entrega::ESTADO_LISTO_PARA_ENTREGA,
+            [
                 'confirmado_carga_por'     => Auth::id(),
                 'fecha_confirmacion_carga' => now(),
-            ]);
+            ],
+            'Carga confirmada - Listo para entrega'
+        );
 
-            $this->registrarCambioEstado(
-                $entrega,
-                $estadoAnterior,
-                Entrega::ESTADO_EN_CARGA,
-                'Carga confirmada - Iniciando proceso de carga física'
-            );
-
-            // Recargar relaciones para WebSocket
-            $entrega->load(['chofer', 'ventas.cliente', 'confirmadorCarga']);
-
-            return $entrega;
-        });
+        // Recargar relaciones para WebSocket
+        $entrega->load(['chofer', 'ventas.cliente', 'confirmadorCarga']);
 
         $this->logSuccess('Carga confirmada', ['entrega_id' => $entregaId]);
 

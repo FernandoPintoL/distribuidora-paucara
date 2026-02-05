@@ -3,8 +3,6 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import SearchSelect from '@/presentation/components/ui/search-select';
-import NotificationService from '@/infrastructure/services/notification.service';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
 
 interface ModoManualProps {

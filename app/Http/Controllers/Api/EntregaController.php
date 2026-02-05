@@ -1918,6 +1918,15 @@ class EntregaController extends Controller
      */
     public function confirmarVentaCargada(\Illuminate\Http\Request $request, int $id, int $venta_id)
     {
+        // Validar que el usuario tiene uno de los roles permitidos
+        $rolesPermitidos = ['admin', 'Admin', 'cajero', 'Cajero', 'chofer', 'Chofer'];
+        if (!Auth::user()->hasAnyRole($rolesPermitidos)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para confirmar ventas cargadas. Roles permitidos: ' . implode(', ', $rolesPermitidos),
+            ], 403);
+        }
+
         try {
             $entrega = Entrega::findOrFail($id);
             $venta = \App\Models\Venta::findOrFail($venta_id);

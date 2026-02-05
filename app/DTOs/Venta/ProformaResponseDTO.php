@@ -42,6 +42,8 @@ class ProformaResponseDTO extends BaseDTO
         public int $items_count = 0,
         public string $created_at = '',
         public string $updated_at = '',
+        public ?int $usuario_creador_id = null,
+        public ?array $usuario_creador = null,
     ) {}
 
     /**
@@ -124,6 +126,12 @@ class ProformaResponseDTO extends BaseDTO
             items_count: $model->detalles->count(),
             created_at: $model->created_at->toIso8601String(),
             updated_at: $model->updated_at->toIso8601String(),
+            usuario_creador_id: $model->usuario_creador_id,
+            usuario_creador: $model->relationLoaded('usuarioCreador') && $model->usuarioCreador ? [
+                'id' => $model->usuarioCreador->id,
+                'name' => $model->usuarioCreador->name,
+                'email' => $model->usuarioCreador->email,
+            ] : null,
         );
     }
 

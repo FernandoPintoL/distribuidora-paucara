@@ -751,6 +751,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
             ->middleware('auth')
             ->name('entregas.debug');
 
+        // 📦 Obtener productos agrupados de una entrega (consolidando cantidades)
+        Route::get('/{entrega}/productos-agrupados', [\App\Http\Controllers\EntregaPdfController::class, 'obtenerProductosAgrupados'])
+            ->middleware('auth')
+            ->name('entregas.productos-agrupados');
+
         // Confirmar carga (cambiar a EN_CARGA)
         Route::post('/{id}/confirmar-carga', [EntregaController::class, 'confirmarCarga'])
             ->middleware('permission:entregas.update')

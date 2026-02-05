@@ -586,6 +586,7 @@ class ProformaService
             'direccionSolicitada',
             'direccionConfirmada',
             'moneda',
+            'usuarioCreador',
         ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);
