@@ -410,20 +410,22 @@ class InventarioInicialController extends Controller
             ];
 
             foreach ($borrador->items as $index => $item) {
-                if ($item->cantidad === null || $item->cantidad <= 0) {
-                    continue; // Saltar items sin cantidad
+                // Permitir cantidad 0 (reemplazar sin importar el valor)
+                if ($item->cantidad === null) {
+                    continue; // Solo saltar si es null
                 }
 
                 try {
                     if ($item->stock_producto_id) {
-                        // Actualizar stock existente
+                        // Reemplazar stock existente (no actualizar)
                         $stockProducto    = StockProducto::findOrFail($item->stock_producto_id);
                         $cantidadAnterior = $stockProducto->cantidad;
                         $diferencia       = $item->cantidad - $cantidadAnterior;
 
-                        // Actualizar cantidad y mantener invariante
+                        // REEMPLAZAR cantidad y cantidad_disponible (ignorar reservas previas)
                         $stockProducto->cantidad            = $item->cantidad;
-                        $stockProducto->cantidad_disponible = $item->cantidad - $stockProducto->cantidad_reservada;
+                        $stockProducto->cantidad_disponible = $item->cantidad; // REEMPLAZAR: igual a cantidad
+                        $stockProducto->cantidad_reservada  = 0; // REEMPLAZAR: siempre 0
                         $stockProducto->lote                = $item->lote;
                         $stockProducto->fecha_vencimiento   = $item->fecha_vencimiento;
                         if ($item->precio_costo) {
@@ -432,7 +434,7 @@ class InventarioInicialController extends Controller
                         $stockProducto->fecha_actualizacion = now();
                         $stockProducto->save();
 
-                        // Validar invariante
+                        // Validar invariante (ahora siempre se cumple: cantidad = cantidad_disponible + 0)
                         if ($stockProducto->validarInvariante() === false) {
                             throw new \Exception("Invariante de stock roto para producto_id={$item->producto_id}");
                         }

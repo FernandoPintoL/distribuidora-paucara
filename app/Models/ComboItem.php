@@ -18,6 +18,8 @@ class ComboItem extends Model
         'cantidad',
         'precio_unitario',
         'tipo_precio_id',
+        'es_obligatorio',
+        'grupo_opcional',
     ];
 
     protected function casts(): array

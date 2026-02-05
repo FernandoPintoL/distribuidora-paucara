@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ComboItem;
+use App\Models\ComboGrupo;
+use App\Models\ComboGrupoItem;
 use App\Models\Producto;
 use App\Models\PrecioProducto;
 use App\Models\TipoPrecio;
@@ -53,7 +55,7 @@ class ComboController extends Controller
 
         try {
             DB::transaction(function () use ($request, &$combo) {
-                $this->validarItems($request->items);
+                $this->validarItems($request->items, $request->grupo_opcional ?? null);
 
                 $combo = Producto::create([
                     'sku'            => $request->sku,
@@ -67,6 +69,11 @@ class ComboController extends Controller
                 ]);
 
                 $this->crearItems($combo->id, $request->items);
+
+                // Crear grupo opcional si existe
+                if (!empty($request->grupo_opcional)) {
+                    $this->crearGrupo($combo->id, $request->grupo_opcional);
+                }
 
                 // Crear precios para el combo (venta y costo con el mismo valor)
                 $this->crearPreciosProducto($combo->id, $request->precio_venta);
@@ -99,7 +106,11 @@ class ComboController extends Controller
     public function show(Producto $combo): Response
     {
         abort_unless($combo->es_combo, 404);
-        $combo->load('comboItems.producto:id,nombre,sku', 'comboItems.tipoPrecio:id,nombre');
+        $combo->load(
+            'comboItems.producto:id,nombre,sku',
+            'comboItems.tipoPrecio:id,nombre',
+            'comboGrupos.items.producto:id,nombre,sku'
+        );
 
         return Inertia::render('combos/show', ['combo' => $this->serializarCombo($combo)]);
     }
@@ -107,7 +118,11 @@ class ComboController extends Controller
     public function edit(Producto $combo): Response
     {
         abort_unless($combo->es_combo, 404);
-        $combo->load('comboItems.producto:id,nombre,sku', 'comboItems.tipoPrecio:id,nombre');
+        $combo->load(
+            'comboItems.producto:id,nombre,sku',
+            'comboItems.tipoPrecio:id,nombre',
+            'comboGrupos.items.producto:id,nombre,sku'
+        );
 
         return Inertia::render('combos/form', array_merge(
             $this->formProps(),
@@ -121,7 +136,7 @@ class ComboController extends Controller
         $this->validarRequest($request, $combo->id);
 
         DB::transaction(function () use ($request, $combo) {
-            $this->validarItems($request->items, comboId: $combo->id);
+            $this->validarItems($request->items, $request->grupo_opcional ?? null, comboId: $combo->id);
 
             $combo->update([
                 'sku'            => $request->sku,
@@ -132,7 +147,13 @@ class ComboController extends Controller
 
             // Delete-and-recreate atómico (mismo patrón que codigos_barra en ProductoController)
             $combo->comboItems()->delete();
+            $combo->comboGrupos()->delete(); // Eliminar grupos opcionales
             $this->crearItems($combo->id, $request->items);
+
+            // Crear grupo opcional si existe
+            if (!empty($request->grupo_opcional)) {
+                $this->crearGrupo($combo->id, $request->grupo_opcional);
+            }
 
             // Actualizar precios del combo (eliminar antiguos y crear nuevos)
             $combo->precios()->delete();
@@ -177,15 +198,21 @@ class ComboController extends Controller
         };
 
         $request->validate([
-            'sku'                    => ['required', 'string', 'min:2', 'max:255', $validarSkuUnico],
-            'nombre'                 => ['required', 'string', 'min:2', 'max:255'],
-            'descripcion'            => ['nullable', 'string', 'max:1000'],
-            'precio_venta'           => ['required', 'numeric', 'min:0'],
-            'items'                  => ['required', 'array', 'min:1'],
-            'items.*.producto_id'    => ['required', 'integer', 'exists:productos,id'],
-            'items.*.cantidad'       => ['required', 'numeric', 'min:0.01'],
-            'items.*.precio_unitario'=> ['required', 'numeric', 'min:0'],
-            'items.*.tipo_precio_id' => ['nullable', 'integer', 'exists:tipos_precio,id'],
+            'sku'                             => ['required', 'string', 'min:2', 'max:255', $validarSkuUnico],
+            'nombre'                          => ['required', 'string', 'min:2', 'max:255'],
+            'descripcion'                     => ['nullable', 'string', 'max:1000'],
+            'precio_venta'                    => ['required', 'numeric', 'min:0'],
+            'items'                           => ['required', 'array', 'min:1'],
+            'items.*.producto_id'             => ['required', 'integer', 'exists:productos,id'],
+            'items.*.cantidad'                => ['required', 'numeric', 'min:0'],
+            'items.*.precio_unitario'         => ['required', 'numeric', 'min:0'],
+            'items.*.tipo_precio_id'          => ['nullable', 'integer', 'exists:tipos_precio,id'],
+            'items.*.es_obligatorio'          => ['required', 'boolean'],
+            'items.*.grupo_opcional'          => ['nullable', 'string', 'min:2', 'max:50'],
+            'grupo_opcional'                  => ['nullable', 'array'],
+            'grupo_opcional.productos'        => ['nullable', 'array'],
+            'grupo_opcional.cantidad_a_llevar' => ['nullable', 'integer', 'min:1'],
+            'grupo_opcional.precio_grupo'     => ['nullable', 'numeric', 'min:0'],
         ], [
             'sku.required' => 'El SKU es requerido.',
             'nombre.required' => 'El nombre es requerido.',
@@ -194,7 +221,7 @@ class ComboController extends Controller
         ]);
     }
 
-    private function validarItems(array $items, ?int $comboId = null): void
+    private function validarItems(array $items, ?array $grupoOpcional = null, ?int $comboId = null): void
     {
         $productosIds = array_column($items, 'producto_id');
 
@@ -215,6 +242,56 @@ class ComboController extends Controller
         if ($inactivos->isNotEmpty()) {
             abort(422, 'Productos inactivos: ' . $inactivos->implode(', '));
         }
+
+        // ✅ Validar que haya al menos 1 producto obligatorio
+        $obligatorios = array_filter($items, fn($item) => $item['es_obligatorio'] ?? true);
+        if (empty($obligatorios)) {
+            abort(422, 'El combo debe tener al menos 1 producto obligatorio.');
+        }
+
+        // ✅ Validar cantidad: todos los productos deben tener cantidad > 0 como referencia
+        foreach ($items as $index => $item) {
+            $cantidad = $item['cantidad'] ?? 0;
+
+            if ($cantidad <= 0) {
+                abort(422, "Producto en posición " . ($index + 1) . " debe tener cantidad mayor a 0.");
+            }
+        }
+
+        // ✅ Si existe grupo opcional, validar su estructura
+        if ($grupoOpcional) {
+            $productosGrupo = $grupoOpcional['productos'] ?? [];
+            $cantidadALlevar = $grupoOpcional['cantidad_a_llevar'] ?? 2;
+            $precioGrupo = $grupoOpcional['precio_grupo'] ?? 0;
+
+            if (empty($productosGrupo)) {
+                abort(422, 'El grupo opcional debe tener al menos 1 producto.');
+            }
+
+            if ($cantidadALlevar < 1) {
+                abort(422, 'La cantidad a llevar del grupo debe ser al menos 1.');
+            }
+
+            if ($precioGrupo < 0) {
+                abort(422, 'El precio del grupo debe ser mayor o igual a 0.');
+            }
+
+            // Validar que cantidad_a_llevar no exceda la cantidad de productos en el grupo
+            if ($cantidadALlevar > count($productosGrupo)) {
+                abort(422, "No puede llevar $cantidadALlevar productos si el grupo solo tiene " . count($productosGrupo) . '.');
+            }
+
+            Log::info('✅ [ComboController::validarItems] Grupo opcional validado', [
+                'productos_en_grupo' => count($productosGrupo),
+                'cantidad_a_llevar' => $cantidadALlevar,
+                'precio_grupo' => $precioGrupo,
+            ]);
+        }
+
+        Log::info('✅ [ComboController::validarItems] Items validados correctamente', [
+            'total_items' => count($items),
+            'obligatorios' => count($obligatorios),
+        ]);
     }
 
     private function crearItems(int $comboId, array $items): void
@@ -226,8 +303,46 @@ class ComboController extends Controller
                 'cantidad'        => $item['cantidad'],
                 'precio_unitario' => $item['precio_unitario'],
                 'tipo_precio_id'  => $item['tipo_precio_id'] ?? null,
+                'es_obligatorio'  => $item['es_obligatorio'] ?? true,
+                'grupo_opcional'  => $item['grupo_opcional'] ?? null,
             ]);
         }
+    }
+
+    private function crearGrupo(int $comboId, array $grupoOpcional): void
+    {
+        $nombreGrupo = $grupoOpcional['nombre_grupo'] ?? '';
+        $productosIds = $grupoOpcional['productos'] ?? [];
+        $cantidadALlevar = $grupoOpcional['cantidad_a_llevar'] ?? 2;
+        $precioGrupo = $grupoOpcional['precio_grupo'] ?? 0;
+
+        if (empty($nombreGrupo) || empty($productosIds)) {
+            return;
+        }
+
+        // Crear el grupo
+        $grupo = ComboGrupo::create([
+            'combo_id'           => $comboId,
+            'nombre_grupo'       => $nombreGrupo,
+            'cantidad_a_llevar'  => $cantidadALlevar,
+            'precio_grupo'       => $precioGrupo,
+        ]);
+
+        // Agregar productos al grupo
+        foreach ($productosIds as $productoId) {
+            ComboGrupoItem::create([
+                'grupo_id'    => $grupo->id,
+                'producto_id' => $productoId,
+            ]);
+        }
+
+        Log::info('✅ [ComboController::crearGrupo] Grupo opcional creado', [
+            'grupo_id'          => $grupo->id,
+            'nombre_grupo'      => $nombreGrupo,
+            'productos'         => count($productosIds),
+            'cantidad_a_llevar' => $cantidadALlevar,
+            'precio_grupo'      => $precioGrupo,
+        ]);
     }
 
     private function crearPreciosProducto(int $comboId, float $precioVenta): void
@@ -281,7 +396,20 @@ class ComboController extends Controller
                 'precio_unitario'    => (float) $item->precio_unitario,
                 'tipo_precio_id'     => $item->tipo_precio_id,
                 'tipo_precio_nombre' => $item->tipoPrecio?->nombre,
+                'es_obligatorio'     => (bool) $item->es_obligatorio,
+                'grupo_opcional'     => $item->grupo_opcional,
             ])->values()->toArray(),
+            'grupo_opcional' => $combo->comboGrupos->isNotEmpty() ? [
+                'nombre_grupo'       => $combo->comboGrupos->first()->nombre_grupo,
+                'cantidad_a_llevar'  => $combo->comboGrupos->first()->cantidad_a_llevar,
+                'precio_grupo'       => (float) $combo->comboGrupos->first()->precio_grupo,
+                'productos'          => $combo->comboGrupos->first()->items->pluck('producto_id')->toArray(),
+                'productos_detalle'  => $combo->comboGrupos->first()->items->map(fn(ComboGrupoItem $item) => [
+                    'producto_id'   => $item->producto_id,
+                    'producto_nombre' => $item->producto?->nombre,
+                    'producto_sku'  => $item->producto?->sku,
+                ])->toArray(),
+            ] : null,
         ];
     }
 }

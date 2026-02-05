@@ -47,6 +47,8 @@ interface ComboItem {
   precio_unitario: number;
   tipo_precio_id?: number;
   tipo_precio_nombre?: string;
+  es_obligatorio?: boolean;
+  grupo_opcional?: string | null;
   precios?: Array<{
     id: number;
     tipo_precio_id: number;
@@ -57,6 +59,18 @@ interface ComboItem {
       nombre: string;
       codigo: string;
     };
+  }>;
+}
+
+interface GrupoOpcional {
+  nombre_grupo: string;
+  cantidad_a_llevar: number;
+  precio_grupo: number;
+  productos: number[];
+  productos_detalle?: Array<{
+    producto_id: number;
+    producto_nombre: string;
+    producto_sku: string;
   }>;
 }
 
@@ -96,6 +110,9 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
   const [precioUnitario, setPrecioUnitario] = useState(0);
+  const [esObligatorio, setEsObligatorio] = useState(true);
+  const [cantidadALlevar, setCantidadALlevar] = useState(2);
+  const [precioGrupo, setPrecioGrupo] = useState(0);
   const [loadingSearch, setLoadingSearch] = useState(false);
 
   // Función para normalizar items y asegurar que todos los números sean tipo number
@@ -113,7 +130,33 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     descripcion: combo?.descripcion || '',
     precio_venta: combo?.precio_venta || 0,
     items: normalizeItems(items),
+    grupo_opcional: null,
   });
+
+  const productosOpcionales = items.filter(item => !item.es_obligatorio);
+
+  // Cargar datos del grupo opcional cuando se abre un combo existente (edición)
+  useEffect(() => {
+    if (isEditing && combo?.grupo_opcional) {
+      console.log('📦 Cargando grupo opcional:', combo.grupo_opcional);
+      setCantidadALlevar(combo.grupo_opcional.cantidad_a_llevar || 2);
+      setPrecioGrupo(combo.grupo_opcional.precio_grupo || 0);
+    } else if (isEditing) {
+      console.log('⚠️ Combo abierto pero NO tiene grupo_opcional');
+    }
+  }, [isEditing, combo?.grupo_opcional]);
+
+  // Actualizar grupo_opcional cuando cambien los items, SKU o configuración del grupo
+  useEffect(() => {
+    const grupoOpcionalData = productosOpcionales.length > 0 ? {
+      nombre_grupo: data.sku,
+      cantidad_a_llevar: cantidadALlevar,
+      precio_grupo: precioGrupo,
+      productos: productosOpcionales.map(p => p.producto_id),
+    } : null;
+
+    setData('grupo_opcional', grupoOpcionalData);
+  }, [productosOpcionales.length, data.sku, cantidadALlevar, precioGrupo, items]);
 
   // Buscar productos
   const handleSearch = useCallback(async (query: string) => {
@@ -158,6 +201,8 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                 tipo_precio_nombre: producto.precios?.find(
                   p => p.tipo_precio_id === producto.tipo_precio_id_recomendado
                 )?.tipoPrecio?.nombre,
+                es_obligatorio: true,
+                grupo_opcional: null,
                 precios: producto.precios,
               };
               const updatedItemsFromSearch = [...items, newComboItem];
@@ -167,6 +212,8 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
               setSearchQuery('');
               setCantidad(1);
               setPrecioUnitario(0);
+              setEsObligatorio(true);
+              setGrupoOpcional('');
             }, 200);
           } else {
             alert('Este producto ya está en el combo');
@@ -199,6 +246,8 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
       tipo_precio_nombre: producto.precios?.find(
         p => p.tipo_precio_id === producto.tipo_precio_id_recomendado
       )?.tipoPrecio?.nombre,
+      es_obligatorio: true,
+      grupo_opcional: null,
       precios: producto.precios,
     };
 
@@ -213,6 +262,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     setSelectedProducto(null);
     setCantidad(1);
     setPrecioUnitario(0);
+    setEsObligatorio(true);
   };
 
   const handleAddItem = () => {
@@ -233,12 +283,14 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
       producto_id: selectedProducto.id,
       producto_nombre: selectedProducto.nombre,
       producto_sku: selectedProducto.sku,
-      cantidad,
+      cantidad: cantidad,
       precio_unitario: precioUnitario || selectedProducto.precio_venta || 0,
       tipo_precio_id: selectedProducto.tipo_precio_id_recomendado,
       tipo_precio_nombre: selectedProducto.precios?.find(
         p => p.tipo_precio_id === selectedProducto.tipo_precio_id_recomendado
       )?.tipoPrecio?.nombre,
+      es_obligatorio: esObligatorio,
+      grupo_opcional: null,
       precios: selectedProducto.precios,
     };
 
@@ -249,6 +301,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     setSearchQuery('');
     setCantidad(1);
     setPrecioUnitario(0);
+    setEsObligatorio(true);
   };
 
   const handleRemoveItem = (productoId: number) => {
@@ -304,27 +357,71 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
     setData('items', normalizeItems(updatedItems));
   };
 
-  const totalCosto = useMemo(() => {
-    return items.reduce((sum, item) => {
-      return sum + parseFloat(item.precio_unitario.toString()) * parseFloat(item.cantidad.toString());
-    }, 0);
-  }, [items]);
+  const handleUpdateEsObligatorio = (productoId: number, esObligatorio: boolean) => {
+    const updatedItems = items.map(item => {
+      if (item.producto_id === productoId) {
+        return {
+          ...item,
+          es_obligatorio: esObligatorio,
+          grupo_opcional: null,
+        };
+      }
+      return item;
+    });
+    setItems(updatedItems);
+    setData('items', normalizeItems(updatedItems));
+  };
 
-  // Auto-actualizar precio_venta con el totalCosto cuando items cambian
+  const totalCosto = useMemo(() => {
+    // Sumar SOLO costo de productos obligatorios
+    const costoObligatorios = items.reduce((sum, item) => {
+      const esObligatorio = item.es_obligatorio !== false;
+      const cantidad = parseFloat(item.cantidad.toString());
+      const precio = parseFloat(item.precio_unitario.toString());
+
+      if (esObligatorio && cantidad > 0) {
+        return sum + precio * cantidad;
+      }
+      return sum;
+    }, 0);
+
+    // Sumar costo del grupo opcional: cantidad_a_llevar × precio_grupo
+    const costoGrupo = productosOpcionales.length > 0
+      ? cantidadALlevar * precioGrupo
+      : 0;
+
+    return costoObligatorios + costoGrupo;
+  }, [items, productosOpcionales.length, cantidadALlevar, precioGrupo]);
+
+  // Auto-actualizar precio_venta con el totalCosto cuando items o grupo cambian
   // Solo si precio_venta es 0 o es igual al anterior totalCosto
   const [previousTotalCosto, setPreviousTotalCosto] = useState(0);
+  const [previousItemsLength, setPreviousItemsLength] = useState(0);
+  const [previousProductosOpcionalesLength, setPreviousProductosOpcionalesLength] = useState(0);
 
   useEffect(() => {
-    if (items.length > 0) {
-      // Si es la primera vez (precio_venta === 0) o si el precio_venta actual es igual al costo anterior,
-      // actualizar al nuevo costo total
-      const currentPrecioVenta = parseFloat(data.precio_venta.toString());
-      if (currentPrecioVenta === 0 || Math.abs(currentPrecioVenta - previousTotalCosto) < 0.01) {
+    const currentPrecioVenta = parseFloat(data.precio_venta.toString());
+
+    // Detectar si se eliminó un producto (items.length disminuyó)
+    const itemsWereRemoved = items.length < previousItemsLength;
+    // Detectar si cambió la cantidad de opcionales (obligatorio → opcional o viceversa)
+    const opcionalStatusChanged = productosOpcionales.length !== previousProductosOpcionalesLength;
+
+    if (items.length > 0 || productosOpcionales.length > 0) {
+      // Actualizar si:
+      // 1. Es la primera vez (precio_venta === 0)
+      // 2. El precio actual es igual al costo anterior (cambio manual no detectado)
+      // 3. Se eliminó un producto (itemsWereRemoved)
+      // 4. Cambió de obligatorio a opcional o viceversa (opcionalStatusChanged)
+      if (currentPrecioVenta === 0 || Math.abs(currentPrecioVenta - previousTotalCosto) < 0.01 || itemsWereRemoved || opcionalStatusChanged) {
         setData('precio_venta', totalCosto);
       }
     }
+
     setPreviousTotalCosto(totalCosto);
-  }, [totalCosto, items.length]);
+    setPreviousItemsLength(items.length);
+    setPreviousProductosOpcionalesLength(productosOpcionales.length);
+  }, [totalCosto, items.length, productosOpcionales.length]);
 
   // Mostrar toasts para errores
   useEffect(() => {
@@ -556,33 +653,69 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                 )}
               </div>
 
-              {/* Cantidad y Precio unitario */}
+              {/* Cantidad, Precio unitario y Tipo de producto */}
               {selectedProducto && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="cantidad">Cantidad *</Label>
-                    <Input
-                      id="cantidad"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="1"
-                      value={cantidad}
-                      onChange={(e) => setCantidad(parseFloat(e.target.value) || 1)}
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cantidad">Cantidad *</Label>
+                      <Input
+                        id="cantidad"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="1"
+                        value={cantidad}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            setCantidad(0);
+                          } else {
+                            setCantidad(parseFloat(val) || 0);
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="precio_unitario">Precio Unitario *</Label>
+                      <Input
+                        id="precio_unitario"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={precioUnitario}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            setPrecioUnitario(0);
+                          } else {
+                            setPrecioUnitario(parseFloat(val) || 0);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
 
+                  {/* Tipo de Producto: Obligatorio vs Opcional */}
                   <div>
-                    <Label htmlFor="precio_unitario">Precio Unitario *</Label>
-                    <Input
-                      id="precio_unitario"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={precioUnitario}
-                      onChange={(e) => setPrecioUnitario(parseFloat(e.target.value) || 0)}
-                    />
+                    <Label htmlFor="es_obligatorio">Tipo de Producto *</Label>
+                    <select
+                      id="es_obligatorio"
+                      value={esObligatorio ? 'obligatorio' : 'opcional'}
+                      onChange={(e) => setEsObligatorio(e.target.value === 'obligatorio')}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-gray-100"
+                    >
+                      <option value="obligatorio">Obligatorio</option>
+                      <option value="opcional">Opcional</option>
+                    </select>
+                    {!esObligatorio && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                        ℹ️ Se asignará automáticamente al grupo: <strong>{data.sku || '[SKU del combo]'}</strong>
+                      </p>
+                    )}
                   </div>
+
                   <div>
                     <Button
                       type="button"
@@ -593,7 +726,6 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                       Agregar a la Tabla
                     </Button>
                   </div>
-
                 </div>
 
               )}
@@ -601,6 +733,68 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
 
             </CardContent>
           </Card>
+
+          {/* Sección: Configuración del Grupo Opcional */}
+          {productosOpcionales.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuración del Grupo Opcional</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-4">
+                    📦 Grupo: <strong>{data.sku || '[SKU del combo]'}</strong>
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cantidad_a_llevar">Cantidad a llevar *</Label>
+                      <Input
+                        id="cantidad_a_llevar"
+                        type="number"
+                        min="1"
+                        max={productosOpcionales.length}
+                        value={cantidadALlevar}
+                        onChange={(e) => setCantidadALlevar(parseInt(e.target.value) || 1)}
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Máximo: {productosOpcionales.length} productos
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="precio_grupo">Precio por item *</Label>
+                      <Input
+                        id="precio_grupo"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={precioGrupo}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPrecioGrupo(val === '' ? 0 : parseFloat(val) || 0);
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Precio fijo para todos los productos del grupo
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos en el grupo:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {productosOpcionales.map((item) => (
+                        <Badge key={item.producto_id} variant="secondary">
+                          {item.producto_nombre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Sección: Tabla de productos */}
           {items.length > 0 && (
@@ -618,75 +812,116 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                         <TableHead className="text-center">Precio Unit.</TableHead>
                         <TableHead className="text-center">Subtotal</TableHead>
                         <TableHead>Tipo de Precio</TableHead>
+                        <TableHead className="text-center">Obligatorio</TableHead>
                         <TableHead className="text-center">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {items.map((item) => (
-                        <TableRow key={item.producto_id}>
-                          <TableCell>
-                            <div className="font-medium text-sm">{item.producto_nombre}</div>
-                            <div className="text-xs text-gray-500">{item.producto_sku}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              value={item.cantidad}
-                              onChange={(e) =>
-                                handleUpdateCantidad(item.producto_id, parseFloat(e.target.value) || 1)
-                              }
-                              className="w-20 px-2 py-1 text-sm"
-                            />
-                          </TableCell>
-                          <TableCell className='text-center'>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              value={item.precio_unitario}
-                              onChange={(e) =>
-                                handleUpdatePrecioUnitario(item.producto_id, parseFloat(e.target.value) || 0)
-                              }
-                              className="w-24 px-2 py-1 text-sm"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center font-medium">
-                            Bs {(parseFloat(item.precio_unitario.toString()) * parseFloat(item.cantidad.toString())).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <select
-                              value={item.tipo_precio_id || ''}
-                              onChange={(e) =>
-                                handleUpdateTipoPrecio(
-                                  item.producto_id,
-                                  e.target.value ? parseInt(e.target.value) : undefined
-                                )
-                              }
-                              className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded dark:bg-gray-800 dark:text-gray-100"
-                            >
-                              <option value="">Sin especificar</option>
-                              {tipos_precio.map((tipo) => (
-                                <option key={tipo.id} value={tipo.id}>
-                                  {tipo.nombre}
-                                </option>
-                              ))}
-                            </select>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveItem(item.producto_id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 size={18} />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {items.map((item) => {
+                        const esObligatorio = item.es_obligatorio !== false;
+                        const cantidad = parseFloat(item.cantidad.toString());
+                        const sumaACosto = esObligatorio && cantidad > 0; // Solo obligatorios suman al costo
+                        return (
+                          <TableRow key={item.producto_id} className={!esObligatorio ? 'bg-blue-50 dark:bg-blue-900/10' : ''}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <div className="font-medium text-sm">{item.producto_nombre}</div>
+                                  <div className="text-xs text-gray-500">{item.producto_sku}</div>
+                                </div>
+                                {!esObligatorio && (
+                                  <Badge variant="outline" className="text-blue-600 dark:text-blue-400">
+                                    Opcional
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.cantidad}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '') {
+                                    handleUpdateCantidad(item.producto_id, 0);
+                                  } else {
+                                    handleUpdateCantidad(item.producto_id, parseFloat(val) || 0);
+                                  }
+                                }}
+                                className="w-20 px-2 py-1 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell className='text-center'>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.precio_unitario}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '') {
+                                    handleUpdatePrecioUnitario(item.producto_id, 0);
+                                  } else {
+                                    handleUpdatePrecioUnitario(item.producto_id, parseFloat(val) || 0);
+                                  }
+                                }}
+                                className="w-24 px-2 py-1 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell className={`text-center font-medium ${sumaACosto ? 'text-green-600 dark:text-green-400' : 'text-gray-400 line-through'}`}>
+                              Bs {(parseFloat(item.precio_unitario.toString()) * cantidad).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <select
+                                value={item.tipo_precio_id || ''}
+                                onChange={(e) =>
+                                  handleUpdateTipoPrecio(
+                                    item.producto_id,
+                                    e.target.value ? parseInt(e.target.value) : undefined
+                                  )
+                                }
+                                className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="">Sin especificar</option>
+                                {tipos_precio.map((tipo) => (
+                                  <option key={tipo.id} value={tipo.id}>
+                                    {tipo.nombre}
+                                  </option>
+                                ))}
+                              </select>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <select
+                                value={item.es_obligatorio ? 'obligatorio' : 'opcional'}
+                                onChange={(e) =>
+                                  handleUpdateEsObligatorio(
+                                    item.producto_id,
+                                    e.target.value === 'obligatorio'
+                                  )
+                                }
+                                className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="obligatorio">Obligatorio</option>
+                                <option value="opcional">Opcional</option>
+                              </select>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(item.producto_id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 size={18} />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+
                     </TableBody>
                   </Table>
                 </div>
@@ -701,22 +936,49 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                 <CardTitle>Resumen de Precios</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Costo obligatorios */}
                 <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
-                  <span className="text-gray-600 dark:text-gray-400">Costo Total Calculado:</span>
-                  <span className="font-semibold dark:text-gray-100">Bs {totalCosto.toFixed(2)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Costo Obligatorios:</span>
+                  <span className="font-semibold dark:text-gray-100">
+                    Bs {items.reduce((sum, item) => {
+                      const esObligatorio = item.es_obligatorio !== false;
+                      const cantidad = parseFloat(item.cantidad.toString());
+                      const precio = parseFloat(item.precio_unitario.toString());
+                      if (esObligatorio && cantidad > 0) {
+                        return sum + precio * cantidad;
+                      }
+                      return sum;
+                    }, 0).toFixed(2)}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
-                  <span className="text-gray-600 dark:text-gray-400">Precio de Venta:</span>
-                  <span className="font-semibold dark:text-gray-100">Bs {typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
+
+                {/* Costo grupo opcional */}
+                {productosOpcionales.length > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Costo Grupo Opcional ({cantidadALlevar} × Bs {precioGrupo.toFixed(2)}):
+                    </span>
+                    <span className="font-semibold dark:text-gray-100">Bs {(cantidadALlevar * precioGrupo).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* Costo total */}
+                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2 rounded">
+                  <span className="text-gray-600 dark:text-gray-400 font-medium">Costo Total Calculado:</span>
+                  <span className="font-bold text-lg dark:text-gray-100">Bs {totalCosto.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-2 bg-blue-50 dark:bg-blue-900/20 px-2 rounded border border-blue-200 dark:border-blue-800">
+                  <span className="text-gray-600 dark:text-gray-400 font-medium">Precio de Venta (Auto):</span>
+                  <span className="font-bold text-lg dark:text-gray-100">Bs {typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
+                </div>
+                {/* <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">Margen de Ganancia:</span>
                   <Badge
                     variant={margen > 0 ? 'default' : margen < 0 ? 'destructive' : 'secondary'}
                   >
                     {margen.toFixed(2)}%
                   </Badge>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           )}

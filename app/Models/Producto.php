@@ -101,6 +101,11 @@ class Producto extends Model
         return $this->hasMany(ComboItem::class, 'combo_id');
     }
 
+    public function comboGrupos()
+    {
+        return $this->hasMany(ComboGrupo::class, 'combo_id');
+    }
+
     public function stock()
     {
         return $this->hasMany(StockProducto::class, 'producto_id');

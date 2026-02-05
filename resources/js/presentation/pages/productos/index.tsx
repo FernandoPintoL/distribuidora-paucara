@@ -5,6 +5,9 @@ import { productosConfig } from '@/config/modules/productos.config';
 import productosService from '@/infrastructure/services/productos.service';
 import type { Pagination } from '@/domain/entities/shared';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';
+import { Link } from '@inertiajs/react';
+import { Button } from '@/presentation/components/ui/button';
+import { Package } from 'lucide-react';
 
 interface ProductosIndexProps {
   productos: Pagination<Producto>;
@@ -31,6 +34,14 @@ export default function ProductosIndex({ productos, filters, categorias, marcas,
       { title: 'Dashboard', href: productosService.indexUrl() },
       { title: 'Productos', href: productosService.indexUrl() }
     ]}>
+      <div className="mb-4 flex justify-end">
+        <Link href="/combos">
+          <Button variant="outline" className="gap-2">
+            <Package size={18} />
+            Ir a Combos
+          </Button>
+        </Link>
+      </div>
       <GenericContainer<Producto, ProductoFormData>
         entities={productos}
         filters={filters}

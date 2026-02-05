@@ -201,6 +201,7 @@ class ProductoController extends Controller
                     'activo'                => $producto->activo,
                     'fecha_creacion'        => $producto->fecha_creacion,
                     'es_alquilable'         => $producto->es_alquilable,
+                    'es_combo'              => (bool) $producto->es_combo,
                     'categoria_id'          => $producto->categoria_id,
                     'marca_id'              => $producto->marca_id,
                     'proveedor_id'          => $producto->proveedor_id,

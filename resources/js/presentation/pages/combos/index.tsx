@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/presentation/components/ui/table';
 import { Badge } from '@/presentation/components/ui/badge';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, Package } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import * as routes from '@/routes/combos';
 
@@ -109,7 +109,7 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Items</TableHead>
                       <TableHead className="text-center">Precio Venta</TableHead>
-                      <TableHead className="text-center">Costo Calculado</TableHead>
+                      {/* <TableHead className="text-center">Costo Calculado</TableHead> */}
                       <TableHead className="text-center">Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -123,9 +123,9 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                         <TableCell className="text-right">
                           Bs {combo.precio_venta.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        {/* <TableCell className="text-right">
                           Bs {combo.subtotal_costo.toFixed(2)}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="text-center">
                           <Badge variant={combo.activo ? 'default' : 'secondary'}>
                             {combo.activo ? 'Activo' : 'Inactivo'}
@@ -133,7 +133,12 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Link href={routes.edit(combo.id).url}>
+                            <Link href={`/productos/${combo.id}/edit`} title="Editar producto">
+                              <Button variant="ghost" size="sm">
+                                <Package size={18} />
+                              </Button>
+                            </Link>
+                            <Link href={routes.edit(combo.id).url} title="Editar combo">
                               <Button variant="ghost" size="sm">
                                 <Edit size={18} />
                               </Button>
@@ -143,6 +148,7 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                               size="sm"
                               onClick={() => setDeleteConfirm(combo.id)}
                               className="text-red-600 hover:text-red-700"
+                              title="Eliminar combo"
                             >
                               <Trash2 size={18} />
                             </Button>
