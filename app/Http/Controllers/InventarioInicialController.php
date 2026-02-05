@@ -520,6 +520,7 @@ class InventarioInicialController extends Controller
 
     /**
      * Cargar productos paginados al borrador con stock actual
+     * Prioridad: ID exacto > SKU exacto > Código de barras exacto > Búsqueda parcial
      */
     public function loadProductsPaginated(Request $request, $borradorId)
     {
@@ -540,31 +541,118 @@ class InventarioInicialController extends Controller
         $perPage = $validated['per_page'] ?? 30;
         $search  = $validated['search'] ?? '';
 
-        // Obtener productos activos con paginación
+        $exactMatch = false; // Flag para indicar si es búsqueda exacta
+
+        // Obtener productos activos
         $productosQuery = Producto::with(['categoria', 'marca', 'unidad', 'codigosBarra'])
             ->where('activo', true);
 
-        // Aplicar búsqueda
+        // Aplicar búsqueda con PRIORIDAD
         if (! empty($search)) {
             $searchLower = strtolower($search);
-            $productosQuery->where(function ($q) use ($search, $searchLower) {
-                $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
-                    ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
-                // Buscar en la tabla codigos_barra
-                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
-                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
-                            ->where('activo', true);
-                    });
-            });
+            $searchNumeric = is_numeric($search) ? (int) $search : null;
+
+            // INTENTO 1: Búsqueda exacta por ID (si es número)
+            if ($searchNumeric !== null) {
+                $productosPorId = (clone $productosQuery)->where('id', $searchNumeric)->get();
+                if ($productosPorId->count() > 0) {
+                    $productos = $productosPorId;
+                    $exactMatch = true;
+                    $page = 1;
+                } else {
+                    // INTENTO 2: Búsqueda exacta por SKU
+                    $productosPorSku = (clone $productosQuery)
+                        ->whereRaw('LOWER(sku) = ?', [$searchLower])
+                        ->get();
+
+                    if ($productosPorSku->count() > 0) {
+                        $productos = $productosPorSku;
+                        $exactMatch = true;
+                        $page = 1;
+                    } else {
+                        // INTENTO 3: Búsqueda exacta por código de barras
+                        $productosPorCodigo = (clone $productosQuery)
+                            ->whereHas('codigosBarra', function ($q) use ($searchLower) {
+                                $q->whereRaw('LOWER(codigo) = ?', [$searchLower])
+                                    ->where('activo', true);
+                            })
+                            ->get();
+
+                        if ($productosPorCodigo->count() > 0) {
+                            $productos = $productosPorCodigo;
+                            $exactMatch = true;
+                            $page = 1;
+                        } else {
+                            // INTENTO 4: Búsqueda parcial (fallback)
+                            $productosQuery->where(function ($q) use ($search, $searchLower) {
+                                $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
+                                    ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
+                                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
+                                            ->where('activo', true);
+                                    });
+                            });
+                            $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+                        }
+                    }
+                }
+            } else {
+                // INTENTO 2: Búsqueda exacta por SKU (si no es número)
+                $productosPorSku = (clone $productosQuery)
+                    ->whereRaw('LOWER(sku) = ?', [$searchLower])
+                    ->get();
+
+                if ($productosPorSku->count() > 0) {
+                    $productos = $productosPorSku;
+                    $exactMatch = true;
+                    $page = 1;
+                } else {
+                    // INTENTO 3: Búsqueda exacta por código de barras
+                    $productosPorCodigo = (clone $productosQuery)
+                        ->whereHas('codigosBarra', function ($q) use ($searchLower) {
+                            $q->whereRaw('LOWER(codigo) = ?', [$searchLower])
+                                ->where('activo', true);
+                        })
+                        ->get();
+
+                    if ($productosPorCodigo->count() > 0) {
+                        $productos = $productosPorCodigo;
+                        $exactMatch = true;
+                        $page = 1;
+                    } else {
+                        // INTENTO 4: Búsqueda parcial (fallback)
+                        $productosQuery->where(function ($q) use ($search, $searchLower) {
+                            $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
+                                ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
+                                ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
+                                    $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
+                                        ->where('activo', true);
+                                });
+                        });
+                        $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+                    }
+                }
+            }
+        } else {
+            $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
         }
 
-        $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+        // Convertir a colección si es resultado exacto (no paginado)
+        if ($exactMatch && !($productos instanceof \Illuminate\Pagination\LengthAwarePaginator)) {
+            $productosArray = $productos->toArray();
+        } else {
+            $productosArray = $productos instanceof \Illuminate\Pagination\LengthAwarePaginator
+                ? $productos->items()
+                : $productos->toArray();
+        }
 
         // Obtener almacenes activos
         $almacenes = Almacen::where('activo', true)->get();
 
         // Agregar productos al borrador con stock actual
-        $productosIds = $productos->pluck('id')->toArray();
+        $productosIds = is_array($productosArray)
+            ? collect($productosArray)->pluck('id')->toArray()
+            : collect($productosArray)->pluck('id')->toArray();
 
         // Usar el método existente para agregar productos (ya carga stock)
         $items = [];
@@ -615,12 +703,14 @@ class InventarioInicialController extends Controller
 
         return response()->json([
             'success'      => true,
-            'productos'    => $productos->items(),
-            'current_page' => $productos->currentPage(),
-            'last_page'    => $productos->lastPage(),
-            'per_page'     => $productos->perPage(),
-            'total'        => $productos->total(),
+            'productos'    => $productosArray,
+            'current_page' => $productos instanceof \Illuminate\Pagination\LengthAwarePaginator ? $productos->currentPage() : 1,
+            'last_page'    => $productos instanceof \Illuminate\Pagination\LengthAwarePaginator ? $productos->lastPage() : 1,
+            'per_page'     => $productos instanceof \Illuminate\Pagination\LengthAwarePaginator ? $productos->perPage() : count($productosArray),
+            'total'        => count($productosArray),
             'itemsAdded'   => count($items),
+            'exactMatch'   => $exactMatch,
+            'resultCount'  => count($productosArray),
         ]);
     }
 

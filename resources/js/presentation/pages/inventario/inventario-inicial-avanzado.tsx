@@ -594,11 +594,11 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
         try {
             setBuscandoEnDB(true);
-            console.log(`🔍 Buscando en DB: "${termino}"`);
+            console.log(`🔍 Buscando en DB: "${termino}" con PRIORIDAD (ID > SKU > Código de Barras)`);
 
-            // Usar el endpoint de sugerencias que SOLO busca sin agregar nada
+            // Usar el endpoint load-paginated que tiene la lógica de PRIORIDAD
             const response = await fetch(
-                getRoute('inicial.draft.productos.suggestions', { borrador: borrador.id }),
+                getRoute('inicial.draft.productos.load-paginated', { borrador: borrador.id }),
                 {
                     method: 'POST',
                     headers: {
@@ -607,13 +607,14 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                         'X-CSRF-Token': getCsrfToken(),
                     },
                     body: JSON.stringify({
+                        page: 1,
+                        per_page: 30,
                         search: termino,
-                        per_page: 10,
                     }),
                 }
             );
 
-            console.log('Respuesta de búsqueda en DB recibida', response.body);
+            console.log('Respuesta de búsqueda en DB recibida', response.status);
 
             if (!response.ok) {
                 throw new Error('Error al buscar en BD');
@@ -621,17 +622,37 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
             const data = await response.json();
             const productos = data.productos || [];
+            const resultCount = data.resultCount || 0;
+            const exactMatch = data.exactMatch || false;
 
-            if (!productos || productos.length === 0) {
+            if (!productos || resultCount === 0) {
                 NotificationService.error(
                     `❌ No se encontraron productos\nBúsqueda: "${termino}"\n\nVerifica nombre, SKU o código de barras`
                 );
                 return;
             }
 
-            console.log(`✅ Encontrados ${productos.length} producto(s)`);
+            console.log(`✅ Encontrados ${resultCount} producto(s) | exactMatch: ${exactMatch}`);
 
-            // Actualizar sugerencias con los productos encontrados en BD
+            // ✅ SI ES BÚSQUEDA EXACTA Y ENCONTRÓ 1 SOLO PRODUCTO → AGREGAR AUTOMÁTICAMENTE
+            if (exactMatch && resultCount === 1 && productos[0]) {
+                console.log(`🎯 COINCIDENCIA EXACTA - Agregando automáticamente: ${productos[0].nombre}`);
+
+                // Agregar el producto automáticamente
+                await agregarProductos([productos[0].id]);
+
+                // Limpiar búsqueda
+                setBusqueda('');
+                setSugerencias([]);
+                setMostrarSugerencias(false);
+
+                NotificationService.success(
+                    `✓ Producto agregado automáticamente:\n${productos[0].nombre}`
+                );
+                return;
+            }
+
+            // Si encuentra múltiples resultados o es búsqueda parcial → mostrar dropdown
             const sugerenciasDelDB = productos.map((p: any) => ({
                 producto_id: p.id,
                 almacen_id: '',
@@ -643,19 +664,15 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 almacen: null,
             }));
 
-            setSugerencias(sugerenciasDelDB.slice(0, 10)); // Mostrar hasta 10 sugerencias
-            setMostrarSugerencias(true); // ✅ Mostrar el dropdown
-
-            // NO cargar borrador automáticamente - Solo mostrar sugerencias
-            // await cargarBorrador(borrador.id);
-
-            // Resetear paginación a página 1 para mostrar resultados
+            setSugerencias(sugerenciasDelDB.slice(0, 10));
+            setMostrarSugerencias(true);
             setPaginaActual(1);
 
-            /* NotificationService.success(
-                // `✓ Se encontraron ${productos.length} producto(s)\n\n${productos.map((p: any) => p.nombre).join(', ')}`
-                `✓ Se encontraron ${productos.length} producto(s)`
-            ); */
+            if (resultCount > 1) {
+                NotificationService.info(
+                    `Se encontraron ${resultCount} productos - Selecciona uno`
+                );
+            }
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
             console.error('❌ Error en búsqueda en DB:', error);
@@ -666,7 +683,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
         } finally {
             setBuscandoEnDB(false);
         }
-    }, [borrador]);
+    }, [borrador, agregarProductos]);
 
     const finalizarInventario = async () => {
         if (!borrador) return;
