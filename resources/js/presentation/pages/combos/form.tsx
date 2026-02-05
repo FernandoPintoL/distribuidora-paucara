@@ -753,12 +753,11 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                         id="cantidad_a_llevar"
                         type="number"
                         min="1"
-                        max={productosOpcionales.length}
                         value={cantidadALlevar}
                         onChange={(e) => setCantidadALlevar(parseInt(e.target.value) || 1)}
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Máximo: {productosOpcionales.length} productos
+                        Mínimo: 1 producto
                       </p>
                     </div>
 

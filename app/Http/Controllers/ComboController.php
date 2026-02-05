@@ -276,11 +276,6 @@ class ComboController extends Controller
                 abort(422, 'El precio del grupo debe ser mayor o igual a 0.');
             }
 
-            // Validar que cantidad_a_llevar no exceda la cantidad de productos en el grupo
-            if ($cantidadALlevar > count($productosGrupo)) {
-                abort(422, "No puede llevar $cantidadALlevar productos si el grupo solo tiene " . count($productosGrupo) . '.');
-            }
-
             Log::info('✅ [ComboController::validarItems] Grupo opcional validado', [
                 'productos_en_grupo' => count($productosGrupo),
                 'cantidad_a_llevar' => $cantidadALlevar,
