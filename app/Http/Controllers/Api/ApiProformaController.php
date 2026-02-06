@@ -243,7 +243,7 @@ class ApiProformaController extends Controller
             }
 
             // Cargar relaciones para respuesta
-            $proforma->load(['detalles.producto', 'cliente', 'direccionSolicitada', 'direccionConfirmada']);
+            $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'direccionSolicitada', 'direccionConfirmada']);
 
             DB::commit();
 
@@ -288,8 +288,8 @@ class ApiProformaController extends Controller
         }
 
         $proforma->load([
-            'detalles.producto',
-            'cliente',
+            'detalles.producto.imagenes',  // ✅ AGREGADO: Cargar imágenes del producto
+            'cliente.localidad',  // ✅ ACTUALIZADO: Cargar localidad del cliente
             'usuarioCreador',
             'usuarioAprobador',
             'estadoLogistica'  // ✅ AGREGADO: Cargar relación de estado
@@ -540,7 +540,7 @@ class ApiProformaController extends Controller
             }
 
             // Cargar relaciones para respuesta
-            $proforma->load(['detalles.producto', 'cliente', 'direccionSolicitada', 'direccionConfirmada']);
+            $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'direccionSolicitada', 'direccionConfirmada']);
 
             DB::commit();
 
@@ -2966,7 +2966,7 @@ class ApiProformaController extends Controller
             ]);
 
             // Recargar relaciones
-            $proforma->load(['detalles.producto', 'cliente', 'estadoLogistica']);
+            $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'estadoLogistica']);
 
             return response()->json([
                 'success' => true,
@@ -3073,9 +3073,9 @@ class ApiProformaController extends Controller
 
             // Responder
             if ($siguienteProforma) {
-                // Eager load relación cliente si no está cargada
+                // Eager load relación cliente y localidad si no está cargada
                 if (!$siguienteProforma->relationLoaded('cliente')) {
-                    $siguienteProforma->load('cliente');
+                    $siguienteProforma->load('cliente.localidad');
                 }
 
                 return response()->json([
