@@ -574,6 +574,8 @@ class ProformaService
 
     /**
      * Obtener una proforma
+     *
+     * ✅ SIMPLIFICADO: Cargar reservas_proforma para mostrar qué está reservado
      */
     public function obtener(int $proformaId): ProformaResponseDTO
     {
@@ -582,6 +584,8 @@ class ProformaService
             'detalles.producto.marca',
             // ✅ NUEVO: Cargar stock y almacén para mostrar en la tabla
             'detalles.producto.stock',
+            // ✅ SIMPLIFICADO: Cargar reservas_proforma de esta proforma
+            'reservas',
             'cliente',
             'direccionSolicitada',
             'direccionConfirmada',

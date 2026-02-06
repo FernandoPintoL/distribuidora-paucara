@@ -2375,17 +2375,12 @@ class ApiProformaController extends Controller
                         ], 422);
                     }
 
-                    // Verificar disponibilidad de stock con respecto a reservas
-                    $disponibilidad = $proforma->verificarDisponibilidadStock();
-                    $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
-
-                    if (!empty($stockInsuficiente)) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Stock insuficiente para algunos productos',
-                            'productos_sin_stock' => $stockInsuficiente,
-                        ], 422);
-                    }
+                    // ✅ SIMPLIFICADO: Si hay reservas activas NO expiradas, no validar disponibilidad
+                    // Las reservas ya garantizan que el stock existe para esta proforma
+                    Log::info('✅ Proforma tiene reservas activas, continuando conversión sin validar stock disponible', [
+                        'proforma_id' => $proforma->id,
+                        'reservas_activas' => $reservasActivas,
+                    ]);
                 } else {
                     // NO hay reservas: intentar crearlas automáticamente
                     Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', intentando crearlas...');

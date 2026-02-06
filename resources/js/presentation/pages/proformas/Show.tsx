@@ -122,7 +122,9 @@ function ProductSelectionDialog({
             stock_disponible: (selectedProducto as any).stock_disponible || 0,
             peso: (selectedProducto as any).peso || 0,
             categoria: (selectedProducto as any).categoria || undefined,
-            limite_venta: (selectedProducto as any).limite_venta || null
+            limite_venta: (selectedProducto as any).limite_venta || null,
+            // ✅ NUEVO: Marcar como detalle nuevo para validar sobrestock
+            esNuevo: true
         }
 
         onSelectProducto(nuevoDetalle)
@@ -1515,7 +1517,9 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     </TableHeader>
                                     <TableBody>
                                         {editableDetalles.map((detalle, index) => {
-                                            const tieneSobrestock = parseFloat(String(detalle.cantidad || 0)) > parseFloat(String(detalle.stock_disponible || 0))
+                                            // ✅ ACTUALIZADO: Solo validar sobrestock para detalles NUEVOS
+                                            // Los detalles existentes (del backend) ya están reservados, no necesitan validación
+                                            const tieneSobrestock = (detalle as any).esNuevo && parseFloat(String(detalle.cantidad || 0)) > parseFloat(String(detalle.stock_disponible || 0))
 
                                             return (
                                                 <TableRow
