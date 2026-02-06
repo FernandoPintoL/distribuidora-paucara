@@ -193,6 +193,11 @@ class ImpresionService
                 'TICKET_80' => 'impresion.cajas.cierre-diario-ticket-80',
                 'TICKET_58' => 'impresion.cajas.cierre-diario-ticket-58',
             ],
+            'movimiento_individual' => [
+                'A4' => 'impresion.cajas.movimiento-individual-a4',
+                'TICKET_80' => 'impresion.cajas.movimiento-individual-ticket-80',
+                'TICKET_58' => 'impresion.cajas.movimiento-individual-ticket-58',
+            ],
         ];
 
         return $fallbacks[$tipoDocumento][$formato] ?? null;

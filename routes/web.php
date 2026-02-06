@@ -454,6 +454,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('movimientos.imprimir')
             ->middleware('permission:cajas.transacciones');
 
+        // ✅ NUEVO: Ruta para imprimir un movimiento individual
+        Route::get('/movimiento/{movimiento}/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimiento'])
+            ->where('movimiento', '[0-9]+')
+            ->name('movimiento.imprimir')
+            ->middleware('permission:cajas.transacciones');
+
         Route::get('/{caja}/movimientos/exportar-excel', [\App\Http\Controllers\CajaController::class, 'exportarExcel'])
             ->where('caja', '[0-9]+')
             ->name('movimientos.exportar-excel')
@@ -494,6 +500,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // Reportes del admin
         Route::get('/reportes', [\App\Http\Controllers\CajaController::class, 'reportes'])->middleware('permission:cajas.reportes')->name('reportes');
+
+        // ✅ NUEVO: Conciliación de cajas (Regularización Ventas vs Movimientos)
+        Route::get('/conciliacion', function () {
+            return view('cajas.conciliacion');
+        })->name('conciliacion')->middleware('permission:cajas.transacciones');
 
         // Gastos (admin ve todos)
         Route::prefix('gastos')->name('gastos.')->middleware('permission:cajas.gastos')->group(function () {

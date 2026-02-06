@@ -40,6 +40,7 @@ use App\Http\Controllers\VehiculoController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ComboController;
+use App\Http\Controllers\ConciliacionCajaController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -401,6 +402,11 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 
         Route::post('{venta}/confirmar-pickup-empleado', [ApiVentaController::class, 'confirmarPickupEmpleado'])
             ->name('api.ventas.confirmar-pickup-empleado');
+
+        // ✅ NUEVO: Registrar venta en movimientos de caja
+        Route::post('{venta}/registrar-en-caja', [ApiVentaController::class, 'registrarEnCaja'])
+            ->name('api.ventas.registrar-en-caja')
+            ->middleware('permission:cajas.transacciones');
     });
 });
 
@@ -1043,6 +1049,14 @@ Route::middleware(['auth', 'permission:admin.cierres.ver'])->prefix('admin/cierr
 Route::middleware(['auth', 'permission:cajas.gastos'])->prefix('admin/gastos')->group(function () {
     Route::get('/resumen', [\App\Http\Controllers\Api\AdminCajaApiController::class, 'resumenGastos'])
         ->name('api.admin.gastos.resumen');
+});
+
+// ✅ Rutas API para conciliación de cajas (Regularización Ventas vs Movimientos)
+Route::middleware(['auth', 'permission:cajas.transacciones'])->prefix('conciliacion')->group(function () {
+    Route::get('/dia', [\App\Http\Controllers\ConciliacionCajaController::class, 'conciliacionDelDia'])
+        ->name('api.conciliacion.dia');
+    Route::get('/historial', [\App\Http\Controllers\ConciliacionCajaController::class, 'historial'])
+        ->name('api.conciliacion.historial');
 });
 
 // ========================================

@@ -1193,6 +1193,108 @@ imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [a
     
     imprimirMovimientos.form = imprimirMovimientosForm
 /**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+export const imprimirMovimiento = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirMovimiento.url(args, options),
+    method: 'get',
+})
+
+imprimirMovimiento.definition = {
+    methods: ["get","head"],
+    url: '/cajas/movimiento/{movimiento}/imprimir',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+imprimirMovimiento.url = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { movimiento: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { movimiento: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    movimiento: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        movimiento: typeof args.movimiento === 'object'
+                ? args.movimiento.id
+                : args.movimiento,
+                }
+
+    return imprimirMovimiento.definition.url
+            .replace('{movimiento}', parsedArgs.movimiento.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+imprimirMovimiento.get = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirMovimiento.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimirMovimiento.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+    const imprimirMovimientoForm = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimirMovimiento.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+        imprimirMovimientoForm.get = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirMovimiento.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::imprimirMovimiento
+ * @see app/Http/Controllers/CajaController.php:1667
+ * @route '/cajas/movimiento/{movimiento}/imprimir'
+ */
+        imprimirMovimientoForm.head = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirMovimiento.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imprimirMovimiento.form = imprimirMovimientoForm
+/**
 * @see \App\Http\Controllers\CajaController::exportarExcel
  * @see app/Http/Controllers/CajaController.php:1606
  * @route '/cajas/{caja}/movimientos/exportar-excel'
@@ -1833,6 +1935,6 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     reportes.form = reportesForm
-const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, movimientosApertura, imprimirCierre, obtenerDatosCierre, imprimirMovimientos, exportarExcel, exportarPdf, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
+const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, movimientosApertura, imprimirCierre, obtenerDatosCierre, imprimirMovimientos, imprimirMovimiento, exportarExcel, exportarPdf, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
 
 export default CajaController

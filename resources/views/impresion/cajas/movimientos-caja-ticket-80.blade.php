@@ -12,7 +12,7 @@
 <div class="separador-doble"></div>
 
 <!-- Información de la apertura -->
-<div style="font-size: 16px; margin-bottom: 5px;">
+<div style="margin-bottom: 5px;">
     <table style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="width: 50%; padding: 1px;"><strong>Caja:</strong> {{ $apertura->caja->nombre }}</td>
@@ -28,7 +28,7 @@
 <div class="separador"></div>
 
 <!-- Tabla de movimientos -->
-<table style="width: 100%; font-size: 16px; border-collapse: collapse; margin-bottom: 5px;">
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 5px;">
     <thead>
         <tr style="border-bottom: 1px dashed #000;">
             <th style="padding: 1px; text-align: left; width: 20%;">Hora</th>
@@ -113,7 +113,7 @@ return $item->tipoOperacion->nombre;
 
 <div class="separador"></div>
 
-<div style="font-size: 16px; text-align: center; color: #666;">
+<div style="text-align: center; color: #666;">
     <p style="margin: 2px 0;">{{ $empresa->nombre_comercial ?? 'Distribuidora Paucara' }}</p>
     <p style="margin: 2px 0; font-size: 12px;">{{ $fecha_impresion->format('d/m/Y H:i:s') }}</p>
 </div>

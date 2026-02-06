@@ -206,6 +206,98 @@ class ApiVentaController extends Controller
     }
 
     /**
+     * ✅ NUEVO: Registrar venta en movimientos_caja
+     * POST /api/ventas/{venta}/registrar-en-caja
+     *
+     * Permite registrar manualmente una venta en movimientos_caja si no se registró automáticamente
+     */
+    public function registrarEnCaja(Venta $venta, Request $request)
+    {
+        try {
+            // ✅ Cargar relaciones necesarias
+            $venta->load('estadoDocumento');
+
+            $usuario = Auth::user();
+            $this->authorize('cajas.transacciones');
+
+            // Validar que la venta esté aprobada
+            if ($venta->estadoDocumento?->codigo !== 'APROBADO') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden registrar ventas aprobadas',
+                    'estado_actual' => $venta->estadoDocumento?->nombre,
+                ], 422);
+            }
+
+            // Validar que la venta no esté ya registrada en caja
+            $movimientoExistente = \App\Models\MovimientoCaja::where('venta_id', $venta->id)->exists();
+
+            if ($movimientoExistente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta venta ya ha sido registrada en movimientos de caja',
+                ], 422);
+            }
+
+            // Validar caja abierta
+            $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                ->whereDoesntHave('cierre')
+                ->first();
+
+            if (!$cajaAbierta) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tiene una caja abierta. Por favor abra una caja primero',
+                ], 422);
+            }
+
+            // Crear movimiento de caja
+            $movimiento = \App\Models\MovimientoCaja::create([
+                'caja_id' => $cajaAbierta->caja_id,
+                'user_id' => $usuario->id,
+                'fecha' => now(),
+                'monto' => (float) $venta->total,
+                'tipo_operacion_id' => \App\Models\TipoOperacionCaja::where('codigo', 'INGRESO')
+                    ->first()?->id ?? 1,
+                'tipo_pago_id' => $venta->tipo_pago_id,
+                'venta_id' => $venta->id,
+                'numero_documento' => $venta->numero,
+                'observaciones' => "Venta #{$venta->numero} registrada manualmente desde listado",
+            ]);
+
+            Log::info('✅ Venta registrada en movimientos_caja manualmente', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'movimiento_id' => $movimiento->id,
+                'usuario_id' => $usuario->id,
+                'monto' => (float) $venta->total,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Venta #{$venta->numero} registrada en caja exitosamente",
+                'data' => [
+                    'movimiento_id' => $movimiento->id,
+                    'venta_numero' => $venta->numero,
+                    'monto' => (float) $venta->total,
+                    'fecha' => $movimiento->fecha->format('Y-m-d H:i:s'),
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Error al registrar venta en caja', [
+                'venta_id' => $venta->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar la venta en caja: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Verificar si el usuario tiene permisos de almacén
      *
      * @param mixed $user

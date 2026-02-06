@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer, DollarSign, Loader2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
@@ -22,6 +22,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
     const [outputModal, setOutputModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
+    const [registrandoEnCaja, setRegistrandoEnCaja] = useState<number | null>(null);
 
     // ✅ DEBUG: Verificar datos de dirección en consola
     React.useEffect(() => {
@@ -114,6 +115,55 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
             toast.error('Error al anular la venta');
         } finally {
             setIsAnulando(false);
+        }
+    };
+
+    const handleRegistrarEnCaja = async (venta: Venta) => {
+        // Pedir confirmación
+        if (!window.confirm(`¿Registrar la venta #${venta.numero} en movimientos de caja?`)) {
+            return;
+        }
+
+        setRegistrandoEnCaja(venta.id);
+        try {
+            const response = await fetch(`/api/ventas/${venta.id}/registrar-en-caja`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            const data = await response.json();
+
+            console.log('📋 Respuesta de registrar en caja:', {
+                status: response.status,
+                ok: response.ok,
+                data: data,
+            });
+
+            if (!response.ok) {
+                console.error('❌ Error al registrar:', data.message);
+                toast.error(data.message || 'Error al registrar en caja');
+
+                // Mostrar detalles específicos
+                if (data.estado_actual) {
+                    console.log('Estado actual de venta:', data.estado_actual);
+                }
+                return;
+            }
+
+            toast.success(`✅ Venta #${venta.numero} registrada en caja`);
+
+            // Recargar página después de 1 segundo
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } catch (error) {
+            console.error('❌ Error de excepción:', error);
+            toast.error('Error al registrar en caja');
+        } finally {
+            setRegistrandoEnCaja(null);
         }
     };
 
@@ -371,6 +421,26 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             >
                                                 <Printer className="w-4 h-4" />
                                             </button>
+
+                                            {/* ✅ Registrar en caja */}
+                                            {venta.estado_documento?.codigo === 'APROBADO' && (
+                                                <button
+                                                    onClick={() => handleRegistrarEnCaja(venta)}
+                                                    disabled={registrandoEnCaja === venta.id}
+                                                    className={`p-1 rounded transition-colors ${
+                                                        registrandoEnCaja === venta.id
+                                                            ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                            : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                    }`}
+                                                    title="Registrar en movimientos de caja"
+                                                >
+                                                    {registrandoEnCaja === venta.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <DollarSign className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import type { AperturaCaja, MovimientoCaja } from '@/domain/entities/cajas';
 import { formatCurrency, formatDateTime, getMovimientoIcon, getMovimientoColor, toNumber } from '@/lib/cajas.utils';
 import { ComprobantesMovimiento } from '@/presentation/components/ComprobantesMovimiento';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
@@ -69,6 +70,9 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const [expandirVentasEstado, setExpandirVentasEstado] = useState(false);
     const [expandirPagos, setExpandirPagos] = useState(false);
     const [expandirGastos, setExpandirGastos] = useState(false);
+    const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
+    const [mostrarModalMovimientoIndividual, setMostrarModalMovimientoIndividual] = useState(false);
+    const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<MovimientoCaja | null>(null);
 
     if (!cajaAbiertaHoy || movimientosHoy.length === 0) {
         return (
@@ -830,14 +834,22 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </div>
                         </div>
 
-                        {/* Botón Exportar */}
-                        <div>
+                        {/* Botones Exportar e Imprimir */}
+                        <div className="space-y-2">
                             <button
                                 onClick={exportarACSV}
                                 className="w-full px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 font-medium transition"
                             >
                                 📥 Exportar a CSV
                             </button>
+                            {cajaAbiertaHoy && (
+                                <button
+                                    onClick={() => setMostrarModalImpresion(true)}
+                                    className="w-full px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 font-medium transition"
+                                >
+                                    🖨️ Imprimir Movimientos
+                                </button>
+                            )}
                         </div>
 
                         {/* Resumen de Filtros Activos */}
@@ -923,11 +935,28 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                         <ComprobantesMovimiento comprobantes={movimiento.comprobantes} />
                                     </td> */}
                                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                                        <div className="flex items-center justify-end">
-                                            {getMovimientoIcon(toNumber(movimiento.monto))}
-                                            <span className={`ml-2 text-sm font-medium ${getMovimientoColor(toNumber(movimiento.monto))}`}>
-                                                {formatCurrency(Math.abs(toNumber(movimiento.monto)))}
-                                            </span>
+                                        <div className="flex items-center justify-end gap-4">
+                                            {/* Botón Imprimir Movimiento Individual */}
+                                            <button
+                                                onClick={() => {
+                                                    setMovimientoSeleccionado(movimiento);
+                                                    setMostrarModalMovimientoIndividual(true);
+                                                }}
+                                                className="inline-flex items-center justify-center p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition"
+                                                title="Imprimir este movimiento"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4H9a2 2 0 00-2 2v2a2 2 0 002 2h10a2 2 0 002-2v-2a2 2 0 00-2-2m-6-4V9m0 0V5a2 2 0 012-2h.5a2 2 0 011.961 1.561l2.286 9.144a2 2 0 01-1.961 2.561H7.5a2 2 0 01-1.961-2.561l2.286-9.144A2 2 0 019.5 5H10a2 2 0 012 2v4m0 0h4" />
+                                                </svg>
+                                            </button>
+
+                                            {/* Monto */}
+                                            <div className="flex items-center">
+                                                {getMovimientoIcon(toNumber(movimiento.monto))}
+                                                <span className={`ml-2 text-sm font-medium ${getMovimientoColor(toNumber(movimiento.monto))}`}>
+                                                    {formatCurrency(Math.abs(toNumber(movimiento.monto)))}
+                                                </span>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -935,6 +964,40 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         </tbody>
                     </table>
                 </div>
+
+                {/* ✅ NUEVO: Modal de Impresión (Todos los movimientos) */}
+                {cajaAbiertaHoy && (
+                    <OutputSelectionModal
+                        isOpen={mostrarModalImpresion}
+                        onClose={() => setMostrarModalImpresion(false)}
+                        documentoId={cajaAbiertaHoy.id}
+                        tipoDocumento="caja"
+                        printType="movimientos"
+                        documentoInfo={{
+                            numero: `Apertura #${cajaAbiertaHoy.id}`,
+                            fecha: new Date(cajaAbiertaHoy.fecha).toLocaleDateString('es-ES'),
+                            monto: cajaAbiertaHoy.monto_apertura,
+                        }}
+                    />
+                )}
+
+                {/* ✅ NUEVO: Modal de Impresión (Movimiento Individual) */}
+                {movimientoSeleccionado && (
+                    <OutputSelectionModal
+                        isOpen={mostrarModalMovimientoIndividual}
+                        onClose={() => {
+                            setMostrarModalMovimientoIndividual(false);
+                            setMovimientoSeleccionado(null);
+                        }}
+                        documentoId={movimientoSeleccionado.id}
+                        tipoDocumento="movimiento"
+                        documentoInfo={{
+                            numero: `Movimiento #${movimientoSeleccionado.id}`,
+                            fecha: new Date(movimientoSeleccionado.fecha).toLocaleDateString('es-ES'),
+                            monto: movimientoSeleccionado.monto,
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega';
+export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento';
 
 interface FormatoConfig {
     formato: string;
@@ -66,6 +66,11 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'B1', nombre: 'Hoja Grande (B1)', descripcion: 'Formato B1 - 707mm × 1000mm' },
         { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+    ],
+    movimiento: [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
 };
 
@@ -139,6 +144,9 @@ export function OutputSelectionModal({
                 // Por defecto usar movimientos
                 rutaBase = `/cajas/${documentoId}/movimientos`;
             }
+        } else if (tipoDocumento === 'movimiento') {
+            // Para movimientos individuales
+            rutaBase = `/cajas/movimiento/${documentoId}`;
         } else if (tipoDocumento === 'entrega') {
             // Para entregas, usar la ruta API específica
             rutaBase = `/api/entregas/${documentoId}`;

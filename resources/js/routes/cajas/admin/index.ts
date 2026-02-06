@@ -269,6 +269,77 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     reportes.form = reportesForm
+/**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+export const conciliacion = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: conciliacion.url(options),
+    method: 'get',
+})
+
+conciliacion.definition = {
+    methods: ["get","head"],
+    url: '/cajas/admin/conciliacion',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+conciliacion.url = (options?: RouteQueryOptions) => {
+    return conciliacion.definition.url + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+conciliacion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: conciliacion.url(options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+conciliacion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: conciliacion.url(options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+    const conciliacionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: conciliacion.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+        conciliacionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: conciliacion.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:505
+ * @route '/cajas/admin/conciliacion'
+ */
+        conciliacionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: conciliacion.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    conciliacion.form = conciliacionForm
 const admin = {
     dashboard,
 cierreDiario,
@@ -276,6 +347,7 @@ cierreDiarioJson,
 reportesDiarios,
 cajas,
 reportes,
+conciliacion,
 gastos,
 auditoria,
 }

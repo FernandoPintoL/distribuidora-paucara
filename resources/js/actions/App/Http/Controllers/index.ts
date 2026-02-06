@@ -25,6 +25,7 @@ import ReporteCargoListController from './ReporteCargoListController'
 import ProveedorController from './ProveedorController'
 import ImageBackupController from './ImageBackupController'
 import AuditoriaCajaController from './AuditoriaCajaController'
+import ConciliacionCajaController from './ConciliacionCajaController'
 import VentaPublicController from './VentaPublicController'
 import DashboardController from './DashboardController'
 import RoleController from './RoleController'
@@ -101,6 +102,7 @@ ReporteCargoListController,
 ProveedorController,
 ImageBackupController,
 AuditoriaCajaController,
+ConciliacionCajaController,
 VentaPublicController,
 DashboardController,
 RoleController,

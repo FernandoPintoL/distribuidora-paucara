@@ -1658,6 +1658,54 @@ class CajaController extends Controller
     }
 
     /**
+     * Imprimir un movimiento individual en diferentes formatos
+     *
+     * ✅ NUEVO: Genera impresión de un movimiento específico
+     * - Formatos: TICKET_58, TICKET_80, A4
+     * - Acciones: download (PDF), stream (vista previa)
+     */
+    public function imprimirMovimiento(MovimientoCaja $movimiento, Request $request)
+    {
+        $this->authorize('cajas.transacciones');
+
+        // Cargar relaciones necesarias para las plantillas
+        $movimiento->load(['tipoOperacion', 'tipoPago', 'usuario']);
+
+        $formato = $request->query('formato', 'A4');
+        $accion  = $request->query('accion', 'download');
+
+        // Obtener la apertura de caja del movimiento
+        $apertura = AperturaCaja::where('caja_id', $movimiento->caja_id)
+            ->where('fecha', '<=', $movimiento->fecha)
+            ->orderBy('fecha', 'desc')
+            ->first();
+
+        if (!$apertura) {
+            return back()->withErrors(['error' => 'No se encontró la apertura de caja para este movimiento']);
+        }
+
+        $usuario = $movimiento->usuario ?? Auth::user();
+
+        // Preparar datos para la vista
+        $datos = [
+            'movimiento'      => $movimiento,
+            'apertura'        => $apertura,
+            'usuario'         => $usuario,
+            'fecha_impresion' => now(),
+        ];
+
+        // Usar ImpresionService para generar el PDF
+        $impresionService = app(\App\Services\ImpresionService::class);
+        $pdf              = $impresionService->generarPDF('movimiento_individual', $datos, $formato);
+
+        if ($accion === 'stream') {
+            return $pdf->stream();
+        }
+
+        return $pdf->download('movimiento-caja-' . $movimiento->id . '.pdf');
+    }
+
+    /**
      * Convertir logo a base64 para embebimiento en PDF
      *
      * @param string|null $logoUrl URL del logo

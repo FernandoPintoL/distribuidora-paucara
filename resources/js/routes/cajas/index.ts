@@ -2,6 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 import movimientos from './movimientos'
 import gastos from './gastos'
 import cierre from './cierre'
+import movimiento from './movimiento'
 import admin from './admin'
 /**
 * @see \App\Http\Controllers\CajaController::user
@@ -734,6 +735,7 @@ gastos,
 aperturaMovimientos,
 cierre,
 datosCierre,
+movimiento,
 admin,
 }
 

@@ -856,6 +856,85 @@ confirmarPickupEmpleado.post = (args: { venta: number | { id: number } } | [vent
         })
     
     confirmarPickupEmpleado.form = confirmarPickupEmpleadoForm
+/**
+* @see \App\Http\Controllers\Api\ApiVentaController::registrarEnCaja
+ * @see app/Http/Controllers/Api/ApiVentaController.php:214
+ * @route '/api/ventas/{venta}/registrar-en-caja'
+ */
+export const registrarEnCaja = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarEnCaja.url(args, options),
+    method: 'post',
+})
+
+registrarEnCaja.definition = {
+    methods: ["post"],
+    url: '/api/ventas/{venta}/registrar-en-caja',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiVentaController::registrarEnCaja
+ * @see app/Http/Controllers/Api/ApiVentaController.php:214
+ * @route '/api/ventas/{venta}/registrar-en-caja'
+ */
+registrarEnCaja.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { venta: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { venta: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    venta: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        venta: typeof args.venta === 'object'
+                ? args.venta.id
+                : args.venta,
+                }
+
+    return registrarEnCaja.definition.url
+            .replace('{venta}', parsedArgs.venta.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiVentaController::registrarEnCaja
+ * @see app/Http/Controllers/Api/ApiVentaController.php:214
+ * @route '/api/ventas/{venta}/registrar-en-caja'
+ */
+registrarEnCaja.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: registrarEnCaja.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiVentaController::registrarEnCaja
+ * @see app/Http/Controllers/Api/ApiVentaController.php:214
+ * @route '/api/ventas/{venta}/registrar-en-caja'
+ */
+    const registrarEnCajaForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: registrarEnCaja.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiVentaController::registrarEnCaja
+ * @see app/Http/Controllers/Api/ApiVentaController.php:214
+ * @route '/api/ventas/{venta}/registrar-en-caja'
+ */
+        registrarEnCajaForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: registrarEnCaja.url(args, options),
+            method: 'post',
+        })
+    
+    registrarEnCaja.form = registrarEnCajaForm
 const ventas = {
     registrarPago,
 imprimir,
@@ -867,6 +946,7 @@ update,
 destroy,
 confirmarPickupCliente,
 confirmarPickupEmpleado,
+registrarEnCaja,
 }
 
 export default ventas

@@ -15,6 +15,7 @@ import proveedores from './proveedores'
 import cajas from './cajas'
 import gastos from './gastos'
 import admin from './admin'
+import conciliacion from './conciliacion'
 import dashboard from './dashboard'
 import codigosBarra from './codigos-barra'
 /**
@@ -191,6 +192,7 @@ proveedores,
 cajas,
 gastos,
 admin,
+conciliacion,
 dashboard,
 codigosBarra,
 }
