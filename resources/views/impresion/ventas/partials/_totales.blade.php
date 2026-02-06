@@ -22,15 +22,19 @@
             <td class="text-right">-{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
         </tr>
         {{-- TOTAL A PAGAR (final) --}}
+        @php
+            $totalAPagar = $documento->subtotal - ($documento->descuento ?? 0);
+            $cambio = max(0, $documento->monto_pagado - $totalAPagar);
+        @endphp
         <tr class="total-final">
             <td><strong>Total a Pagar:</strong></td>
             <td class="text-right">
-                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->subtotal, 2) }}</strong>
+                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($totalAPagar, 2) }}</strong>
             </td>
         </tr>
         <tr>
             <td><strong>Cambio:</strong></td>
-            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pagado - $documento->subtotal, 2) }}</td>
+            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($cambio, 2) }}</td>
         </tr>
     </table>
 </div>

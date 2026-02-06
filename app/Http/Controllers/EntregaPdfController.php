@@ -65,7 +65,7 @@ class EntregaPdfController extends Controller
             // Cargar relaciones necesarias
             $entrega->load([
                 'ventas.cliente',
-                'ventas.detalles.producto',
+                'ventas.detalles.producto.unidad',
                 'chofer',
                 'vehiculo',
                 'localidad',
@@ -166,7 +166,7 @@ class EntregaPdfController extends Controller
             // Cargar relaciones necesarias
             $entrega->load([
                 'ventas.cliente',
-                'ventas.detalles.producto',
+                'ventas.detalles.producto.unidad',
                 'chofer',
                 'vehiculo',
                 'localidad',
@@ -257,12 +257,12 @@ class EntregaPdfController extends Controller
     }
 
     /**
-     * Configurar PDF para formato B1 (707mm × 1000mm)
+     * Configurar PDF para formato B1 (1000mm × 707mm - Landscape)
      */
     private function configurarB1($pdf)
     {
         return $pdf
-            ->setPaper([0, 0, 2004, 2834], 'portrait')  // B1 = 707mm × 1000mm (≈ 2004 × 2834 pt)
+            ->setPaper([0, 0, 2834, 2004], 'landscape')  // B1 = 1000mm × 707mm (≈ 2834 × 2004 pt)
             ->setOption('margin-top', 20)
             ->setOption('margin-bottom', 20)
             ->setOption('margin-left', 20)

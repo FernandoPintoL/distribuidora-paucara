@@ -21,11 +21,12 @@
         }
 
         .page {
-            width: 707mm;
-            min-height: 1000mm;
-            padding: 20mm;
+            width: 400mm;
+            min-height: 300mm;
+            padding: 10mm;
             box-sizing: border-box;
             background: white;
+            margin: 0 auto;
         }
 
         /* Header con información de empresa */
