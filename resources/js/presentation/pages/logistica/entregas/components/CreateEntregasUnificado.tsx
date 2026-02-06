@@ -403,6 +403,25 @@ export default function CreateEntregasUnificado({
                             />
                         </Card>
                     )}
+
+                    {/* Entregador (Solo Single) */}
+                    {selectedCount === 1 && (
+                        <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-cyan-500">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+                                Entregador
+                            </h3>
+                            <input
+                                type="text"
+                                value={formData.entregador || ''}
+                                onChange={(e) => updateFormData({ entregador: e.target.value })}
+                                placeholder="Nombre de la persona que realiza la entrega"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
+                            />
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                                📝 Persona responsable de entregar la carga
+                            </p>
+                        </Card>
+                    )}
                 </div>
 
                 {/* BLOQUE 3: Opciones & Validación */}

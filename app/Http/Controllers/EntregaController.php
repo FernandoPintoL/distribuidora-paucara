@@ -513,6 +513,7 @@ class EntregaController extends Controller
                     'chofer_id'         => 'required|exists:empleados,id',
                     'fecha_programada'  => 'required|date_format:Y-m-d\TH:i|fecha_entrega_valida',
                     'direccion_entrega' => 'nullable|string|max:500',
+                    'entregador'        => 'nullable|string|max:255',
                     'peso_kg'           => 'nullable|numeric|min:0.01|max:50000',
                     'observaciones'     => 'nullable|string|max:1000',
                 ],
@@ -557,6 +558,7 @@ class EntregaController extends Controller
                 'direccion_cliente_id' => $venta->direccion_cliente_id, // ✅ Asignar dirección del cliente
                 'peso_kg'              => $validated['peso_kg'],
                 'observaciones'        => $validated['observaciones'] ?? null,
+                'entregador'           => $validated['entregador'] ?? null, // ✅ NUEVO: Nombre del entregador
                 'estado'               => $estadoInicial->codigo, // ✅ Enum (legacy compatibility)
                 'estado_entrega_id'    => $estadoInicial->id,     // ✅✅ FK a estados_logistica (CRITICAL)
             ]);

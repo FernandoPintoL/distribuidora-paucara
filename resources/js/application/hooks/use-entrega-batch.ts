@@ -15,6 +15,7 @@ export interface BatchFormData {
     // Campos opcionales para caso single (1 venta)
     fecha_programada?: string;
     direccion_entrega?: string;
+    entregador?: string;
 }
 
 interface UseBatchState {
@@ -45,6 +46,7 @@ export function useEntregaBatch() {
             observaciones: '',
             fecha_programada: getTodayDateTimeLocal(),
             direccion_entrega: undefined,
+            entregador: undefined,
         },
         isSubmitting: false,
         submitError: null,

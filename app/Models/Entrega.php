@@ -38,7 +38,11 @@ class Entrega extends Model
         // Información de entrega
         'peso_kg',                  // Suma de pesos de ventas
         'observaciones',
+        'entregador',               // NUEVO: Nombre de quién realiza la entrega
         'motivo_novedad',
+        'motivo_cancelacion',       // NUEVO: Razón de cancelación
+        'cancelada_en',             // NUEVO: Fecha de cancelación
+        'cancelada_por_id',         // NUEVO: ID del usuario que canceló
 
         // Comprobantes
         'firma_digital_url',
@@ -72,6 +76,7 @@ class Entrega extends Model
             'fecha_confirmacion_carga' => 'datetime',
             'fecha_inicio_entrega' => 'datetime',
             'fecha_ultima_ubicacion' => 'datetime',
+            'cancelada_en' => 'datetime',          // NUEVO: Fecha de cancelación
             'latitud_actual' => 'decimal:8',
             'longitud_actual' => 'decimal:8',
         ];

@@ -432,9 +432,9 @@ class EntregaPdfController extends Controller
                     // Si el producto ya existe en el array, sumar cantidad
                     if (isset($productosAgrupados[$productoId])) {
                         $productosAgrupados[$productoId]['cantidad_total'] += (float) $detalle->cantidad;
-                        $productosAgrupados[$productoId]['subtotal'] = bcadd(
-                            $productosAgrupados[$productoId]['subtotal'],
-                            bcmul($detalle->cantidad, $detalle->precio_unitario, 2),
+                        $productosAgrupados[$productoId]['subtotal'] = round(
+                            $productosAgrupados[$productoId]['subtotal'] +
+                            ($detalle->cantidad * $detalle->precio_unitario),
                             2
                         );
                         // Agregar venta a la lista
@@ -453,7 +453,7 @@ class EntregaPdfController extends Controller
                             'codigo_producto' => $detalle->producto?->codigo_barras ?? '',
                             'cantidad_total' => (float) $detalle->cantidad,
                             'precio_unitario' => (float) $detalle->precio_unitario,
-                            'subtotal' => bcmul($detalle->cantidad, $detalle->precio_unitario, 2),
+                            'subtotal' => round($detalle->cantidad * $detalle->precio_unitario, 2),
                             'unidad_medida' => $detalle->producto?->unidad?->nombre ?? 'Unidad',
                             'ventas' => [
                                 [
