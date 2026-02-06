@@ -31,7 +31,8 @@ class VentaPublicController extends Controller
             'accessToken',
         ]);
 
-        $empresa = $venta->cliente->empresa ?? auth()->user()->empresa;
+        // ✅ CORREGIDO: No depender de auth()->user() para acceso público
+        $empresa = $venta->cliente->empresa ?? \App\Models\Empresa::principal();
         $documento = $venta;
         $formato = $request->query('formato', 'a4');
         $fecha_impresion = now();
@@ -77,7 +78,8 @@ class VentaPublicController extends Controller
             'accessToken',
         ]);
 
-        $empresa = $venta->cliente->empresa ?? auth()->user()->empresa;
+        // ✅ CORREGIDO: No depender de auth()->user() para acceso público
+        $empresa = $venta->cliente->empresa ?? \App\Models\Empresa::principal();
         $documento = $venta;
         $formato = $request->query('formato', 'a4');
         $fecha_impresion = now();

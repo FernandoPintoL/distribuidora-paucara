@@ -18,6 +18,16 @@
             @if($documento->usuario)
                 <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>
             @endif
+            {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
+            @php
+                $usuarioCreadorProforma = null;
+                if ($documento->proforma_id && $documento->proforma) {
+                    $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
+                }
+            @endphp
+            @if($usuarioCreadorProforma)
+                <p><strong>Preventista:</strong> {{ $usuarioCreadorProforma->name }}</p>
+            @endif
             @if($documento->movimientoCaja && $documento->movimientoCaja->caja)
                 <p><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</p>
             @endif

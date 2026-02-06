@@ -26,6 +26,16 @@
     @if($documento->usuario)
     <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>
     @endif
+    {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
+    @php
+        $usuarioCreadorProforma = null;
+        if ($documento->proforma_id && $documento->proforma) {
+            $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
+        }
+    @endphp
+    @if($usuarioCreadorProforma)
+    <p><strong>Preventista:</strong> {{ $usuarioCreadorProforma->name }}</p>
+    @endif
 </div>
 
 <div class="separador"></div>
@@ -42,17 +52,17 @@
 
 {{-- ==================== INFORMACIÓN DE PAGO ==================== --}}
 <div class="center bold" style="font-size: 12px;">
-    {{ $documento->politica_pago ?? 'CONTRA_ENTREGA' }}
+    Politica Pago: {{ $documento->politica_pago ?? 'CONTRA_ENTREGA' }}
 </div>
 
 <div class="center" style="margin-top: 5px; font-weight: bold;">
     @if($documento->estado_pago === 'PAGADA')
-    <span style="color: green;">✓ PAGADA</span>
+    <span>PAGADA</span>
     @elseif($documento->estado_pago === 'PARCIAL')
-    <span style="color: orange;">⚠ PARCIAL</span><br>
+    <span>PAGO PARCIAL</span><br>
     <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? 0, 2) }}</span>
     @elseif($documento->estado_pago === 'PENDIENTE')
-    <span style="color: red;">✗ PENDIENTE</span><br>
+    <span>PENDIENTE PAGO</span><br>
     <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? $documento->subtotal, 2) }}</span>
     @else
     <span>{{ $documento->estado_pago ?? 'SIN ESTADO' }}</span>

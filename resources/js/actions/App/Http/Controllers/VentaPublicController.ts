@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
 export const preview = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
 preview.url = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ preview.url = (args: { token: string | number } | [token: string | number ] | st
 
 /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
 preview.get = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -53,7 +53,7 @@ preview.get = (args: { token: string | number } | [token: string | number ] | st
 })
 /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
 preview.head = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -63,7 +63,7 @@ preview.head = (args: { token: string | number } | [token: string | number ] | s
 
     /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
     const previewForm = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -73,7 +73,7 @@ preview.head = (args: { token: string | number } | [token: string | number ] | s
 
             /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
         previewForm.get = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ preview.head = (args: { token: string | number } | [token: string | number ] | s
         })
             /**
 * @see \App\Http\Controllers\VentaPublicController::preview
- * @see app/Http/Controllers/VentaPublicController.php:60
+ * @see app/Http/Controllers/VentaPublicController.php:61
  * @route '/venta/preview/{token}'
  */
         previewForm.head = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

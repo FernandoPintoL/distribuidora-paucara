@@ -44,31 +44,6 @@
             font-weight: bold;
         }
 
-        /* Header del ticket */
-        .header {
-            text-align: center;
-            margin-bottom: 1px;
-            padding: 0;
-            /*border-bottom: 1px dashed #000;*/
-        }
-
-        .logo {
-            max-width: 120px;
-            max-height: 80px;
-            margin: 0 auto 2px;
-            display: block;
-            object-fit: contain;
-        }
-
-        .empresa-nombre {
-            font-weight: bold;
-            margin: 1px 0;
-        }
-
-        .empresa-info {
-            margin: 0;
-        }
-
         /* Separadores */
         .separador {
             border-top: 1px dashed #000;
@@ -202,9 +177,9 @@
             color: #333;
         }
 
-        /* ✅ Espacio en blanco para corte (5cm) */
+        /* ✅ Espacio en blanco para corte (10cm) */
         .espacio-corte {
-            height: 5cm;
+            height: 10cm;
             margin-top: 10px;
             page-break-after: avoid;
         }
@@ -212,47 +187,9 @@
     </style>
 </head>
 <body>
-    <!-- Selector de fuentes (solo en navegador) -->
-    {{-- @if(request()->query('accion') === 'stream')
-    <div class="font-selector">
-        <label for="font-select">Fuente de letra:</label>
-        <select id="font-select" onchange="cambiarFuente(this.value)">
-            @forelse($fuentes_disponibles ?? [] as $key => $fuente)
-            <option value="{{ $key }}" {{ ($fuente_config['nombre'] ?? '') === ($fuente['nombre'] ?? '') ? 'selected' : '' }}>
-    {{ $fuente['nombre'] }}
-    </option>
-    @empty
-    <option value="consolas" selected>Consolas (Por defecto)</option>
-    @endforelse
-    </select>
-    </div> --}}
-
-    {{-- <script>
-        function cambiarFuente(fuente) {
-            const url = new URL(window.location);
-            url.searchParams.set('fuente', fuente);
-            window.location.href = url.toString();
-        }
-    </script> 
-    @endif--}}
-
     <div class="ticket">
-        {{-- Header compacto --}}
-        <div class="header">
-            @if(!empty($logo_principal_base64))
-            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 190px; max-height: 90px; object-fit: contain;">
-            @endif
-            <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
-            <div class="empresa-info">{{ $empresa->direccion }}</div>
-            @if($empresa->telefono)
-            <div class="empresa-info">Celular: {{ $empresa->telefono }}</div>
-            @endif
-            <div class="empresa-info">Preventista: 71655177</div>
-        </div>
-    </div>
-
-    {{-- Contenido específico del documento --}}
-    @yield('contenido')
+        {{-- Contenido específico del documento (sin cabecera) --}}
+        @yield('contenido')
 
         {{-- ✅ ESPACIO PARA CORTE - 5cm en blanco --}}
         <div class="espacio-corte"></div>

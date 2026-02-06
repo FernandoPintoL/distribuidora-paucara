@@ -1,9 +1,9 @@
-@extends('impresion.layouts.base-ticket')
+@extends('impresion.layouts.base-ticket-simple')
 
 @section('titulo', 'Entrega #' . $entrega->numero_entrega)
 
 @section('contenido')
-<div style="width: 100%; box-sizing: border-box;">
+<div style="width: 100%;">
 
     <div class="documento-titulo" style="margin-bottom: 3px;">ENTREGA N° {{ $entrega->id }}</div>
     <div class="documento-numero" style="font-weight: bold;">{{ $entrega->numero_entrega }}</div>
@@ -84,7 +84,7 @@
             @forelse($productosGenerico as $producto)
             <tr style="border-bottom: 1px dotted #999;">
                 <td style="padding: 1px 0;">{{ substr($producto['producto_nombre'], 0, 25) }}</td>
-                <td style="padding: 1px 0; text-align: center; width: 15%;">{{ number_format($producto['cantidad_total'], 1) }}</td>
+                <td style="padding: 1px 0; text-align: center; width: 15%;"> {{ number_format($producto['cantidad_total'], 1) }}</td>
                 <td style="padding: 1px 0; text-align: right; width: 20%; font-weight: bold;">{{ number_format($producto['subtotal_total'], 2) }}</td>
             </tr>
             @empty

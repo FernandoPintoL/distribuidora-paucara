@@ -329,6 +329,8 @@ class ImpresionService
             'moneda',
             'estadoDocumento',
             'movimientoCaja.caja',
+            'proforma.usuarioCreador',
+            'accessToken',
         ]);
 
         return $this->generarPDF('venta', $venta, $formato, $opciones);

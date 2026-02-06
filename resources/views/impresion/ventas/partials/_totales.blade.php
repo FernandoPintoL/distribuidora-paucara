@@ -19,7 +19,7 @@
         @endif --}}
         <tr>
             <td><strong>Descuento:</strong></td>
-            <td class="text-right">-{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
+            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
         </tr>
         {{-- TOTAL A PAGAR (final) --}}
         @php
