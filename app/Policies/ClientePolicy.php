@@ -46,6 +46,12 @@ class ClientePolicy
 
     /**
      * ✅ Ver un cliente individual
+     *
+     * Reglas:
+     * - Cliente logueado: ve solo sus propios datos
+     * - Preventista: puede ver:
+     *   1. Clientes asignados a él (preventista_id)
+     *   2. Cualquier cliente activo (para seleccionar en carrito)
      */
     public function view(User $user, Cliente $cliente): bool
     {
@@ -54,9 +60,19 @@ class ClientePolicy
             return true;
         }
 
-        // ✅ Preventista (cualquier variante): ver solo SUS clientes (por preventista_id)
+        // ✅ Preventista (cualquier variante):
         if ($user->hasRole(['Preventista', 'preventista'])) {
-            return $user->empleado?->id === $cliente->preventista_id;
+            // 1️⃣ VER clientes asignados a él (preventista_id coincide)
+            if ($user->empleado?->id === $cliente->preventista_id) {
+                return true;
+            }
+
+            // 2️⃣ TAMBIÉN puede ver clientes activos (para seleccionar en carrito)
+            if ($cliente->activo) {
+                return true;
+            }
+
+            return false;
         }
 
         // Fallback a ABAC (zona) si no tiene preventista_id
