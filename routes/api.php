@@ -39,6 +39,7 @@ use App\Http\Controllers\ReporteInventarioApiController;
 use App\Http\Controllers\VehiculoController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PrecioController;
+use App\Http\Controllers\ComboController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -256,6 +257,19 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
     Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
     Route::get('/app/productos/buscar', [ProductoController::class, 'buscarApi']);
+
+    // ==========================================
+    // 📦 COMBOS - CAPACIDAD DE MANUFACTURA
+    // ==========================================
+    Route::get('/combos/{combo}/capacidad', [ComboController::class, 'capacidad'])->name('api.combos.capacidad');
+    Route::get('/combos/{combo}/capacidad-detalles', [ComboController::class, 'capacidadDetalles'])->name('api.combos.capacidad-detalles');
+    Route::get('/productos/{producto}/combos', [ComboController::class, 'combosDelProducto'])->name('api.productos.combos');
+
+    // ==========================================
+    // 📊 STOCK DE PRODUCTOS
+    // ==========================================
+    Route::get('/productos/{producto}/stock', [ProductoController::class, 'obtenerStock'])->name('api.productos.stock');
+    Route::post('/productos/stock/multiples', [ProductoController::class, 'obtenerStockMultiples'])->name('api.productos.stock.multiples');
 
     // ==========================================
     // 🛒 PROFORMAS - API UNIFICADA

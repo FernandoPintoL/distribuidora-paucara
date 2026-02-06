@@ -8,6 +8,8 @@ use App\Models\ComboGrupoItem;
 use App\Models\Producto;
 use App\Models\PrecioProducto;
 use App\Models\TipoPrecio;
+use App\Services\ComboStockService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -383,17 +385,25 @@ class ComboController extends Controller
             'descripcion'  => $combo->descripcion,
             'precio_venta' => (float) $combo->precio_venta,
             'activo'       => $combo->activo,
-            'items'        => $combo->comboItems->map(fn(ComboItem $item) => [
-                'producto_id'        => $item->producto_id,
-                'producto_nombre'    => $item->producto?->nombre,
-                'producto_sku'       => $item->producto?->sku,
-                'cantidad'           => (float) $item->cantidad,
-                'precio_unitario'    => (float) $item->precio_unitario,
-                'tipo_precio_id'     => $item->tipo_precio_id,
-                'tipo_precio_nombre' => $item->tipoPrecio?->nombre,
-                'es_obligatorio'     => (bool) $item->es_obligatorio,
-                'grupo_opcional'     => $item->grupo_opcional,
-            ])->values()->toArray(),
+            'items'        => $combo->comboItems->map(function(ComboItem $item) {
+                // Obtener stock del producto (consolidado de todos los almacenes)
+                $stockTotal = $item->producto?->stock()->sum('cantidad') ?? 0;
+                $stockDisponible = $item->producto?->stock()->sum('cantidad_disponible') ?? 0;
+
+                return [
+                    'producto_id'        => $item->producto_id,
+                    'producto_nombre'    => $item->producto?->nombre,
+                    'producto_sku'       => $item->producto?->sku,
+                    'cantidad'           => (float) $item->cantidad,
+                    'precio_unitario'    => (float) $item->precio_unitario,
+                    'tipo_precio_id'     => $item->tipo_precio_id,
+                    'tipo_precio_nombre' => $item->tipoPrecio?->nombre,
+                    'es_obligatorio'     => (bool) $item->es_obligatorio,
+                    'grupo_opcional'     => $item->grupo_opcional,
+                    'stock_disponible'   => (int) $stockDisponible,
+                    'stock_total'        => (int) $stockTotal,
+                ];
+            })->values()->toArray(),
             'grupo_opcional' => $combo->comboGrupos->isNotEmpty() ? [
                 'nombre_grupo'       => $combo->comboGrupos->first()->nombre_grupo,
                 'cantidad_a_llevar'  => $combo->comboGrupos->first()->cantidad_a_llevar,
@@ -406,5 +416,111 @@ class ComboController extends Controller
                 ])->toArray(),
             ] : null,
         ];
+    }
+
+    /**
+     * Obtener la capacidad de combos disponibles según el stock
+     * GET /combos/{combo}/capacidad
+     */
+    public function capacidad(Producto $combo, Request $request): JsonResponse
+    {
+        abort_unless($combo->es_combo, 404);
+
+        $almacenId = $request->integer('almacen_id');
+
+        $capacidad = ComboStockService::calcularCapacidadCombos(
+            $combo->id,
+            $almacenId ?: null
+        );
+
+        return response()->json([
+            'success' => true,
+            'combo_id' => $combo->id,
+            'combo_nombre' => $combo->nombre,
+            'capacidad' => $capacidad,
+            'almacen_id' => $almacenId ?: null,
+        ]);
+    }
+
+    /**
+     * Obtener la capacidad de combos con detalles de cada producto obligatorio
+     * GET /combos/{combo}/capacidad-detalles
+     */
+    public function capacidadDetalles(Producto $combo, Request $request): JsonResponse
+    {
+        abort_unless($combo->es_combo, 404);
+
+        $almacenId = $request->integer('almacen_id');
+
+        $resultado = ComboStockService::calcularCapacidadConDetalles(
+            $combo->id,
+            $almacenId ?: null
+        );
+
+        return response()->json([
+            'success' => true,
+            'combo_id' => $combo->id,
+            'combo_nombre' => $combo->nombre,
+            'capacidad_total' => $resultado['capacidad_total'],
+            'detalles' => $resultado['detalles'],
+            'almacen_id' => $almacenId ?: null,
+        ]);
+    }
+
+    /**
+     * Obtener todos los combos que contienen un producto específico
+     * GET /api/productos/{producto}/combos
+     */
+    public function combosDelProducto(Producto $producto, Request $request): JsonResponse
+    {
+        $almacenId = $request->integer('almacen_id');
+
+        // Obtener todos los combos que contienen este producto
+        $combos = ComboItem::where('producto_id', $producto->id)
+            ->with('combo')
+            ->get()
+            ->pluck('combo')
+            ->unique('id')
+            ->values();
+
+        $resultado = $combos->map(function ($combo) use ($almacenId) {
+            // Calcular capacidad para cada combo
+            $capacidadInfo = ComboStockService::calcularCapacidadConDetalles(
+                $combo->id,
+                $almacenId ?: null
+            );
+
+            // Encontrar si este producto es el cuello de botella
+            $esCuelloBotella = collect($capacidadInfo['detalles'])
+                ->where('producto_id', $producto->id)
+                ->where('es_cuello_botella', true)
+                ->isNotEmpty();
+
+            // Encontrar en qué posición está este producto en los detalles
+            $productoEnCombo = collect($capacidadInfo['detalles'])
+                ->firstWhere('producto_id', $producto->id);
+
+            return [
+                'combo_id' => $combo->id,
+                'combo_nombre' => $combo->nombre,
+                'combo_sku' => $combo->sku,
+                'precio_venta' => $combo->precio_venta,
+                'capacidad_total' => $capacidadInfo['capacidad_total'],
+                'es_obligatorio' => $productoEnCombo['es_obligatorio'] ?? true,
+                'cantidad_requerida' => $productoEnCombo['cantidad_requerida'] ?? 0,
+                'combos_posibles_por_este_producto' => $productoEnCombo['combos_posibles'] ?? 0,
+                'es_cuello_botella' => $esCuelloBotella,
+                'detalles' => $capacidadInfo['detalles'],
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'producto_id' => $producto->id,
+            'producto_nombre' => $producto->nombre,
+            'total_combos' => $resultado->count(),
+            'combos' => $resultado,
+            'almacen_id' => $almacenId ?: null,
+        ]);
     }
 }

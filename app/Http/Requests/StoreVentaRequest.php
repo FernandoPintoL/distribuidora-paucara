@@ -68,6 +68,13 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.precio_unitario' => 'required|numeric|min:0.01|max:999999.99', // Problema #10: > 0 y razonable
             'detalles.*.descuento'       => 'nullable|numeric|min:0',
             'detalles.*.subtotal'        => 'required|numeric|min:0.01',
+            'detalles.*.tipo_precio_id'  => 'nullable|integer|exists:tipos_precio,id',
+            'detalles.*.tipo_precio_nombre' => 'nullable|string|max:100',
+            // ✅ NUEVO: Validación para combo_items_seleccionados
+            'detalles.*.combo_items_seleccionados' => 'nullable|array',
+            'detalles.*.combo_items_seleccionados.*.combo_item_id' => 'nullable|integer|exists:combo_items,id',
+            'detalles.*.combo_items_seleccionados.*.producto_id' => 'nullable|integer|exists:productos,id',
+            'detalles.*.combo_items_seleccionados.*.incluido' => 'nullable|boolean',
         ];
     }
 

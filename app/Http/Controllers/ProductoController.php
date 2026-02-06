@@ -19,6 +19,8 @@ use App\Models\StockProducto;
 use App\Models\TipoAjusteInventario;
 use App\Models\TipoPrecio;
 use App\Models\UnidadMedida;
+use App\Services\ComboStockService;
+use App\Services\ProductoStockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -202,6 +204,7 @@ class ProductoController extends Controller
                     'fecha_creacion'        => $producto->fecha_creacion,
                     'es_alquilable'         => $producto->es_alquilable,
                     'es_combo'              => (bool) $producto->es_combo,
+                    'capacidad'             => $producto->es_combo ? ComboStockService::calcularCapacidadCombos($producto->id) : null,
                     'categoria_id'          => $producto->categoria_id,
                     'marca_id'              => $producto->marca_id,
                     'proveedor_id'          => $producto->proveedor_id,
@@ -1644,7 +1647,7 @@ class ProductoController extends Controller
                         ->with('almacen:id,nombre');
                 },
                 'comboItems' => function ($q) {
-                    $q->select('id', 'combo_id', 'producto_id', 'cantidad', 'precio_unitario', 'tipo_precio_id')
+                    $q->select('id', 'combo_id', 'producto_id', 'cantidad', 'precio_unitario', 'tipo_precio_id', 'es_obligatorio') // ✅ AGREGADO: es_obligatorio
                         ->with([
                             'producto' => function ($pq) {
                                 $pq->select('id', 'nombre', 'sku', 'codigo_barras', 'precio_venta', 'unidad_medida_id');
@@ -1659,6 +1662,12 @@ class ProductoController extends Controller
                 $stockAlmacen = $producto->stock->firstWhere('almacen_id', $almacenId);
                 $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
                 $stockTotal = $producto->stock->sum('cantidad_disponible');
+                $stockReservado = $producto->stock->sum('cantidad_reservada') ?? 0;
+
+                // ✅ NUEVO: Obtener capacidad para combos usando ProductoStockService
+                $capacidad = $producto->es_combo
+                    ? ProductoStockService::obtenerStockProducto($producto->id, $almacenId)['capacidad']
+                    : null;
 
                 // ✅ MEJORADO: Buscar precio de venta con múltiples estrategias
                 $precioVentaObj = null;
@@ -1722,7 +1731,8 @@ class ProductoController extends Controller
                 foreach ($producto->precios as $precio) {
                     if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'VENTA') {
                         $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
-                        $tipoPrecioNombreRecomendado = $precio->nombre ?? $precio->tipoPrecio->nombre;
+                        // ✅ CONSISTENCIA: Usar tipo_precio.nombre para evitar nombres genéricos
+                        $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
                         break;
                     }
                 }
@@ -1733,8 +1743,32 @@ class ProductoController extends Controller
                         $nombre = strtoupper($precio->nombre ?? '');
                         if (strpos($nombre, 'VENTA') !== false && strpos($nombre, 'COSTO') === false) {
                             $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
-                            $tipoPrecioNombreRecomendado = $precio->nombre;
+                            // ✅ CONSISTENCIA: Usar tipo_precio.nombre si está disponible
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio ? $precio->tipoPrecio->nombre : $precio->nombre;
                             break;
+                        }
+                    }
+                }
+
+                // ✅ NUEVO: Estrategia 3 para COMBOS - Si aún no encontró, buscar LICORERIA
+                if (!$tipoPrecioIdRecomendado && $producto->es_combo) {
+                    foreach ($producto->precios as $precio) {
+                        if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'LICORERIA') {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            // ✅ CORREGIDO: Usar tipo_precio.nombre para mostrar "Precio de Licorería" en lugar de "Precio General"
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
+                            break;
+                        }
+                    }
+                    // Si tampoco encontró por código, buscar por nombre que contenga 'LICORERIA'
+                    if (!$tipoPrecioIdRecomendado) {
+                        foreach ($producto->precios as $precio) {
+                            if (stripos($precio->nombre ?? '', 'LICORERIA') !== false) {
+                                $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                                // ✅ CORREGIDO: Usar tipo_precio.nombre si está disponible
+                                $tipoPrecioNombreRecomendado = $precio->tipoPrecio ? $precio->tipoPrecio->nombre : $precio->nombre;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1754,20 +1788,29 @@ class ProductoController extends Controller
                 $comboItems = [];
                 if ($producto->es_combo && $producto->comboItems->count() > 0) {
                     $comboItems = $producto->comboItems
-                        ->map(fn($item) => [
-                            'id'                    => $item->id,
-                            'combo_id'              => $item->combo_id,
-                            'producto_id'           => $item->producto_id,
-                            'producto_nombre'       => $item->producto?->nombre ?? '',
-                            'producto_sku'          => $item->producto?->sku ?? '',
-                            'producto_codigo_barras'=> $item->producto?->codigo_barras ?? '',
-                            'cantidad'              => (float) $item->cantidad,
-                            'precio_unitario'       => (float) $item->precio_unitario,
-                            'tipo_precio_id'        => $item->tipo_precio_id,
-                            'tipo_precio_nombre'    => $item->tipoPrecio?->nombre ?? '',
-                            'unidad_medida_id'      => $item->producto?->unidad_medida_id,
-                            'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
-                        ])
+                        ->map(function($item) {
+                            // Obtener stock del producto (consolidado de todos los almacenes)
+                            $stockTotal = $item->producto?->stock()->sum('cantidad') ?? 0;
+                            $stockDisponible = $item->producto?->stock()->sum('cantidad_disponible') ?? 0;
+
+                            return [
+                                'id'                    => $item->id,
+                                'combo_id'              => $item->combo_id,
+                                'producto_id'           => $item->producto_id,
+                                'producto_nombre'       => $item->producto?->nombre ?? '',
+                                'producto_sku'          => $item->producto?->sku ?? '',
+                                'producto_codigo_barras'=> $item->producto?->codigo_barras ?? '',
+                                'cantidad'              => (float) $item->cantidad,
+                                'precio_unitario'       => (float) $item->precio_unitario,
+                                'tipo_precio_id'        => $item->tipo_precio_id,
+                                'tipo_precio_nombre'    => $item->tipoPrecio?->nombre ?? '',
+                                'unidad_medida_id'      => $item->producto?->unidad_medida_id,
+                                'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
+                                'stock_disponible'      => (int) $stockDisponible,
+                                'stock_total'           => (int) $stockTotal,
+                                'es_obligatorio'        => (bool) $item->es_obligatorio, // ✅ NUEVO: Indica si el producto es obligatorio en el combo
+                            ];
+                        })
                         ->values()
                         ->all();
                 }
@@ -1783,12 +1826,28 @@ class ProductoController extends Controller
                     'precio_base'      => (float) $precioBase,
                     'precio_venta'     => (float) $precioBase,
                     'precio_costo'     => (float) $precioCosto,
-                    'precios'          => $producto->precios,
+                    'precios'          => $producto->precios->map(function($p) {
+                        return [
+                            'id' => $p->id,
+                            // ✅ CORREGIDO: Usar tipo_precio.nombre si el precio.nombre es genérico
+                            'nombre' => $p->tipoPrecio ? $p->tipoPrecio->nombre : ($p->nombre ?? 'Precio'),
+                            'precio' => (float) $p->precio,
+                            'tipo_precio_id' => $p->tipo_precio_id,
+                            'es_precio_base' => $p->es_precio_base,
+                            'tipo_precio' => $p->tipoPrecio ? [
+                                'id' => $p->tipoPrecio->id,
+                                'nombre' => $p->tipoPrecio->nombre,
+                                'codigo' => $p->tipoPrecio->codigo,
+                            ] : null,
+                        ];
+                    })->all(),
                     // ✅ NUEVO: Tipo de precio recomendado basado en código VENTA
                     'tipo_precio_id_recomendado' => $tipoPrecioIdRecomendado,
                     'tipo_precio_nombre_recomendado' => $tipoPrecioNombreRecomendado,
                     'stock_disponible' => (int) $stockDisponible,
                     'stock'            => (int) $stockDisponible,
+                    'stock_reservado'  => (int) $stockReservado,
+                    'capacidad'        => $capacidad,
                     'almacen_id'       => $almacenId,
                     'almacen_nombre'   => $almacenNombre,
                     'stock_total'      => (int) $stockTotal,
@@ -2933,6 +2992,60 @@ class ProductoController extends Controller
                 ->select('id', 'nombre')
                 ->orderBy('nombre')
                 ->get(),
+        ]);
+    }
+
+    /**
+     * Obtener stock disponible de un producto específico
+     * GET /api/productos/{producto}/stock
+     */
+    public function obtenerStock(Producto $producto, Request $request): JsonResponse
+    {
+        $almacenId = $request->integer('almacen_id');
+
+        $stock = ProductoStockService::obtenerStockProducto(
+            $producto->id,
+            $almacenId ?: null
+        );
+
+        return response()->json([
+            'success' => true,
+            'producto_id' => $producto->id,
+            'producto_nombre' => $producto->nombre,
+            'producto_sku' => $producto->sku,
+            'es_combo' => (bool) $producto->es_combo,
+            'es_fraccionado' => (bool) $producto->es_fraccionado,
+            ...$stock,
+            'almacen_id' => $almacenId ?: null,
+        ]);
+    }
+
+    /**
+     * Obtener stock disponible de múltiples productos
+     * POST /api/productos/stock/multiples
+     */
+    public function obtenerStockMultiples(Request $request): JsonResponse
+    {
+        $productoIds = $request->input('producto_ids', []);
+        $almacenId = $request->integer('almacen_id');
+
+        if (empty($productoIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Se requieren IDs de productos',
+            ], 400);
+        }
+
+        $stocks = ProductoStockService::obtenerStockMultiples(
+            $productoIds,
+            $almacenId ?: null
+        );
+
+        return response()->json([
+            'success' => true,
+            'total' => $stocks->count(),
+            'stocks' => $stocks,
+            'almacen_id' => $almacenId ?: null,
         ]);
     }
 }

@@ -36,8 +36,10 @@ class PrecioRangoProductoService
     /**
      * Calcular todos los items del carrito con sus precios por rango
      *
-     * RESPUESTA MEJORADA (FASE 1):
-     * ✅ Incluye tipo_precio_id y tipo_precio_nombre en nivel superior
+     * RESPUESTA MEJORADA (FASE 2 - OPCIÓN 1):
+     * ✅ Respeta tipo_precio_id del request si viene
+     * ✅ Si hay rango aplicado, usa el tipo_precio_id del rango
+     * ✅ Si no hay rango y no viene tipo_precio_id, devuelve null
      * ✅ Calcula ahorro total disponible del carrito
      * ✅ Mantiene compatibilidad con rango_aplicado
      */
@@ -61,6 +63,7 @@ class PrecioRangoProductoService
             }
 
             $cantidad = (int) $item['cantidad'];
+            $tipoPrecioIdDelRequest = $item['tipo_precio_id'] ?? null; // ✅ NUEVO: Obtener tipo_precio_id del request
 
             // ✅ NUEVO: Log detallado del cálculo
             Log::info('💰 [calcularCarrito] Procesando producto', [
@@ -87,9 +90,10 @@ class PrecioRangoProductoService
 
             $precioInfo = $this->calcularPrecioCompleto($producto, $cantidad, $empresaId);
 
-            // 🔑 NUEVO: Extraer tipo_precio_id del rango_aplicado
-            // Si hay rango aplicado, usar el tipo_precio_id de ahí
-            // Si no, usar tipo_precio_id=2 (VENTA - por defecto)
+            // 🔑 OPCIÓN 1: Respetar tipo_precio_id del request o del rango
+            // 1️⃣ Si hay rango aplicado → usar tipo_precio_id del rango
+            // 2️⃣ Si no hay rango pero viene tipo_precio_id en request → respetarlo
+            // 3️⃣ Si no hay rango ni tipo_precio_id → devolver null (no sobrescribir la selección del frontend)
             if ($precioInfo['rango_aplicado']) {
                 $tipoPrecioId     = $precioInfo['rango_aplicado']['tipo_precio_id'];
                 $tipoPrecioNombre = $precioInfo['rango_aplicado']['tipo_precio_nombre'];
@@ -101,46 +105,31 @@ class PrecioRangoProductoService
                     'tipo_precio_nombre' => $tipoPrecioNombre,
                     'precio_unitario' => $precioInfo['precio_unitario'],
                 ]);
-            } else {
-                // Fallback: Si no hay rango, obtener el tipo_precio de la venta normal
-                // ✅ MODIFICADO: Buscar el precio con código 'VENTA' en lugar de hardcodear ID 2
-                $precioVentaObj = $producto->precios()
-                    ->whereHas('tipoPrecio', function ($query) {
-                        $query->where('codigo', 'VENTA');
-                    })
-                    ->first();
+            } elseif ($tipoPrecioIdDelRequest) {
+                // ✅ NUEVO: Si viene tipo_precio_id en request, respetarlo
+                $tipoPrecioId     = $tipoPrecioIdDelRequest;
 
-                if ($precioVentaObj) {
-                    $tipoPrecioId     = $precioVentaObj->tipo_precio_id;
-                    $tipoPrecioNombre = $precioVentaObj->nombre ?? $precioVentaObj->tipoPrecio->nombre ?? 'Precio de Venta';
-                    $precioVenta      = $precioVentaObj->precio;
-                } else {
-                    // Si no encuentra por código, buscar por nombre
-                    $precioVentaObj = $producto->precios()
-                        ->whereRaw('LOWER(nombre) LIKE ?', ['%venta%'])
-                        ->whereRaw('LOWER(nombre) NOT LIKE ?', ['%costo%'])
-                        ->first();
+                // Obtener el nombre del tipo de precio
+                $tipoPrecio = TipoPrecio::find($tipoPrecioId);
+                $tipoPrecioNombre = $tipoPrecio?->nombre ?? null;
 
-                    if ($precioVentaObj) {
-                        $tipoPrecioId     = $precioVentaObj->tipo_precio_id;
-                        $tipoPrecioNombre = $precioVentaObj->nombre;
-                        $precioVenta      = $precioVentaObj->precio;
-                    } else {
-                        // Último recurso: usar el primero de la lista
-                        $precioVentaObj   = $producto->precios()->first();
-                        $tipoPrecioId     = $precioVentaObj->tipo_precio_id ?? 2;
-                        $tipoPrecioNombre = $precioVentaObj->nombre ?? 'Precio de Venta';
-                        $precioVenta      = $precioVentaObj->precio ?? 0;
-                    }
-                }
-
-                Log::info('ℹ️ [calcularCarrito] Sin rango - usando precio normal', [
+                Log::info('✅ [calcularCarrito] Usando tipo_precio_id del request', [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
                     'tipo_precio_id' => $tipoPrecioId,
                     'tipo_precio_nombre' => $tipoPrecioNombre,
                     'precio_unitario' => $precioInfo['precio_unitario'],
-                    'buscado_por_codigo' => 'VENTA',
+                ]);
+            } else {
+                // ✅ NUEVO: Si no hay rango ni tipo_precio_id en request, devolver null
+                // Esto respeta que el frontend mantenga su selección original
+                $tipoPrecioId     = null;
+                $tipoPrecioNombre = null;
+
+                Log::info('ℹ️ [calcularCarrito] Sin rango y sin tipo_precio_id en request - devolviendo null', [
+                    'producto_id' => $producto->id,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precioInfo['precio_unitario'],
                 ]);
             }
 

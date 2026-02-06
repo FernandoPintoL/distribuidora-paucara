@@ -213,21 +213,24 @@ class PrecioRangoProductoController extends Controller
      * Body:
      * {
      *   "items": [
-     *     { "producto_id": 1, "cantidad": 15 },
-     *     { "producto_id": 2, "cantidad": 5 }
+     *     { "producto_id": 1, "cantidad": 15, "tipo_precio_id": 7 },
+     *     { "producto_id": 2, "cantidad": 5, "tipo_precio_id": 7 }
      *   ]
      * }
+     *
+     * ✅ NUEVO: tipo_precio_id es opcional. Si viene, se respeta. Si no y hay rango, usa el del rango.
      */
     public function calcularCarrito(Request $request)
     {
         $request->validate([
-            'items'               => 'required|array|min:1',
-            'items.*.producto_id' => [
+            'items'                     => 'required|array|min:1',
+            'items.*.producto_id'       => [
                 'required',
                 'integer',
                 'exists:productos,id,activo,1', // ← Validar que esté activo
             ],
-            'items.*.cantidad'    => 'required|numeric|min:0.01', // ← Permite decimales (0.01 en adelante)
+            'items.*.cantidad'          => 'required|numeric|min:0.01', // ← Permite decimales (0.01 en adelante)
+            'items.*.tipo_precio_id'    => 'nullable|integer|exists:tipos_precio,id', // ✅ NUEVO: opcional
         ]);
 
         try {

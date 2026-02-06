@@ -439,9 +439,30 @@ class StockService
             $cantidad   = (float) $item['cantidad'];
 
             if (isset($combos[$productoId])) {
-                foreach ($combos[$productoId]->comboItems as $comboItem) {
-                    $id = $comboItem->producto_id;
-                    $expandido[$id] = ($expandido[$id] ?? 0) + ((float) $comboItem->cantidad * $cantidad);
+                // ✅ NUEVO: Verificar si hay items seleccionados específicos para este combo
+                $comboItemsSeleccionados = $item['combo_items_seleccionados'] ?? null;
+
+                if ($comboItemsSeleccionados && is_array($comboItemsSeleccionados) && count($comboItemsSeleccionados) > 0) {
+                    // Si hay items seleccionados, solo expandir esos que estén marcados como incluido=true
+                    // Crear mapa para búsqueda rápida, filtrando solo items con incluido=true
+                    $idsSeleccionados = array_map(fn($s) => $s['producto_id'],
+                        array_filter($comboItemsSeleccionados, fn($item) => ($item['incluido'] ?? false) === true)
+                    );
+
+                    foreach ($combos[$productoId]->comboItems as $comboItem) {
+                        // ✅ SOLO si el item está en la lista de seleccionados Y está marcado como incluido=true
+                        if (in_array($comboItem->producto_id, $idsSeleccionados)) {
+                            $id = $comboItem->producto_id;
+                            $expandido[$id] = ($expandido[$id] ?? 0) + ((float) $comboItem->cantidad * $cantidad);
+                        }
+                    }
+                } else {
+                    // Si NO hay items seleccionados, expandir TODOS los items del combo
+                    // (compatibilidad con combos que no tengan items seleccionados explícitamente)
+                    foreach ($combos[$productoId]->comboItems as $comboItem) {
+                        $id = $comboItem->producto_id;
+                        $expandido[$id] = ($expandido[$id] ?? 0) + ((float) $comboItem->cantidad * $cantidad);
+                    }
                 }
             } else {
                 $expandido[$productoId] = ($expandido[$productoId] ?? 0) + $cantidad;

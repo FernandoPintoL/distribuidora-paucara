@@ -16,6 +16,7 @@ use App\Models\TipoDocumento;
 use App\Models\TipoPago;
 use App\Models\User;
 use App\Models\Venta;
+use App\Services\ComboStockService;
 use App\Services\Venta\VentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-
+use App\Models\TipoPrecio;
 /**
  * VentaController - REFACTORIZADO (THIN Controller Pattern)
  *
@@ -303,13 +304,17 @@ class VentaController extends Controller
             'nota'               => 'Productos se cargan dinámicamente via /api/productos/buscar',
         ]);
 
+        // ✅ NUEVO: Obtener tipos de precio para asignar por defecto
+        $tiposPrecio = TipoPrecio::activos()->select('id', 'codigo', 'nombre')->get();
+
         return Inertia::render('ventas/create', [
-            'clientes'           => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'clientes'           => Cliente::activos()->select('id', 'nombre', 'nit', 'codigo_cliente', 'email', 'telefono')->get(), // ✅ AGREGADO: codigo_cliente para búsqueda automática de GENERAL
             'productos'          => $productos, // ✅ MODIFICADO: Solo productos con stock en almacén
             'almacenes'          => Almacen::activos()->select('id', 'nombre')->get(),
             'monedas'            => Moneda::activos()->select('id', 'codigo', 'nombre', 'simbolo')->get(),
             'tipos_documento'    => TipoDocumento::activos()->select('id', 'codigo', 'nombre')->get(),
             'tipos_pago'         => $tiposPago,
+            'tipos_precio'       => $tiposPrecio, // ✅ NUEVO: Tipos de precio para asignar por defecto
             'estados_documento'  => EstadoDocumento::where('activo', true)->select('id', 'codigo', 'nombre')->get(), // ✅ NUEVO: Estados de documento
             'almacen_id_empresa' => $almacenIdEmpresa,                                                               // ✅ NUEVO: Almacén de la empresa
         ]);
@@ -976,25 +981,52 @@ class VentaController extends Controller
                     continue;
                 }
 
-                $stockDisponible = $productoData->stock()
-                    ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
-                    ->sum('cantidad') ?? 0;
-
                 $cantidadSolicitada = $producto['cantidad'];
-                $tieneStock         = $stockDisponible >= $cantidadSolicitada;
 
-                if (! $tieneStock) {
-                    $diferencia = $cantidadSolicitada - $stockDisponible;
-                    $errores[]  = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$stockDisponible})";
+                // ✅ COMBOS: Validar capacidad en lugar de stock directo
+                if ($productoData->es_combo) {
+                    $capacidad = ComboStockService::calcularCapacidadCombos(
+                        $productoData->id,
+                        $almacenId
+                    );
+
+                    $tieneStock = $capacidad >= $cantidadSolicitada;
+
+                    if (! $tieneStock) {
+                        $diferencia = $cantidadSolicitada - $capacidad;
+                        $errores[]  = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$capacidad})";
+                    }
+
+                    $detalles[] = [
+                        'producto_id'         => $producto['producto_id'],
+                        'producto_nombre'     => $productoData->nombre,
+                        'cantidad_solicitada' => $cantidadSolicitada,
+                        'stock_disponible'    => $capacidad,
+                        'es_combo'            => true,
+                        'diferencia'          => max(0, $cantidadSolicitada - $capacidad),
+                    ];
+                } else {
+                    // ✅ PRODUCTOS SIMPLES: Validar stock directo
+                    $stockDisponible = $productoData->stock()
+                        ->when($almacenId, fn($q) => $q->where('almacen_id', $almacenId))
+                        ->sum('cantidad_disponible') ?? 0;
+
+                    $tieneStock = $stockDisponible >= $cantidadSolicitada;
+
+                    if (! $tieneStock) {
+                        $diferencia = $cantidadSolicitada - $stockDisponible;
+                        $errores[]  = "{$productoData->nombre}: Faltan {$diferencia} unidades (solicitado: {$cantidadSolicitada}, disponible: {$stockDisponible})";
+                    }
+
+                    $detalles[] = [
+                        'producto_id'         => $producto['producto_id'],
+                        'producto_nombre'     => $productoData->nombre,
+                        'cantidad_solicitada' => $cantidadSolicitada,
+                        'stock_disponible'    => $stockDisponible,
+                        'es_combo'            => false,
+                        'diferencia'          => max(0, $cantidadSolicitada - $stockDisponible),
+                    ];
                 }
-
-                $detalles[] = [
-                    'producto_id'         => $producto['producto_id'],
-                    'producto_nombre'     => $productoData->nombre,
-                    'cantidad_solicitada' => $cantidadSolicitada,
-                    'stock_disponible'    => $stockDisponible,
-                    'diferencia'          => max(0, $cantidadSolicitada - $stockDisponible),
-                ];
             }
 
             $valido = empty($errores);

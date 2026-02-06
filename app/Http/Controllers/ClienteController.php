@@ -386,6 +386,28 @@ class ClienteController extends Controller
                 'updates_keys' => array_keys($updates),
             ]);
 
+            // ✅ CÓDIGO CLIENTE: Si viene en la petición, respetarlo. Si no viene, el evento updating manejará la lógica
+            if (isset($data['codigo_cliente']) && !empty($data['codigo_cliente'])) {
+                // Usar el código proporcionado del frontend (respetarlo incluso si cambió localidad)
+                Log::info('✅ Usando código de cliente del frontend', [
+                    'cliente_id' => $cliente->id,
+                    'codigo_proporcionado' => $data['codigo_cliente'],
+                ]);
+            } else {
+                // Si no viene codigo_cliente, no lo tocamos aquí
+                // El evento updating del modelo manejará la lógica:
+                // - Si cambió localidad → regenerar automáticamente
+                // - Si no cambió → dejar como está
+                unset($data['codigo_cliente']);
+                Log::info('ℹ️ Código de cliente no modificado en petición - evento updating manejará la lógica', [
+                    'cliente_id' => $cliente->id,
+                    'localidad_cambio' => $cliente->localidad_id !== $cliente->getOriginal('localidad_id'),
+                ]);
+            }
+
+            // ✅ CÓDIGO CLIENTE: Capturar valor anterior para auditoría
+            $codigoAnterior = $cliente->codigo_cliente;
+
             // ✅ CRÉDITO: Capturar valores anteriores para auditoría de crédito
             $creditoAnterior = [
                 'puede_tener_credito' => $cliente->getOriginal('puede_tener_credito'),
@@ -395,6 +417,22 @@ class ClienteController extends Controller
             // Actualizar el cliente
             $cliente->update($data);
             $cliente->refresh();
+
+            // ✅ CÓDIGO CLIENTE: Registrar cambios en auditoría si cambió
+            if (isset($data['codigo_cliente']) && $data['codigo_cliente'] !== $codigoAnterior) {
+                $cliente->registrarCambio(
+                    'actualizar_codigo_cliente',
+                    [
+                        'codigo_anterior' => $codigoAnterior,
+                        'codigo_nuevo' => $data['codigo_cliente'],
+                    ]
+                );
+                Log::info('📝 Cambio de código de cliente registrado en auditoría', [
+                    'cliente_id' => $cliente->id,
+                    'codigo_anterior' => $codigoAnterior,
+                    'codigo_nuevo' => $data['codigo_cliente'],
+                ]);
+            }
 
             // ✅ CRÉDITO: Registrar cambios de crédito en auditoría
             if (isset($data['puede_tener_credito']) || isset($data['limite_credito'])) {

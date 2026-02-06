@@ -24,6 +24,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Edit, Trash2, Plus, Package } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import * as routes from '@/routes/combos';
+import ComboCapacity from './components/ComboCapacity';
 
 interface ComboItem {
   id: number;
@@ -108,6 +109,7 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                       <TableHead>Nombre</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Items</TableHead>
+                      <TableHead className="text-center">Capacidad</TableHead>
                       <TableHead className="text-center">Precio Venta</TableHead>
                       {/* <TableHead className="text-center">Costo Calculado</TableHead> */}
                       <TableHead className="text-center">Estado</TableHead>
@@ -117,9 +119,12 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
                   <TableBody>
                     {combos.data.map((combo) => (
                       <TableRow key={combo.id}>
-                        <TableCell className="font-medium">{combo.nombre}</TableCell>
+                        <TableCell className="font-medium">{combo.id} | {combo.nombre}</TableCell>
                         <TableCell>{combo.sku}</TableCell>
                         <TableCell className="text-center">{combo.cantidad_items}</TableCell>
+                        <TableCell className="text-center">
+                          <ComboCapacity comboId={combo.id} compact={true} />
+                        </TableCell>
                         <TableCell className="text-right">
                           Bs {combo.precio_venta.toFixed(2)}
                         </TableCell>

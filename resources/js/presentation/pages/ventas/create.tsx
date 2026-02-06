@@ -34,6 +34,12 @@ import type { Cliente } from '@/domain/entities/clientes';
 import ventasService from '@/infrastructure/services/ventas.service';
 import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 
+interface TipoPrecio {
+    id: number;
+    codigo: string;
+    nombre: string;
+}
+
 interface PageProps extends InertiaPageProps {
     clientes: Cliente[];
     productos: Producto[]; // ✅ Ahora array vacío (búsqueda via API)
@@ -42,6 +48,7 @@ interface PageProps extends InertiaPageProps {
     estados_documento: EstadoDocumento[];
     tipos_pago: TipoPago[];
     tipos_documento: TipoDocumento[];
+    tipos_precio: TipoPrecio[]; // ✅ NUEVO: Tipos de precio para asignar por defecto
     almacen_id_empresa: number; // ✅ NUEVO: Almacén de la empresa principal
     auth: {
         user: {
@@ -53,7 +60,7 @@ interface PageProps extends InertiaPageProps {
 }
 
 export default function VentaForm() {
-    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, almacen_id_empresa, auth, venta } = usePage<PageProps>().props;
+    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, tipos_precio, almacen_id_empresa, auth, venta } = usePage<PageProps>().props;
     const isEditing = Boolean(venta);
     const { shouldShowBanner } = useCajaWarning();
 
@@ -129,6 +136,20 @@ export default function VentaForm() {
 
     // ✅ NUEVO: Rastrear qué tipos de precio han sido seleccionados manualmente por el usuario
     const [manuallySelectedTipoPrecio, setManuallySelectedTipoPrecio] = useState<Record<number, boolean>>({});
+
+    // ✅ NUEVO: Rastrear items seleccionados en combos por cada detalle
+    const [comboItemsMap, setComboItemsMap] = useState<Record<number, any[]>>({});
+
+    // ✅ NUEVO: Obtener ID del tipo de precio LICORERIA desde props
+    const tipoPrecioLicoreriId = useMemo(() => {
+        const licoreria = tipos_precio?.find(tp =>
+            tp.codigo === 'LICORERIA' || tp.nombre?.toUpperCase() === 'LICORERIA'
+        );
+        if (licoreria) {
+            console.log('✅ Tipo de precio LICORERIA obtenido:', licoreria.id);
+        }
+        return licoreria?.id || null;
+    }, [tipos_precio]);
 
     // Verificar si hay caja abierta (de cualquier día)
     useEffect(() => {
@@ -321,6 +342,7 @@ export default function VentaForm() {
                             'X-Requested-With': 'XMLHttpRequest',
                         }
                     });
+                    console.log('📡 Respuesta al cargar cliente:', response);
                     if (response.ok) {
                         const result = await response.json();
                         if (result.success && result.data) {
@@ -334,6 +356,68 @@ export default function VentaForm() {
             cargarClienteCompleto();
         }
     }, [data.cliente_id]);
+
+    // ✅ NUEVO: Buscar y seleccionar automáticamente cliente GENERAL al cargar el componente
+    useEffect(() => {
+        console.group('🔍 [useEffect] Buscando cliente GENERAL automáticamente');
+
+        // Solo al cargar por primera vez y sin edición
+        if (isEditing) {
+            console.log('❌ Modo edición activo - Saltando selección automática');
+            console.groupEnd();
+            return;
+        }
+
+        if (data.cliente_id && data.cliente_id !== 0) {
+            console.log('❌ Cliente ya seleccionado (ID:', data.cliente_id, ') - No cambiar');
+            console.groupEnd();
+            return;
+        }
+
+        if (!clientesSeguro || clientesSeguro.length === 0) {
+            console.log('❌ No hay clientes disponibles', { clientesSeguro });
+            console.groupEnd();
+            return;
+        }
+
+        console.log('📋 Clientes disponibles:', {
+            cantidad: clientesSeguro.length,
+            clientes: clientesSeguro.map((c: Cliente) => ({
+                id: c.id,
+                nombre: c.nombre,
+                codigo_cliente: c.codigo_cliente
+            }))
+        });
+
+        // Buscar cliente con código_cliente === 'GENERAL'
+        const clienteGeneral = clientesSeguro.find((c: Cliente) => c.codigo_cliente === 'GENERAL');
+
+        if (clienteGeneral) {
+            console.log('✅ CLIENTE GENERAL ENCONTRADO Y SELECCIONADO:', {
+                id: clienteGeneral.id,
+                nombre: clienteGeneral.nombre,
+                nit: clienteGeneral.nit,
+                codigo_cliente: clienteGeneral.codigo_cliente,
+                email: clienteGeneral.email,
+                telefono: clienteGeneral.telefono
+            });
+
+            setData('cliente_id', clienteGeneral.id);
+            setClienteValue(clienteGeneral.id);
+            setClienteDisplay(clienteGeneral.nombre + (clienteGeneral.nit ? ` (${clienteGeneral.nit})` : ''));
+            setClienteSeleccionado(clienteGeneral);
+
+            console.log('✅ Estados actualizados:');
+            console.log('   - cliente_id:', clienteGeneral.id);
+            console.log('   - clienteValue:', clienteGeneral.id);
+            console.log('   - clienteDisplay:', clienteGeneral.nombre + (clienteGeneral.nit ? ` (${clienteGeneral.nit})` : ''));
+        } else {
+            console.log('❌ Cliente GENERAL NO ENCONTRADO en la lista de clientes');
+            console.log('   Códigos disponibles:', clientesSeguro.map((c: Cliente) => c.codigo_cliente));
+        }
+
+        console.groupEnd();
+    }, [isEditing, clientesSeguro.length]); // Ejecutar cuando clientes se cargan o cambia edición
 
     // ✅ NUEVO: Sincronizar política de pago cuando se selecciona tipo de pago CREDITO
     useEffect(() => {
@@ -477,12 +561,16 @@ export default function VentaForm() {
 
             // Recalcular precios según rangos con la nueva cantidad
             // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
-            precioRango.calcularCarritoDebounced(
-                updatedDetalles.map(d => ({
-                    producto_id: d.producto_id,
-                    cantidad: d.cantidad
-                }))
-            );
+            // ✅ NO calcular si el cliente es GENERAL (no se deben aplicar rangos)
+            if (clienteSeleccionado?.codigo_cliente !== 'GENERAL') {
+                precioRango.calcularCarritoDebounced(
+                    updatedDetalles.map(d => ({
+                        producto_id: d.producto_id,
+                        cantidad: d.cantidad,
+                        tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
+                    }))
+                );
+            }
 
             calculateTotals(updatedDetalles);
             calculatePeso(updatedDetalles);
@@ -520,10 +608,10 @@ export default function VentaForm() {
             }
         }
 
-        // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend
+        // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend, fallback a LICORERIA si no viene
         // El backend devuelve tipo_precio_id_recomendado basado en el código VENTA
-        const tipoPrecioIdRecomendado = (producto as any).tipo_precio_id_recomendado;
-        const tipoPrecioNombreRecomendado = (producto as any).tipo_precio_nombre_recomendado;
+        const tipoPrecioIdRecomendado = (producto as any).tipo_precio_id_recomendado || tipoPrecioLicoreriId;
+        const tipoPrecioNombreRecomendado = (producto as any).tipo_precio_nombre_recomendado || 'LICORERIA';
 
         // ✅ DEBUG: Loguear los IDs de precios disponibles para verificar coincidencias
         const preciosConIds = (producto as any).precios?.map((p: any) => ({
@@ -570,12 +658,16 @@ export default function VentaForm() {
 
         // 🔑 NUEVO: Calcular precios según rangos
         // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
-        precioRango.calcularCarritoDebounced(
-            newDetalles.map(d => ({
-                producto_id: d.producto_id,
-                cantidad: d.cantidad
-            }))
-        );
+        // ✅ NO calcular si el cliente es GENERAL (no se deben aplicar rangos)
+        if (clienteSeleccionado?.codigo_cliente !== 'GENERAL') {
+            precioRango.calcularCarritoDebounced(
+                newDetalles.map(d => ({
+                    producto_id: d.producto_id,
+                    cantidad: d.cantidad,
+                    tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
+                }))
+            );
+        }
 
         calculateTotals(newDetalles);
         calculatePeso(newDetalles);
@@ -657,12 +749,16 @@ export default function VentaForm() {
         if (field === 'cantidad' && !esUnidadOPrecioFraccionado) {
             console.log(`📊 [updateDetail] Recalculando rango para cantidad de producto ${updatedDetalles[index].producto_id}`);
             // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
-            precioRango.calcularCarritoDebounced(
-                updatedDetalles.map(d => ({
-                    producto_id: d.producto_id,
-                    cantidad: d.cantidad
-                }))
-            );
+            // ✅ NO calcular si el cliente es GENERAL (no se deben aplicar rangos)
+            if (clienteSeleccionado?.codigo_cliente !== 'GENERAL') {
+                precioRango.calcularCarritoDebounced(
+                    updatedDetalles.map(d => ({
+                        producto_id: d.producto_id,
+                        cantidad: d.cantidad,
+                        tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
+                    }))
+                );
+            }
         }
 
         calculateTotals(updatedDetalles);
@@ -682,11 +778,13 @@ export default function VentaForm() {
 
         // 🔑 NUEVO: Recalcular rangos cuando se elimina un producto
         // ✅ COMENTADO: Deshabilitado temporalmente para evitar cambios automáticos de precio
-        if (updatedDetalles.length > 0) {
+        // ✅ NO calcular si el cliente es GENERAL (no se deben aplicar rangos)
+        if (updatedDetalles.length > 0 && clienteSeleccionado?.codigo_cliente !== 'GENERAL') {
             precioRango.calcularCarritoDebounced(
                 updatedDetalles.map(d => ({
                     producto_id: d.producto_id,
-                    cantidad: d.cantidad
+                    cantidad: d.cantidad,
+                    tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
                 }))
             );
         }
@@ -731,22 +829,31 @@ export default function VentaForm() {
             pesoTotal += Number(cantidad) * Number(peso);
         });
 
-        /* console.log('⚖️ Peso total calculado:', {
-            pesoTotal,
-            detallesCount: detalles.length,
-            detalles: detalles.map(d => ({
-                numero: d.numero,
-                producto: d.producto?.nombre,
-                cantidad: d.cantidad,
-                peso_unitario: d.producto?.peso,
-                subtotal_peso: Number(d.cantidad) * Number(d.producto?.peso || 0)
-            }))
-        }); */
-
         setData(prev => ({
             ...prev,
             peso_total_estimado: pesoTotal
         }));
+    };
+
+    // ✅ NUEVO: Función para limpiar manualmente el borrador de localStorage
+    const limpiarBorrador = () => {
+        const confirmar = window.confirm('¿Deseas limpiar el borrador? Esta acción no se puede deshacer.');
+        if (!confirmar) return;
+
+        try {
+            localStorage.removeItem('venta-create-draft');
+            // Resetear estados
+            reset();
+            setDetallesWithProducts([]);
+            setClienteSeleccionado(null);
+            setClienteValue(null);
+            setClienteDisplay('');
+            setManuallySelectedTipoPrecio({});
+            NotificationService.success('Borrador de venta eliminado');
+        } catch (error) {
+            console.error('Error limpiando borrador:', error);
+            NotificationService.error('Error al limpiar el borrador');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -806,13 +913,13 @@ export default function VentaForm() {
             tipo_pago_id: data.tipo_pago_id ?? 1,  // ✅ NUEVO: Tipo de pago seleccionado
             politica_pago: politicaPagoFinal,  // ✅ MODIFICADO: Usar politica_pago calculada
             estado_pago: data.estado_pago ?? 'PAGADO',
-            detalles: detallesWithProducts.map(d => {
+            detalles: detallesWithProducts.map((d, detailIndex) => {
                 // ✅ MODIFICADO: Usar siempre d.precio_unitario (ya contiene valor editado manualmente o del tipo de precio)
                 // NO usar precioRango para no sobrescribir ediciones manuales
                 const precioFinal = d.precio_unitario;
                 const subtotalFinal = (Number(d.cantidad) * Number(precioFinal)) - Number(d.descuento);
 
-                return {
+                const detalle: any = {
                     id: d.id,
                     producto_id: d.producto_id,
                     cantidad: d.cantidad,
@@ -826,6 +933,24 @@ export default function VentaForm() {
                     tipo_precio_id: d.tipo_precio_id || undefined,
                     tipo_precio_nombre: d.tipo_precio_nombre || undefined
                 };
+
+                // ✅ NUEVO: Si es combo, agregar items seleccionados
+                if ((d.producto as any)?.es_combo) {
+                    const comboItems = comboItemsMap[detailIndex] || ((d.producto as any).combo_items || []);
+                    detalle.combo_items_seleccionados = comboItems.map((item: any) => ({
+                        combo_item_id: item.id,
+                        producto_id: item.producto_id,
+                        incluido: item.incluido !== false // true si está incluido, false si está excluido
+                    }));
+
+                    console.log(`📦 [handleConfirmSubmit] Combo ${d.producto?.nombre}:`, {
+                        total_items: comboItems.length,
+                        items_incluidos: comboItems.filter((i: any) => i.incluido !== false).length,
+                        detalles: detalle.combo_items_seleccionados
+                    });
+                }
+
+                return detalle;
             })
         };
 
@@ -1027,32 +1152,6 @@ export default function VentaForm() {
                     </div>
                 )}
 
-                {/* Indicador de caja abierta */}
-                {/* {!cargandoCaja && cajaInfo?.tiene_caja_abierta && (
-                    <div className={`border rounded-lg p-4 ${
-                        cajaInfo.es_de_hoy
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-300'
-                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300'
-                    }`}>
-                        <div className={`${
-                            cajaInfo.es_de_hoy
-                                ? 'text-green-700 dark:text-green-300'
-                                : 'text-yellow-700 dark:text-yellow-300'
-                        } flex items-center gap-2`}>
-                            <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
-                            <div>
-                                <strong>{cajaInfo.mensaje}</strong>
-                                {cajaInfo.caja_nombre && (
-                                    <div className="text-sm mt-1">
-                                        Caja: <strong>{cajaInfo.caja_nombre}</strong>
-                                        {cajaInfo.usuario_caja && ` • Operador: ${cajaInfo.usuario_caja}`}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )} */}
-
                 {/* Banner de advertencia - caja sin abrir */}
                 {shouldShowBanner && (
                     <div className="mb-4">
@@ -1065,10 +1164,6 @@ export default function VentaForm() {
 
                 {/* Información básica */}
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
-                    {/* <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                        Información básica
-                    </h2> */}
-
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
                         {/* Campo número oculto - se genera automáticamente */}
                         <input
@@ -1263,6 +1358,14 @@ export default function VentaForm() {
                                 [index]: true
                             }));
                         }} // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
+                        onComboItemsChange={(detailIndex, items) => {
+                            // ✅ NUEVO: Actualizar el estado de items opcionales cuando el usuario los selecciona/deselecciona
+                            setComboItemsMap(prev => ({
+                                ...prev,
+                                [detailIndex]: items
+                            }));
+                            console.log(`🔄 [create.tsx] Items del combo actualizado (índice ${detailIndex}):`, items);
+                        }} // ✅ NUEVO: Notificar cambios en items opcionales
                     />
                 </div>
                 {/* Totales */}
@@ -1366,6 +1469,17 @@ export default function VentaForm() {
                     >
                         Cancelar
                     </Link>
+
+                    {/* ✅ NUEVO: Botón para limpiar borrador manualmente */}
+                    <button
+                        type="button"
+                        onClick={limpiarBorrador}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-900 transition-colors"
+                        title="Limpiar el borrador de venta guardado en localStorage"
+                    >
+                        🗑️ Limpiar borrador
+                    </button>
+
                     {/* ✅ NUEVO: Permitir CREDITO incluso con stock insuficiente */}
                     {(() => {
                         const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);

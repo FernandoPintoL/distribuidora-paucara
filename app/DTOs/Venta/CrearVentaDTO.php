@@ -58,11 +58,17 @@ class CrearVentaDTO extends BaseDTO
         $almacenIdPorDefecto = $empresaPrincipal?->almacen_id ?? 1;
 
         // ✨ CORREGIR: Transformar unidad_venta_id a unidad_medida_id para StockService
+        // ✅ NUEVO: Preservar combo_items_seleccionados del frontend
         $detalles = $request->input('detalles', []);
         $detallesCorregidos = array_map(function ($detalle) {
             // Si viene unidad_venta_id, renombrarlo a unidad_medida_id para que StockService lo entienda
             if (isset($detalle['unidad_venta_id']) && !isset($detalle['unidad_medida_id'])) {
                 $detalle['unidad_medida_id'] = $detalle['unidad_venta_id'];
+            }
+            // ✅ NUEVO: Preservar combo_items_seleccionados si viene en el request
+            // Estructura: [{ combo_item_id, producto_id, incluido }]
+            if (isset($detalle['combo_items_seleccionados'])) {
+                $detalle['combo_items_seleccionados'] = $detalle['combo_items_seleccionados'];
             }
             return $detalle;
         }, $detalles);

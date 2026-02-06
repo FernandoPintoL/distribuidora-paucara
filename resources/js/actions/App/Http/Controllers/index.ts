@@ -4,6 +4,7 @@ import ModuloSidebarController from './ModuloSidebarController'
 import Auth from './Auth'
 import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
+import ComboController from './ComboController'
 import VentaController from './VentaController'
 import CompraController from './CompraController'
 import PrecioController from './PrecioController'
@@ -32,7 +33,6 @@ import MarcaController from './MarcaController'
 import AlmacenController from './AlmacenController'
 import ConfiguracionGlobalController from './ConfiguracionGlobalController'
 import EmpresaController from './EmpresaController'
-import ComboController from './ComboController'
 import CodigoBarraController from './CodigoBarraController'
 import ReporteCodigosBarraController from './ReporteCodigosBarraController'
 import UnidadMedidaController from './UnidadMedidaController'
@@ -80,6 +80,7 @@ ModuloSidebarController,
 Auth,
 PermissionController,
 ProductoController,
+ComboController,
 VentaController,
 CompraController,
 PrecioController,
@@ -108,7 +109,6 @@ MarcaController,
 AlmacenController,
 ConfiguracionGlobalController,
 EmpresaController,
-ComboController,
 CodigoBarraController,
 ReporteCodigosBarraController,
 UnidadMedidaController,

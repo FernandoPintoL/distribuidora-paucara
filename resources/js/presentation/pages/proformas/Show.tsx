@@ -615,7 +615,8 @@ export default function ProformasShow({ item: proforma }: Props) {
         // Recalcular rangos de precio
         const itemsParaCalcular = nuevosDetalles.map(d => ({
             producto_id: d.producto_id,
-            cantidad: d.cantidad
+            cantidad: d.cantidad,
+            tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
         }))
         calcularCarritoDebounced(itemsParaCalcular)
     }
@@ -695,7 +696,8 @@ export default function ProformasShow({ item: proforma }: Props) {
         // Calcular rangos para el nuevo detalle
         const itemsParaCalcular = nuevosDetalles.map(d => ({
             producto_id: d.producto_id,
-            cantidad: d.cantidad
+            cantidad: d.cantidad,
+            tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
         }))
         calcularCarritoDebounced(itemsParaCalcular)
     }

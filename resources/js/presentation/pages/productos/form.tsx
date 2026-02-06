@@ -4,6 +4,7 @@ import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
 import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
 import Step5PrecioRango from './steps/Step5PrecioRango'; // ✨ NUEVO
+import ProductoCombos from './components/ProductoCombos';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -481,10 +482,10 @@ export default function ProductoForm({
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
               <TabsList className={`grid w-full ${isEditing && permite_productos_fraccionados && data.es_fraccionado
-                  ? 'grid-cols-5'
+                  ? 'grid-cols-6'
                   : isEditing || (permite_productos_fraccionados && data.es_fraccionado)
-                    ? 'grid-cols-4'
-                    : 'grid-cols-3'
+                    ? 'grid-cols-5'
+                    : 'grid-cols-4'
                 }`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
 
@@ -498,6 +499,9 @@ export default function ProductoForm({
                 )}
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
+                {isEditing && (
+                  <TabsTrigger value="combos">📦 Combos</TabsTrigger>
+                )}
               </TabsList>
 
               <form onSubmit={submit} className="space-y-6">
@@ -587,6 +591,12 @@ export default function ProductoForm({
                   />
                 )}
               </TabsContent>
+
+              {isEditing && producto?.id && (
+                <TabsContent value="combos" className="space-y-6 mt-6">
+                  <ProductoCombos productoId={producto.id} />
+                </TabsContent>
+              )}
             </Tabs>
           </CardContent>
 

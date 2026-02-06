@@ -532,42 +532,42 @@ export function ImageBackupPanel() {
         <div className="space-y-6">
             {/* Sección de Estado del Disco */}
             {diskSpace && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-red-900">💾 Estado del Espacio en Disco</h3>
+                <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-red-900 dark:text-red-100">💾 Estado del Espacio en Disco</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <p className="text-sm text-gray-600">Espacio disponible para backups:</p>
-                            <p className="text-2xl font-bold text-red-600">{diskSpace.available_for_backups_formatted}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Espacio disponible para backups:</p>
+                            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{diskSpace.available_for_backups_formatted}</p>
                         </div>
                         <div className="space-y-2">
-                            <p className="text-sm text-gray-600">Uso del disco:</p>
-                            <p className="text-2xl font-bold text-orange-600">{diskSpace.disk_used_percent.toFixed(1)}%</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Uso del disco:</p>
+                            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{diskSpace.disk_used_percent.toFixed(1)}%</p>
                         </div>
                         <div className="space-y-2">
-                            <p className="text-sm text-gray-600">Espacio total:</p>
-                            <p className="text-lg text-gray-900">{diskSpace.disk_total_formatted}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Espacio total:</p>
+                            <p className="text-lg text-gray-900 dark:text-gray-100">{diskSpace.disk_total_formatted}</p>
                         </div>
                         <div className="space-y-2">
-                            <p className="text-sm text-gray-600">Tamaño de backups:</p>
-                            <p className="text-lg text-gray-900">{diskSpace.backups_size_formatted}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Tamaño de backups:</p>
+                            <p className="text-lg text-gray-900 dark:text-gray-100">{diskSpace.backups_size_formatted}</p>
                         </div>
                     </div>
                     {diskSpace.disk_used_percent > 90 && (
-                        <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
-                            <p className="text-sm text-red-900">⚠️ Espacio en disco crítico. Considera eliminar backups antiguos.</p>
+                        <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-lg">
+                            <p className="text-sm text-red-900 dark:text-red-100">⚠️ Espacio en disco crítico. Considera eliminar backups antiguos.</p>
                         </div>
                     )}
                     {diskSpace.available_for_backups < 100 * 1024 * 1024 && (
-                        <div className="mt-4 p-3 bg-orange-100 border border-orange-300 rounded-lg">
-                            <p className="text-sm text-orange-900">⚠️ Menos de 100MB disponibles para nuevos backups.</p>
+                        <div className="mt-4 p-3 bg-orange-100 dark:bg-orange-900 border border-orange-300 dark:border-orange-700 rounded-lg">
+                            <p className="text-sm text-orange-900 dark:text-orange-100">⚠️ Menos de 100MB disponibles para nuevos backups.</p>
                         </div>
                     )}
                 </div>
             )}
 
             {/* Sección de Crear Backup */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 text-blue-900">📦 Crear Backup</h3>
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100">📦 Crear Backup</h3>
 
                 {!showCreateOptions ? (
                     <div className="flex gap-3">
@@ -576,7 +576,7 @@ export function ImageBackupPanel() {
                                 handleCreateBackup(false);
                             }}
                             disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
                         >
                             Backup Completo
                         </Button>
@@ -594,7 +594,7 @@ export function ImageBackupPanel() {
                             {tables.map((table) => (
                                 <label
                                     key={table.id}
-                                    className="flex items-center gap-2 cursor-pointer p-2 hover:bg-blue-100 rounded"
+                                    className="flex items-center gap-2 cursor-pointer p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded text-gray-900 dark:text-gray-100"
                                 >
                                     <input
                                         type="checkbox"
@@ -611,7 +611,7 @@ export function ImageBackupPanel() {
                             <Button
                                 onClick={() => handleCreateBackup(true)}
                                 disabled={loading || selectedTables.length === 0}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
                             >
                                 Crear Backup Selectivo
                             </Button>
@@ -631,21 +631,21 @@ export function ImageBackupPanel() {
             </div>
 
             {/* Sección de Backup por Carpeta */}
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 text-purple-900">📁 Backup por Carpeta</h3>
-                <p className="text-sm text-purple-800 mb-4">
+            <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-purple-900 dark:text-purple-100">📁 Backup por Carpeta</h3>
+                <p className="text-sm text-purple-800 dark:text-purple-200 mb-4">
                     Descarga o restaura backups de carpetas específicas sin problemas de memoria o timeout.
                 </p>
 
                 {/* Tamaños de carpetas */}
                 {Object.keys(folderSizes).length > 0 && (
-                    <div className="mb-6 p-4 bg-white rounded-lg border border-purple-100">
-                        <h4 className="font-semibold text-sm text-gray-900 mb-3">📊 Tamaño de carpetas actuales:</h4>
+                    <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-purple-100 dark:border-purple-800">
+                        <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-3">📊 Tamaño de carpetas actuales:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             {Object.entries(folderSizes).map(([folder, size]) => (
-                                <div key={folder} className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                    <p className="text-sm font-medium text-gray-900">{folder}</p>
-                                    <p className="text-lg font-bold text-purple-600">{size.formatted}</p>
+                                <div key={folder} className="p-3 bg-purple-50 dark:bg-purple-900 rounded-lg border border-purple-100 dark:border-purple-800">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{folder}</p>
+                                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{size.formatted}</p>
                                 </div>
                             ))}
                         </div>
@@ -657,7 +657,7 @@ export function ImageBackupPanel() {
                         <Button
                             onClick={() => setShowFolderBackup(true)}
                             disabled={loading}
-                            className="bg-purple-600 hover:bg-purple-700"
+                            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600"
                         >
                             <Folder className="w-4 h-4 mr-2" />
                             Descargar/Restaurar por Carpeta
@@ -666,13 +666,13 @@ export function ImageBackupPanel() {
                 ) : (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-2">
+                            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                                 Selecciona una carpeta:
                             </label>
                             <select
                                 value={selectedFolder}
                                 onChange={(e) => setSelectedFolder(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             >
                                 <option value="">-- Selecciona una carpeta --</option>
                                 <option value="clientes">Clientes</option>
@@ -685,7 +685,7 @@ export function ImageBackupPanel() {
                             <Button
                                 onClick={handleCreateFolderBackup}
                                 disabled={loading || !selectedFolder}
-                                className="bg-purple-600 hover:bg-purple-700"
+                                className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600"
                             >
                                 Crear Backup
                             </Button>
@@ -713,15 +713,15 @@ export function ImageBackupPanel() {
             </div>
 
             {/* Sección de Subir y Restaurar Backup */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 text-green-900">⬆️ Subir y Restaurar Backup</h3>
-                <p className="text-sm text-green-800 mb-4">
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-green-900 dark:text-green-100">⬆️ Subir y Restaurar Backup</h3>
+                <p className="text-sm text-green-800 dark:text-green-200 mb-4">
                     Sube un archivo ZIP de backup que descargaste anteriormente para restaurar imágenes.
                 </p>
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                             1. Selecciona un archivo ZIP:
                         </label>
                         <div className="flex items-center gap-2">
@@ -730,15 +730,17 @@ export function ImageBackupPanel() {
                                 accept=".zip"
                                 onChange={handleFileUpload}
                                 disabled={loading}
-                                className="block w-full text-sm text-gray-500
+                                className="block w-full text-sm text-gray-500 dark:text-gray-400
                                     file:mr-4 file:py-2 file:px-4
                                     file:rounded-lg file:border-0
                                     file:text-sm file:font-semibold
                                     file:bg-green-600 file:text-white
-                                    hover:file:bg-green-700 cursor-pointer"
+                                    dark:file:bg-green-700
+                                    hover:file:bg-green-700 dark:hover:file:bg-green-600
+                                    cursor-pointer"
                             />
                             {uploadedFile && (
-                                <span className="text-sm text-green-600 font-medium">
+                                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
                                     ✓ {uploadedFile.name}
                                 </span>
                             )}
@@ -746,14 +748,14 @@ export function ImageBackupPanel() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                             2. Selecciona la carpeta destino:
                         </label>
                         <select
                             value={selectedFolder}
                             onChange={(e) => setSelectedFolder(e.target.value)}
                             disabled={loading}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         >
                             <option value="">-- Selecciona una carpeta --</option>
                             <option value="clientes">Clientes</option>
@@ -765,7 +767,7 @@ export function ImageBackupPanel() {
                     <Button
                         onClick={handleRestoreFolderBackup}
                         disabled={loading || !uploadedFile || !selectedFolder}
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
                     >
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Restaurar Carpeta
@@ -773,18 +775,18 @@ export function ImageBackupPanel() {
 
                     {/* Indicador de progreso */}
                     {uploadProgress && (
-                        <div className="mt-4 space-y-2 p-4 bg-white border border-green-200 rounded-lg">
+                        <div className="mt-4 space-y-2 p-4 bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded-lg">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-900 font-medium">{uploadProgress.fileName}</span>
-                                <span className="text-green-600 font-medium">{uploadProgress.progress.toFixed(1)}%</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{uploadProgress.fileName}</span>
+                                <span className="text-green-600 dark:text-green-400 font-medium">{uploadProgress.progress.toFixed(1)}%</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                                 <div
-                                    className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
+                                    className="bg-green-600 dark:bg-green-500 h-2.5 rounded-full transition-all duration-300"
                                     style={{ width: `${uploadProgress.progress}%` }}
                                 ></div>
                             </div>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
                                 {uploadProgress.uploadedChunks}/{uploadProgress.totalChunks} partes subidas
                             </p>
                         </div>
@@ -793,9 +795,9 @@ export function ImageBackupPanel() {
             </div>
 
             {/* Sección de Backups Disponibles */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">📋 Backups Disponibles</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📋 Backups Disponibles</h3>
                     <Button
                         onClick={loadBackups}
                         disabled={loading}
@@ -808,8 +810,8 @@ export function ImageBackupPanel() {
                 </div>
 
                 {backups.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                        <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                         <p>No hay backups disponibles</p>
                     </div>
                 ) : (
@@ -817,11 +819,11 @@ export function ImageBackupPanel() {
                         {backups.map((backup) => (
                             <div
                                 key={backup.name}
-                                className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition"
+                                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                             >
                                 <div className="flex-1">
-                                    <p className="font-medium text-gray-900 break-all">{backup.name}</p>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="font-medium text-gray-900 dark:text-gray-100 break-all">{backup.name}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
                                         {backup.size_formatted} • {backup.created_at_formatted}
                                     </p>
                                 </div>
@@ -831,7 +833,7 @@ export function ImageBackupPanel() {
                                         onClick={() => handleRestoreBackup(backup.name)}
                                         disabled={loading}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
+                                        className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
                                         title="Restaurar este backup"
                                     >
                                         <CheckCircle className="w-4 h-4" />
@@ -862,8 +864,8 @@ export function ImageBackupPanel() {
             </div>
 
             {/* Información útil */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-900">
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-sm text-amber-900 dark:text-amber-100">
                     <strong>💡 Consejo:</strong> Crea un backup antes de hacer cambios importantes en tu servidor.
                     Los backups se almacenan en el servidor y puedes descargarlos para guardar en tu computadora.
                 </p>

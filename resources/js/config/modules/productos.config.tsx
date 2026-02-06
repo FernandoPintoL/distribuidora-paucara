@@ -1,6 +1,7 @@
 // Configuration: Productos module configuration
 import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';
+import { Package } from 'lucide-react';
 
 const currency = (n?: number | null) => {
   if (n === undefined || n === null) return '-';
@@ -173,6 +174,32 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
                 {stockReservado > 0 && <span className="ml-2 text-amber-600 dark:text-amber-400">Reservado: {stockReservado}</span>}
               </div>
             )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'capacidad',
+      label: 'Capacidad',
+      type: 'custom',
+      sortable: false,
+      render: (value, entity) => {
+        const esComboCampo = (entity as any).es_combo;
+        const capacidad = (entity as any).capacidad;
+
+        if (!esComboCampo || !capacidad) {
+          return (
+            <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+          );
+        }
+
+        return (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+            <Package size={14} className="text-blue-600 dark:text-blue-400" />
+            <div className="flex flex-col">
+              <span className="font-semibold text-blue-700 dark:text-blue-200">{capacidad}</span>
+              <span className="text-[10px] text-blue-600 dark:text-blue-300 leading-none">combos</span>
+            </div>
           </div>
         );
       }
@@ -371,20 +398,32 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
               <span className="block text-[10px] uppercase tracking-wide">Precio base</span>
               <span className="font-bold text-sm">{currency(p.precio_base)}</span>
             </div>
-            <div>
-              <span className="block text-[10px] uppercase tracking-wide">Stock Disponible</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${((p as any).stock_disponible_calc ?? 0) === 0 ? 'bg-red-100 text-red-700' : ((p as any).stock_disponible_calc ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
-                }`}>
-                {((p as any).stock_disponible_calc ?? 0)}
-              </span>
-            </div>
-            {((p as any).stock_total_calc ?? 0) > 0 && (
-              <div className="text-[10px] text-muted-foreground">
-                Total: {((p as any).stock_total_calc ?? 0)}
-                {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0)) > 0 && (
-                  <span className="ml-1 text-amber-600">Reservado: {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0))}</span>
-                )}
+            {p.es_combo ? (
+              <div>
+                <span className="block text-[10px] uppercase tracking-wide">Capacidad</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
+                  <Package size={12} />
+                  {(p as any).capacidad ?? 0} combos
+                </span>
               </div>
+            ) : (
+              <>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide">Stock Disponible</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${((p as any).stock_disponible_calc ?? 0) === 0 ? 'bg-red-100 text-red-700' : ((p as any).stock_disponible_calc ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                    {((p as any).stock_disponible_calc ?? 0)}
+                  </span>
+                </div>
+                {((p as any).stock_total_calc ?? 0) > 0 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    Total: {((p as any).stock_total_calc ?? 0)}
+                    {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0)) > 0 && (
+                      <span className="ml-1 text-amber-600">Reservado: {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0))}</span>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">

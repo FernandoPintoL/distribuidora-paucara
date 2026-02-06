@@ -19,6 +19,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Trash2, ArrowLeft, Search, X } from 'lucide-react';
 import { Link, router } from '@inertiajs/react';
 import * as routes from '@/routes/combos';
+import ComboCapacity from './components/ComboCapacity';
 
 interface Producto {
   id: number;
@@ -49,6 +50,8 @@ interface ComboItem {
   tipo_precio_nombre?: string;
   es_obligatorio?: boolean;
   grupo_opcional?: string | null;
+  stock_disponible?: number;
+  stock_total?: number;
   precios?: Array<{
     id: number;
     tipo_precio_id: number;
@@ -114,6 +117,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
   const [cantidadALlevar, setCantidadALlevar] = useState(2);
   const [precioGrupo, setPrecioGrupo] = useState(0);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const [stockData, setStockData] = useState<Record<number, { stock_disponible: number; stock_total: number }>>({});
 
   // Función para normalizar items y asegurar que todos los números sean tipo number
   const normalizeItems = useCallback((itemsToNormalize: ComboItem[]) => {
@@ -122,6 +126,40 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
       cantidad: parseFloat(item.cantidad.toString()),
       precio_unitario: parseFloat(item.precio_unitario.toString()),
     }));
+  }, []);
+
+  // Fetch stock data for all products in the combo
+  const fetchStockForItems = useCallback(async (comboItems: ComboItem[]) => {
+    if (comboItems.length === 0) return;
+
+    try {
+      const productIds = comboItems.map(item => item.producto_id);
+      const response = await fetch('/api/productos/stock/multiples', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ producto_ids: productIds }),
+      });
+
+      if (response.ok) {
+        const stockResults = await response.json();
+        const stockMap: Record<number, { stock_disponible: number; stock_total: number }> = {};
+
+        if (Array.isArray(stockResults)) {
+          stockResults.forEach((result: any) => {
+            stockMap[result.producto_id] = {
+              stock_disponible: result.stock_disponible || 0,
+              stock_total: result.stock_total || 0,
+            };
+          });
+        }
+
+        setStockData(stockMap);
+      }
+    } catch (error) {
+      console.error('Error fetching stock data:', error);
+    }
   }, []);
 
   const { data, setData, post, put, processing, errors } = useForm({
@@ -135,6 +173,14 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
 
   const productosOpcionales = items.filter(item => !item.es_obligatorio);
 
+  // Cargar stock cuando se abre un combo existente (edición)
+  useEffect(() => {
+    if (isEditing && combo?.items && combo.items.length > 0) {
+      console.log('📦 Cargando stock de items del combo:', combo.items);
+      fetchStockForItems(items);
+    }
+  }, [isEditing, combo?.items]);
+
   // Cargar datos del grupo opcional cuando se abre un combo existente (edición)
   useEffect(() => {
     if (isEditing && combo?.grupo_opcional) {
@@ -145,6 +191,13 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
       console.log('⚠️ Combo abierto pero NO tiene grupo_opcional');
     }
   }, [isEditing, combo?.grupo_opcional]);
+
+  // Fetch stock data whenever items change
+  useEffect(() => {
+    if (items.length > 0) {
+      fetchStockForItems(items);
+    }
+  }, [items]);
 
   // Actualizar grupo_opcional cuando cambien los items, SKU o configuración del grupo
   useEffect(() => {
@@ -807,6 +860,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Producto</TableHead>
+                        <TableHead className="text-center">Stock Disp.</TableHead>
                         <TableHead className="text-center">Cantidad</TableHead>
                         <TableHead className="text-center">Precio Unit.</TableHead>
                         <TableHead className="text-center">Subtotal</TableHead>
@@ -833,6 +887,14 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                                     Opcional
                                   </Badge>
                                 )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="text-sm font-medium">
+                                {stockData[item.producto_id]?.stock_disponible ?? item.stock_disponible ?? '-'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                / {stockData[item.producto_id]?.stock_total ?? item.stock_total ?? '-'}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -980,6 +1042,11 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                 </div> */}
               </CardContent>
             </Card>
+          )}
+
+          {/* Capacidad de Manufactura */}
+          {isEditing && combo?.id && (
+            <ComboCapacity comboId={combo.id} />
           )}
 
           {/* Botones de acción */}

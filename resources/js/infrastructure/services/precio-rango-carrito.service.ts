@@ -31,8 +31,8 @@ export interface DetalleCarritoConRango {
     producto_nombre: string;
     producto_sku: string;
     cantidad: number;
-    tipo_precio_id: Id;
-    tipo_precio_nombre: string;
+    tipo_precio_id: Id | null; // ✅ NUEVO: Ahora puede ser null si no hay rango ni tipo_precio_id en request
+    tipo_precio_nombre: string | null; // ✅ NUEVO: Puede ser null
     precio_unitario: number;
     subtotal: number;
     rango_aplicado: RangoAplicado | null;
@@ -52,6 +52,7 @@ export interface CarritoCalculadoResponse {
 export interface ItemCarrito {
     producto_id: Id;
     cantidad: number;
+    tipo_precio_id?: Id; // ✅ NUEVO: Opcional, si viene se respeta
 }
 
 // ============= SERVICIO =============

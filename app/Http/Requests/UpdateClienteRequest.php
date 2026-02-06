@@ -110,6 +110,7 @@ class UpdateClienteRequest extends FormRequest
 
         return [
             // Campos básicos
+            'codigo_cliente'                 => 'nullable|string|max:50',
             'crear_usuario'                  => 'nullable|boolean',
             'password'                       => 'nullable|string|min:8',
             'password_confirmation'          => 'required_with:password|same:password',
@@ -223,6 +224,7 @@ class UpdateClienteRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'codigo_cliente'                   => 'código del cliente',
             'nombre'                           => 'nombre del cliente',
             'razon_social'                     => 'razón social',
             'nit'                              => 'NIT',

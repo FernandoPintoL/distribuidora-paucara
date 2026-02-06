@@ -212,6 +212,23 @@ class VentaService
                 $descuento = $detalle['descuento'] ?? 0;
                 $subtotal = ($cantidad * $precio) - $descuento;
 
+                // ✅ NUEVO: Preparar combo_items_seleccionados si existen
+                $comboItemsSeleccionados = null;
+                if (isset($detalle['combo_items_seleccionados']) && is_array($detalle['combo_items_seleccionados'])) {
+                    // Filtrar solo items que están incluidos (incluido = true)
+                    $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function($item) {
+                        return ($item['incluido'] ?? false) === true;
+                    });
+                    // Reindexar array después de filter
+                    $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
+
+                    Log::debug('📦 [VentaService::crear] Items del combo seleccionados', [
+                        'producto_id' => $detalle['producto_id'],
+                        'cantidad_items_seleccionados' => count($comboItemsSeleccionados),
+                        'total_items' => count($detalle['combo_items_seleccionados']),
+                    ]);
+                }
+
                 \App\Models\DetalleVenta::create([
                     'venta_id'           => $venta->id,
                     'producto_id'        => $detalle['producto_id'],
@@ -221,6 +238,13 @@ class VentaService
                     'subtotal'           => $subtotal,
                     'tipo_precio_id'     => $detalle['tipo_precio_id'] ?? null,    // ✅ NUEVO: Tipo de precio seleccionado
                     'tipo_precio_nombre' => $detalle['tipo_precio_nombre'] ?? null, // ✅ NUEVO: Nombre del tipo de precio
+                    'combo_items_seleccionados' => $comboItemsSeleccionados ? array_map(function($item) {
+                        return [
+                            'combo_item_id' => $item['combo_item_id'] ?? null,
+                            'producto_id' => $item['producto_id'] ?? null,
+                            'incluido' => $item['incluido'] ?? false,
+                        ];
+                    }, $comboItemsSeleccionados) : null, // ✅ NUEVO: Items del combo seleccionados
                 ]);
             }
             Log::info('✅ [VentaService::crear] Detalles de venta creados', [

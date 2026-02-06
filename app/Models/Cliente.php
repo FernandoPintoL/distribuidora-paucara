@@ -181,14 +181,19 @@ class Cliente extends Model
             }
         });
 
-        // Regenerar código si la localidad cambia
+        // Regenerar código si la localidad cambia (pero respetar si el usuario envía manualmente un código)
         static::updating(function ($cliente) {
             \Log::info("📝 Evento updating disparado para cliente {$cliente->id}", [
                 'isDirty' => $cliente->isDirty(),
                 'dirty_attributes' => $cliente->getDirty(),
                 'localidad_id_actual' => $cliente->localidad_id,
                 'localidad_id_original' => $cliente->getOriginal('localidad_id'),
+                'codigo_cliente_actual' => $cliente->codigo_cliente,
+                'codigo_cliente_original' => $cliente->getOriginal('codigo_cliente'),
             ]);
+
+            // ✅ IMPORTANTE: Respetar si el usuario envía manualmente un código en el UPDATE
+            $codigoFueModificado = $cliente->isDirty('codigo_cliente');
 
             if ($cliente->isDirty('localidad_id')) {
                 $localidadAnterior = $cliente->getOriginal('localidad_id');
@@ -199,17 +204,25 @@ class Cliente extends Model
                     'nueva' => $localidadNueva,
                     'codigo_anterior' => $cliente->getOriginal('codigo_cliente'),
                     'codigo_actual' => $cliente->codigo_cliente,
+                    'codigo_fue_modificado' => $codigoFueModificado,
                 ]);
 
-                // Regenerar el código con la nueva localidad (incluso si es NULL)
-                if ($localidadNueva) {
+                // Solo regenerar código si:
+                // 1. La localidad cambió
+                // 2. El usuario NO envió manualmente un código
+                if ($localidadNueva && !$codigoFueModificado) {
                     $codigoAnterior = $cliente->codigo_cliente;
                     $cliente->codigo_cliente = $cliente->generateCodigoCliente();
 
-                    \Log::info("✅ Código de cliente regenerado", [
+                    \Log::info("✅ Código de cliente regenerado automáticamente (localidad cambió)", [
                         'cliente_id' => $cliente->id,
                         'codigo_anterior' => $codigoAnterior ?? 'NULL',
                         'codigo_nuevo' => $cliente->codigo_cliente,
+                    ]);
+                } elseif ($codigoFueModificado) {
+                    \Log::info("✅ Código de cliente respetado (usuario envió manualmente)", [
+                        'cliente_id' => $cliente->id,
+                        'codigo_usuario' => $cliente->codigo_cliente,
                     ]);
                 }
             }

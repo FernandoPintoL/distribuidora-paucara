@@ -28,8 +28,8 @@ export interface DetalleProducto {
     es_fraccionado?: boolean; // ✅ NUEVO: Indica si el producto es fraccionado
     unidad_medida_id?: number | string; // ✅ NUEVO: Unidad base del producto
     unidad_medida_nombre?: string; // ✅ NUEVO: Nombre de la unidad base
-    tipo_precio_id?: number | string; // ✅ NUEVO: ID del tipo de precio aplicado
-    tipo_precio_nombre?: string; // ✅ NUEVO: Nombre del tipo de precio aplicado
+    tipo_precio_id?: number | string | null; // ✅ MODIFICADO: Permite null cuando cliente es GENERAL
+    tipo_precio_nombre?: string | null; // ✅ MODIFICADO: Permite null cuando cliente es GENERAL
     producto?: {
         id: number | string;
         nombre: string;
@@ -70,6 +70,7 @@ interface ProductosTableProps {
     readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)
     onUpdateDetailUnidadConPrecio?: (index: number, unidadId: number, precio: number) => void; // ✅ NUEVO: Actualizar unidad y precio juntos
     onManualTipoPrecioChange?: (index: number) => void; // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
+    onComboItemsChange?: (detailIndex: number, items: any[]) => void; // ✅ NUEVO: Notificar cuando cambian los items opcionales del combo
 }
 
 export default function ProductosTable({
@@ -83,7 +84,8 @@ export default function ProductosTable({
     readOnly = false, // ✅ NUEVO: Modo solo lectura
     tipo = 'compra', // ✅ NUEVO: Tipo de documento (compra o venta)
     onUpdateDetailUnidadConPrecio, // ✅ NUEVO: Actualizar unidad y precio juntos
-    onManualTipoPrecioChange // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
+    onManualTipoPrecioChange, // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
+    onComboItemsChange // ✅ NUEVO: Notificar cambios en items opcionales del combo
 }: ProductosTableProps) {
     // ✅ DEBUG: Loguear props recibidos
     /* console.log('📋 ProductosTable - Props recibidos:', {
@@ -115,6 +117,38 @@ export default function ProductosTable({
     // ✅ NUEVO: Mapa de combo_items actualizados por índice (se mantiene aunque detalles cambien)
     const [comboItemsMap, setComboItemsMap] = useState<Record<number, Array<any>>>({});
 
+    // ✅ NUEVO: useEffect para expandir automáticamente combos recién agregados
+    useEffect(() => {
+        if (detalles.length === 0) return;
+
+        const ultimoDetalle = detalles[detalles.length - 1];
+        const ultimoIndice = detalles.length - 1;
+
+        // Verificar si el último detalle agregado es un combo
+        if (ultimoDetalle?.producto && (ultimoDetalle.producto as any).es_combo) {
+            const tieneComponentes = ((ultimoDetalle.producto as any).combo_items?.length || 0) > 0;
+
+            if (tieneComponentes && !expandedCombos[ultimoIndice]) {
+                console.log(`✅ [ProductosTable] Expandiendo automáticamente combo: ${ultimoDetalle.producto.nombre} (índice: ${ultimoIndice})`);
+                setExpandedCombos(prev => ({
+                    ...prev,
+                    [ultimoIndice]: true
+                }));
+
+                // ✅ NUEVO: Inicializar combo_items con incluido = true para obligatorios y opcionales
+                const comboItems = ((ultimoDetalle.producto as any).combo_items || []).map((item: any) => ({
+                    ...item,
+                    incluido: item.es_obligatorio !== false // Si es obligatorio O es opcional pero lo incluimos por defecto
+                }));
+
+                setComboItemsMap(prev => ({
+                    ...prev,
+                    [ultimoIndice]: comboItems
+                }));
+            }
+        }
+    }, [detalles.length]); // Solo vigilar cambios en la cantidad de detalles
+
     // ✅ NUEVO: Estado para modal de cascada de precios
     const [modalCascadaState, setModalCascadaState] = useState<{
         isOpen: boolean;
@@ -132,6 +166,13 @@ export default function ProductosTable({
         productoData: null
     });
 
+    // ✅ NUEVO: Función para agregar producto y limpiar input/sugerencias
+    const handleAgregarProductoYLimpiar = (producto: Producto) => {
+        onAddProduct(producto);
+        setProductSearch('');
+        setProductosDisponibles([]);
+        setSearchError(null);
+    };
 
     // ✅ NUEVO: Función para buscar productos manualmente (botón o Enter)
     const buscarProductos = async (searchTerm?: string) => {
@@ -179,7 +220,7 @@ export default function ProductosTable({
 
             const data = await response.json();
 
-            console.log('📡 Respuesta API completa:', data.data);
+            console.log('📡 Respuesta API completa de la busqueda:', data.data);
 
             // Transformar respuesta de API a formato Producto
             const productosAPI = data.data.map((p: any) => ({
@@ -191,6 +232,10 @@ export default function ProductosTable({
                 precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
                 precio_compra: p.precio_costo || 0, // ✅ NUEVO: Precio de compra (igual al costo)
                 stock: p.stock_disponible || 0,
+                stock_disponible_calc: p.stock_disponible || 0, // ✅ AGREGADO: Stock disponible calculado
+                stock_total_calc: p.stock_total || 0, // ✅ AGREGADO: Stock total calculado
+                stock_reservado: p.stock_reservado || 0, // ✅ AGREGADO: Stock reservado
+                capacidad: p.capacidad || null, // ✅ AGREGADO: Capacidad (para combos)
                 peso: p.peso,
                 codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
                 // ✅ NUEVO: Campos para productos fraccionados
@@ -249,7 +294,7 @@ export default function ProductosTable({
 
             // ✅ NUEVO: Si hay exactamente 1 resultado válido, agregarlo automáticamente
             if (productosValidos.length === 1) {
-                onAddProduct(productosValidos[0]);
+                handleAgregarProductoYLimpiar(productosValidos[0]);
             }
         } catch (error) {
             console.error('Error buscando productos:', error);
@@ -352,9 +397,8 @@ export default function ProductosTable({
                         })) || []
                     };
 
-                    onAddProduct(producto);
+                    handleAgregarProductoYLimpiar(producto);
                     setShowScannerModal(false);
-                    setProductSearch('');
                     NotificationService.success(`Producto escaneado: ${producto.nombre}`);
                 } else {
                     NotificationService.error('No se encontró producto con ese código de barras');
@@ -585,7 +629,7 @@ export default function ProductosTable({
                                     key={producto.id}
                                     type="button"
                                     disabled={readOnly}
-                                    onClick={() => onAddProduct(producto)}
+                                    onClick={() => handleAgregarProductoYLimpiar(producto)}
                                     className="w-full text-left px-2.5 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <div className="font-medium text-xs text-gray-900 dark:text-white">
@@ -624,6 +668,9 @@ export default function ProductosTable({
                             <tr>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Producto
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Stock Disponible
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Cantidad
@@ -710,6 +757,44 @@ export default function ProductosTable({
                                                     <div>Código Barras: {productoInfo.codigo_barras}</div>
                                                 )}
                                             </div>
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            {(() => {
+                                                const stockDisponible = (productoInfo as any)?.stock_disponible_calc ?? (productoInfo as any)?.stock_disponible ?? 0;
+                                                const stockTotal = (productoInfo as any)?.stock_total_calc ?? (productoInfo as any)?.stock_total ?? 0;
+                                                const esComboCampo = (productoInfo as any)?.es_combo;
+                                                const capacidad = (productoInfo as any)?.capacidad;
+
+                                                if (esComboCampo) {
+                                                    return (
+                                                        <div className="text-xs">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-semibold">
+                                                                📦 {capacidad ?? 0}
+                                                            </span>
+                                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                                                {capacidad !== null && capacidad !== undefined ? 'combos' : '—'}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div className="text-xs">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${
+                                                            stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
+                                                            stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
+                                                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200'
+                                                        }`}>
+                                                            {stockDisponible}
+                                                        </span>
+                                                        {stockTotal > stockDisponible && (
+                                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                                                Total: {stockTotal}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             <input
@@ -1088,9 +1173,33 @@ export default function ProductosTable({
                                             {content}
                                             {/* Mostrar componentes del combo */}
                                             {itemsAMostrar.map((item: any, itemIndex: number) => (
-                                                <tr key={`combo-item-${index}-${itemIndex}`} className="bg-purple-50 dark:bg-purple-900/10 border-l-4 border-purple-400">
+                                                <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${item.incluido === false ? 'bg-gray-100 dark:bg-gray-800/50 opacity-60' : 'bg-purple-50 dark:bg-purple-900/10'} border-purple-400`}>
                                                     <td className="px-4 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
+                                                            {/* ✅ NUEVO: Checkbox para productos opcionales (es_obligatorio = false) */}
+                                                            {item.es_obligatorio === false ? (
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={item.incluido !== false}
+                                                                    onChange={(e) => {
+                                                                        const nuevosItems = [...itemsAMostrar];
+                                                                        nuevosItems[itemIndex].incluido = e.target.checked;
+                                                                        setComboItemsMap(prev => ({
+                                                                            ...prev,
+                                                                            [index]: nuevosItems
+                                                                        }));
+                                                                        // ✅ NUEVO: Notificar al parent component sobre los cambios en items opcionales
+                                                                        onComboItemsChange?.(index, nuevosItems);
+                                                                        console.log(`✅ Producto opcional ${item.producto_nombre}: ${e.target.checked ? 'INCLUIDO' : 'EXCLUIDO'}`);
+                                                                    }}
+                                                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer accent-purple-600"
+                                                                    title="Marcar para incluir en la venta / desmarcar para excluir"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-4 h-4 flex items-center justify-center">
+                                                                    <span className="text-purple-600 dark:text-purple-400 text-lg">✓</span>
+                                                                </div>
+                                                            )}
                                                             <div className="w-4 h-4 flex items-center justify-center">
                                                                 <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -1098,10 +1207,20 @@ export default function ProductosTable({
                                                             </div>
                                                             <div className="text-xs font-medium text-purple-700 dark:text-purple-300">
                                                                 {item.producto_nombre}
+                                                                {item.es_obligatorio && <span className="text-purple-600 dark:text-purple-400 ml-1">*</span>}
                                                             </div>
                                                         </div>
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                             SKU: {item.producto_sku}
+                                                        </div>
+                                                        {/* Stock del producto */}
+                                                        <div className="text-xs text-gray-600 dark:text-gray-300 mt-1 flex items-center gap-1">
+                                                            <span className="text-purple-600 dark:text-purple-400">📦</span>
+                                                            <span>
+                                                                Stock: <span className="font-semibold text-purple-700 dark:text-purple-300">
+                                                                    {item.stock_disponible ?? '-'} / {item.stock_total ?? '-'}
+                                                                </span>
+                                                            </span>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-medium">
@@ -1115,18 +1234,18 @@ export default function ProductosTable({
                                                     {tipo === 'compra' && (
                                                         <>
                                                             <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
-                                                                {formatCurrency(item.precio_unitario)}
+                                                                {(item.precio_unitario || 0).toFixed(2)}
                                                             </td>
                                                             <td colSpan={2}></td>
                                                         </>
                                                     )}
                                                     {tipo === 'venta' && (
                                                         <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
-                                                            {formatCurrency(item.precio_unitario)}
+                                                            {(item.precio_unitario || 0).toFixed(2)}
                                                         </td>
                                                     )}
                                                     <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-purple-700 dark:text-purple-300">
-                                                        {formatCurrency(item.cantidad * item.precio_unitario)}
+                                                        {((item.cantidad || 0) * (item.precio_unitario || 0)).toFixed(2)}
                                                     </td>
                                                     <td className="px-4 py-2 whitespace-nowrap"></td>
                                                 </tr>

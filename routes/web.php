@@ -109,6 +109,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('productos/filtros/datos', [\App\Http\Controllers\ProductoController::class, 'getFiltrosData'])->middleware('permission:productos.manage')->name('productos.filtros-data');
 
     // Rutas para combos (productos virtuales que agrupan otros productos)
+    Route::get('combos/{combo}/capacidad', [\App\Http\Controllers\ComboController::class, 'capacidad'])->middleware('permission:productos.manage')->name('combos.capacidad');
+    Route::get('combos/{combo}/capacidad-detalles', [\App\Http\Controllers\ComboController::class, 'capacidadDetalles'])->middleware('permission:productos.manage')->name('combos.capacidad-detalles');
     Route::resource('combos', \App\Http\Controllers\ComboController::class)->middleware('permission:productos.manage');
 
     // Resource route DESPUÉS de las rutas específicas
