@@ -101,6 +101,12 @@ export default function StockYProductos({
     // Alias para mantener el nombre stockFiltrado en el resto del código
     const stockFiltrado = stockFiltradoApi;
 
+    // Función para obtener el token CSRF
+    const getCsrfToken = () => {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        return token || '';
+    };
+
     // Función para eliminar un lote (stock_producto)
     const eliminarLote = async (stockProductoId: number) => {
         try {
@@ -110,6 +116,7 @@ export default function StockYProductos({
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken(),
                 },
             });
 
