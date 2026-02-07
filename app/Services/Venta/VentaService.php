@@ -190,6 +190,7 @@ class VentaService
                 'ventana_entrega_ini'        => $dto->ventana_entrega_ini,
                 'ventana_entrega_fin'        => $dto->ventana_entrega_fin,
                 'idempotency_key'            => $dto->idempotency_key,
+                'caja_id'                    => $cajaId, // ✅ NUEVO: Caja donde se registró la venta
             ]);
 
             Log::info('✅ [VentaService::crear] Venta creada en BD', [
@@ -497,7 +498,6 @@ class VentaService
                 );
 
             $resultado = $query
-                ->orderByDesc('fecha')
                 ->orderByDesc('id')
                 ->paginate($perPage);
 

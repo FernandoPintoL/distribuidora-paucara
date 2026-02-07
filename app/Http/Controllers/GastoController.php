@@ -31,7 +31,7 @@ class GastoController extends Controller
                   ->orWhere('numero_documento', 'LIKE', "%{$request->q}%");
             });
 
-        $gastosPaginados = $query->orderBy('fecha', 'desc')->paginate(15)->withQueryString();
+        $gastosPaginados = $query->orderBy('id', 'desc')->paginate(15)->withQueryString();
 
         // Mapear gastos al formato esperado
         $gastos = $gastosPaginados->getCollection()->map(function ($gasto) {

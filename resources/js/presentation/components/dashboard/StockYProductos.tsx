@@ -22,6 +22,8 @@ export default function StockYProductos({
     productosMasMovidos,
 }: StockYProductosProps) {
 
+    console.log('Renderizando StockYProductos con stockPorAlmacen:', stockPorAlmacen);
+
     const [filtros, setFiltros] = useState<FiltrosState>({
         busqueda: '',
         almacenId: '',
@@ -35,6 +37,14 @@ export default function StockYProductos({
 
     // Estado para filas expandidas (mostrar conversiones)
     const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
+
+    // Estado para diálogo de confirmación de eliminación
+    const [loteParaEliminar, setLoteParaEliminar] = useState<{
+        stockProductoId: number;
+        lote: string;
+        producteName: string;
+    } | null>(null);
+    const [eliminando, setEliminando] = useState(false);
 
     // Obtener lista única de almacenes
     const almacenes = useMemo(() => {
@@ -90,6 +100,61 @@ export default function StockYProductos({
 
     // Alias para mantener el nombre stockFiltrado en el resto del código
     const stockFiltrado = stockFiltradoApi;
+
+    // Función para eliminar un lote (stock_producto)
+    const eliminarLote = async (stockProductoId: number) => {
+        try {
+            setEliminando(true);
+            const response = await fetch(`/api/stock/productos/${stockProductoId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Error ${response.status}`);
+            }
+
+            // Recargar datos después de eliminar
+            const params = new URLSearchParams();
+            if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+            if (filtros.almacenId) params.append('almacen_id', filtros.almacenId);
+            params.append('rango_stock', filtros.rangoStock);
+            params.append('ordenamiento', filtros.ordenamiento);
+
+            const reloadResponse = await fetch(`/api/inventario/stock-filtrado?${params.toString()}`);
+            if (reloadResponse.ok) {
+                const json = await reloadResponse.json();
+                if (json.success) {
+                    setStockFiltradoApi(json.data);
+                }
+            }
+
+            // Mostrar mensaje de éxito
+            const evento = new CustomEvent('notification', {
+                detail: {
+                    type: 'success',
+                    message: `Lote "${loteParaEliminar?.lote}" eliminado correctamente`,
+                },
+            });
+            window.dispatchEvent(evento);
+        } catch (error) {
+            console.error('Error eliminando lote:', error);
+            const evento = new CustomEvent('notification', {
+                detail: {
+                    type: 'error',
+                    message: error instanceof Error ? error.message : 'Error al eliminar lote',
+                },
+            });
+            window.dispatchEvent(evento);
+        } finally {
+            setEliminando(false);
+            setLoteParaEliminar(null);
+        }
+    };
 
     // Toggle para expandir/colapsar filas
     const toggleRow = (stockIdOrKey: number | string) => {
@@ -247,7 +312,7 @@ export default function StockYProductos({
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
                                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                {stock.producto_nombre}
+                                                                #{stock.producto_id} | {stock.producto_nombre}
                                                                 <br />
                                                                 {stock.es_fraccionado && (
                                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
@@ -339,6 +404,7 @@ export default function StockYProductos({
                                                                                     <th className="px-3 py-2 text-right font-medium">Cantidad</th>
                                                                                     <th className="px-3 py-2 text-right font-medium">Disponible</th>
                                                                                     <th className="px-3 py-2 text-right font-medium">Reservado</th>
+                                                                                    <th className="px-3 py-2 text-center font-medium">Acciones</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -364,6 +430,31 @@ export default function StockYProductos({
                                                                                         </td>
                                                                                         <td className="px-3 py-2 text-right text-yellow-700 dark:text-yellow-400">
                                                                                             {formatCantidad(lote.cantidad_reservada)}
+                                                                                        </td>
+                                                                                        <td className="px-3 py-2 text-center">
+                                                                                            <button
+                                                                                                onClick={() =>
+                                                                                                    setLoteParaEliminar({
+                                                                                                        stockProductoId: lote.id,
+                                                                                                        lote: lote.lote,
+                                                                                                        producteName: stock.producto_nombre,
+                                                                                                    })
+                                                                                                }
+                                                                                                className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition"
+                                                                                                title="Eliminar lote"
+                                                                                            >
+                                                                                                <svg
+                                                                                                    className="w-4 h-4"
+                                                                                                    fill="currentColor"
+                                                                                                    viewBox="0 0 20 20"
+                                                                                                >
+                                                                                                    <path
+                                                                                                        fillRule="evenodd"
+                                                                                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                                                                                        clipRule="evenodd"
+                                                                                                    />
+                                                                                                </svg>
+                                                                                            </button>
                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}
@@ -482,6 +573,79 @@ export default function StockYProductos({
                     </div>
                 )}
             </div>
+
+            {/* Diálogo de Confirmación para Eliminar Lote */}
+            {loteParaEliminar && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6">
+                        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full dark:bg-red-900/30 mb-4">
+                            <svg
+                                className="w-6 h-6 text-red-600 dark:text-red-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                        </div>
+
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
+                            ¿Eliminar lote?
+                        </h3>
+
+                        <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                            ¿Estás seguro de que deseas eliminar el lote <strong>{loteParaEliminar.lote}</strong> del
+                            producto <strong>{loteParaEliminar.producteName}</strong>?
+                        </p>
+
+                        <p className="text-xs text-orange-600 dark:text-orange-400 text-center mb-6 bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                            ⚠️ Esta acción se ejecutará incluso si el lote tiene movimientos asociados.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setLoteParaEliminar(null)}
+                                disabled={eliminando}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => eliminarLote(loteParaEliminar.stockProductoId)}
+                                disabled={eliminando}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 flex items-center justify-center gap-2 transition"
+                            >
+                                {eliminando ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg
+                                            className="w-4 h-4"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                        >
+                                            <path
+                                                fillRule="evenodd"
+                                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                                clipRule="evenodd"
+                                            />
+                                        </svg>
+                                        Eliminar
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

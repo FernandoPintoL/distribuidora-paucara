@@ -3158,13 +3158,9 @@ class ApiProformaController extends Controller
         }
 
         try {
-            // ✅ MEJORADO: Obtener caja abierta DIRECTAMENTE desde AperturaCaja
-            // Esto funciona para ADMINS y EMPLEADOS (los admins no tienen registro en empleados)
-            $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
-                ->whereDate('fecha', today())
-                ->whereDoesntHave('cierre')
-                ->with('caja')
-                ->first();
+            // ✅ MEJORADO: Usar CajaAbiertaService para obtener caja abierta (mismo que VentaController)
+            $cajaAbiertaService = new \App\Services\CajaAbiertaService();
+            $cajaAbierta = $cajaAbiertaService->obtenerAperturaAbierta();
 
             if (!$cajaAbierta) {
                 Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta HOY', [

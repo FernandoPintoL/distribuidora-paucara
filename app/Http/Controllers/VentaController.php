@@ -49,6 +49,7 @@ class VentaController extends Controller
         private \App\Services\ImpresionService $impresionService,
         private \App\Services\PrinterService $printerService,
         private \App\Services\ExcelExportService $excelExportService,
+        private \App\Services\CajaAbiertaService $cajaAbiertaService,
     ) {
         // ✅ ACTUALIZADO: Permisos solo para peticiones web, NO para API
         // Los clientes móviles acceden a sus propias ventas (filtradas por cliente_id autenticado)
@@ -411,8 +412,8 @@ class VentaController extends Controller
             // 2. Crear DTO desde Request
             $dto = CrearVentaDTO::fromRequest($request);
 
-            // ✅ 2.5 Obtener caja_id del middleware
-            $cajaId = $request->attributes->get('caja_id');
+            // ✅ 2.5 Obtener caja_id usando CajaAbiertaService (inyectado)
+            $cajaId = $this->cajaAbiertaService->obtenerCajaIdAbierta();
 
             // 3. Delegar al Service (ÚNICA lógica de negocio)
             $ventaDTO = $this->ventaService->crear($dto, $cajaId);

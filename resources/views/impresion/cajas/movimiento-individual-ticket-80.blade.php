@@ -90,4 +90,20 @@
     <p style="margin: 2px 0;">ID Movimiento: {{ $movimiento->id }}</p>
 </div>
 
+<div class="separador"></div>
+
+<!-- Espacio para Firmas -->
+<div class="firmas-container">
+    <table>
+        <tr>
+            <td style="width: 50%;">
+                <p>Firma Autorizado</p>
+            </td>
+            <td style="width: 50%;">
+                <p>Firma Recibido</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
 @endsection

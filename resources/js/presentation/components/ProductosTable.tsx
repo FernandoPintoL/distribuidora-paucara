@@ -783,9 +783,9 @@ export default function ProductosTable({
                                                         <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${
                                                             stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
                                                             stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
-                                                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200'
+                                                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
                                                         }`}>
-                                                            {stockDisponible}
+                                                            Disponible: {stockDisponible}
                                                         </span>
                                                         {stockTotal > stockDisponible && (
                                                             <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">

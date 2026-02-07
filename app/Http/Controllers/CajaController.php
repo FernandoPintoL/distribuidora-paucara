@@ -103,14 +103,14 @@ class CajaController extends Controller
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
                 ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
-                ->orderBy('fecha', 'desc')
+                ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
                 ->get();
         }
 
         // Obtener historial de aperturas del usuario destino
         $historicoAperturas = AperturaCaja::where('user_id', $usuarioDestino->id)
             ->with(['caja', 'cierre'])
-            ->orderBy('fecha', 'desc')
+            ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
             ->limit(50)
             ->get()
             ->map(function ($apertura) {
@@ -836,7 +836,7 @@ class CajaController extends Controller
         $movimientosHoy = MovimientoCaja::where('user_id', $usuarioDestino->id)
             ->whereDate('fecha', today())
             ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
-            ->orderBy('fecha', 'desc')
+            ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
             ->get();
 
         return Inertia::render('Cajas/Detalle', [

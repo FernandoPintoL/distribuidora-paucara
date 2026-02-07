@@ -129,6 +129,15 @@ class MovimientoInventario extends Model
      */
     public function scopePorTipo($query, string $tipo)
     {
+        // Tipos genéricos que necesitan LIKE
+        $tiposGenericos = ['ENTRADA', 'SALIDA', 'AJUSTE'];
+
+        // Si es un tipo genérico (ENTRADA, SALIDA, AJUSTE), buscar con LIKE
+        if (in_array($tipo, $tiposGenericos)) {
+            return $query->where('tipo', 'LIKE', $tipo . '_%');
+        }
+
+        // Para tipos específicos (TRANSFERENCIA, etc), buscar exacto
         return $query->where('tipo', $tipo);
     }
 
@@ -147,6 +156,49 @@ class MovimientoInventario extends Model
         return $query->whereHas('stockProducto', function ($q) use ($productoId) {
             $q->where('producto_id', $productoId);
         });
+    }
+
+    /**
+     * Scope para búsqueda flexible de productos
+     * Busca por: ID, SKU, nombre y código de barras
+     */
+    public function scopePorProductoBusqueda($query, string $busqueda)
+    {
+        $busquedaNormalizada = strtolower($busqueda);
+        $esNumero = is_numeric($busqueda);
+
+        return $query->whereHas('stockProducto.producto', function ($q) use ($busqueda, $busquedaNormalizada, $esNumero) {
+            $q->where(function ($subQuery) use ($busqueda, $busquedaNormalizada, $esNumero) {
+                // Búsqueda por ID (si es número)
+                if ($esNumero) {
+                    $subQuery->where('id', (int)$busqueda)
+                             ->orWhere('sku', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(sku) LIKE ?', ['%' . $busquedaNormalizada . '%'])
+                             ->orWhere('nombre', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(nombre) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                } else {
+                    // Si no es número, buscar en SKU y nombre (case-insensitive)
+                    $subQuery->where('sku', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(sku) LIKE ?', ['%' . $busquedaNormalizada . '%'])
+                             ->orWhere('nombre', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(nombre) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                }
+            });
+
+            // Búsqueda por código de barras (case-insensitive)
+            $q->orWhereHas('codigosBarra', function ($barQuery) use ($busqueda, $busquedaNormalizada) {
+                $barQuery->where('codigo', 'LIKE', '%' . $busqueda . '%')
+                         ->orWhereRaw('LOWER(codigo) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+            });
+        });
+    }
+
+    /**
+     * Scope para filtrar por observaciones
+     */
+    public function scopePorObservaciones($query, string $observaciones)
+    {
+        return $query->where('observacion', 'LIKE', '%' . $observaciones . '%');
     }
 
     public function scopePorAlmacen($query, $almacenId)

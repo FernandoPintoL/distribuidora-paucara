@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:17
+ * @see app/Http/Controllers/Api/StockApiController.php:19
  * @route '/api/stock/preparar-impresion'
  */
 export const prepararImpresion = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ prepararImpresion.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:17
+ * @see app/Http/Controllers/Api/StockApiController.php:19
  * @route '/api/stock/preparar-impresion'
  */
 prepararImpresion.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ prepararImpresion.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:17
+ * @see app/Http/Controllers/Api/StockApiController.php:19
  * @route '/api/stock/preparar-impresion'
  */
 prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
     /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:17
+ * @see app/Http/Controllers/Api/StockApiController.php:19
  * @route '/api/stock/preparar-impresion'
  */
     const prepararImpresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
             /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:17
+ * @see app/Http/Controllers/Api/StockApiController.php:19
  * @route '/api/stock/preparar-impresion'
  */
         prepararImpresionForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

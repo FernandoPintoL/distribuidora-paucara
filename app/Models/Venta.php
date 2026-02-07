@@ -35,6 +35,7 @@ class Venta extends Model
         'tipo_pago_id',
         'tipo_documento_id',
         'direccion_cliente_id',
+        'caja_id',  // ✅ NUEVO: Caja en la que se realizó la venta
         // Campos para logística
         'requiere_envio',
         'canal_origen',
@@ -183,6 +184,11 @@ class Venta extends Model
     public function proforma()
     {
         return $this->belongsTo(Proforma::class);
+    }
+
+    public function caja()
+    {
+        return $this->belongsTo(Caja::class);
     }
 
     public function detalles()

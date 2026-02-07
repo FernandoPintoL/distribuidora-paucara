@@ -28,6 +28,19 @@ export interface ConversionUnidad {
 }
 
 /**
+ * Detalle de lote para un stock de producto
+ */
+export interface DetalleLote {
+    id: number; // stock_producto_id
+    lote: string;
+    fecha_vencimiento: string | null;
+    cantidad: number;
+    cantidad_disponible: number;
+    cantidad_reservada: number;
+    conversiones?: ConversionUnidad[];
+}
+
+/**
  * Stock de productos por almacén (detalle de stock_productos)
  */
 export interface StockPorAlmacen {
@@ -43,10 +56,13 @@ export interface StockPorAlmacen {
     producto_codigo_barra: string;
     producto_sku: string;
     almacen_nombre: string;
+    fecha_vencimiento_proximo?: string | null;
     // Campos para productos fraccionados
     es_fraccionado: boolean;
     unidad_medida_nombre?: string; // Unidad base del producto
     conversiones?: ConversionUnidad[]; // Conversiones disponibles
+    // Detalles de lotes (para productos con múltiples lotes)
+    detalles_lotes?: DetalleLote[];
 }
 
 /**

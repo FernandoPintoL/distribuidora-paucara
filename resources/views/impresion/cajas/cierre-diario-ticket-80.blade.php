@@ -63,4 +63,20 @@
     <p style="margin-top: 3px; font-size: 7px;">Cierre diario general consolidado</p>
 </div>
 
+<div class="separador"></div>
+
+<!-- Espacio para Firmas -->
+<div class="firmas-container">
+    <table>
+        <tr>
+            <td style="width: 50%;">
+                <p>Firma Autorizado</p>
+            </td>
+            <td style="width: 50%;">
+                <p>Firma Recibido</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
 @endsection

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
@@ -42,7 +42,9 @@ export default function FiltrosMovimientos({
     tiposAjuste = [],
     showAdvanced = false
 }: FiltrosMovimientosProps) {
-    const [isOpen, setIsOpen] = React.useState(false);
+    // ✅ Estado local para los filtros - NO se aplican hasta hacer clic en buscar
+    const [filtrosLocal, setFiltrosLocal] = useState<IFiltrosMovimientos>(filtros);
+    const [isOpen, setIsOpen] = useState(true);
 
     // Convertir opciones a formato SearchSelect
     const tiposMovimientoOptions = tiposMovimiento.map(tipo => ({
@@ -66,24 +68,37 @@ export default function FiltrosMovimientos({
         description: ta.clave,
     }));
 
-    const updateFiltro = (key: keyof IFiltrosMovimientos, value: string | number | boolean | undefined) => {
-        onFiltrosChange({
-            ...filtros,
+    // ✅ Actualizar estado local (sin navegar)
+    const updateFiltroLocal = (key: keyof IFiltrosMovimientos, value: string | number | boolean | undefined) => {
+        setFiltrosLocal({
+            ...filtrosLocal,
             [key]: value
         });
     };
 
+    // ✅ Aplicar filtros - SOLO cuando se hace clic en buscar
+    const aplicarFiltros = () => {
+        onFiltrosChange(filtrosLocal);
+    };
+
+    // ✅ Manejar Enter en inputs
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            aplicarFiltros();
+        }
+    };
+
     const clearFiltro = (key: keyof IFiltrosMovimientos) => {
-        const newFiltros = { ...filtros };
+        const newFiltros = { ...filtrosLocal };
         delete newFiltros[key];
-        onFiltrosChange(newFiltros);
+        setFiltrosLocal(newFiltros);
     };
 
     const clearAllFiltros = () => {
-        onFiltrosChange({});
+        setFiltrosLocal({});
     };
 
-    const hasActiveFilters = Object.keys(filtros).length > 0;
+    const hasActiveFilters = Object.keys(filtrosLocal).length > 0;
 
     return (
         <Card>
@@ -94,11 +109,20 @@ export default function FiltrosMovimientos({
                         Filtros
                         {hasActiveFilters && (
                             <Badge variant="secondary" className="ml-2">
-                                {Object.keys(filtros).length}
+                                {Object.keys(filtrosLocal).length}
                             </Badge>
                         )}
                     </CardTitle>
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={aplicarFiltros}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            <Search className="h-4 w-4 mr-1" />
+                            Buscar
+                        </Button>
                         {hasActiveFilters && (
                             <Button
                                 variant="ghost"
@@ -124,40 +148,67 @@ export default function FiltrosMovimientos({
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleContent>
                     <CardContent className="space-y-4">
-                        {/* Búsqueda general */}
-                        <div className="space-y-2">
-                            <Label htmlFor="search">Búsqueda general</Label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    id="search"
-                                    placeholder="Buscar por producto, referencia, observaciones..."
-                                    value={filtros.search || ''}
-                                    onChange={(e) => updateFiltro('search', e.target.value)}
-                                    className="pl-9"
-                                />
-                                {filtros.search && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                                        onClick={() => clearFiltro('search')}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Búsqueda de producto - columna más ancha */}
+                            <div className="col-span-1 md:col-span-1 lg:col-span-1 space-y-2">
+                                <Label htmlFor="producto_busqueda">🔍 Producto</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="producto_busqueda"
+                                        placeholder="ID, SKU, nombre, código..."
+                                        value={filtrosLocal.producto_busqueda || ''}
+                                        onChange={(e) => updateFiltroLocal('producto_busqueda', e.target.value || undefined)}
+                                        onKeyPress={handleKeyPress}
+                                        className="pl-9"
+                                    />
+                                    {filtrosLocal.producto_busqueda && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                                            onClick={() => updateFiltroLocal('producto_busqueda', undefined)}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Número de documento */}
+                            <div className="space-y-2">
+                                <Label htmlFor="numero_documento">Número de documento</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="numero_documento"
+                                        placeholder="Ej: FAC-001, TRANSF-100..."
+                                        value={filtrosLocal.numero_documento || ''}
+                                        onChange={(e) => updateFiltroLocal('numero_documento', e.target.value || undefined)}
+                                        onKeyPress={handleKeyPress}
+                                        className="pl-9"
+                                    />
+                                    {filtrosLocal.numero_documento && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                                            onClick={() => updateFiltroLocal('numero_documento', undefined)}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Tipo de movimiento */}
                             <div className="space-y-2">
                                 <Label>Tipo de movimiento</Label>
                                 <SearchSelect
                                     placeholder="Seleccionar tipo..."
-                                    value={filtros.tipo || ''}
+                                    value={filtrosLocal.tipo || ''}
                                     options={tiposMovimientoOptions}
-                                    onChange={(value) => updateFiltro('tipo', value || undefined)}
+                                    onChange={(value) => updateFiltroLocal('tipo', value || undefined)}
                                     allowClear={true}
                                     emptyText="No se encontraron tipos"
                                 />
@@ -169,9 +220,9 @@ export default function FiltrosMovimientos({
                                     <Label>Tipo de Ajuste</Label>
                                     <SearchSelect
                                         placeholder="Seleccionar ajuste..."
-                                        value={filtros.tipo_ajuste_id?.toString() || ''}
+                                        value={filtrosLocal.tipo_ajuste_id?.toString() || ''}
                                         options={tiposAjusteOptions}
-                                        onChange={(value) => updateFiltro('tipo_ajuste_id', value ? parseInt(value) : undefined)}
+                                        onChange={(value) => updateFiltroLocal('tipo_ajuste_id', value ? parseInt(value) : undefined)}
                                         allowClear={true}
                                         emptyText="No se encontraron ajustes"
                                     />
@@ -183,9 +234,9 @@ export default function FiltrosMovimientos({
                                 <Label>Almacén</Label>
                                 <SearchSelect
                                     placeholder="Seleccionar almacén..."
-                                    value={filtros.almacen_id?.toString() || ''}
+                                    value={filtrosLocal.almacen_id?.toString() || ''}
                                     options={almacenesOptions}
-                                    onChange={(value) => updateFiltro('almacen_id', value ? parseInt(value) : undefined)}
+                                    onChange={(value) => updateFiltroLocal('almacen_id', value ? parseInt(value) : undefined)}
                                     allowClear={true}
                                     emptyText="No se encontraron almacenes"
                                 />
@@ -193,14 +244,14 @@ export default function FiltrosMovimientos({
 
                             {/* Fecha desde */}
                             <div className="space-y-2">
-                                <Label htmlFor="fecha_desde">Fecha desde</Label>
+                                <Label htmlFor="fecha_inicio">Fecha desde</Label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        id="fecha_desde"
+                                        id="fecha_inicio"
                                         type="date"
-                                        value={filtros.fecha_desde || ''}
-                                        onChange={(e) => updateFiltro('fecha_desde', e.target.value)}
+                                        value={filtrosLocal.fecha_inicio || ''}
+                                        onChange={(e) => updateFiltroLocal('fecha_inicio', e.target.value)}
                                         className="pl-9"
                                     />
                                 </div>
@@ -208,14 +259,14 @@ export default function FiltrosMovimientos({
 
                             {/* Fecha hasta */}
                             <div className="space-y-2">
-                                <Label htmlFor="fecha_hasta">Fecha hasta</Label>
+                                <Label htmlFor="fecha_fin">Fecha hasta</Label>
                                 <div className="relative">
                                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        id="fecha_hasta"
+                                        id="fecha_fin"
                                         type="date"
-                                        value={filtros.fecha_hasta || ''}
-                                        onChange={(e) => updateFiltro('fecha_hasta', e.target.value)}
+                                        value={filtrosLocal.fecha_fin || ''}
+                                        onChange={(e) => updateFiltroLocal('fecha_fin', e.target.value)}
                                         className="pl-9"
                                     />
                                 </div>
@@ -224,27 +275,14 @@ export default function FiltrosMovimientos({
 
                         {showAdvanced && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
-                                {/* Producto específico */}
-                                <div className="space-y-2">
-                                    <Label>Producto</Label>
-                                    <SearchSelect
-                                        placeholder="Buscar producto..."
-                                        value={filtros.producto_id?.toString() || ''}
-                                        options={productosOptions}
-                                        onChange={(value) => updateFiltro('producto_id', value ? parseInt(value) : undefined)}
-                                        allowClear={true}
-                                        emptyText="No se encontraron productos"
-                                    />
-                                </div>
-
                                 {/* Número de referencia */}
                                 <div className="space-y-2">
                                     <Label htmlFor="numero_referencia">Número de referencia</Label>
                                     <Input
                                         id="numero_referencia"
                                         placeholder="Ej: FAC-001, TRANSF-100..."
-                                        value={filtros.numero_referencia || ''}
-                                        onChange={(e) => updateFiltro('numero_referencia', e.target.value)}
+                                        value={filtrosLocal.numero_referencia || ''}
+                                        onChange={(e) => updateFiltroLocal('numero_referencia', e.target.value)}
                                     />
                                 </div>
 
@@ -255,8 +293,8 @@ export default function FiltrosMovimientos({
                                         id="cantidad_min"
                                         type="number"
                                         placeholder="0"
-                                        value={filtros.cantidad_min || ''}
-                                        onChange={(e) => updateFiltro('cantidad_min', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                        value={filtrosLocal.cantidad_min || ''}
+                                        onChange={(e) => updateFiltroLocal('cantidad_min', e.target.value ? parseFloat(e.target.value) : undefined)}
                                     />
                                 </div>
                             </div>
@@ -267,7 +305,7 @@ export default function FiltrosMovimientos({
                             <div className="pt-4 border-t">
                                 <div className="flex flex-wrap gap-2">
                                     <span className="text-sm text-muted-foreground">Filtros activos:</span>
-                                    {Object.entries(filtros).map(([key, value]) => {
+                                    {Object.entries(filtrosLocal).map(([key, value]) => {
                                         if (!value) return null;
 
                                         let displayValue = value.toString();

@@ -300,7 +300,7 @@ class ChoferCajaController extends Controller
                 ->where('user_id', $user->id)
                 ->whereDate('fecha', today())
                 ->with(['tipoOperacion', 'usuario'])
-                ->orderBy('fecha', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
 
             Log::info('📋 [CHOFER_CAJA] Movimientos obtenidos', [

@@ -172,7 +172,7 @@ class CierreCajaService
                 $this->fechaFin,
             ])
             ->with(['tipoOperacion', 'comprobantes', 'tipoPago', 'venta.estadoDocumento', 'pago']) // ✅ NUEVO: Cargar relación pago
-            ->orderBy('fecha', 'asc')
+            ->orderBy('id', 'desc')
             ->get();
     }
 

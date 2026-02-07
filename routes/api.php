@@ -1105,8 +1105,9 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
 });
 
 // ==========================================
-// 📦 STOCK - IMPRESIÓN
+// 📦 STOCK - IMPRESIÓN Y GESTIÓN
 // ==========================================
 Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
     Route::post('preparar-impresion', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresion']);
+    Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
 });

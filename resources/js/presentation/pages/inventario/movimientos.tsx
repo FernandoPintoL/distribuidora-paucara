@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import MovimientosTable from '@/presentation/components/Inventario/MovimientosTable';
@@ -56,10 +57,21 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
     // ✅ Hook de aplicación para manejo de acciones
     const { handleCreateAjuste, handleGoToReportes } = useMovimientosInventario();
 
-    // ✅ Manejador de cambios en filtros
+    // ✅ Aplicar filtros cuando el usuario hace clic en "Buscar"
     const handleFiltrosChange = (nuevosFiltros: FiltrosMovimientos) => {
-        // TODO: Implementar cambio de filtros (refetch de datos)
-        console.log('Filtros actualizados:', nuevosFiltros);
+        console.log('Aplicando filtros:', nuevosFiltros);
+
+        // Convertir filtros a parámetros de query
+        const queryParams = {
+            ...nuevosFiltros,
+            page: 1, // Resetear a página 1 cuando se aplican filtros
+        };
+
+        // Navegar con los nuevos filtros
+        router.get('/inventario/movimientos', queryParams, {
+            preserveState: true,
+            preserveScroll: true,
+        });
     };
 
     // ✅ Breadcrumbs
@@ -203,6 +215,20 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                         <MovimientosTable
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             movimientos={movimientos.data as any}
+                            pagination={{
+                                current_page: movimientos.current_page,
+                                last_page: movimientos.last_page,
+                                per_page: movimientos.per_page,
+                                total: movimientos.total,
+                                from: movimientos.from,
+                                to: movimientos.to,
+                            }}
+                            onPageChange={(page) => {
+                                router.get('/inventario/movimientos', { page }, {
+                                    preserveState: true,
+                                    preserveScroll: true,
+                                });
+                            }}
                         />
                     </div>
                 )}

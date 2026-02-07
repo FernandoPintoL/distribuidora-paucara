@@ -9,6 +9,8 @@ import {
 } from '@/presentation/components/ui/table';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
+import { Button } from '@/presentation/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface MovimientoInventario {
     id: number;
@@ -29,14 +31,27 @@ interface MovimientoInventario {
     };
 }
 
+interface PaginationInfo {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number;
+    to: number;
+}
+
 interface MovimientosTableProps {
     movimientos: MovimientoInventario[];
     isLoading?: boolean;
+    pagination?: PaginationInfo;
+    onPageChange?: (page: number) => void;
 }
 
 const MovimientosTable: React.FC<MovimientosTableProps> = ({
     movimientos = [],
-    isLoading = false
+    isLoading = false,
+    pagination,
+    onPageChange
 }) => {
     const getTipoColor = (tipo: string) => {
         const colors: Record<string, string> = {
@@ -72,7 +87,6 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead>Tipo</TableHead>
                             <TableHead>Producto</TableHead>
                             <TableHead>Almacén</TableHead>
-                            <TableHead>Cantidad</TableHead>
                             <TableHead>Motivo</TableHead>
                             <TableHead>Usuario</TableHead>
                         </TableRow>
@@ -88,34 +102,33 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             movimientos.map((movimiento) => (
                                 <TableRow key={movimiento.id}>
                                     <TableCell className="font-medium">
-                                        {movimiento.referencia || movimiento.numero}
+                                        #{ movimiento.id } | {movimiento.referencia || movimiento.numero}
                                     </TableCell>
                                     <TableCell>
                                         {new Date(movimiento.fecha).toLocaleDateString()}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge className={getTipoColor(movimiento.tipo)}>
-                                            {movimiento.tipo}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <div className="font-medium">{movimiento.producto.nombre}</div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {movimiento.producto.codigo}
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{movimiento.almacen.nombre}</TableCell>
-                                    <TableCell>
-                                        <span className={
+                                        <p><Badge className={getTipoColor(movimiento.tipo)}>
+                                            {movimiento.tipo} 
+                                        </Badge></p>
+                                        <p className='mt-2'>Cantidad:  <span className={
                                             movimiento.cantidad > 0
                                                 ? 'text-green-600'
                                                 : 'text-red-600'
                                         }>
                                             {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
-                                        </span>
+                                        </span></p>
+                                         
                                     </TableCell>
+                                    <TableCell>
+                                        <div>
+                                            <div className="font-medium">{movimiento.producto.nombre}</div>
+                                            <div className="text-sm text-muted-foreground">
+                                                #{movimiento.producto.id} | {movimiento.producto.sku}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{movimiento.almacen.nombre}</TableCell>
                                     <TableCell>{movimiento.motivo}</TableCell>
                                     <TableCell>{movimiento.usuario.name}</TableCell>
                                 </TableRow>
@@ -123,6 +136,68 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                         )}
                     </TableBody>
                 </Table>
+
+                {/* Paginación */}
+                {pagination && pagination.last_page > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="text-sm text-muted-foreground">
+                            Mostrando <strong>{pagination.from}</strong> a <strong>{pagination.to}</strong> de <strong>{pagination.total}</strong> resultados
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.current_page === 1}
+                                onClick={() => onPageChange?.(pagination.current_page - 1)}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => {
+                                    // Mostrar solo páginas cercanas a la actual
+                                    if (
+                                        page === 1 ||
+                                        page === pagination.last_page ||
+                                        (page >= pagination.current_page - 1 && page <= pagination.current_page + 1)
+                                    ) {
+                                        return (
+                                            <Button
+                                                key={page}
+                                                variant={page === pagination.current_page ? 'default' : 'outline'}
+                                                size="sm"
+                                                onClick={() => onPageChange?.(page)}
+                                            >
+                                                {page}
+                                            </Button>
+                                        );
+                                    }
+
+                                    // Mostrar puntos suspensivos
+                                    if (page === pagination.current_page - 2 || page === pagination.current_page + 2) {
+                                        return (
+                                            <span key={`dots-${page}`} className="px-2 text-muted-foreground">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+
+                                    return null;
+                                })}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.current_page === pagination.last_page}
+                                onClick={() => onPageChange?.(pagination.current_page + 1)}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

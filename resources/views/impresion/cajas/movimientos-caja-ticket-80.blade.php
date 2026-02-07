@@ -113,9 +113,22 @@ return $item->tipoOperacion->nombre;
 
 <div class="separador"></div>
 
-<div style="text-align: center; color: #666;">
+<div style="text-align: center; color: #666; margin">
     <p style="margin: 2px 0;">{{ $empresa->nombre_comercial ?? 'Distribuidora Paucara' }}</p>
     <p style="margin: 2px 0; font-size: 12px;">{{ $fecha_impresion->format('d/m/Y H:i:s') }}</p>
+</div>
+
+<div class="separador"></div>
+
+<!-- Espacio para Firmas -->
+<div class="firmas-container margin-top: 40px;">
+    <table>
+        <tr>
+            <td style="width: 50%;">
+                <p>Firma Autorizado</p>
+            </td>
+        </tr>
+    </table>
 </div>
 
 @endsection

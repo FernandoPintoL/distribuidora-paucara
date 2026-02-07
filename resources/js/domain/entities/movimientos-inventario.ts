@@ -281,19 +281,20 @@ export interface FiltrosMovimientos {
 
     // Filtros de producto y usuario
     producto_id?: Id;
+    producto_busqueda?: string;  // Búsqueda flexible por ID, SKU, nombre o código de barras
     productos?: Id[];
     usuario_id?: Id;
     usuarios?: Id[];
 
-    // Filtros de estado y tiempo
+    // Filtros de estado y tiempo (nombres coinciden con backend)
     estado?: EstadoMovimiento;
     estados?: EstadoMovimiento[];
-    fecha_desde?: string;
-    fecha_hasta?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
 
     // Filtros de búsqueda
-    search?: string;
-    busqueda?: string;
+    observaciones?: string;  // Búsqueda en observaciones del movimiento
+    numero_documento?: string;  // Búsqueda por número de documento (factura, transferencia, etc)
     numero_referencia?: string;
     lote?: string;
 

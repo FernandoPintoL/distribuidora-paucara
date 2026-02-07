@@ -466,12 +466,14 @@ class InventarioController extends Controller
         $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
         $almacenId   = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
         $productoId  = $request->filled('producto_id') ? $request->integer('producto_id') : null;
-        $page        = $request->integer('page', 1);
+        $productoBusqueda = $request->filled('producto_busqueda') ? $request->string('producto_busqueda') : null;
+        $observaciones = $request->filled('observaciones') ? $request->string('observaciones') : null;
+        $numeroDocumento = $request->filled('numero_documento') ? $request->string('numero_documento') : null;
         $perPage     = 15;
 
         // Construir query con filtros
         $query = MovimientoInventario::with([
-            'stockProducto.producto:id,nombre',
+            'stockProducto.producto:id,nombre,sku',
             'stockProducto.almacen:id,nombre',
             'user:id,name',
         ])->porFecha($fechaInicio, $fechaFin);
@@ -484,8 +486,21 @@ class InventarioController extends Controller
             $query->porAlmacen($almacenId);
         }
 
+        // Buscar por ID específico O por búsqueda flexible
         if ($productoId && $productoId > 0) {
             $query->porProducto($productoId);
+        } elseif ($productoBusqueda && ! empty($productoBusqueda)) {
+            $query->porProductoBusqueda($productoBusqueda);
+        }
+
+        // Filtrar por observaciones
+        if ($observaciones && ! empty($observaciones)) {
+            $query->porObservaciones($observaciones);
+        }
+
+        // Filtrar por número de documento
+        if ($numeroDocumento && ! empty($numeroDocumento)) {
+            $query->where('numero_documento', 'LIKE', '%' . $numeroDocumento . '%');
         }
 
         // Obtener total para estadísticas
@@ -493,9 +508,9 @@ class InventarioController extends Controller
         $totalEntradas    = (clone $query)->where('tipo', 'like', 'ENTRADA%')->count();
         $totalSalidas     = (clone $query)->where('tipo', 'like', 'SALIDA%')->count();
 
-        // Paginar resultados
+        // ✅ Paginar resultados - Laravel obtiene automáticamente la página del request
         $movimientosPaginados = $query->orderByDesc('id')
-            ->paginate($perPage, ['*'], 'page', $page);
+            ->paginate($perPage);
 
         // Mapear datos de movimientos
         $movimientos = $movimientosPaginados->map(function ($movimiento) {
@@ -517,6 +532,7 @@ class InventarioController extends Controller
                 'producto'          => [
                     'id'        => $movimiento->stockProducto->producto->id,
                     'nombre'    => $movimiento->stockProducto->producto->nombre,
+                    'sku'       => $movimiento->stockProducto->producto->sku,
                     'categoria' => [
                         'nombre' => 'General',
                     ],

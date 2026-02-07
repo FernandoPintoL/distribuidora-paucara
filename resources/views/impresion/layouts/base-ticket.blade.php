@@ -209,6 +209,35 @@
             page-break-after: avoid;
         }
 
+        /* ✅ FIRMAS - Permitir espacios */
+        .firmas-container {
+            margin-top: 12px !important;
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+        }
+
+        .firmas-container table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .firmas-container td {
+            padding: 0 5px !important;
+            border-top: 1px solid #000 !important;
+            text-align: center;
+            height: auto;
+            margin: 0 !important;
+            padding-top: 18px !important;
+        }
+
+        .firmas-container p {
+            margin: 3px 0 0 0 !important;
+            padding: 0 !important;
+            font-size: 9px;
+        }
+
     </style>
 </head>
 <body>

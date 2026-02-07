@@ -232,7 +232,7 @@ class AdminCajaApiController extends Controller
             ->where('user_id', $aperturaHoy->user_id)
             ->whereDate('fecha', today())
             ->with('tipoOperacion')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get()
             ->map(function ($mov) {
                 return [

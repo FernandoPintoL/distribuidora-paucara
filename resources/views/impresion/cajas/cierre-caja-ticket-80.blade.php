@@ -218,4 +218,20 @@
     <div>{{ is_string($usuario) ? $usuario : $usuario->name }}</div>
 </div>
 
+<div class="separador"></div>
+
+<!-- Espacio para Firmas -->
+<div class="firmas-container">
+    <table>
+        <tr>
+            <td style="width: 50%;">
+                <p>Firma Autorizado</p>
+            </td>
+            <td style="width: 50%;">
+                <p>Firma Recibido</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
 @endsection
