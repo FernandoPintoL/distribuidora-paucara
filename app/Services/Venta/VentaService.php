@@ -183,7 +183,7 @@ class VentaService
                 'politica_pago'              => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'estado_pago'                => $estadoPago,                                             // ✅ Dinámico según pago inicial
                 'monto_pagado'               => $dto->monto_pagado_inicial ?? 0,                         // ✅ Si se pagó al aprobar
-                'monto_pendiente'            => max(0, $dto->total - ($dto->monto_pagado_inicial ?? 0)), // ✅ Resta pago inicial
+                'monto_pendiente'            => max(0, ($dto->subtotal - ($dto->descuento ?? 0)) - ($dto->monto_pagado_inicial ?? 0)),
                                                                                                          // Campos de SLA y compromisos de entrega
                 'fecha_entrega_comprometida' => $dto->fecha_entrega_comprometida,
                 'hora_entrega_comprometida'  => $dto->hora_entrega_comprometida,

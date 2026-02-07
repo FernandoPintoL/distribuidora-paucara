@@ -2518,7 +2518,7 @@ class ApiProformaController extends Controller
                     'politica_pago' => $politica,
                     'estado_pago' => $estadoPago,
                     'monto_pagado' => $montoPagado,
-                    'monto_pendiente' => $total - $montoPagado,
+                    'monto_pendiente' => max(0, ($proforma->subtotal - ($proforma->descuento ?? 0)) - $montoPagado),
                     // ✅ Estado del documento: APROBADO (ID=3) cuando se convierte proforma aprobada a venta
                     'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
                         ->where('activo', true)
