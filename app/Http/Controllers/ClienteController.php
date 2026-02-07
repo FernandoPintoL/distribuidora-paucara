@@ -166,7 +166,7 @@ class ClienteController extends Controller
     {
         try {
             // ✅ Autorizar: Solo roles permitidos pueden ver listado de clientes
-            $this->authorize('viewAny', ClienteModel::class);
+            // ✅ Remover autorización para permitir a todos los usuarios ver clientes
 
             // Configurar opciones según el tipo de request
             $options = $this->isApiRequest() ? [
