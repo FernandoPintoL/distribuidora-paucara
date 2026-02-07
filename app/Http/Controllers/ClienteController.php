@@ -107,6 +107,25 @@ class ClienteController extends Controller
             ->when($q, function ($query) use ($q, $options) {
                 // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
                 $searchLower = strtolower($q);
+
+                // ✅ NUEVO: Agregar columna de relevancia con prioridades
+                // Máxima: id, codigo_cliente (1-2)
+                // Media: nombre, telefono (3-4)
+                // Baja: razon_social, nit, localidad (5-6)
+                $query->selectRaw(
+                    'clientes.*,
+                    CASE
+                        WHEN LOWER(CAST(clientes.id as text)) = LOWER(?) THEN 1
+                        WHEN LOWER(clientes.codigo_cliente) = LOWER(?) THEN 2
+                        WHEN LOWER(clientes.nombre) LIKE LOWER(?) THEN 3
+                        WHEN LOWER(clientes.telefono) LIKE LOWER(?) THEN 4
+                        WHEN LOWER(clientes.razon_social) LIKE LOWER(?) THEN 5
+                        WHEN LOWER(clientes.nit) LIKE LOWER(?) THEN 6
+                        ELSE 7
+                    END as relevancia',
+                    [$q, $q, "%{$q}%", "%{$q}%", "%{$q}%", "%{$q}%"]
+                );
+
                 $query->where(function ($sub) use ($searchLower, $options) {
                     $sub->whereRaw('LOWER(clientes.nombre) like ?', ["%$searchLower%"])
                         ->orWhereRaw('LOWER(clientes.razon_social) like ?', ["%$searchLower%"])
@@ -119,6 +138,9 @@ class ClienteController extends Controller
                         $sub->orWhereRaw('LOWER(clientes.email) like ?', ["%$searchLower%"]);
                     }
                 });
+            }, function ($query) {
+                // Si no hay búsqueda, seleccionar normalmente
+                $query->select('clientes.*');
             })
             ->when($activo !== null, function ($query) use ($activo) {
                 $query->where('clientes.activo', $activo);
@@ -126,8 +148,16 @@ class ClienteController extends Controller
             ->when($localidadId && is_numeric($localidadId), function ($query) use ($localidadId) {
                 $query->where('clientes.localidad_id', $localidadId);
             })
-            ->select('clientes.*')
-            ->orderBy('clientes.' . $orderBy, $orderDir);
+            ->when($q,
+                // Si hay búsqueda, ordenar por relevancia
+                function ($query) {
+                    $query->orderBy('relevancia', 'asc');
+                },
+                // Si no hay búsqueda, ordenar por los parámetros solicitados
+                function ($query) use ($orderBy, $orderDir) {
+                    $query->orderBy('clientes.' . $orderBy, $orderDir);
+                }
+            );
 
         return $query->paginate($request->integer('per_page', $options['per_page']))->withQueryString();
     }
