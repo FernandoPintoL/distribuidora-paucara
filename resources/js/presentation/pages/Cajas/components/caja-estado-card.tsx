@@ -53,6 +53,8 @@ export function CajaEstadoCard({
     cierresPendientes = 0,
     isConsolidating = false
 }: Props) {
+    console.log('Renderizando CajaEstadoCard - cajaAbiertaHoy:', cajaAbiertaHoy);
+    console.log('Efectivo esperado:', efectivoEsperado);
     // ✅ NUEVO: Detectar si la caja es del día anterior o anterior
     const esDiaAnterior = () => {
         if (!cajaAbiertaHoy) return false;

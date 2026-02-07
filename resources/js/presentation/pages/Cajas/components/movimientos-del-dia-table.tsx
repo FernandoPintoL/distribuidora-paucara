@@ -322,7 +322,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                         <strong>+ Ventas Efectivo</strong>
                                     </td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(ventasPorTipoPago.find(item => item.tipo === 'Efectivo')?.total || 0)}
+                                       +{formatCurrency(efectivoEsperado.ventas_efectivo)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">

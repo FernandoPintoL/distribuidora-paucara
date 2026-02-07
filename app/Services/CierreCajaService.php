@@ -490,7 +490,7 @@ class CierreCajaService
             ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
             ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
             ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO']) // ← INCLUYE AMBOS
-            ->where('estados_documento.nombre', 'Aprobado')               // ← SOLO APROBADAS
+            ->where('estados_documento.codigo', 'APROBADO')               // ← SOLO APROBADAS (por código, más estable)
             ->whereBetween('movimientos_caja.fecha', [
                 $aperturaCaja->fecha,
                 $this->fechaFin,
@@ -511,8 +511,8 @@ class CierreCajaService
             ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
             ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
             ->where('tipo_operacion_caja.codigo', 'VENTA')  // ← SOLO VENTA DIRECTA
-            ->where('estados_documento.nombre', 'Aprobado') // ← SOLO APROBADAS
-            ->where('tipos_pago.nombre', 'Efectivo')        // ← SOLO EFECTIVO
+            ->where('estados_documento.codigo', 'APROBADO')               // ← SOLO APROBADAS
+            ->where('tipos_pago.codigo', 'EFECTIVO')         // ← SOLO EFECTIVO (por código, más estable)
             ->whereBetween('movimientos_caja.fecha', [
                 $aperturaCaja->fecha,
                 $this->fechaFin,
