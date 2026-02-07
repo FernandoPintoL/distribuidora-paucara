@@ -118,7 +118,7 @@ class StoreClienteRequest extends FormRequest
             'activo'                         => 'nullable|boolean',
             'observaciones'                  => 'nullable|string',
             'crear_usuario'                  => 'nullable|boolean',
-            'password'                       => 'required_if:crear_usuario,true|nullable|string|min:8',
+            'password'                       => 'nullable|string|min:8',
             'password_confirmation'          => 'required_with:password|same:password',
 
             // Campos de imagen (opcionales)
@@ -164,7 +164,6 @@ class StoreClienteRequest extends FormRequest
             'limite_credito.numeric'                    => 'El límite de crédito debe ser un número.',
             'limite_credito.min'                        => 'El límite de crédito no puede ser negativo.',
             'puede_tener_credito.boolean'               => 'El campo habilitación de crédito debe ser verdadero o falso.',
-            'password.required_if'                      => 'La contraseña es obligatoria cuando se crea un usuario.',
             'password.min'                              => 'La contraseña debe tener al menos 8 caracteres.',
             'password_confirmation.required_with'       => 'Debe confirmar la contraseña.',
             'password_confirmation.same'                => 'Las contraseñas no coinciden.',
