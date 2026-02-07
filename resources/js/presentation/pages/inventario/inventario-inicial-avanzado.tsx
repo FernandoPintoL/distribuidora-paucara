@@ -284,9 +284,9 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             setGuardando(true);
             let itemsGuardados = 0;
 
-            // Guardar todos los items del borrador que tengan cantidad
+            // Guardar todos los items del borrador que tengan cantidad (incluyendo 0)
             for (const item of borrador.items) {
-                if (item.cantidad && typeof item.cantidad === 'number' && item.cantidad > 0) {
+                if (item.cantidad !== null && item.cantidad !== undefined && typeof item.cantidad === 'number') {
                     try {
                         await guardarItem(
                             item.producto_id,
@@ -321,22 +321,35 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
             clearTimeout(debounceTimerRef.current);
         }
 
-        // Mostrar sugerencias locales inmediatamente
+        // Mostrar sugerencias locales inmediatamente (BÚSQUEDA EXACTA: ID, SKU, Código de Barras)
         if (valor.trim().length > 0) {
             const filtrados = productosUnicos.filter(
                 p => {
                     const valorLower = valor.toLowerCase();
-                    const nombre = p.producto?.nombre?.toLowerCase().includes(valorLower) || false;
-                    const sku = p.producto?.sku?.toLowerCase().includes(valorLower) || false;
-                    const codigoBarrasLegacy = p.producto?.codigo_barras?.toLowerCase().includes(valorLower) || false;
+                    const valorNumerico = parseInt(valor, 10);
 
-                    // Buscar en la relación codigos_barra
-                    const enCodigosBarra = Array.isArray(p.producto?.codigos_barra) &&
-                        p.producto.codigos_barra.some((cb: any) =>
-                            cb.codigo?.toLowerCase().includes(valorLower)
+                    // 1️⃣ Búsqueda EXACTA por ID (si es número)
+                    if (!isNaN(valorNumerico) && p.producto?.id === valorNumerico) {
+                        return true;
+                    }
+
+                    // 2️⃣ Búsqueda EXACTA por SKU (case-insensitive)
+                    const skuExacto = p.producto?.sku?.toLowerCase() === valorLower;
+                    if (skuExacto) return true;
+
+                    // 3️⃣ Búsqueda EXACTA por código de barras legacy (case-insensitive)
+                    const codigoBarrasExacto = p.producto?.codigo_barras?.toLowerCase() === valorLower;
+                    if (codigoBarrasExacto) return true;
+
+                    // 4️⃣ Búsqueda EXACTA en la relación codigos_barra (case-insensitive)
+                    if (Array.isArray(p.producto?.codigos_barra)) {
+                        const enCodigosBarra = p.producto.codigos_barra.some((cb: any) =>
+                            cb.codigo?.toLowerCase() === valorLower
                         );
+                        if (enCodigosBarra) return true;
+                    }
 
-                    return nombre || sku || codigoBarrasLegacy || enCodigosBarra;
+                    return false;
                 }
             );
             setSugerencias(filtrados.slice(0, 5)); // Máximo 5 sugerencias locales

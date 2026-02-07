@@ -585,16 +585,8 @@ class InventarioInicialController extends Controller
                             $exactMatch = true;
                             $page = 1;
                         } else {
-                            // INTENTO 4: Búsqueda parcial (fallback)
-                            $productosQuery->where(function ($q) use ($search, $searchLower) {
-                                $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
-                                    ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
-                                    ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
-                                        $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
-                                            ->where('activo', true);
-                                    });
-                            });
-                            $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+                            // ❌ Sin coincidencia exacta - Retornar vacío (no fallback a parcial)
+                            $productos = collect();
                         }
                     }
                 }
@@ -622,16 +614,8 @@ class InventarioInicialController extends Controller
                         $exactMatch = true;
                         $page = 1;
                     } else {
-                        // INTENTO 4: Búsqueda parcial (fallback)
-                        $productosQuery->where(function ($q) use ($search, $searchLower) {
-                            $q->whereRaw('LOWER(nombre) like ?', ["%{$searchLower}%"])
-                                ->orWhereRaw('LOWER(sku) like ?', ["%{$searchLower}%"])
-                                ->orWhereHas('codigosBarra', function ($codigoQuery) use ($searchLower) {
-                                    $codigoQuery->whereRaw('LOWER(codigo) like ?', ["%{$searchLower}%"])
-                                        ->where('activo', true);
-                                });
-                        });
-                        $productos = $productosQuery->paginate($perPage, ['*'], 'page', $page);
+                        // ❌ Sin coincidencia exacta - Retornar vacío (no fallback a parcial)
+                        $productos = collect();
                     }
                 }
             }
