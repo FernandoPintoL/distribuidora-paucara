@@ -14,6 +14,7 @@ export interface CrearLoteRequest {
     // Campos opcionales para caso single (unificación de flujos)
     fecha_programada?: string;
     direccion_entrega?: string;
+    entregador?: string;  // ✅ NUEVO: Nombre de quién realiza la entrega
 }
 
 export interface VentaEnEntrega {
@@ -31,6 +32,7 @@ export interface CrearLoteResponse {
         numero_entrega: string;
         estado: string;
         fecha_asignacion: string;
+        entregador?: string;  // ✅ NUEVO: Nombre de quién realiza la entrega
         vehiculo: {
             id: number;
             placa: string;
@@ -62,6 +64,9 @@ class OptimizacionEntregasService {
                 chofer_id: request.chofer_id,
                 zona_id: request.zona_id,
                 observaciones: request.observaciones,
+                fecha_programada: request.fecha_programada,
+                direccion_entrega: request.direccion_entrega,
+                entregador: request.entregador,  // ✅ NUEVO
             });
 
             const response = await fetch(this.API_ENDPOINT, {

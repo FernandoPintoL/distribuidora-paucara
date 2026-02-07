@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 
 // Hooks
@@ -133,7 +133,8 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
 
     // Ver proforma
     const handleVerProforma = (proforma: ProformaAppExterna) => {
-        window.open(`/proformas/${proforma.id}`, '_blank');
+        // ✅ ACTUALIZADO: Usar router.visit() para navegar en la misma página (no abre nueva pestaña)
+        router.visit(`/proformas/${proforma.id}`);
     };
 
     // Rechazar proforma - Abre el modal de rechazo específico

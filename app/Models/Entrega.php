@@ -1096,4 +1096,122 @@ class Entrega extends Model
             ? $this->estadoEntrega?->icono
             : null;
     }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * MÉTODOS DE UTILIDAD
+     * ═══════════════════════════════════════════════════════════════════════
+     */
+
+    /**
+     * Obtener todas las localidades de los clientes en las ventas de esta entrega
+     *
+     * RELACIÓN:
+     *   Entrega → Ventas (via entrega_id) → Cliente → Localidad
+     *
+     * RETORNA:
+     *   Collection de Localidad (únicos)
+     *
+     * EJEMPLO:
+     *   $entrega->getLocalidades()
+     *   → [Localidad{id:1, nombre:'La Paz'}, Localidad{id:2, nombre:'Santa Cruz'}]
+     *
+     * @return \Illuminate\Database\Eloquent\Collection|array
+     */
+    public function getLocalidades()
+    {
+        // Cargar relaciones si no están ya cargadas
+        if (!$this->relationLoaded('ventas')) {
+            $this->load('ventas.cliente.localidad');
+        }
+
+        // Obtener localidades únicas desde las ventas
+        return $this->ventas
+            ->pluck('cliente.localidad')
+            ->filter()  // Remover nulls
+            ->unique('id')  // Localidades únicas por ID
+            ->values()  // Re-indexar colección
+            ->all();
+    }
+
+    /**
+     * Obtener información resumida de localidades
+     *
+     * RETORNA:
+     *   Array con estructura: [
+     *     {
+     *       'localidad_id' => 1,
+     *       'localidad_nombre' => 'La Paz',
+     *       'cantidad_ventas' => 3,
+     *       'clientes' => ['Cliente A', 'Cliente B']
+     *     },
+     *     ...
+     *   ]
+     *
+     * EJEMPLO:
+     *   $entrega->getLocalidadesResumen()
+     *
+     * @return array
+     */
+    public function getLocalidadesResumen(): array
+    {
+        // Cargar relaciones si no están ya cargadas
+        if (!$this->relationLoaded('ventas')) {
+            $this->load('ventas.cliente.localidad');
+        }
+
+        // Agrupar por localidad
+        $localidades = [];
+
+        foreach ($this->ventas as $venta) {
+            $cliente = $venta->cliente;
+            $localidad = $cliente?->localidad;
+
+            if (!$localidad) {
+                continue;
+            }
+
+            $localidadId = $localidad->id;
+
+            // Inicializar si no existe
+            if (!isset($localidades[$localidadId])) {
+                $localidades[$localidadId] = [
+                    'localidad_id' => $localidad->id,
+                    'localidad_nombre' => $localidad->nombre,
+                    'cantidad_ventas' => 0,
+                    'clientes' => [],
+                ];
+            }
+
+            // Incrementar cantidad de ventas
+            $localidades[$localidadId]['cantidad_ventas']++;
+
+            // Agregar cliente si no existe
+            if ($cliente && !in_array($cliente->nombre, $localidades[$localidadId]['clientes'])) {
+                $localidades[$localidadId]['clientes'][] = $cliente->nombre;
+            }
+        }
+
+        // Retornar como array indexado
+        return array_values($localidades);
+    }
+
+    /**
+     * Validar si la entrega tiene múltiples localidades
+     *
+     * RETORNA:
+     *   bool - true si tiene clientes en 2 o más localidades
+     *
+     * EJEMPLO:
+     *   if ($entrega->tieneMultiplesLocalidades()) {
+     *     // Entrega consolidada de múltiples localidades
+     *   }
+     *
+     * @return bool
+     */
+    public function tieneMultiplesLocalidades(): bool
+    {
+        $localidades = $this->getLocalidades();
+        return count($localidades) > 1;
+    }
 }

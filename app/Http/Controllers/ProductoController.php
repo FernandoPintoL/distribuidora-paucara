@@ -1659,10 +1659,22 @@ class ProductoController extends Controller
             ])
             ->map(function ($producto) use ($almacenId, $tipo) {
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
-                $stockAlmacen = $producto->stock->firstWhere('almacen_id', $almacenId);
+
+                // ✅ CORREGIDO: Asegurar que stock_producto está cargado para compras y ventas
+                $stockAlmacen = $producto->stock ? $producto->stock->firstWhere('almacen_id', $almacenId) : null;
                 $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
-                $stockTotal = $producto->stock->sum('cantidad_disponible');
-                $stockReservado = $producto->stock->sum('cantidad_reservada') ?? 0;
+                $stockTotal = $producto->stock ? $producto->stock->sum('cantidad_disponible') : 0;
+                $stockReservado = $producto->stock ? $producto->stock->sum('cantidad_reservada') : 0;
+
+                // ✅ DEBUG: Log para verificar carga de stock
+                if ($tipo === 'compra') {
+                    Log::debug("📊 [mapearProductos COMPRA] Producto {$producto->id} ({$producto->nombre})", [
+                        'stock_relation_count' => $producto->stock ? $producto->stock->count() : 0,
+                        'almacen_id' => $almacenId,
+                        'stock_disponible' => $stockDisponible,
+                        'stock_total' => $stockTotal,
+                    ]);
+                }
 
                 // ✅ NUEVO: Obtener capacidad para combos usando ProductoStockService
                 $capacidad = $producto->es_combo

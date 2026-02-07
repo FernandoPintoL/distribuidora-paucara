@@ -91,19 +91,47 @@ class ImpresionService
         ?string $formato = null,
         array $opciones = []
     ) {
-        // Obtener plantilla adecuada
-        $plantilla = PlantillaImpresion::obtenerDefault($tipoDocumento, $formato);
+        \Log::info('📝 [ImpresionService::generarPDF] INICIANDO', [
+            'tipoDocumento' => $tipoDocumento,
+            'formato' => $formato,
+            'tipo_documento_class' => get_class($documento),
+        ]);
 
-        // Si no existe plantilla, intentar usar vistas hardcodeadas por defecto
-        if (!$plantilla) {
-            $vistaFallback = $this->obtenerVistaFallback($tipoDocumento, $formato);
-            if (!$vistaFallback) {
-                throw new Exception(
-                    "No existe plantilla activa para '{$tipoDocumento}'" .
-                    ($formato ? " con formato '{$formato}'" : '') .
-                    " y no hay vista por defecto disponible"
-                );
-            }
+        try {
+            // Obtener plantilla adecuada
+            \Log::info('📝 [ImpresionService::generarPDF] Buscando plantilla', [
+                'tipoDocumento' => $tipoDocumento,
+                'formato' => $formato,
+            ]);
+
+            $plantilla = PlantillaImpresion::obtenerDefault($tipoDocumento, $formato);
+
+            // Si no existe plantilla, intentar usar vistas hardcodeadas por defecto
+            if (!$plantilla) {
+                \Log::info('⚠️ [ImpresionService::generarPDF] No hay plantilla, buscando vista fallback', [
+                    'tipoDocumento' => $tipoDocumento,
+                    'formato' => $formato,
+                ]);
+
+                $vistaFallback = $this->obtenerVistaFallback($tipoDocumento, $formato);
+
+                if (!$vistaFallback) {
+                    \Log::error('❌ [ImpresionService::generarPDF] No se encontró vista fallback', [
+                        'tipoDocumento' => $tipoDocumento,
+                        'formato' => $formato,
+                    ]);
+                    throw new Exception(
+                        "No existe plantilla activa para '{$tipoDocumento}'" .
+                        ($formato ? " con formato '{$formato}'" : '') .
+                        " y no hay vista por defecto disponible"
+                    );
+                }
+
+                \Log::info('✅ [ImpresionService::generarPDF] Vista fallback encontrada', [
+                    'tipoDocumento' => $tipoDocumento,
+                    'formato' => $formato,
+                    'vista' => $vistaFallback,
+                ]);
 
             // Usar vista fallback
             $empresa = $this->empresa ?? Empresa::principal();
@@ -132,21 +160,65 @@ class ImpresionService
                 'fuentes_disponibles' => $this->obtenerFuentesDisponibles(),
             ], $datosAdjuntos);
 
+            \Log::info('📝 [ImpresionService::generarPDF] Cargando vista fallback', [
+                'vista' => $vistaFallback,
+                'tipoDocumento' => $tipoDocumento,
+            ]);
+
             $pdf = PDF::loadView($vistaFallback, $datos);
+
+            \Log::info('📝 [ImpresionService::generarPDF] PDF cargado desde vista fallback', [
+                'tipoDocumento' => $tipoDocumento,
+            ]);
+
             $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4');
+
+            \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (fallback)', [
+                'tipoDocumento' => $tipoDocumento,
+                'formato' => $formato,
+            ]);
+
             return $pdf;
         }
 
         // Preparar datos para la vista
+        \Log::info('📝 [ImpresionService::generarPDF] Preparando datos para plantilla', [
+            'tipoDocumento' => $tipoDocumento,
+        ]);
+
         $datos = $this->prepararDatos($documento, $plantilla, $opciones);
 
         // Generar PDF usando la vista Blade especificada
+        \Log::info('📝 [ImpresionService::generarPDF] Cargando vista de plantilla', [
+            'vista' => $plantilla->vista_blade,
+        ]);
+
         $pdf = PDF::loadView($plantilla->vista_blade, $datos);
+
+        \Log::info('📝 [ImpresionService::generarPDF] PDF cargado desde plantilla', [
+            'tipoDocumento' => $tipoDocumento,
+        ]);
 
         // Aplicar configuración específica del formato
         $this->aplicarConfiguracionFormato($pdf, $plantilla->formato);
 
+        \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (plantilla)', [
+            'tipoDocumento' => $tipoDocumento,
+            'formato' => $plantilla->formato,
+        ]);
+
         return $pdf;
+        } catch (\Exception $e) {
+            \Log::error('❌ [ImpresionService::generarPDF] ERROR CRÍTICO', [
+                'tipoDocumento' => $tipoDocumento,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'línea' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -158,6 +230,11 @@ class ImpresionService
      */
     private function obtenerVistaFallback(string $tipoDocumento, ?string $formato = null): ?string
     {
+        \Log::info('🔍 [ImpresionService::obtenerVistaFallback] Buscando vista fallback', [
+            'tipoDocumento' => $tipoDocumento,
+            'formato' => $formato,
+        ]);
+
         $formato = $formato ?? 'A4';
 
         $fallbacks = [
@@ -198,9 +275,35 @@ class ImpresionService
                 'TICKET_80' => 'impresion.cajas.movimiento-individual-ticket-80',
                 'TICKET_58' => 'impresion.cajas.movimiento-individual-ticket-58',
             ],
+            'cuenta-por-cobrar' => [
+                'A4' => 'impresion.cuentas_por_cobrar.hoja-completa',
+                'TICKET_80' => 'impresion.cuentas_por_cobrar.ticket-80',
+                'TICKET_58' => 'impresion.cuentas_por_cobrar.ticket-58',
+            ],
+            'cuenta-por-pagar' => [
+                'A4' => 'impresion.cuentas_por_pagar.hoja-completa',
+                'TICKET_80' => 'impresion.cuentas_por_pagar.ticket-80',
+                'TICKET_58' => 'impresion.cuentas_por_pagar.ticket-58',
+            ],
         ];
 
-        return $fallbacks[$tipoDocumento][$formato] ?? null;
+        $vistaEncontrada = $fallbacks[$tipoDocumento][$formato] ?? null;
+
+        if ($vistaEncontrada) {
+            \Log::info('✅ [ImpresionService::obtenerVistaFallback] Vista fallback encontrada', [
+                'tipoDocumento' => $tipoDocumento,
+                'formato' => $formato,
+                'vista' => $vistaEncontrada,
+            ]);
+        } else {
+            \Log::warning('⚠️ [ImpresionService::obtenerVistaFallback] No se encontró vista fallback', [
+                'tipoDocumento' => $tipoDocumento,
+                'formato' => $formato,
+                'tipos_disponibles' => array_keys($fallbacks),
+            ]);
+        }
+
+        return $vistaEncontrada;
     }
 
     /**
@@ -383,6 +486,99 @@ class ImpresionService
         ]);
 
         return $this->generarPDF('envio', $envio, $formato, $opciones);
+    }
+
+    /**
+     * Imprimir Cuenta por Cobrar
+     *
+     * @param \App\Models\CuentaPorCobrar $cuentaPorCobrar
+     * @param string|null $formato
+     * @param array $opciones
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function imprimirCuentaPorCobrar($cuentaPorCobrar, ?string $formato = 'A4', array $opciones = [])
+    {
+        \Log::info('📝 [ImpresionService::imprimirCuentaPorCobrar] INICIANDO', [
+            'cuenta_id' => $cuentaPorCobrar->id,
+            'formato' => $formato,
+            'opciones' => $opciones,
+        ]);
+
+        try {
+            // Cargar relaciones necesarias
+            \Log::info('📝 [ImpresionService::imprimirCuentaPorCobrar] Cargando relaciones', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+            ]);
+
+            $cuentaPorCobrar->load([
+                'cliente',
+                'venta',
+                'usuario',
+            ]);
+
+            \Log::info('✅ [ImpresionService::imprimirCuentaPorCobrar] Relaciones cargadas exitosamente', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'tiene_cliente' => !!$cuentaPorCobrar->cliente,
+                'tiene_venta' => !!$cuentaPorCobrar->venta,
+                'tiene_usuario' => !!$cuentaPorCobrar->usuario,
+            ]);
+
+            return $this->generarPDF('cuenta-por-cobrar', $cuentaPorCobrar, $formato, $opciones);
+        } catch (\Exception $e) {
+            \Log::error('❌ [ImpresionService::imprimirCuentaPorCobrar] ERROR', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Imprimir Cuenta por Pagar
+     *
+     * @param \App\Models\CuentaPorPagar $cuentaPorPagar
+     * @param string|null $formato
+     * @param array $opciones
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function imprimirCuentaPorPagar($cuentaPorPagar, ?string $formato = 'A4', array $opciones = [])
+    {
+        \Log::info('📝 [ImpresionService::imprimirCuentaPorPagar] INICIANDO', [
+            'cuenta_id' => $cuentaPorPagar->id,
+            'formato' => $formato,
+            'opciones' => $opciones,
+        ]);
+
+        try {
+            // Cargar relaciones necesarias
+            \Log::info('📝 [ImpresionService::imprimirCuentaPorPagar] Cargando relaciones', [
+                'cuenta_id' => $cuentaPorPagar->id,
+            ]);
+
+            $cuentaPorPagar->load([
+                'compra.proveedor',
+                'usuario',
+            ]);
+
+            \Log::info('✅ [ImpresionService::imprimirCuentaPorPagar] Relaciones cargadas exitosamente', [
+                'cuenta_id' => $cuentaPorPagar->id,
+                'tiene_compra' => !!$cuentaPorPagar->compra,
+                'tiene_proveedor' => !!$cuentaPorPagar->compra?->proveedor,
+                'tiene_usuario' => !!$cuentaPorPagar->usuario,
+            ]);
+
+            return $this->generarPDF('cuenta-por-pagar', $cuentaPorPagar, $formato, $opciones);
+        } catch (\Exception $e) {
+            \Log::error('❌ [ImpresionService::imprimirCuentaPorPagar] ERROR', [
+                'cuenta_id' => $cuentaPorPagar->id,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**

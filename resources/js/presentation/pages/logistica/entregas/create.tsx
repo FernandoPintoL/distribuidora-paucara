@@ -40,7 +40,7 @@ export default function Create({
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Logística', href: '/logistica' },
+                { title: 'Logística', href: '/logistica/dashboard' },
                 { title: 'Entregas', href: '/logistica/entregas' },
                 { title: 'Crear', href: '#' },
             ]}

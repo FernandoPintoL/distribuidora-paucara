@@ -831,6 +831,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::get('/{id}/progreso', [EntregaController::class, 'obtenerProgreso'])
             ->middleware('permission:entregas.show')
             ->name('entregas.progreso');
+
+        // Obtener localidades de clientes en las ventas de una entrega
+        Route::get('/{entrega}/localidades', [EntregaController::class, 'obtenerLocalidades'])
+            ->middleware('permission:entregas.show')
+            ->name('entregas.localidades');
     });
 
     // ✅ PHASE 3: REPORTES DE CARGA (Gestión de cargas en vehículos)

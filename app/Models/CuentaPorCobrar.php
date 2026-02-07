@@ -54,6 +54,11 @@ class CuentaPorCobrar extends Model
         return $this->hasMany(Pago::class, 'cuenta_por_cobrar_id');
     }
 
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'usuario_id');
+    }
+
     // Scopes
     public function scopeVencidas($query)
     {

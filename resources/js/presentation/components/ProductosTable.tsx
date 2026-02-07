@@ -223,40 +223,47 @@ export default function ProductosTable({
             console.log('📡 Respuesta API completa de la busqueda:', data.data);
 
             // Transformar respuesta de API a formato Producto
-            const productosAPI = data.data.map((p: any) => ({
-                id: p.id,
-                nombre: p.nombre,
-                codigo: p.sku || p.codigo_barras,
-                codigo_barras: p.codigo_barras,
-                precio_venta: p.precio_base || 0,
-                precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
-                precio_compra: p.precio_costo || 0, // ✅ NUEVO: Precio de compra (igual al costo)
-                stock: p.stock_disponible || 0,
-                stock_disponible_calc: p.stock_disponible || 0, // ✅ AGREGADO: Stock disponible calculado
-                stock_total_calc: p.stock_total || 0, // ✅ AGREGADO: Stock total calculado
-                stock_reservado: p.stock_reservado || 0, // ✅ AGREGADO: Stock reservado
-                capacidad: p.capacidad || null, // ✅ AGREGADO: Capacidad (para combos)
-                peso: p.peso,
-                codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
-                // ✅ NUEVO: Campos para productos fraccionados
-                es_fraccionado: p.es_fraccionado || false,
-                unidad_medida_id: p.unidad_medida_id,
-                unidad_medida_nombre: p.unidad_medida_nombre,
-                conversiones: p.conversiones || [],
-                // ✅ NUEVO: Incluir precios disponibles para selección
-                precios: p.precios?.map((pr: any) => ({
-                    id: pr.id,
-                    tipo_precio_id: pr.tipo_precio_id,
-                    nombre: pr.nombre || pr.tipoPrecio?.nombre,
-                    precio: pr.precio
-                })) || [],
-                // ✅ NUEVO: Incluir tipo de precio recomendado del backend
-                tipo_precio_id_recomendado: p.tipo_precio_id_recomendado,
-                tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado,
-                // ✅ NUEVO: Incluir es_combo
-                es_combo: p.es_combo || false,
-                combo_items: p.combo_items || []
-            }));
+            const productosAPI = data.data.map((p: any) => {
+                // ✅ CORREGIDO: Para compras, asegurar que stock_disponible siempre tiene un valor
+                const stockDisponible = tipo === 'compra'
+                    ? (p.stock_disponible !== null && p.stock_disponible !== undefined ? p.stock_disponible : (p.stock || 0))
+                    : (p.stock_disponible || 0);
+
+                return {
+                    id: p.id,
+                    nombre: p.nombre,
+                    codigo: p.sku || p.codigo_barras,
+                    codigo_barras: p.codigo_barras,
+                    precio_venta: p.precio_base || 0,
+                    precio_costo: p.precio_costo || 0, // ✅ NUEVO: Precio de costo desde API
+                    precio_compra: p.precio_costo || 0, // ✅ NUEVO: Precio de compra (igual al costo)
+                    stock: stockDisponible,
+                    stock_disponible_calc: stockDisponible, // ✅ CORREGIDO: Stock disponible para compras
+                    stock_total_calc: p.stock_total || 0, // ✅ AGREGADO: Stock total calculado
+                    stock_reservado: p.stock_reservado || 0, // ✅ AGREGADO: Stock reservado
+                    capacidad: p.capacidad || null, // ✅ AGREGADO: Capacidad (para combos)
+                    peso: p.peso,
+                    codigos_barras: p.codigosBarra?.map((cb: any) => cb.codigo) || [],
+                    // ✅ NUEVO: Campos para productos fraccionados
+                    es_fraccionado: p.es_fraccionado || false,
+                    unidad_medida_id: p.unidad_medida_id,
+                    unidad_medida_nombre: p.unidad_medida_nombre,
+                    conversiones: p.conversiones || [],
+                    // ✅ NUEVO: Incluir precios disponibles para selección
+                    precios: p.precios?.map((pr: any) => ({
+                        id: pr.id,
+                        tipo_precio_id: pr.tipo_precio_id,
+                        nombre: pr.nombre || pr.tipoPrecio?.nombre,
+                        precio: pr.precio
+                    })) || [],
+                    // ✅ NUEVO: Incluir tipo de precio recomendado del backend
+                    tipo_precio_id_recomendado: p.tipo_precio_id_recomendado,
+                    tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado,
+                    // ✅ NUEVO: Incluir es_combo
+                    es_combo: p.es_combo || false,
+                    combo_items: p.combo_items || []
+                };
+            });
 
             console.log('✅ Productos transformados:', productosAPI);
 
@@ -637,7 +644,12 @@ export default function ProductosTable({
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
                                         {producto.codigo} | {formatCurrency(producto.precio_venta || 0)}
-                                        {(producto as any).stock_disponible && ` | ${(producto as any).stock_disponible}`}
+                                        {/* ✅ CORREGIDO: Mostrar stock para compras */}
+                                        {tipo === 'compra' ? (
+                                            ` | Stock: ${(producto as any).stock_disponible ?? (producto as any).stock ?? 0}`
+                                        ) : (
+                                            (producto as any).stock_disponible && ` | ${(producto as any).stock_disponible}`
+                                        )}
                                     </div>
                                 </button>
                             ))
@@ -760,10 +772,29 @@ export default function ProductosTable({
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             {(() => {
-                                                const stockDisponible = (productoInfo as any)?.stock_disponible_calc ?? (productoInfo as any)?.stock_disponible ?? 0;
-                                                const stockTotal = (productoInfo as any)?.stock_total_calc ?? (productoInfo as any)?.stock_total ?? 0;
+                                                // ✅ CORREGIDO: Leer stock correctamente desde el backend
+                                                // Prioridad: stock_disponible_calc > stock_disponible > stock > 0
+                                                const stockDisponible =
+                                                    (productoInfo as any)?.stock_disponible_calc ??
+                                                    (productoInfo as any)?.stock_disponible ??
+                                                    (productoInfo as any)?.stock ??
+                                                    0;
+
+                                                const stockTotal =
+                                                    (productoInfo as any)?.stock_total_calc ??
+                                                    (productoInfo as any)?.stock_total ??
+                                                    0;
+
                                                 const esComboCampo = (productoInfo as any)?.es_combo;
                                                 const capacidad = (productoInfo as any)?.capacidad;
+
+                                                // ✅ DEBUG: Log para verificar valores
+                                                console.log(`📦 [ProductosTable] Stock para ${productoInfo?.nombre}:`, {
+                                                    stock_disponible_calc: (productoInfo as any)?.stock_disponible_calc,
+                                                    stock_disponible: (productoInfo as any)?.stock_disponible,
+                                                    stock: (productoInfo as any)?.stock,
+                                                    resultado: stockDisponible
+                                                });
 
                                                 if (esComboCampo) {
                                                     return (

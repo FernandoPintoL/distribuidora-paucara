@@ -113,7 +113,7 @@ export function useEntregaBatch() {
     /**
      * Crear entregas en lote
      */
-    const handleSubmit = async () => {
+    const handleSubmit = async (onSuccess?: (entrega: any) => void) => {
         // Validar datos
         if (!state.formData.vehiculo_id || !state.formData.chofer_id) {
             setState((prev) => ({
@@ -147,6 +147,7 @@ export function useEntregaBatch() {
                 observaciones: state.formData.observaciones,
                 fecha_programada: state.formData.fecha_programada,
                 direccion_entrega: state.formData.direccion_entrega,
+                entregador: state.formData.entregador,  // ✅ NUEVO: Nombre de quién realiza la entrega
             };
 
             const resultado = await optimizacionEntregasService.crearLote(request);
@@ -158,11 +159,15 @@ export function useEntregaBatch() {
                     isSubmitting: false,
                 }));
 
-                // Redirigir a entregas (vista dashboard) después de 2 segundos
-                // ✅ ACTUALIZADO: Usar ?view=dashboard en lugar de ruta separada
-                setTimeout(() => {
-                    router.visit('/logistica/entregas?view=dashboard');
-                }, 2000);
+                // ✅ ACTUALIZADO: Si hay callback (modal), usarlo; sino, redirigir como antes
+                if (onSuccess && resultado.data) {
+                    onSuccess(resultado.data);
+                } else {
+                    // Redirigir a entregas (vista dashboard) después de 2 segundos
+                    setTimeout(() => {
+                        router.visit('/logistica/entregas?view=dashboard');
+                    }, 2000);
+                }
             } else {
                 setState((prev) => ({
                     ...prev,

@@ -19,7 +19,8 @@ class LogisticaController extends Controller
 
         // proformas recientes con paginación y filtros
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
-        $query = Proforma::with(['cliente.localidad', 'usuarioCreador', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada']);
+        // ✅ ACTUALIZADO: Cargar roles del usuarioCreador
+        $query = Proforma::with(['cliente.localidad', 'usuarioCreador.roles', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada']);
 
         // Aplicar filtros desde query params - default a PENDIENTE y APROBADA
         if (request()->has('estado')) {
@@ -121,6 +122,10 @@ class LogisticaController extends Controller
                     'estado'                          => $proforma->estado,
                     'canal_origen'                    => $proforma->canal_origen,
                     'usuario_creador_nombre'          => $proforma->usuarioCreador->name ?? 'Sistema',
+                    // ✅ NUEVO: Rol del usuario creador
+                    'usuario_creador_rol'             => $proforma->usuarioCreador && $proforma->usuarioCreador->roles->isNotEmpty()
+                        ? $proforma->usuarioCreador->roles->first()->name
+                        : 'Sin rol',
                     'usuario_aprobador_nombre'        => $proforma->usuarioAprobador->name ?? 'N/A',
                     'fecha_vencimiento'               => $proforma->fecha_vencimiento,
                     // ✅ Nuevos campos de filtro

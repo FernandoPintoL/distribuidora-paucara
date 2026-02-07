@@ -187,20 +187,7 @@ class VehiculoController extends Controller
                     ->toArray();
             }
 
-            // Validar que todas las ventas van a la misma localidad (información, no filtrado)
-            if (count($localidadesDestino) > 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Las ventas seleccionadas tienen destinos en diferentes localidades. Por favor selecciona ventas de la misma localidad.',
-                    'data'    => [
-                        'recomendado' => null,
-                        'peso_total'  => $pesoTotal,
-                        'disponibles' => [],
-                        'alerta'      => 'DESTINOS MÚLTIPLES',
-                    ],
-                ], 422);
-            }
-
+            // Permitir múltiples localidades de destino
             $localidadDestino = $localidadesDestino[0] ?? null;
             Log::info('Recomendación de vehículo', [
                 'peso_total'        => $pesoTotal,

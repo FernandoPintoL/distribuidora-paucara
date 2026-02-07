@@ -52,7 +52,7 @@ export function useVehiculoRecomendado(
 
     // Calcular peso total
     const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
-    const pesoTotal = selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0);
+    const pesoTotal = selectedVentas.reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0);
 
     console.log('📊 Calculando recomendación:', {
       ventasCount: selectedVentaIds.length,
@@ -60,7 +60,7 @@ export function useVehiculoRecomendado(
       pesoTotal,
       detalle: selectedVentas.map(v => ({
         numero_venta: v.numero_venta,
-        peso_estimado: v.peso_estimado,
+        peso_total_estimado: v.peso_total_estimado || v.peso_estimado,
       }))
     });
 

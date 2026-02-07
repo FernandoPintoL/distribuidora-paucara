@@ -292,7 +292,8 @@ class ApiProformaController extends Controller
             'cliente.localidad',  // ✅ ACTUALIZADO: Cargar localidad del cliente
             'usuarioCreador',
             'usuarioAprobador',
-            'estadoLogistica'  // ✅ AGREGADO: Cargar relación de estado
+            'estadoLogistica',  // ✅ AGREGADO: Cargar relación de estado
+            'venta'  // ✅ NUEVO: Cargar venta relacionada (cuando está CONVERTIDA)
         ]);
 
         return response()->json([

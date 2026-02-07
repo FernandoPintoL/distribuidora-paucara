@@ -5,6 +5,7 @@ use App\Models\CuentaPorPagar;
 use App\Models\Pago;
 use App\Models\Proveedor;
 use App\Models\TipoPago;
+use App\Services\ImpresionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,7 @@ use Inertia\Inertia;
 
 class CuentaPorPagarController extends Controller
 {
+    public function __construct(private ImpresionService $impresionService) {}
     public function index(Request $request)
     {
         $query = CuentaPorPagar::with(['compra.proveedor', 'pagos.tipoPago'])
@@ -287,6 +289,62 @@ class CuentaPorPagarController extends Controller
             return response()->json([
                 'message' => 'Error al anular el pago: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    public function imprimirTicket80(Request $request, CuentaPorPagar $cuentaPorPagar)
+    {
+        // Determinar formato y acción
+        $formato = $request->get('formato', 'TICKET_80');
+        $accion = $request->get('accion', 'stream');
+
+        Log::info('🖨️ [IMPRESIÓN CUENTAS POR PAGAR] Iniciando impresión', [
+            'cuenta_id'  => $cuentaPorPagar->id,
+            'usuario_id' => Auth::id(),
+            'formato'    => $formato,
+            'accion'     => $accion,
+            'url_completa' => $request->fullUrl(),
+        ]);
+
+        try {
+            // Validar formato
+            if (!in_array($formato, ['A4', 'TICKET_80', 'TICKET_58'])) {
+                $formato = 'TICKET_80';
+            }
+
+            Log::info('📝 [IMPRESIÓN CUENTAS POR PAGAR] Llamando ImpresionService', [
+                'cuenta_id' => $cuentaPorPagar->id,
+                'formato' => $formato,
+            ]);
+
+            // Generar PDF usando ImpresionService
+            $pdf = $this->impresionService->imprimirCuentaPorPagar($cuentaPorPagar, $formato);
+
+            Log::info('✅ [IMPRESIÓN CUENTAS POR PAGAR] PDF generado exitosamente', [
+                'cuenta_id' => $cuentaPorPagar->id,
+                'formato' => $formato,
+                'accion' => $accion,
+            ]);
+
+            $nombreArchivo = "cuenta_por_pagar_{$cuentaPorPagar->id}_{$formato}.pdf";
+
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [IMPRESIÓN CUENTAS POR PAGAR] ERROR CRÍTICO', [
+                'cuenta_id'      => $cuentaPorPagar->id,
+                'formato'        => $formato,
+                'accion'         => $accion,
+                'usuario_id'     => Auth::id(),
+                'error_message'  => $e->getMessage(),
+                'error_file'     => $e->getFile(),
+                'error_line'     => $e->getLine(),
+                'error_trace'    => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 }

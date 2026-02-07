@@ -283,8 +283,16 @@
     {{-- Contenido específico del documento --}}
     @yield('contenido')
 
-        {{-- ✅ ESPACIO PARA CORTE - 5cm en blanco --}}
-        <div class="espacio-corte"></div>
+    {{-- ✅ FIRMAS DEL CLIENTE --}}
+    <div style="margin-top: 130px !important;">
+        <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
+            <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
+            <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Firma / Sello</p>
+        </div>
+    </div>
+
+    {{-- ✅ ESPACIO PARA CORTE - 5cm en blanco --}}
+    <div class="espacio-corte"></div>
     </div>
 </body>
 </html>

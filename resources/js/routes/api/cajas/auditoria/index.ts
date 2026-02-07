@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
 export const estadisticas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
 estadisticas.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ estadisticas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
 estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
 estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
     const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
         estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\AuditoriaCajaController::estadisticas
- * @see app/Http/Controllers/AuditoriaCajaController.php:212
+ * @see app/Http/Controllers/AuditoriaCajaController.php:214
  * @route '/api/cajas/auditoria/estadisticas'
  */
         estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -78,15 +78,26 @@ export function useGenericForm<T extends BaseEntity, F extends BaseFormData>(
       }
 
       // Filtrar datos: eliminar campos null/undefined y campos _preview
+      // ✅ NUEVO: Permitir que ciertos campos sean null usando __allowNullFields
+      const allowNullFields = (preparedData as any).__allowNullFields || [];
       const cleanData = Object.entries(preparedData).reduce((acc, [key, value]) => {
         // No enviar campos _preview (solo son para mostrar)
         if (key.endsWith('_preview')) {
           return acc;
         }
 
-        // No enviar campos null o undefined (archivos no cambiados)
-        if (value === null || value === undefined) {
+        // No enviar campos especiales internos
+        if (key === '__allowNullFields') {
           return acc;
+        }
+
+        // No enviar campos null o undefined (archivos no cambiados)
+        // EXCEPT si están marcados en __allowNullFields
+        if (value === null || value === undefined) {
+          if (!allowNullFields.includes(key)) {
+            return acc;
+          }
+          // Si está en allowNullFields, permitir que se envíe null
         }
 
         acc[key] = value;

@@ -45,6 +45,7 @@ export interface ProformaAppExterna extends BaseEntity {
     fecha: string;
     fecha_vencimiento?: string;
     usuario_creador_nombre: string;
+    usuario_creador_rol?: string;  // ✅ NUEVO: Rol del usuario creador
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
 
     // Solicitud de entrega del cliente

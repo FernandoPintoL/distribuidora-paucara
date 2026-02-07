@@ -9,8 +9,9 @@ import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import SearchSelect from '@/presentation/components/ui/search-select'; // ✅ NUEVO
-import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
 
 // Helper functions
@@ -125,6 +126,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     const [pagoAAnular, setPagoAAnular] = useState<{ id: number; monto: number; cuenta_id: number } | null>(null);
     const [motivoAnulacion, setMotivoAnulacion] = useState('');
     const [anulandoPago, setAnulandoPago] = useState(false);
+
+    // Estados para modal de impresión
+    const [modalImpresionOpen, setModalImpresionOpen] = useState(false);
+    const [cuentaAImprimir, setCuentaAImprimir] = useState<CuentaPorCobrar | null>(null);
 
     // Validación defensiva para evitar errores si cuentasPorCobrar es undefined
     if (!cuentasPorCobrar || !cuentasPorCobrar.filtros) {
@@ -533,8 +538,21 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                         size="sm"
                                                         variant="outline"
                                                         onClick={() => setModalDetalle({ isOpen: true, cuenta })}
+                                                        title="Ver detalles"
                                                     >
                                                         <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setCuentaAImprimir(cuenta);
+                                                            setModalImpresionOpen(true);
+                                                        }}
+                                                        title="Imprimir"
+                                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
                                                     </Button>
                                                     {cuenta.estado !== 'PAGADO' && (
                                                         <Button
@@ -804,6 +822,24 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                )}
+
+                {/* Modal de Impresión */}
+                {cuentaAImprimir && (
+                    <OutputSelectionModal
+                        isOpen={modalImpresionOpen}
+                        onClose={() => {
+                            setModalImpresionOpen(false);
+                            setCuentaAImprimir(null);
+                        }}
+                        documentoId={cuentaAImprimir.id}
+                        tipoDocumento="cuenta-por-cobrar"
+                        documentoInfo={{
+                            numero: `Cuenta #${cuentaAImprimir.id}`,
+                            fecha: formatDate(cuentaAImprimir.fecha_vencimiento),
+                            monto: cuentaAImprimir.saldo_pendiente,
+                        }}
+                    />
                 )}
             </div>
         </AppLayout>

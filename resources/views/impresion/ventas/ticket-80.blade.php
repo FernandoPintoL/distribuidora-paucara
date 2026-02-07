@@ -112,24 +112,4 @@
 
 <div class="separador"></div>
 
-{{-- ==================== FIRMA DEL CLIENTE ==================== --}}
-<div style="margin-top: 130px !important;">
-    {{-- <p style="text-align: center; font-weight: bold; margin-bottom: 30px !important;">FIRMA DEL CLIENTE</p> --}}
-
-    <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
-        <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
-        <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Firma / Sello</p>
-    </div>
-
-    {{-- <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
-        <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
-        <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Nombre (Letra Legible)</p>
-    </div>
-
-    <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
-        <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
-        <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Fecha</p>
-    </div> --}}
-</div>
-
 @endsection

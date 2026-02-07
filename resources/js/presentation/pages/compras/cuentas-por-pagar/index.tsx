@@ -8,8 +8,9 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
-import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Plus, Eye, CreditCard, AlertTriangle, ChevronDown, ChevronUp, Trash2, Printer } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
 import type { CuentasPorPagarIndexResponse, CuentaPorPagar, FiltrosCuentasPorPagar } from '@/domain/entities/compras';
 
@@ -38,6 +39,10 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
 
     // Estados para expandir/contraer filas de pagos
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+    // Estados para el modal de impresión
+    const [modalImpresionOpen, setModalImpresionOpen] = useState(false);
+    const [cuentaAImprimir, setCuentaAImprimir] = useState<CuentaPorPagar | null>(null);
 
     const toggleRowExpanded = (cuentaId: number) => {
         const newExpandedRows = new Set(expandedRows);
@@ -472,6 +477,17 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                                                             Pagar
                                                         </Button>
                                                     )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setCuentaAImprimir(cuenta);
+                                                            setModalImpresionOpen(true);
+                                                        }}
+                                                        title="Imprimir"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -729,6 +745,24 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                )}
+
+                {/* Modal de Impresión */}
+                {cuentaAImprimir && (
+                    <OutputSelectionModal
+                        isOpen={modalImpresionOpen}
+                        onClose={() => {
+                            setModalImpresionOpen(false);
+                            setCuentaAImprimir(null);
+                        }}
+                        documentoId={cuentaAImprimir.id}
+                        tipoDocumento="cuenta-por-pagar"
+                        documentoInfo={{
+                            numero: `#${cuentaAImprimir.id}`,
+                            fecha: cuentaAImprimir.fecha_vencimiento,
+                            monto: cuentaAImprimir.saldo_pendiente,
+                        }}
+                    />
                 )}
             </div>
         </AppLayout>

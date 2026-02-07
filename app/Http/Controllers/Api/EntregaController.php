@@ -475,6 +475,80 @@ class EntregaController extends Controller
     }
 
     /**
+     * GET /api/entregas/{id}/localidades
+     * Obtener todas las localidades de los clientes en las ventas de esta entrega
+     *
+     * RELACIÓN:
+     *   Entrega → Ventas → Cliente → Localidad
+     *
+     * RESPUESTA:
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "localidades": [
+     *       {
+     *         "id": 1,
+     *         "nombre": "La Paz",
+     *         "codigo": "LP"
+     *       },
+     *       {
+     *         "id": 2,
+     *         "nombre": "Santa Cruz",
+     *         "codigo": "SC"
+     *       }
+     *     ],
+     *     "localidades_resumen": [
+     *       {
+     *         "localidad_id": 1,
+     *         "localidad_nombre": "La Paz",
+     *         "cantidad_ventas": 2,
+     *         "clientes": ["Cliente A", "Cliente B"]
+     *       }
+     *     ],
+     *     "cantidad_localidades": 2,
+     *     "tiene_multiples_localidades": true
+     *   }
+     * }
+     */
+    public function obtenerLocalidades(Entrega $entrega, \App\Services\EntregaLocalidadesService $service)
+    {
+        try {
+            Log::info('📍 Obteniendo localidades de entrega', [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+            ]);
+
+            // ✅ NUEVO: Usar el servicio en lugar de métodos del modelo
+            $datos = $service->obtenerDatosCompletos($entrega);
+
+            Log::info('✅ Localidades obtenidas', [
+                'entrega_id' => $entrega->id,
+                'cantidad' => $datos['cantidad_localidades'],
+                'localidades' => array_column($datos['localidades'], 'nombre'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => array_merge($datos, [
+                    'tiene_multiples_localidades' => $datos['es_consolidada'],
+                ]),
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo localidades', [
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener localidades',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * POST /api/chofer/entregas/{id}/iniciar-ruta
      * Marcar entrega como EN_CAMINO (legacy) o EN_TRANSITO (nuevo flujo)
      * Actualizar también todas las ventas a EN_TRANSITO
@@ -1606,6 +1680,8 @@ class EntregaController extends Controller
                 // ✅ NUEVO: Campos opcionales para caso single (1 venta)
                 'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
                 'direccion_entrega' => 'nullable|string|max:255',
+                // ✅ NUEVO: Campo entregador (nombre de quién realiza la entrega)
+                'entregador' => 'nullable|string|max:255',
             ]);
 
             Log::info('✅ Validation passed', ['validated' => $validated]);
@@ -1630,6 +1706,8 @@ class EntregaController extends Controller
                     // ✅ NUEVO: Parámetros opcionales para caso single (1 venta)
                     'fecha_programada' => $validated['fecha_programada'] ?? null,
                     'usuario_id' => Auth::id(),
+                    // ✅ NUEVO: Campo entregador (nombre de quién realiza la entrega)
+                    'entregador' => $validated['entregador'] ?? null,
                 ]
             );
 
@@ -1711,6 +1789,7 @@ class EntregaController extends Controller
                     'numero_entrega' => $entrega->numero_entrega,
                     'estado' => $entrega->estado,
                     'fecha_asignacion' => $entrega->fecha_asignacion,
+                    'entregador' => $entrega->entregador,
                     'vehiculo' => [
                         'id' => $entrega->vehiculo?->id,
                         'placa' => $entrega->vehiculo?->placa,

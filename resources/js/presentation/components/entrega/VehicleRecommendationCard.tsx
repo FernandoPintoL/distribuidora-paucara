@@ -310,16 +310,17 @@ export function VehicleRecommendationCard({
                 Uso de Capacidad
               </span>
               <div className="flex flex-col items-end gap-0.5">
+                {/* ✅ CORREGIDO: Mostrar porcentaje CON nuevas cargas, no el actual */}
                 <span
                   className={`text-sm font-bold ${getCapacityTextColor(
-                    vehiculoActual?.porcentaje_uso_actual ?? 0
+                    vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0
                   )}`}
                 >
-                  {vehiculoActual?.porcentaje_uso_actual ?? 0}%
+                  {vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0}%
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {Math.round(
-                    (Number(vehiculoActual?.porcentaje_uso_actual ?? 0) / 100) * Number(vehiculoActual?.capacidad_kg ?? 0)
+                    (Number(vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0) / 100) * Number(vehiculoActual?.capacidad_kg ?? 0)
                   )}{' '}
                   / {Number(vehiculoActual?.capacidad_kg ?? 0)} kg
                 </span>
@@ -328,9 +329,9 @@ export function VehicleRecommendationCard({
             <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all ${getCapacityColor(
-                  vehiculoActual?.porcentaje_uso_actual ?? 0
+                  vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0
                 )}`}
-                style={{ width: `${Math.min(vehiculoActual?.porcentaje_uso_actual ?? 0, 100)}%` }}
+                style={{ width: `${Math.min(vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0, 100)}%` }}
               ></div>
             </div>
           </div>

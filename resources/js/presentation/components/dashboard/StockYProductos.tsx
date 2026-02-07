@@ -22,7 +22,7 @@ export default function StockYProductos({
     productosMasMovidos,
 }: StockYProductosProps) {
 
-    console.log('Renderizando StockYProductos con stockPorAlmacen:', stockPorAlmacen);
+    // console.log('Renderizando StockYProductos con stockPorAlmacen:', stockPorAlmacen);
 
     const [filtros, setFiltros] = useState<FiltrosState>({
         busqueda: '',

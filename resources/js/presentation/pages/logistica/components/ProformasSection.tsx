@@ -729,6 +729,8 @@ export function ProformasSection({
                                     </div>
                                 </th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Cliente</th>
+                                {/* ✅ NUEVO: Columna Usuario Creador */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Usuario Creador</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Estado</th>
                                 <th
                                     className="px-4 py-2 text-left font-medium dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
@@ -760,6 +762,15 @@ export function ProformasSection({
                                 <tr key={proforma.id} className="border-t dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
                                     <td className="px-4 py-2 font-mono text-xs dark:text-gray-300">{proforma.numero}</td>
                                     <td className="px-4 py-2 dark:text-gray-300">{proforma.cliente_nombre}</td>
+                                    {/* ✅ NUEVO: Celda Usuario Creador con Rol */}
+                                    <td className="px-4 py-2 dark:text-gray-300">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-sm">{proforma.usuario_creador_nombre}</span>
+                                            <Badge variant="outline" className="w-fit text-xs">
+                                                {proforma.usuario_creador_rol || 'Sin rol'}
+                                            </Badge>
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-2">
                                         <div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
                                             {getEstadoIcon(proforma.estado)}

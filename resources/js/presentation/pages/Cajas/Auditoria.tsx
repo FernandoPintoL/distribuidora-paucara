@@ -42,13 +42,10 @@ interface RegistroAuditoria {
   usuario: string;
   tipo_evento: string;
   descripcion: string;
+  observaciones?: Record<string, any>;
+  mensaje_error?: string;
   ip_address: string;
   user_agent: string;
-  detalles?: {
-    operacion?: string;
-    ruta?: string;
-    metodo?: string;
-  };
   created_at: string;
   severidad?: 'bajo' | 'medio' | 'alto' | 'crítico';
 }
@@ -106,9 +103,11 @@ export default function Auditoria({
   alertas,
   estadisticas,
 }: Props) {
+  console.log('Registros de auditoría:', registros);
   const [filtroUsuario, setFiltroUsuario] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [filtroSeveridad, setFiltroSeveridad] = useState('todos');
+  const [expandidoId, setExpandidoId] = useState<number | null>(null);
 
   const registrosFiltrados = registros.filter(
     (r) =>
@@ -279,6 +278,7 @@ export default function Auditoria({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>Fecha/Hora</TableHead>
                   <TableHead>Usuario</TableHead>
                   <TableHead>Tipo Evento</TableHead>
@@ -290,39 +290,101 @@ export default function Auditoria({
               <TableBody>
                 {registrosFiltrados.length > 0 ? (
                   registrosFiltrados.map((registro) => (
-                    <TableRow key={registro.id}>
-                      <TableCell className="text-sm font-medium dark:text-white">
-                        {format(
-                          parseISO(registro.created_at),
-                          'dd MMM HH:mm:ss',
-                          { locale: es }
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm dark:text-gray-300">{registro.usuario}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {registro.tipo_evento}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm dark:text-gray-300">
-                        {registro.descripcion}
-                      </TableCell>
-                      <TableCell className="text-sm font-mono dark:text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-600" />
-                          {registro.ip_address}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getSeveridadColor(registro.severidad)}>
-                          {registro.severidad?.toUpperCase() || 'INFO'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                    <React.Fragment key={registro.id}>
+                      <TableRow
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                        onClick={() =>
+                          setExpandidoId(
+                            expandidoId === registro.id ? null : registro.id
+                          )
+                        }
+                      >
+                        <TableCell className="text-center">
+                          <span className="text-lg">
+                            {expandidoId === registro.id ? '▼' : '▶'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium dark:text-white">
+                          {format(
+                            parseISO(registro.created_at),
+                            'dd MMM HH:mm:ss',
+                            { locale: es }
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm dark:text-gray-300">
+                          {registro.usuario}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {registro.tipo_evento}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm dark:text-gray-300">
+                          {registro.descripcion}
+                        </TableCell>
+                        <TableCell className="text-sm font-mono dark:text-gray-300">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-600" />
+                            {registro.ip_address}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getSeveridadColor(registro.severidad)}>
+                            {registro.severidad?.toUpperCase() || 'INFO'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      {expandidoId === registro.id && (
+                        <TableRow className="bg-gray-50 dark:bg-gray-900">
+                          <TableCell colSpan={7} className="p-4">
+                            <div className="space-y-3">
+                              {registro.observaciones &&
+                                Object.keys(registro.observaciones).length > 0 && (
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                                      📝 Observaciones:
+                                    </h4>
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                                      <pre className="text-xs overflow-auto max-h-40 text-gray-700 dark:text-gray-300">
+                                        {JSON.stringify(
+                                          registro.observaciones,
+                                          null,
+                                          2
+                                        )}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
+                              {registro.mensaje_error && (
+                                <div>
+                                  <h4 className="font-semibold text-red-600 dark:text-red-400 mb-2">
+                                    ⚠️ Mensaje de Error:
+                                  </h4>
+                                  <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-700">
+                                    <p className="text-sm text-red-700 dark:text-red-300">
+                                      {registro.mensaje_error}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                              {!registro.observaciones &&
+                                !registro.mensaje_error && (
+                                  <p className="text-gray-500 dark:text-gray-400">
+                                    Sin observaciones adicionales
+                                  </p>
+                                )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-4 text-gray-500 dark:text-gray-400"
+                    >
                       Sin registros que coincidan con los filtros
                     </TableCell>
                   </TableRow>

@@ -150,6 +150,13 @@ export class ClientesService extends ExtendableService<Cliente, ClienteFormData>
       preparedData.password_confirmation = preparedData.password;
     }
 
+    // ✅ NUEVO: Permitir enviar limite_credito como null
+    // Marcar que este campo debe ser enviado aunque sea null
+    if (preparedData.limite_credito === null || preparedData.limite_credito === undefined) {
+      (preparedData as any).__allowNullFields = (preparedData as any).__allowNullFields || [];
+      (preparedData as any).__allowNullFields.push('limite_credito');
+    }
+
     // Normalizar ventanas de entrega: asegurar que las horas estén en formato HH:MM
     if (Array.isArray(preparedData.ventanas_entrega)) {
       preparedData.ventanas_entrega = preparedData.ventanas_entrega.map((ventana) => {

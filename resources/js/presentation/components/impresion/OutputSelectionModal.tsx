@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento';
+export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar';
 
 interface FormatoConfig {
     formato: string;
@@ -68,6 +68,16 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
     ],
     movimiento: [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'cuenta-por-cobrar': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'cuenta-por-pagar': [
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
@@ -150,6 +160,12 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'entrega') {
             // Para entregas, usar la ruta API específica
             rutaBase = `/api/entregas/${documentoId}`;
+        } else if (tipoDocumento === 'cuenta-por-cobrar') {
+            // Para cuentas por cobrar
+            rutaBase = `/cuentas-por-cobrar/${documentoId}`;
+        } else if (tipoDocumento === 'cuenta-por-pagar') {
+            // Para cuentas por pagar
+            rutaBase = `/cuentas-por-pagar/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -157,12 +173,21 @@ export function OutputSelectionModal({
         if (tipo === 'excel') {
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/exportar-excel`;
+            } else if (tipoDocumento === 'cuenta-por-cobrar' || tipoDocumento === 'cuenta-por-pagar') {
+                // Para cuentas por cobrar/pagar no hay excel
+                url = `${rutaBase}/exportar-excel`;
             } else {
                 url = `${rutaBase}/exportar-excel`;
             }
         } else if (tipo === 'pdf') {
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/descargar?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'cuenta-por-cobrar') {
+                // Para cuentas por cobrar
+                url = `/ventas${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+            } else if (tipoDocumento === 'cuenta-por-pagar') {
+                // Para cuentas por pagar
+                url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -170,6 +195,12 @@ export function OutputSelectionModal({
             // Para imprimir
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/descargar?formato=${formato}&accion=stream`;
+            } else if (tipoDocumento === 'cuenta-por-cobrar') {
+                // Para cuentas por cobrar - ruta específica para ticket-80
+                url = `/ventas${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+            } else if (tipoDocumento === 'cuenta-por-pagar') {
+                // Para cuentas por pagar - ruta específica para ticket-80
+                url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             }

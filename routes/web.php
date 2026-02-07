@@ -261,6 +261,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::patch('cuentas-por-pagar/{cuenta}/estado', [\App\Http\Controllers\CuentaPorPagarController::class, 'actualizarEstado'])->name('cuentas-por-pagar.actualizar-estado');
         Route::post('cuentas-por-pagar/{cuentaPorPagar}/registrar-pago', [\App\Http\Controllers\CuentaPorPagarController::class, 'registrarPago'])->name('cuentas-por-pagar.registrar-pago');
         Route::post('cuentas-por-pagar/{cuentaPorPagar}/anular-pago/{pago}', [\App\Http\Controllers\CuentaPorPagarController::class, 'anularPago'])->name('cuentas-por-pagar.anular-pago');
+        Route::get('cuentas-por-pagar/{cuentaPorPagar}/imprimir-ticket-80', [\App\Http\Controllers\CuentaPorPagarController::class, 'imprimirTicket80'])->name('cuentas-por-pagar.imprimir-ticket-80');
 
         // Sistema de Pagos
         Route::get('pagos', [\App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
@@ -339,6 +340,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Gestión de Cuentas por Cobrar
         Route::get('cuentas-por-cobrar', [\App\Http\Controllers\CuentaPorCobrarController::class, 'index'])->name('cuentas-por-cobrar.index');
         Route::get('cuentas-por-cobrar/{cuentaPorCobrar}/show', [\App\Http\Controllers\CuentaPorCobrarController::class, 'show'])->name('cuentas-por-cobrar.show');
+        Route::get('cuentas-por-cobrar/{cuentaPorCobrar}/imprimir-ticket-80', [\App\Http\Controllers\CuentaPorCobrarController::class, 'imprimirTicket80'])->name('cuentas-por-cobrar.imprimir-ticket-80');
 
         // Acciones personalizadas (POST)
         Route::post('{venta}/anular', [\App\Http\Controllers\VentaController::class, 'anular'])->name('anular');

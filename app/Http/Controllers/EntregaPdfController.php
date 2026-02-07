@@ -64,7 +64,7 @@ class EntregaPdfController extends Controller
 
             // Cargar relaciones necesarias
             $entrega->load([
-                'ventas.cliente',
+                'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidades de clientes
                 'ventas.detalles.producto.unidad',
                 'chofer',
                 'vehiculo',
@@ -111,6 +111,11 @@ class EntregaPdfController extends Controller
             $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
             $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
 
+            // ✅ NUEVO: Obtener localidades e información del entregador
+            $localidadesService = app(\App\Services\EntregaLocalidadesService::class);
+            $localidades = $localidadesService->obtenerLocalidades($entrega);
+            $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
+
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
@@ -120,6 +125,8 @@ class EntregaPdfController extends Controller
                 'formato' => $formato,
                 'logo_principal_base64' => $logoPrincipalBase64,
                 'logo_footer_base64' => $logoFooterBase64,
+                'localidades' => $localidades,              // ✅ NUEVO
+                'localidades_resumen' => $localidadesResumen,  // ✅ NUEVO
             ];
 
             // Crear PDF con configuración según formato

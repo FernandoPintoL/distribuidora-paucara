@@ -1097,13 +1097,25 @@ export default function CompraForm() {
                 unidad_medida_nombre: producto.unidad_medida_nombre, // ✨ NUEVO: Nombre de unidad para referencia
                 es_fraccionado: producto.es_fraccionado || false, // ✨ NUEVO: Indicador de producto fraccionado
                 conversiones: producto.conversiones || [], // ✨ NUEVO: Conversiones para calcular precio/unidad como referencia
-                producto: { // ✅ NUEVO: Guardar objeto completo del producto
+                producto: { // ✅ NUEVO: Guardar objeto completo del producto con stock
                   id: producto.id,
                   nombre: producto.nombre,
                   codigo: producto.codigo,
                   codigo_barras: producto.codigo_barras,
                   precio_costo: precioCosto,
-                  es_fraccionado: producto.es_fraccionado || false
+                  es_fraccionado: producto.es_fraccionado || false,
+                  // ✅ CORREGIDO: Incluir stock para mostrar disponibilidad
+                  stock: (producto as any).stock || 0,
+                  stock_disponible: (producto as any).stock_disponible || 0,
+                  stock_disponible_calc: (producto as any).stock_disponible_calc || 0,
+                  stock_total: (producto as any).stock_total || 0,
+                  stock_total_calc: (producto as any).stock_total_calc || 0,
+                  stock_reservado: (producto as any).stock_reservado || 0,
+                  // ✅ Otros campos necesarios
+                  unidad_medida_id: producto.unidad_medida_id,
+                  unidad_medida_nombre: producto.unidad_medida_nombre,
+                  es_combo: (producto as any).es_combo || false,
+                  capacidad: (producto as any).capacidad || null
                 }
               };
               const newDetalles = [...data.detalles, newDetalle];

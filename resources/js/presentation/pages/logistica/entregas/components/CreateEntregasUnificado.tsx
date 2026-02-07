@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { AlertCircle, Package, CheckCircle2, Plus, Calendar } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import BatchVentaSelector from './BatchVentaSelector';
 import ConsolidacionAutomaticaModal from './ConsolidacionAutomaticaModal';
 import { VehicleRecommendationCard } from '@/presentation/components/entrega/VehicleRecommendationCard';
@@ -68,6 +69,10 @@ export default function CreateEntregasUnificado({
 
     // Estado del modal de consolidación automática
     const [isConsolidacionModalOpen, setIsConsolidacionModalOpen] = useState(false);
+
+    // ✅ NUEVO: Estado para OutputSelectionModal de entregas
+    const [showOutputSelection, setShowOutputSelection] = useState(false);
+    const [entregaParaImprimir, setEntregaParaImprimir] = useState<any>(null);
 
     // Hooks para batch (2+ ventas)
     const {
@@ -179,7 +184,7 @@ export default function CreateEntregasUnificado({
         const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
         return {
             count: selectedVentaIds.length,
-            pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_estimado ?? 0), 0),
+            pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0),
             montoTotal: selectedVentas.reduce((sum, v) => sum + (v.subtotal ?? 0), 0),
         };
     }, [ventas, selectedVentaIds]);
@@ -404,24 +409,22 @@ export default function CreateEntregasUnificado({
                         </Card>
                     )}
 
-                    {/* Entregador (Solo Single) */}
-                    {selectedCount === 1 && (
-                        <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-cyan-500">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-                                Entregador
-                            </h3>
-                            <input
-                                type="text"
-                                value={formData.entregador || ''}
-                                onChange={(e) => updateFormData({ entregador: e.target.value })}
-                                placeholder="Nombre de la persona que realiza la entrega"
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
-                            />
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                                📝 Persona responsable de entregar la carga
-                            </p>
-                        </Card>
-                    )}
+                    {/* Entregador - Para cualquier cantidad de ventas */}
+                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-cyan-500">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+                            Entregador
+                        </h3>
+                        <input
+                            type="text"
+                            value={formData.entregador || ''}
+                            onChange={(e) => updateFormData({ entregador: e.target.value })}
+                            placeholder="Nombre de la persona que realiza la entrega"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
+                        />
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                            📝 Persona responsable de entregar la carga
+                        </p>
+                    </Card>
                 </div>
 
                 {/* BLOQUE 3: Opciones & Validación */}
@@ -467,6 +470,26 @@ export default function CreateEntregasUnificado({
 
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950 p-4">
+            {/* Barra de Progreso - Aparece cuando se está enviando */}
+            {isSubmitting && (
+                <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 z-50 overflow-hidden">
+                    <div
+                        className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 animate-pulse"
+                        style={{
+                            animation: 'progress 2s ease-in-out infinite',
+                            width: '100%',
+                        }}
+                    />
+                    <style>{`
+                        @keyframes progress {
+                            0% { transform: translateX(-100%); }
+                            50% { transform: translateX(100%); }
+                            100% { transform: translateX(-100%); }
+                        }
+                    `}</style>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8 flex items-center justify-between">
@@ -478,6 +501,16 @@ export default function CreateEntregasUnificado({
                             Selecciona una o más ventas para continuar
                         </p>
                     </div>
+
+                    {/* Estado de Envío */}
+                    {isSubmitting && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                            <span className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                                Creando entregas...
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Layout Principal: Vertical Stack */}
@@ -519,9 +552,34 @@ export default function CreateEntregasUnificado({
                 {/* Botón Flotante (FAB) - Crear Entrega */}
                 {selectedCount >= 1 && (
                     <div className="fixed bottom-6 right-6 z-50">
+                        {/* Barra de progreso del botón flotante */}
+                        {isSubmitting && (
+                            <div className="absolute -top-2 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-green-500 to-emerald-500 rounded-full overflow-hidden shadow-lg">
+                                <div
+                                    className="h-full bg-gradient-to-r from-green-300 via-emerald-300 to-teal-300 animate-pulse"
+                                    style={{
+                                        animation: 'progress-small 1.5s ease-in-out infinite',
+                                        width: '100%',
+                                    }}
+                                />
+                                <style>{`
+                                    @keyframes progress-small {
+                                        0%, 100% { width: 0%; }
+                                        50% { width: 100%; }
+                                    }
+                                `}</style>
+                            </div>
+                        )}
+
                         {/* Botón principal flotante */}
                         <button
-                            onClick={handleSubmitBatch}
+                            onClick={() => {
+                                // ✅ NUEVO: Pasar callback para abrir modal en lugar de recargar
+                                handleSubmitBatch((entrega) => {
+                                    setEntregaParaImprimir(entrega);
+                                    setShowOutputSelection(true);
+                                });
+                            }}
                             disabled={
                                 !formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting
                             }
@@ -534,7 +592,8 @@ export default function CreateEntregasUnificado({
                             }
                             className={`
                                 flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white shadow-lg
-                                transition-all duration-300 transform hover:scale-110 active:scale-95
+                                transition-all duration-300 transform
+                                ${isSubmitting ? 'scale-105 hover:scale-105' : 'hover:scale-110 active:scale-95'}
                                 ${!formData.vehiculo_id || !formData.chofer_id || capacidadInsuficiente || isSubmitting
                                     ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
                                     : 'bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-600 hover:shadow-xl'
@@ -543,8 +602,9 @@ export default function CreateEntregasUnificado({
                         >
                             {isSubmitting ? (
                                 <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    <span className="hidden sm:inline text-sm">Creando...</span>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent border-r-transparent rounded-full animate-spin" />
+                                    <span className="hidden sm:inline text-sm font-medium">Creando...</span>
+                                    <span className="sm:hidden text-sm">...</span>
                                 </>
                             ) : (
                                 <>
@@ -587,6 +647,28 @@ export default function CreateEntregasUnificado({
                     isOpen={isConsolidacionModalOpen}
                     onClose={() => setIsConsolidacionModalOpen(false)}
                 />
+
+                {/* ✅ NUEVO: Modal OutputSelectionModal para imprimir entrega */}
+                {entregaParaImprimir && (
+                    <OutputSelectionModal
+                        isOpen={showOutputSelection}
+                        onClose={() => {
+                            setShowOutputSelection(false);
+                            setEntregaParaImprimir(null);
+                            // Recargar página después de cerrar el modal
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        }}
+                        documentoId={entregaParaImprimir.id}
+                        tipoDocumento="entrega"
+                        documentoInfo={{
+                            numero: entregaParaImprimir.numero_entrega,
+                            cliente: entregaParaImprimir.cliente_nombre || 'Entregas Consolidadas',
+                            fecha: entregaParaImprimir.fecha_asignacion,
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

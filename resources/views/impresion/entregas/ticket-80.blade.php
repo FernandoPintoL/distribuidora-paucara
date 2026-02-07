@@ -48,6 +48,25 @@
     <p style="margin: 2px 0; color: #999;">Sin vehículo asignado</p>
     @endif
 
+    {{-- ✅ NUEVO: ENTREGADOR --}}
+    @if($entrega->entregador)
+    <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px; background-color: #f9f9f9;">
+        <p style="margin: 2px 0;"><strong>Entregador:</strong> {{ $entrega->entregador }}</p>
+    </div>
+    @endif
+
+    {{-- ✅ NUEVO: LOCALIDADES --}}
+    @if($localidades && $localidades->count() > 0)
+    <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px; background-color: #f0f8ff;">
+        <p style="margin: 2px 0; font-weight: bold;">Localidades:</p>
+        <div style="margin: 2px 0;">
+            @foreach($localidades as $localidad)
+            <p style="margin: 1px 0; padding-left: 5px;">• {{ $localidad->nombre }} @if($localidad->codigo)({{ $localidad->codigo }})@endif</p>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- INFORMACIÓN DE PESO --}}
     <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px;">
         <p style="margin: 2px 0; text-align: center; font-weight: bold;">PESO DE LA ENTREGA</p>
@@ -97,7 +116,7 @@
 
     <div style="border-top: 1px dashed #000; padding: 2px 0; margin-bottom: 5px;">
         <div style="text-align: right;">Total: {{ number_format($estadisticas['total_subtotal'], 2) }}</div>
-        <div>{{ $estadisticas['total_productos'] }} items | {{ $estadisticas['total_clientes'] }} clientes</div>
+        <div>{{ $estadisticas['total_items_unicos'] }} items | {{ $estadisticas['total_clientes'] }} clientes</div>
     </div>
 
     <div class="separador"></div>
@@ -124,6 +143,13 @@
 
     <div class="separador"></div>
 
+     {{-- ✅ FIRMAS DEL CLIENTE --}}
+    <div style="margin-top: 130px !important;">
+        <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
+            <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
+            <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Firma / Sello</p>
+        </div>
+    </div>
 
 </div>
 

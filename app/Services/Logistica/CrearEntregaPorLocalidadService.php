@@ -542,6 +542,7 @@ class CrearEntregaPorLocalidadService
             'fecha_programada' => $fechaProgramada,
             'descripcion' => $datos['descripcion'] ?? null,
             'observaciones' => $datos['observaciones'] ?? null,
+            'entregador' => $datos['entregador'] ?? null,  // ✅ NUEVO: Nombre de quién realiza la entrega
         ]);
 
         Log::info('✅ Entrega creada (con estado_entrega_id)', [

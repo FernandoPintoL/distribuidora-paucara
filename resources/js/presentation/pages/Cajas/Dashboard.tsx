@@ -390,13 +390,13 @@ export default function Dashboard({
                 <FileText className="mr-2 h-4 w-4" />
                 Reportes Diarios
               </Button>
-              <Button
+              {/* <Button
                 onClick={() => setMostrarModalCierre(true)}
                 className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white"
               >
                 <Lock className="mr-2 h-4 w-4" />
                 Cierre Diario General
-              </Button>
+              </Button> */}
             </div>
           </div>
 
@@ -845,7 +845,6 @@ export default function Dashboard({
                   <TableHead className="dark:text-gray-300">Caja</TableHead>
                   <TableHead className="dark:text-gray-300">Usuario</TableHead>
                   <TableHead className="dark:text-gray-300">Estado</TableHead>
-                  <TableHead className="dark:text-gray-300">Cierres/Pendientes</TableHead>
                   <TableHead className="dark:text-gray-300">Monto Actual</TableHead>
                   <TableHead className="dark:text-gray-300">Última Actividad</TableHead>
                   <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
@@ -871,23 +870,12 @@ export default function Dashboard({
                             variant={
                               estado === 'abierta' ? 'default' : 'secondary'
                             }
-                            className="dark:bg-slate-700"
+                            className="dark:bg-slate-700 text-white dark:text-gray-300"
                           >
                             {estado === 'abierta'
                               ? '🟢 Abierta'
                               : '🔴 Cerrada'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {caja.cierres_pendientes && caja.cierres_pendientes > 0 ? (
-                            <Badge variant="destructive" className="dark:bg-red-900">
-                              ⏳ {caja.cierres_pendientes} pendiente{caja.cierres_pendientes !== 1 ? 's' : ''}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="dark:bg-slate-700">
-                              ✅ Sin pendientes
-                            </Badge>
-                          )}
                         </TableCell>
                         <TableCell className="font-semibold dark:text-white">
                           ${monto.toFixed(2)}

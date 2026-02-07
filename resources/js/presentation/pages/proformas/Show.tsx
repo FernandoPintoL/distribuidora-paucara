@@ -28,6 +28,7 @@ import { Input } from '@/presentation/components/ui/input'
 import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { FormatoSelector } from '@/presentation/components/impresion'
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'  // ✅ NUEVO
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Id } from '@/domain/entities/shared'
@@ -406,6 +407,10 @@ export default function ProformasShow({ item: proforma }: Props) {
 
     // ✅ NUEVO: Flag para evitar que el componente se remonte durante flujo de aprobación + conversión
     const [isFlowAprobacionConversion, setIsFlowAprobacionConversion] = useState(false)
+
+    // ✅ NUEVO: Estado para el modal de selección de salida (OutputSelection)
+    const [showOutputSelection, setShowOutputSelection] = useState(false)
+    const [ventaParaImprimir, setVentaParaImprimir] = useState<any>(null)
 
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
@@ -1033,20 +1038,34 @@ export default function ProformasShow({ item: proforma }: Props) {
                 approvalFlow.setLoading(false, 'success');
             }
 
-            // Cerrar diálogo y recargar página
+            // Cerrar diálogo
             setShowAprobarDialog(false);
 
             // Mostrar notificación de éxito
             const successMessage = `Proforma aprobada, convertida a venta y stocks actualizados exitosamente`;
             console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
 
-            // ✅ CRÍTICO: Resetear flag ANTES de recargar la página
-            setIsFlowAprobacionConversion(false);
+            // ✅ NUEVO: Obtener la venta creada para imprimir
+            const ventaCreada = convertirData.data?.venta;
+            if (ventaCreada && ventaCreada.id) {
+                console.log('%c📋 Abriendo modal de impresión para venta:', 'color: blue;', {
+                    venta_id: ventaCreada.id,
+                    venta_numero: ventaCreada.numero,
+                });
 
-            // Esperar un momento para que el usuario vea el loading, luego recargar
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+                // Guardar la venta para imprimir
+                setVentaParaImprimir(ventaCreada);
+
+                // Abrir el modal de selección de salida
+                setShowOutputSelection(true);
+            } else {
+                // Si no hay venta, recargar la página directamente
+                console.warn('⚠️ No se obtuvo venta para imprimir, recargan página directamente');
+                setIsFlowAprobacionConversion(false);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
 
         } catch (error) {
             console.error('%c❌ Error en flujo combinado:', 'color: red;', error);
@@ -1213,6 +1232,25 @@ export default function ProformasShow({ item: proforma }: Props) {
                                     Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
                                 </p>
                                 <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
+
+                                {/* ✅ NUEVO: Mostrar información de venta cuando está convertida */}
+                                {proforma.estado === 'CONVERTIDA' && proforma.venta && (
+                                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                        <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">
+                                            ✅ Convertida a Venta
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">ID Venta</span>
+                                                <span className="font-semibold text-green-900 dark:text-green-100">{proforma.venta.id}</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Número Venta</span>
+                                                <span className="font-semibold text-green-900 dark:text-green-100">{proforma.venta.numero}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Información adicional - Horizontal en una sola línea */}
                                 <div className="flex flex-wrap gap-4 mt-3 text-sm">
@@ -2230,6 +2268,33 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 ? 'Convirtiendo a venta y registrando pago...'
                                 : 'Procesando solicitud...'
                     }
+                />
+            )}
+
+            {/* ✅ NUEVO: Modal para seleccionar formato de salida (impresión) */}
+            {ventaParaImprimir && (
+                <OutputSelectionModal
+                    isOpen={showOutputSelection}
+                    onClose={() => {
+                        console.log('%c📋 Modal cerrado, recargando página...', 'color: blue;');
+                        setShowOutputSelection(false);
+                        setVentaParaImprimir(null);
+
+                        // ✅ CRÍTICO: Resetear flag ANTES de recargar la página
+                        setIsFlowAprobacionConversion(false);
+
+                        // Recargar la página después de cerrar el modal
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    }}
+                    documentoId={ventaParaImprimir.id}
+                    tipoDocumento="venta"
+                    documentoInfo={{
+                        numero: ventaParaImprimir.numero,
+                        fecha: ventaParaImprimir.fecha_venta,
+                        monto: ventaParaImprimir.total,
+                    }}
                 />
             )}
         </AppLayout>

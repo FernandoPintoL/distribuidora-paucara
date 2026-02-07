@@ -96,6 +96,7 @@ export interface Proforma extends BaseEntity {
     usuario_creador?: { id: Id; name: string; email: string }; // Datos del usuario creador desde backend
     estado_documento?: EstadoDocumento;
     detalles: ProformaDetalle[]; // ✅ OBLIGATORIO - Una proforma siempre tiene detalles
+    venta?: any; // ✅ NUEVO: Relación a venta cuando está CONVERTIDA
 
     // Timestamps
     created_at: string;
