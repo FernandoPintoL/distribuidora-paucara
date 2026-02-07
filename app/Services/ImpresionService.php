@@ -94,7 +94,7 @@ class ImpresionService
         \Log::info('📝 [ImpresionService::generarPDF] INICIANDO', [
             'tipoDocumento' => $tipoDocumento,
             'formato' => $formato,
-            'tipo_documento_class' => get_class($documento),
+            'tipo_documento_class' => is_object($documento) ? get_class($documento) : gettype($documento),
         ]);
 
         try {

@@ -3159,12 +3159,38 @@ class ApiProformaController extends Controller
         }
 
         try {
-            // ✅ MEJORADO: Usar CajaAbiertaService para obtener caja abierta (mismo que VentaController)
-            $cajaAbiertaService = new \App\Services\CajaAbiertaService();
-            $cajaAbierta = $cajaAbiertaService->obtenerAperturaAbierta();
+            // ✅ MEJORADO: Buscar caja abierta IGUAL QUE EL MIDDLEWARE
+            // 1️⃣ Buscar caja abierta de HOY
+            $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                ->delDia()
+                ->abiertas()
+                ->with('caja')
+                ->latest()
+                ->first();
+
+            // 2️⃣ Si no hay caja de hoy, buscar la más reciente (posiblemente de ayer)
+            if (!$cajaAbierta) {
+                $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                    ->abiertas()
+                    ->with('caja')
+                    ->latest('fecha')
+                    ->first();
+
+                // ✅ Registrar advertencia si es caja de día anterior
+                if ($cajaAbierta && $cajaAbierta->fecha < today()) {
+                    Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usando caja de día anterior (sin cerrar)', [
+                        'usuario_id' => $usuario->id,
+                        'usuario_nombre' => $usuario->name,
+                        'apertura_fecha' => $cajaAbierta->fecha,
+                        'caja_id' => $cajaAbierta->caja_id,
+                        'caja_nombre' => $cajaAbierta->caja?->nombre,
+                        'venta_id' => $venta->id,
+                    ]);
+                }
+            }
 
             if (!$cajaAbierta) {
-                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta HOY', [
+                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta (ni hoy ni días anteriores sin cerrar)', [
                     'usuario_id' => $usuario->id,
                     'usuario_nombre' => $usuario->name,
                     'usuario_roles' => $usuario->getRoleNames()->toArray(),
