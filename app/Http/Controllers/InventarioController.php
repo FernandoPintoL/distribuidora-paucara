@@ -514,6 +514,50 @@ class InventarioController extends Controller
 
         // Mapear datos de movimientos
         $movimientos = $movimientosPaginados->map(function ($movimiento) {
+            // ✅ Validar que stockProducto existe (puede ser null si se eliminó el lote)
+            $stockProducto = $movimiento->stockProducto;
+
+            if (!$stockProducto) {
+                // Si el stock_producto fue eliminado, crear datos fallback
+                return [
+                    'id'                => $movimiento->id,
+                    'tipo'              => $this->mapearTipoMovimiento($movimiento->tipo),
+                    'tipo_ajuste_id'    => $movimiento->tipo_ajuste_inventario_id,
+                    'tipo_merma_id'     => $movimiento->tipo_merma_id,
+                    'estado_merma_id'   => $movimiento->estado_merma_id,
+                    'motivo'            => $this->obtenerMotivoMovimiento($movimiento->tipo),
+                    'cantidad'          => $movimiento->cantidad,
+                    'stock_anterior'    => $movimiento->cantidad_anterior,
+                    'stock_nuevo'       => $movimiento->cantidad_posterior,
+                    'fecha'             => $movimiento->fecha->toISOString(),
+                    'usuario'           => [
+                        'id'   => $movimiento->user_id,
+                        'name' => $movimiento->user?->name ?? 'Sistema',
+                    ],
+                    'producto'          => [
+                        'id'        => null,
+                        'nombre'    => '[Producto Eliminado]',
+                        'sku'       => 'N/A',
+                        'categoria' => [
+                            'nombre' => 'General',
+                        ],
+                    ],
+                    'almacen'           => [
+                        'id'     => null,
+                        'nombre' => '[Almacén No Disponible]',
+                    ],
+                    'referencia'        => $movimiento->numero_documento,
+                    'referencia_tipo'   => $movimiento->referencia_tipo,
+                    'referencia_id'     => $movimiento->referencia_id,
+                    'observaciones'     => $movimiento->observacion,
+                    'anulado'           => (bool) $movimiento->anulado,
+                    'motivo_anulacion'  => $movimiento->motivo_anulacion,
+                    'user_anulacion_id' => $movimiento->user_anulacion_id,
+                    'fecha_anulacion'   => $movimiento->fecha_anulacion ? \Carbon\Carbon::parse($movimiento->fecha_anulacion)->toISOString() : null,
+                    'ip_dispositivo'    => $movimiento->ip_dispositivo,
+                ];
+            }
+
             return [
                 'id'                => $movimiento->id,
                 'tipo'              => $this->mapearTipoMovimiento($movimiento->tipo),
@@ -530,16 +574,16 @@ class InventarioController extends Controller
                     'name' => $movimiento->user?->name ?? 'Sistema',
                 ],
                 'producto'          => [
-                    'id'        => $movimiento->stockProducto->producto->id,
-                    'nombre'    => $movimiento->stockProducto->producto->nombre,
-                    'sku'       => $movimiento->stockProducto->producto->sku,
+                    'id'        => $stockProducto->producto->id,
+                    'nombre'    => $stockProducto->producto->nombre,
+                    'sku'       => $stockProducto->producto->sku,
                     'categoria' => [
                         'nombre' => 'General',
                     ],
                 ],
                 'almacen'           => [
-                    'id'     => $movimiento->stockProducto->almacen->id,
-                    'nombre' => $movimiento->stockProducto->almacen->nombre,
+                    'id'     => $stockProducto->almacen->id,
+                    'nombre' => $stockProducto->almacen->nombre,
                 ],
                 'referencia'        => $movimiento->numero_documento,
                 'referencia_tipo'   => $movimiento->referencia_tipo,
