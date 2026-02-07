@@ -14,11 +14,11 @@ use App\Models\Venta;
 class VentaResponseDTO extends BaseDTO
 {
     public function __construct(
-        public int $id,
+        public int $id = 0,
         public string $numero = '',
-        public int $cliente_id,
-        public string $cliente_nombre,
-        public string $cliente_nit,
+        public int $cliente_id = 0,
+        public string $cliente_nombre = '',
+        public string $cliente_nit = '',
         public ?array $cliente = null,
         public ?string $estado = null,
         public ?array $estado_documento = null,
@@ -39,6 +39,7 @@ class VentaResponseDTO extends BaseDTO
         public ?string $canal_origen = null,
         public ?array $tipo_pago = null,
         public ?string $politica_pago = 'CONTRA_ENTREGA',
+        public ?string $estado_pago = null,  // ✅ NUEVO: Estado de pago
         public ?array $proforma = null,
         public ?array $direccion_cliente = null,
     ) {}
@@ -140,6 +141,7 @@ class VentaResponseDTO extends BaseDTO
                 'nombre' => $venta->tipoPago->nombre,
             ] : null,
             politica_pago: $venta->politica_pago ?? 'CONTRA_ENTREGA',
+            estado_pago: $venta->estado_pago ?? 'PENDIENTE',  // ✅ NUEVO: Estado de pago
             proforma: $venta->proforma ? [
                 'id' => $venta->proforma->id,
                 'numero' => $venta->proforma->numero,

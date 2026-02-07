@@ -32,6 +32,9 @@ interface DashboardProps extends DashboardLogisticaProps {
 }
 
 export default function LogisticaDashboard({ estadisticas, proformasRecientes, localidades, usuariosAprobadores, estadosLogistica }: DashboardProps) {
+    console.log('=== LOGISTICA DASHBOARD PROPS ===');
+    console.log('Estadísticas recibidas (props):', estadisticas);
+    console.log('Proformas recientes recibidas (props):', proformasRecientes);
     // Estados principales
     const [stats] = useState<DashboardLogisticaStats>(estadisticas);
     const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);

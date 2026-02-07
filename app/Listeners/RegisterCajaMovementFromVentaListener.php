@@ -47,12 +47,64 @@ class RegisterCajaMovementFromVentaListener
             // ✅ 1. Obtener caja_id del atributo especial de la venta
             $cajaId = $venta->getAttribute('_caja_id');
 
-            // Si no hay caja_id, significa que fue una creación sin middleware de caja
-            // (ej: desde API sin validación de caja, o desde otro contexto)
+            // 📋 LOG: Búsqueda de caja_id
+            Log::info('🔍 [RegisterCajaMovementFromVentaListener] Buscando caja_id', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'caja_id_del_atributo' => $cajaId,
+            ]);
+
+            // Si no hay caja_id en el atributo, buscar la caja abierta del usuario
+            // (útil para ventas creadas desde convertir proforma)
             if (!$cajaId) {
-                Log::info('⏭️ RegisterCajaMovementFromVentaListener - Sin caja_id, probablemente creada sin validación de caja', [
+                Log::info('ℹ️ [RegisterCajaMovementFromVentaListener] _caja_id no presente, buscando caja abierta', [
+                    'venta_id' => $venta->id,
+                    'usuario_id' => $venta->usuario_id,
+                ]);
+
+                // Buscar caja abierta de HOY primero
+                $cajaAbiertaBusqueda = AperturaCaja::where('user_id', $venta->usuario_id)
+                    ->whereDate('fecha', today())
+                    ->whereDoesntHave('cierre')
+                    ->with('caja')
+                    ->latest()
+                    ->first();
+
+                // Si no hay de hoy, buscar la más reciente (puede ser de ayer)
+                if (!$cajaAbiertaBusqueda) {
+                    $cajaAbiertaBusqueda = AperturaCaja::where('user_id', $venta->usuario_id)
+                        ->whereDoesntHave('cierre')
+                        ->with('caja')
+                        ->latest('fecha')
+                        ->first();
+
+                    if ($cajaAbiertaBusqueda && $cajaAbiertaBusqueda->fecha < today()) {
+                        Log::warning('⚠️ [RegisterCajaMovementFromVentaListener] Usando caja de día anterior', [
+                            'venta_id' => $venta->id,
+                            'usuario_id' => $venta->usuario_id,
+                            'apertura_fecha' => $cajaAbiertaBusqueda->fecha,
+                            'caja_id' => $cajaAbiertaBusqueda->caja_id,
+                        ]);
+                    }
+                }
+
+                // Usar la caja encontrada
+                if ($cajaAbiertaBusqueda) {
+                    $cajaId = $cajaAbiertaBusqueda->caja_id;
+                    Log::info('✅ [RegisterCajaMovementFromVentaListener] Caja encontrada en búsqueda', [
+                        'venta_id' => $venta->id,
+                        'caja_id' => $cajaId,
+                        'caja_nombre' => $cajaAbiertaBusqueda->caja?->nombre,
+                    ]);
+                }
+            }
+
+            // Si aún así no hay caja_id, no registrar
+            if (!$cajaId) {
+                Log::info('⏭️ [RegisterCajaMovementFromVentaListener] Sin caja disponible, no registra movimiento', [
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
+                    'usuario_id' => $venta->usuario_id,
                 ]);
                 return;
             }

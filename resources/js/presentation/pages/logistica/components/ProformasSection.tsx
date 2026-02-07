@@ -743,7 +743,7 @@ export function ProformasSection({
                                         )}
                                     </div>
                                 </th>
-                                <th
+                                {/* <th
                                     className="px-4 py-2 text-left font-medium dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
                                     onClick={() => handleSort('fecha')}
                                 >
@@ -753,7 +753,9 @@ export function ProformasSection({
                                             sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
                                         )}
                                     </div>
-                                </th>
+                                </th> */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Creada</th>
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">✏️ Actualizada</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Acciones</th>
                             </tr>
                         </thead>
@@ -780,9 +782,21 @@ export function ProformasSection({
                                     <td className="px-4 py-2 text-right dark:text-gray-300">
                                         Bs {proforma.total.toLocaleString('es-BO', { maximumFractionDigits: 2 })}
                                     </td>
-                                    <td className="px-4 py-2 text-xs dark:text-gray-300">
+                                    {/* <td className="px-4 py-2 text-xs dark:text-gray-300">
                                         {formatDate(proforma.fecha)}
                                         {estaVencida(proforma) && <div className="text-red-600 dark:text-red-400 text-xs font-semibold">VENCIDA</div>}
+                                    </td> */}
+                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            <div>{new Date(proforma.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                            <div className="text-xs">{new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            <div>{new Date(proforma.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                            <div className="text-xs">{new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        </div>
                                     </td>
                                     <td className="px-4 py-2">
                                         <div className="flex gap-2">

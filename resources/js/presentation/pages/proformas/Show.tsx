@@ -1228,9 +1228,14 @@ export default function ProformasShow({ item: proforma }: Props) {
                                 Proforma {proforma.numero}
                             </h1>
                             <div className="space-y-2 mt-3">
-                                <p className="text-[var(--text-sm)] text-muted-foreground">
-                                    Creada el {new Date(proforma.created_at).toLocaleDateString('es-ES')}
-                                </p>
+                                <div className="flex flex-wrap gap-4 text-[var(--text-sm)] text-muted-foreground">
+                                    <p>
+                                        📅 Creada: {new Date(proforma.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    <p>
+                                        ✏️ Actualizada: {new Date(proforma.updated_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
                                 <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
 
                                 {/* ✅ NUEVO: Mostrar información de venta cuando está convertida */}

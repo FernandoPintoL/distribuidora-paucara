@@ -441,11 +441,13 @@ class ProformaController extends Controller
             // Validar permisos
             // Permitir si:
             // 1. Es administrador
-            // 2. Es cliente y la proforma es suya
+            // 2. Es cajero
             // 3. Es cualquier empleado de la distribuidora (can view proformas)
+            // 4. Es cliente y la proforma es suya
             $user          = auth()->user();
             $isOwnProforma = $proforma->cliente_id === $user->cliente_id;
             $isAdmin       = $user->hasRole('Admin');
+            $isCajero      = $user->hasRole('Cajero');
 
             // Si llega aquí es porque pudo ver/acceder a la proforma
             // Si es cliente y no es suya, rechazar

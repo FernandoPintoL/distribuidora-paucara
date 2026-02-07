@@ -1234,109 +1234,107 @@ export default function VentaForm() {
                         </div>
                     </div>
 
-                    {/* Sección de Envío - mostrar solo si empresa.logistica_envios = true */}
-                    {selectedCliente?.empresa?.logistica_envios && (
-                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-md font-medium text-gray-900 dark:text-white">
-                                    🚚 Información de Envío
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={() => setData('requiere_envio', !data.requiere_envio)}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${data.requiere_envio
-                                        ? 'bg-green-600 dark:bg-green-700'
-                                        : 'bg-gray-300 dark:bg-gray-600'
-                                        } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
-                                >
-                                    <span
-                                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${data.requiere_envio ? 'translate-x-7' : 'translate-x-1'
-                                            }`}
-                                    />
-                                    <span className="ml-2 text-sm font-medium text-white">
-                                        {data.requiere_envio ? 'Sí' : 'No'}
-                                    </span>
-                                </button>
-                            </div>
+                    {/* Sección de Envío - SIEMPRE VISIBLE */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white">
+                                🚚 Información de Envío
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setData('requiere_envio', !data.requiere_envio)}
+                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${data.requiere_envio
+                                    ? 'bg-green-600 dark:bg-green-700'
+                                    : 'bg-gray-300 dark:bg-gray-600'
+                                    } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
+                            >
+                                <span
+                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${data.requiere_envio ? 'translate-x-7' : 'translate-x-1'
+                                        }`}
+                                />
+                                <span className="ml-2 text-sm font-medium text-white">
+                                    {data.requiere_envio ? 'Sí' : 'No'}
+                                </span>
+                            </button>
+                        </div>
 
-                            {/* Campos de envío - mostrar solo si requiere_envio es true */}
-                            {data.requiere_envio && (
-                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                        {/* Campos de envío - mostrar solo si requiere_envio es true */}
+                        {data.requiere_envio && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Dirección de Envío *
+                                    </label>
+                                    <textarea
+                                        value={data.observaciones || ''}
+                                        onChange={(e) => setData('observaciones', e.target.value)}
+                                        rows={2}
+                                        placeholder="Calle, número, piso, referencias..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                    />
+                                    {errors.observaciones && <p className="mt-1 text-sm text-red-600">{errors.observaciones}</p>}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Dirección de Envío *
+                                            Persona que Recibe
                                         </label>
-                                        <textarea
-                                            value={data.observaciones || ''}
-                                            onChange={(e) => setData('observaciones', e.target.value)}
-                                            rows={2}
-                                            placeholder="Calle, número, piso, referencias..."
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre de quien recibe"
+                                            defaultValue={selectedCliente?.nombre || ''}
                                             className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                         />
-                                        {errors.observaciones && <p className="mt-1 text-sm text-red-600">{errors.observaciones}</p>}
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                Persona que Recibe
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Nombre de quien recibe"
-                                                defaultValue={selectedCliente?.nombre || ''}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                Teléfono de Contacto
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                placeholder="Teléfono para envío"
-                                                defaultValue={selectedCliente?.telefono || ''}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Teléfono de Contacto
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            placeholder="Teléfono para envío"
+                                            defaultValue={selectedCliente?.telefono || ''}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                        />
                                     </div>
-
-                                    {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si empresa.logistica_envios = true */}
-                                    {selectedCliente?.empresa?.logistica_envios && (
-                                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                🚚 Empresa de Logística
-                                            </label>
-                                            <select
-                                                value={data.empresa_logistica_id || ''}
-                                                onChange={(e) => setData('empresa_logistica_id', e.target.value ? Number(e.target.value) : null)}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-zinc-800 dark:text-white"
-                                            >
-                                                <option value="">Selecciona empresa de logística...</option>
-                                                <option value="">-- Envío directo (sin intermediario) --</option>
-                                            </select>
-                                            <p className="text-xs text-green-700 dark:text-green-300">
-                                                ℹ️ Esta empresa dispone de servicio de logística para envíos
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                                        ℹ️ Los datos del cliente se pre-rellenan automáticamente. Modifica si es necesario.
-                                    </p>
                                 </div>
-                            )}
 
-                            {!data.requiere_envio && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Activa el envío para agregar dirección y datos de entrega
+                                {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si empresa.logistica_envios = true */}
+                                {selectedCliente?.empresa?.logistica_envios && (
+                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            🚚 Empresa de Logística
+                                        </label>
+                                        <select
+                                            value={data.empresa_logistica_id || ''}
+                                            onChange={(e) => setData('empresa_logistica_id', e.target.value ? Number(e.target.value) : null)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-zinc-800 dark:text-white"
+                                        >
+                                            <option value="">Selecciona empresa de logística...</option>
+                                            <option value="">-- Envío directo (sin intermediario) --</option>
+                                        </select>
+                                        <p className="text-xs text-green-700 dark:text-green-300">
+                                            ℹ️ Esta empresa dispone de servicio de logística para envíos
+                                        </p>
+                                    </div>
+                                )}
+
+                                <p className="text-xs text-blue-700 dark:text-blue-300">
+                                    ℹ️ Los datos del cliente se pre-rellenan automáticamente. Modifica si es necesario.
                                 </p>
-                            )}
+                            </div>
+                        )}
 
-                            {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
-                        </div>
-                    )}
+                        {!data.requiere_envio && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Desactiva el envío si la venta es presencial
+                            </p>
+                        )}
+
+                        {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
+                    </div>
                     <br />
                     <ProductosTable
                         productos={productosSeguro}

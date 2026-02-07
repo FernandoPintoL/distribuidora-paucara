@@ -50,20 +50,24 @@ class VehiculoController extends Controller
 
     public function create(): Response
     {
-        // Obtener choferes desde empleados activos con rol de Chofer
+        // ✅ Obtener choferes desde empleados activos con rol de Chofer (case-insensitive)
         $choferesEmpleados = Empleado::query()
             ->with(['user', 'user.roles'])
             ->where('estado', 'activo')
             ->get()
-            ->filter(fn($e) => $e->user !== null && $e->esChofer())
+            ->filter(fn($e) =>
+                $e->user !== null &&
+                $e->user->roles->some(fn($role) => strtolower($role->name) === 'chofer')
+            )
             ->map(fn($e) => [
                 'value' => $e->id,
                 'label' => $e->user->name ?? $e->nombre,
             ]);
 
-        // También buscar usuarios con rol de Chofer que no estén en empleados
+        // ✅ También buscar usuarios con rol de Chofer que no estén en empleados (case-insensitive)
         $choferesUsuarios = \App\Models\User::query()
-            ->whereHas('roles', fn($q) => $q->where('name', 'Chofer'))
+            ->with('roles')
+            ->whereHas('roles', fn($q) => $q->whereRaw('LOWER(name) = ?', ['chofer']))
             ->whereDoesntHave('empleado')
             ->get()
             ->map(fn($u) => [
@@ -92,20 +96,24 @@ class VehiculoController extends Controller
 
     public function edit(Vehiculo $vehiculo): Response
     {
-        // Obtener choferes desde empleados activos con rol de Chofer
+        // ✅ Obtener choferes desde empleados activos con rol de Chofer (case-insensitive)
         $choferesEmpleados = Empleado::query()
             ->with(['user', 'user.roles'])
             ->where('estado', 'activo')
             ->get()
-            ->filter(fn($e) => $e->user !== null && $e->esChofer())
+            ->filter(fn($e) =>
+                $e->user !== null &&
+                $e->user->roles->some(fn($role) => strtolower($role->name) === 'chofer')
+            )
             ->map(fn($e) => [
                 'value' => $e->id,
                 'label' => $e->user->name ?? $e->nombre,
             ]);
 
-        // También buscar usuarios con rol de Chofer que no estén en empleados
+        // ✅ También buscar usuarios con rol de Chofer que no estén en empleados (case-insensitive)
         $choferesUsuarios = \App\Models\User::query()
-            ->whereHas('roles', fn($q) => $q->where('name', 'Chofer'))
+            ->with('roles')
+            ->whereHas('roles', fn($q) => $q->whereRaw('LOWER(name) = ?', ['chofer']))
             ->whereDoesntHave('empleado')
             ->get()
             ->map(fn($u) => [

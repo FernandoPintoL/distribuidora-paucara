@@ -11,7 +11,6 @@ import { useEntregas } from '@/application/hooks/use-entregas';
 import { useEstadosEntregas } from '@/application/hooks';
 import { useState, useMemo, useCallback } from 'react';
 import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
-import { useDebouncedValue } from '@/application/hooks/use-debounce';
 import { useQueryParam } from '@/application/hooks/use-query-param';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import EstadoEntregaBadge from '@/presentation/components/logistica/EstadoEntregaBadge';
@@ -67,9 +66,6 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         fecha_desde: fechaDesdeURL,
         fecha_hasta: fechaHastaURL,
     });
-
-    // ✅ DEBOUNCE: Búsqueda con delay para mejor performance
-    const busquedaDebounced = useDebouncedValue(filtros.busqueda, 300);
 
     // Estados para selección y modal
     const [entregasSeleccionadas, setEntregasSeleccionadas] = useState<number[]>([]);
@@ -161,15 +157,15 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setMostrarOutputSelection(true);
     }, []);
 
-    // ✅ FILTRADO MEJORADO: Usar búsqueda debounceada y filtros múltiples
+    // ✅ FILTRADO MEJORADO: Usar búsqueda manual y filtros múltiples
     const entregasFiltradas = useMemo(() => {
         return entregas.data.filter(entrega => {
             // Filtro por estado
             const cumpleEstado = filtros.estado === 'TODOS' || entrega.estado === filtros.estado;
 
-            // Filtro por búsqueda (debounceada) - busca en múltiples campos case insensitive
-            const searchLower = busquedaDebounced.toLowerCase();
-            const cumpleBusqueda = busquedaDebounced === '' || (
+            // Filtro por búsqueda (manual - solo con Enter o botón) - busca en múltiples campos case insensitive
+            const searchLower = filtros.busqueda.toLowerCase();
+            const cumpleBusqueda = filtros.busqueda === '' || (
                 // Buscar en datos del chofer
                 entrega.chofer?.nombre?.toLowerCase().includes(searchLower) ||
                 entrega.chofer?.name?.toLowerCase().includes(searchLower) ||
@@ -208,7 +204,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
 
             return cumpleEstado && cumpleBusqueda && cumpleChofer && cumpleVehiculo && cumpleLocalidad && cumpleEstadoLogistica && cumpleFechaDesde && cumpleFechaHasta;
         });
-    }, [entregas.data, filtros, busquedaDebounced]);
+    }, [entregas.data, filtros]);
 
     // Selección múltiple
     const toggleSeleccion = (id: number) => {

@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { User, Edit, AlertCircle, Printer } from 'lucide-react';
 import { useState } from 'react';
@@ -58,10 +58,14 @@ export default function VentaShow() {
     };
 
     // Debug: Verificar datos que llegan
+    console.log('🚀 VentaShow - Props recibidos:', venta);
     console.log('🔍 VentaShow - Venta cargada:', venta.numero);
+    console.log('📦 TODOS LOS DATOS DE LA VENTA:', JSON.stringify(venta, null, 2));
     console.log('  requiere_envio:', venta.requiere_envio, '(tipo:', typeof venta.requiere_envio + ')');
     console.log('  estado_logistico:', venta.estado_logistico);
     console.log('  canal_origen:', venta.canal_origen);
+    console.log('  ⏳ estado_pago:', venta.estado_pago);
+    console.log('  💳 politica_pago:', venta.politica_pago);
 
     const getEstadoColor = (estado: EstadoDocumento) => {
         switch (estado.nombre.toLowerCase()) {
@@ -294,6 +298,44 @@ export default function VentaShow() {
                                     </div>
                                 )}
 
+                                {/* Política de Pago */}
+                                {venta.politica_pago && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Política de Pago
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {venta.politica_pago === 'CONTRA_ENTREGA' && 'Contra Entrega'}
+                                            {venta.politica_pago === 'ANTICIPADO_100' && 'Anticipado 100%'}
+                                            {venta.politica_pago === 'MEDIO_MEDIO' && 'Medio Medio (50-50)'}
+                                            {venta.politica_pago === 'CREDITO' && 'Crédito'}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Estado de Pago */}
+                                {venta.estado_pago && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                            Estado de Pago
+                                        </label>
+                                        <p className="mt-1">
+                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                                venta.estado_pago === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                                venta.estado_pago === 'PAGADO' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                                venta.estado_pago === 'PARCIALMENTE_PAGADO' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                                                venta.estado_pago === 'VENCIDO' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                                            }`}>
+                                                {venta.estado_pago === 'PENDIENTE' && '⏳ Pendiente'}
+                                                {venta.estado_pago === 'PAGADO' && '✅ Pagado'}
+                                                {venta.estado_pago === 'PARCIALMENTE_PAGADO' && '⚠️ Parcialmente Pagado'}
+                                                {venta.estado_pago === 'VENCIDO' && '❌ Vencido'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Canal de Origen */}
                                 {venta.canal_origen && (
                                     <div>
@@ -435,13 +477,13 @@ export default function VentaShow() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                                {detalle.cantidad}
+                                                {formatCurrencyWith2Decimals(detalle.cantidad)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                                {formatCurrency(detalle.precio_unitario, venta.moneda.codigo)}
+                                                {formatCurrencyWith2Decimals(detalle.precio_unitario, venta.moneda.codigo)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                {formatCurrency(detalle.subtotal, venta.moneda.codigo)}
+                                                {formatCurrencyWith2Decimals(detalle.subtotal, venta.moneda.codigo)}
                                             </td>
                                         </tr>
                                     ))}
@@ -455,7 +497,7 @@ export default function VentaShow() {
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">Total</span>
                                     <span className="text-sm text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.subtotal, venta.moneda.codigo)}
+                                        {formatCurrencyWith2Decimals(venta.subtotal, venta.moneda.codigo)}
                                     </span>
                                 </div>
 
@@ -463,7 +505,7 @@ export default function VentaShow() {
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-500 dark:text-gray-400">Descuento</span>
                                         <span className="text-sm text-red-600 dark:text-red-400">
-                                            -{formatCurrency(venta.descuento, venta.moneda.codigo)}
+                                            -{formatCurrencyWith2Decimals(venta.descuento, venta.moneda.codigo)}
                                         </span>
                                     </div>
                                 )} */}
@@ -472,7 +514,7 @@ export default function VentaShow() {
                                     <div className="flex justify-between">
                                         <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                                         <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                            {formatCurrency(venta.total, venta.moneda.codigo)}
+                                            {formatCurrencyWith2Decimals(venta.total, venta.moneda.codigo)}
                                         </span>
                                     </div>
                                 </div> */}
@@ -513,7 +555,7 @@ export default function VentaShow() {
                                             </div>
                                             <div className="text-right">
                                                 <span className="text-lg font-semibold text-green-600 dark:text-green-400">
-                                                    {formatCurrency(pago.monto, venta.moneda.codigo)}
+                                                    {formatCurrencyWith2Decimals(pago.monto, venta.moneda.codigo)}
                                                 </span>
                                             </div>
                                         </div>
@@ -534,14 +576,14 @@ export default function VentaShow() {
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">Monto</span>
                                     <span className="text-sm text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.cuenta_por_cobrar.monto, venta.moneda.codigo)}
+                                        {formatCurrencyWith2Decimals(venta.cuenta_por_cobrar.monto, venta.moneda.codigo)}
                                     </span>
                                 </div>
 
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">Saldo</span>
                                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {formatCurrency(venta.cuenta_por_cobrar.saldo, venta.moneda.codigo)}
+                                        {formatCurrencyWith2Decimals(venta.cuenta_por_cobrar.saldo, venta.moneda.codigo)}
                                     </span>
                                 </div>
 

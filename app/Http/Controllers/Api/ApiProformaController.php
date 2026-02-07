@@ -2267,10 +2267,35 @@ class ApiProformaController extends Controller
                 $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
                 $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
 
+                // 📊 LOG: INICIO DEL FLUJO DE CONVERSIÓN
+                Log::info('🚀 [ApiProformaController::convertirAVenta] INICIO DEL FLUJO', [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'usuario_id' => $usuario->id,
+                    'usuario_nombre' => $usuario->name,
+                    'usuario_roles' => $usuario->getRoleNames()->toArray(),
+                    'cliente_id' => $proforma->cliente_id,
+                    'cliente_nombre' => $proforma->cliente->nombre,
+                ]);
+
+                // 📊 LOG: PARÁMETROS DE PAGO RECIBIDOS
+                Log::info('💳 [convertirAVenta] Parámetros de pago', [
+                    'politica_pago' => $politica,
+                    'monto_pagado' => $montoPagado,
+                    'tipo_pago_id' => $request->input('tipo_pago_id'),
+                    'con_pago' => $request->input('con_pago', false),
+                ]);
+
                 // ✅ VALIDACIÓN: Caja abierta HOY (sin importar si es admin o cajero)
                 $cajaAbiertaHoy = AperturaCaja::where('user_id', $usuario->id)
                     ->whereDoesntHave('cierre')
                     ->exists();
+
+                // 📊 LOG: Búsqueda de caja del día actual
+                Log::info('🔍 [convertirAVenta] Buscando caja abierta de HOY', [
+                    'usuario_id' => $usuario->id,
+                    'caja_abierta_hoy' => $cajaAbiertaHoy,
+                ]);
 
                 // ✅ VALIDACIÓN: Caja consolidada en últimas 24h
                 $cierreConsolidadoReciente = CierreCaja::where('user_id', $usuario->id)
@@ -2283,6 +2308,13 @@ class ApiProformaController extends Controller
 
                 // ❌ Si no tiene caja abierta NI caja consolidada → RECHAZAR
                 if (!$cajaAbiertaHoy && !$cierreConsolidadoReciente) {
+                    Log::error('❌ [convertirAVenta] RECHAZADA: No hay caja abierta ni consolidada', [
+                        'proforma_id' => $proforma->id,
+                        'usuario_id' => $usuario->id,
+                        'caja_abierta_hoy' => $cajaAbiertaHoy,
+                        'cierre_consolidado_reciente' => $cierreConsolidadoReciente,
+                    ]);
+
                     return response()->json([
                         'success' => false,
                         'message' => 'No puede convertir proforma a venta sin una caja abierta o consolidada del día anterior. Por favor, abra una caja primero.',
@@ -2497,6 +2529,39 @@ class ApiProformaController extends Controller
                 // IMPORTANTE: NO se procesa stock aquí, se hace al consumir reservas
                 $venta = \App\Models\Venta::create($datosVenta);
 
+                // 🔑 CRÍTICO: Obtener caja abierta para establecer en atributo especial
+                // El listener RegisterCajaMovementFromVentaListener requiere _caja_id para registrar en caja
+                $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
+                    ->delDia()
+                    ->abiertas()
+                    ->with('caja')
+                    ->latest()
+                    ->first();
+
+                // Si no hay caja de hoy, buscar la más reciente
+                if (!$cajaAbiertaParaRegistro) {
+                    $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
+                        ->abiertas()
+                        ->with('caja')
+                        ->latest('fecha')
+                        ->first();
+                }
+
+                // ✅ Establecer atributo especial para el listener
+                if ($cajaAbiertaParaRegistro) {
+                    $venta->setAttribute('_caja_id', $cajaAbiertaParaRegistro->caja_id);
+                    Log::info('🔑 [convertirAVenta] Establecido _caja_id para listener', [
+                        'venta_id' => $venta->id,
+                        'caja_id' => $cajaAbiertaParaRegistro->caja_id,
+                        'caja_nombre' => $cajaAbiertaParaRegistro->caja?->nombre,
+                    ]);
+                } else {
+                    Log::warning('⚠️ [convertirAVenta] No hay caja para establecer _caja_id', [
+                        'venta_id' => $venta->id,
+                        'usuario_id' => request()->user()->id,
+                    ]);
+                }
+
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {
                     $venta->detalles()->create([
@@ -2534,6 +2599,16 @@ class ApiProformaController extends Controller
                 // ✅ NUEVO: Registrar movimiento de caja para pagos inmediatos (anticipados) y créditos
                 // Se registra para políticas: ANTICIPADO_100, MEDIO_MEDIO, CREDITO
                 if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'])) {
+                    // 📊 LOG: Llamada a registrarMovimientoCajaParaPago
+                    Log::info('📋 [convertirAVenta] Registrando movimiento en caja', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'proforma_id' => $proforma->id,
+                        'politica_pago' => $politica,
+                        'monto_pagado' => $montoPagado,
+                        'total_venta' => $venta->total,
+                    ]);
+
                     $this->registrarMovimientoCajaParaPago(
                         $venta,
                         $proforma,
@@ -2541,6 +2616,16 @@ class ApiProformaController extends Controller
                         $montoPagado,
                         request()->user()
                     );
+
+                    Log::info('✅ [convertirAVenta] Movimiento en caja registrado exitosamente', [
+                        'venta_id' => $venta->id,
+                        'politica_pago' => $politica,
+                    ]);
+                } else {
+                    Log::info('⏭️ [convertirAVenta] No se registra en caja (política no requiere)', [
+                        'venta_id' => $venta->id,
+                        'politica_pago' => $politica,
+                    ]);
                 }
 
                 // ✅ NUEVO: Registrar pago en tabla pagos SOLO para políticas de pago inmediato
@@ -2576,13 +2661,19 @@ class ApiProformaController extends Controller
                 }
 
                 // ✅ MEJORADO: Log detallado con información de política de pago
-                Log::info('✅ Proforma convertida a venta exitosamente (API)', [
+                Log::info('🎉 [convertirAVenta] FLUJO COMPLETADO EXITOSAMENTE', [
                     'proforma_id' => $proforma->id,
                     'proforma_numero' => $proforma->numero,
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
                     'cliente_id' => $venta->cliente_id,
                     'cliente_nombre' => $venta->cliente->nombre,
+                    'usuario_id' => request()->user()->id,
+                    'usuario_nombre' => request()->user()->name,
+                ]);
+
+                Log::info('💰 [convertirAVenta] Detalles de pago registrados', [
+                    'venta_id' => $venta->id,
                     'total' => (float) $venta->total,
                     'politica_pago' => $politica,
                     'estado_pago' => $estadoPago,
@@ -2590,7 +2681,6 @@ class ApiProformaController extends Controller
                     'monto_pendiente' => (float) ($total - $montoPagado),
                     'requiere_envio' => $venta->requiere_envio,
                     'reservas_consumidas' => $reservasActivas,
-                    'usuario_id' => request()->user()->id,
                 ]);
 
                 return response()->json([
@@ -3135,6 +3225,17 @@ class ApiProformaController extends Controller
         float $montoPagado,
         \App\Models\User $usuario
     ): void {
+        // 📊 LOG: INICIO DEL REGISTRO EN CAJA
+        Log::info('🏪 [registrarMovimientoCajaParaPago] INICIANDO REGISTRO EN CAJA', [
+            'venta_id' => $venta->id,
+            'venta_numero' => $venta->numero,
+            'proforma_id' => $proforma->id,
+            'usuario_id' => $usuario->id,
+            'usuario_nombre' => $usuario->name,
+            'politica' => $politica,
+            'monto_pagado' => $montoPagado,
+        ]);
+
         // ✅ Solo registrar para políticas que requieren registro en caja
         // Incluye: pagos anticipados (100%, 50%) y créditos
         $politicasARegistrar = ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'];
@@ -3154,6 +3255,7 @@ class ApiProformaController extends Controller
                 'proforma_id' => $proforma->id,
                 'monto_pagado' => $montoPagado,
                 'politica' => $politica,
+                'detalle' => 'Para política ' . $politica . ' se requiere monto positivo',
             ]);
             return;
         }
@@ -3161,6 +3263,11 @@ class ApiProformaController extends Controller
         try {
             // ✅ MEJORADO: Buscar caja abierta IGUAL QUE EL MIDDLEWARE
             // 1️⃣ Buscar caja abierta de HOY
+            Log::info('🔍 [registrarMovimientoCajaParaPago] Buscando caja abierta de HOY', [
+                'usuario_id' => $usuario->id,
+                'fecha_busqueda' => today(),
+            ]);
+
             $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
                 ->delDia()
                 ->abiertas()
@@ -3168,8 +3275,21 @@ class ApiProformaController extends Controller
                 ->latest()
                 ->first();
 
+            if ($cajaAbierta) {
+                Log::info('✅ [registrarMovimientoCajaParaPago] Caja de HOY encontrada', [
+                    'apertura_caja_id' => $cajaAbierta->id,
+                    'caja_id' => $cajaAbierta->caja_id,
+                    'caja_nombre' => $cajaAbierta->caja?->nombre,
+                    'fecha_apertura' => $cajaAbierta->fecha,
+                ]);
+            }
+
             // 2️⃣ Si no hay caja de hoy, buscar la más reciente (posiblemente de ayer)
             if (!$cajaAbierta) {
+                Log::info('🔍 [registrarMovimientoCajaParaPago] No hay caja de HOY, buscando más reciente', [
+                    'usuario_id' => $usuario->id,
+                ]);
+
                 $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $usuario->id)
                     ->abiertas()
                     ->with('caja')
@@ -3178,26 +3298,42 @@ class ApiProformaController extends Controller
 
                 // ✅ Registrar advertencia si es caja de día anterior
                 if ($cajaAbierta && $cajaAbierta->fecha < today()) {
-                    Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usando caja de día anterior (sin cerrar)', [
+                    Log::warning('⚠️ [registrarMovimientoCajaParaPago] USANDO CAJA DE DÍA ANTERIOR', [
                         'usuario_id' => $usuario->id,
                         'usuario_nombre' => $usuario->name,
+                        'apertura_caja_id' => $cajaAbierta->id,
                         'apertura_fecha' => $cajaAbierta->fecha,
+                        'dias_atras' => $cajaAbierta->fecha->diffInDays(today()),
                         'caja_id' => $cajaAbierta->caja_id,
                         'caja_nombre' => $cajaAbierta->caja?->nombre,
                         'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'politica' => $politica,
+                        'advertencia' => 'Se está usando una caja abierta de un día anterior',
+                    ]);
+                } elseif ($cajaAbierta) {
+                    Log::info('ℹ️ [registrarMovimientoCajaParaPago] Caja más reciente encontrada (mismo día)', [
+                        'apertura_caja_id' => $cajaAbierta->id,
+                        'caja_id' => $cajaAbierta->caja_id,
+                        'caja_nombre' => $cajaAbierta->caja?->nombre,
+                        'fecha_apertura' => $cajaAbierta->fecha,
                     ]);
                 }
             }
 
             if (!$cajaAbierta) {
-                Log::warning('⚠️ [registrarMovimientoCajaParaPago] Usuario no tiene caja abierta (ni hoy ni días anteriores sin cerrar)', [
+                Log::error('❌ [registrarMovimientoCajaParaPago] ERROR CRÍTICO: No hay caja abierta', [
                     'usuario_id' => $usuario->id,
                     'usuario_nombre' => $usuario->name,
                     'usuario_roles' => $usuario->getRoleNames()->toArray(),
+                    'usuario_empleado' => $usuario->empleado?->id,
                     'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
                     'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
                     'politica' => $politica,
                     'monto' => $montoPagado,
+                    'detalle_error' => 'No hay apertura de caja abierta para este usuario, ni hoy ni en días anteriores sin cerrar',
                 ]);
 
                 // ✅ REGISTRAR EN AUDITORÍA: Intento fallido
@@ -3264,6 +3400,17 @@ class ApiProformaController extends Controller
                 default => 'ANTICIPO'
             };
 
+            // 📝 LOG: Preparando movimiento en caja
+            Log::info('📝 [registrarMovimientoCajaParaPago] Preparando movimiento en caja', [
+                'venta_numero' => $venta->numero,
+                'caja_id' => $cajaAbierta->caja_id,
+                'caja_nombre' => $cajaAbierta->caja?->nombre,
+                'usuario_id' => $usuario->id,
+                'tipo_operacion_id' => $tipoOperacion->id,
+                'monto' => $montoPagado,
+                'descripcion_politica' => $descripcionPolitica,
+            ]);
+
             // ✅ Crear movimiento de caja
             $movimiento = \App\Models\MovimientoCaja::create([
                 'caja_id' => $cajaAbierta->caja_id,
@@ -3273,6 +3420,14 @@ class ApiProformaController extends Controller
                 'monto' => $montoPagado,
                 'fecha' => now(),
                 'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Convertida desde proforma #{$proforma->numero}",
+            ]);
+
+            // 💾 LOG: Movimiento creado
+            Log::info('💾 [registrarMovimientoCajaParaPago] Movimiento creado en BD', [
+                'movimiento_id' => $movimiento->id,
+                'venta_numero' => $venta->numero,
+                'monto' => $movimiento->monto,
+                'caja_id' => $movimiento->caja_id,
             ]);
 
             // ✅ REGISTRAR EN AUDITORÍA: Éxito
@@ -3298,17 +3453,21 @@ class ApiProformaController extends Controller
                 'user_agent' => request()->userAgent(),
             ]);
 
-            Log::info('✅ [registrarMovimientoCajaParaPago] Movimiento de caja registrado exitosamente', [
+            Log::info('✅ [registrarMovimientoCajaParaPago] MOVIMIENTO EN CAJA REGISTRADO EXITOSAMENTE', [
                 'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
                 'proforma_id' => $proforma->id,
+                'proforma_numero' => $proforma->numero,
                 'caja_id' => $cajaAbierta->caja_id,
                 'caja_nombre' => $cajaAbierta->caja?->nombre,
+                'apertura_caja_id' => $cajaAbierta->id,
                 'usuario_id' => $usuario->id,
                 'usuario_nombre' => $usuario->name,
-                'monto' => $montoPagado,
-                'politica' => $politica,
-                'tipo_pago' => $descripcionPolitica,
+                'monto_registrado' => $montoPagado,
+                'politica_pago' => $politica,
+                'descripcion_politica' => $descripcionPolitica,
                 'movimiento_id' => $movimiento->id,
+                'fecha_movimiento' => $movimiento->fecha,
             ]);
 
         } catch (\Exception $e) {

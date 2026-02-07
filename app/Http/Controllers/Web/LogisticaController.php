@@ -145,6 +145,9 @@ class LogisticaController extends Controller
                         'longitud'   => $proforma->direccionSolicitada->longitud,
                         'referencia' => $proforma->direccionSolicitada->referencia,
                     ] : null,
+                    // ✅ NUEVO: Timestamps para mostrar fechas de creación y actualización
+                    'created_at'                      => $proforma->created_at,
+                    'updated_at'                      => $proforma->updated_at,
                 ];
             }),
             'current_page' => $proformasPaginated->currentPage(),

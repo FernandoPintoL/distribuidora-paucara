@@ -126,21 +126,34 @@ class EntregaController extends Controller
             ->get(['id', 'placa', 'marca', 'modelo', 'capacidad_kg', 'chofer_asignado_id']);
 
         // Obtener solo empleados que son choferes activos
+        // ✅ ARREGLADO: Transformar en array con solo id y nombre
+        // ✅ CASO-INSENSITIVE: Busca "Chofer" o "chofer"
         $choferes = Empleado::query()
             ->with('user.roles')
             ->where('estado', 'activo')
             ->get()
-            ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'));
+            ->filter(fn($e) =>
+                $e->user !== null &&
+                $e->user->roles->some(fn($role) => strtolower($role->name) === 'chofer')
+            )
+            ->map(fn($e) => [
+                'id' => $e->user->id,
+                'nombre' => $e->user->name
+            ])
+            ->values()
+            ->toArray();
 
         // ✅ NUEVO: Obtener localidades para filtro (todas, sin filtro de activo)
         $localidades = \App\Models\Localidad::orderBy('nombre')
-            ->get(['id', 'nombre', 'codigo']);
+            ->get(['id', 'nombre', 'codigo'])
+            ->toArray();
 
 
         // ✅ NUEVO: Obtener estados logísticos para filtro (todos, sin filtro de activo)
         $estadosLogisticos = \App\Models\EstadoLogistica::where('categoria', 'entrega')
             ->orderBy('orden')
-            ->get(['id', 'codigo', 'nombre', 'color', 'icono']);
+            ->get(['id', 'codigo', 'nombre', 'color', 'icono'])
+            ->toArray();
 
 
         return Inertia::render('logistica/entregas/index', [

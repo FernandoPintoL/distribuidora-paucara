@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
 import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer, DollarSign, Loader2 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
 import ventasService from '@/infrastructure/services/ventas.service';
@@ -188,6 +188,17 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
         return labelMap[estado] || 'Desconocido';
     };
 
+    const getEstadoPagoBadgeStyles = (estado: string): { bg: string; text: string; label: string } => {
+        // ✅ NUEVO: Estilos para estado de pago
+        const styleMap: { [key: string]: { bg: string; text: string; label: string } } = {
+            'PENDIENTE': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', label: 'Pendiente' },
+            'PAGADO': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-300', label: 'Pagado' },
+            'PARCIALMENTE_PAGADO': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', label: 'Parcialmente Pagado' },
+            'VENCIDO': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', label: 'Vencido' },
+        };
+        return styleMap[estado] || { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', label: estado || 'Desconocido' };
+    };
+
     const handleSort = (field: string) => {
         const currentSortDir = filtros?.sort_by === field && filtros?.sort_dir === 'asc' ? 'desc' : 'asc';
         ventasService.sort(field, currentSortDir);
@@ -297,6 +308,13 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                             <th
                                 scope="col"
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
+                                onClick={() => handleSort('estado_pago')}
+                            >
+                                Estado de Pago {getSortIcon('estado_pago')}
+                            </th>
+                            <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
                                 onClick={() => handleSort('requiere_envio')}
                             >
                                 Tipo {getSortIcon('requiere_envio')}
@@ -338,16 +356,25 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
 
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {/* {typeof venta.total === 'string'
-                                                ? formatCurrency(parseFloat(venta.total), venta.moneda?.codigo)
-                                                : formatCurrency(venta.total, venta.moneda?.codigo)
-                                            } */}
-                                            {venta.total}
+                                            {typeof venta.total === 'string'
+                                                ? formatCurrencyWith2Decimals(parseFloat(venta.total), venta.moneda?.codigo)
+                                                : formatCurrencyWith2Decimals(venta.total, venta.moneda?.codigo)
+                                            }
                                         </div>
                                         {venta.moneda && (
                                             <div className="text-sm text-gray-500 dark:text-gray-400">
                                                 {venta.moneda.codigo}
                                             </div>
+                                        )}
+                                    </td>
+
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {venta.estado_pago ? (
+                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoPagoBadgeStyles(venta.estado_pago).bg} ${getEstadoPagoBadgeStyles(venta.estado_pago).text}`}>
+                                                {getEstadoPagoBadgeStyles(venta.estado_pago).label}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
                                         )}
                                     </td>
 

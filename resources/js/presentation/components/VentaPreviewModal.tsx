@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { X, ShoppingCart, User, FileText, CreditCard } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
 import type {
     Cliente,
     Moneda,
@@ -225,13 +225,13 @@ export default function VentaPreviewModal({
                                                                 {detalle.cantidad}
                                                             </td>
                                                             <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
-                                                                {formatCurrency(detalle.precio_unitario)}
+                                                                {formatCurrencyWith2Decimals(detalle.precio_unitario)}
                                                             </td>
                                                             <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
-                                                                {formatCurrency(detalle.descuento)}
+                                                                {formatCurrencyWith2Decimals(detalle.descuento)}
                                                             </td>
                                                             <td className="px-3 py-2 text-sm text-right font-medium text-gray-900 dark:text-white">
-                                                                {formatCurrency(detalle.subtotal)}
+                                                                {formatCurrencyWith2Decimals(detalle.subtotal)}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -250,14 +250,14 @@ export default function VentaPreviewModal({
                                             <div className="flex justify-between">
                                                 <span className="text-sm text-gray-600 dark:text-gray-300">Subtotal:</span>
                                                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {formatCurrency(data.subtotal)}
+                                                    {formatCurrencyWith2Decimals(data.subtotal)}
                                                 </span>
                                             </div>
                                             {data.descuento > 0 && (
                                                 <div className="flex justify-between">
                                                     <span className="text-sm text-gray-600 dark:text-gray-300">Descuento General:</span>
                                                     <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                                                        -{formatCurrency(data.descuento)}
+                                                        -{formatCurrencyWith2Decimals(data.descuento)}
                                                     </span>
                                                 </div>
                                             )}
@@ -266,7 +266,7 @@ export default function VentaPreviewModal({
                                                 <div className="flex justify-between">
                                                     <span className="text-sm text-gray-600 dark:text-gray-300">Impuestos:</span>
                                                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {formatCurrency(data.impuesto)}
+                                                        {formatCurrencyWith2Decimals(data.impuesto)}
                                                     </span>
                                                 </div>
                                             )}
@@ -274,7 +274,7 @@ export default function VentaPreviewModal({
                                                 <div className="flex justify-between">
                                                     <span className="text-lg font-semibold text-gray-900 dark:text-white">TOTAL:</span>
                                                     <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                                        {formatCurrency(data.total)}
+                                                        {formatCurrencyWith2Decimals(data.total)}
                                                     </span>
                                                 </div>
                                             </div>

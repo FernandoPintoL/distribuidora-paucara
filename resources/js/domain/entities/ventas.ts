@@ -121,6 +121,8 @@ export interface Venta extends BaseEntity {
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
     estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
     estado_logistico_id?: Id;  // ✅ NUEVO: FK al estado logístico
+    estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIALMENTE_PAGADO' | 'VENCIDO';  // ✅ NUEVO: Estado de pago
+    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO';  // ✅ NUEVO: Política de pago
 
     // Relaciones
     cliente?: Cliente;
@@ -178,6 +180,8 @@ export interface VentaFormData extends BaseFormData {
     requiere_envio?: boolean;
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
     estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
+    estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIALMENTE_PAGADO' | 'VENCIDO';  // ✅ NUEVO: Estado de pago
+    politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO';  // ✅ NUEVO: Política de pago
     detalles: DetalleVentaFormData[];
 }
 
@@ -191,6 +195,8 @@ export interface FiltrosVentas {
     estado_documento_id?: Id | null;
     moneda_id?: Id | null;
     usuario_id?: Id | null;
+    estado_pago?: string | null;  // ✅ NUEVO: Filtro por estado de pago
+    estado_logistico?: string | null;  // ✅ NUEVO: Filtro por estado logístico
     fecha_desde?: string;
     fecha_hasta?: string;
     monto_min?: number;

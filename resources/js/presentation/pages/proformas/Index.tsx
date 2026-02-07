@@ -31,6 +31,7 @@ interface Props {
 }
 
 export default function ProformasIndex({ proformas }: Props) {
+    console.log('Proformas recibidas:', proformas);
     // Fase 3: Usar hook de estados centralizados para obtener datos dinámicamente
     const { estados: estadosAPI, isLoading: estadosLoading } = useEstadosProformas()
 
@@ -138,13 +139,15 @@ export default function ProformasIndex({ proformas }: Props) {
                                     <TableHead>Total</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead>Usuario</TableHead>
+                                    <TableHead>📅 Creada</TableHead>
+                                    <TableHead>✏️ Actualizada</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredProformas.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={9} className="text-center text-muted-foreground">
                                             {search ? 'No se encontraron proformas que coincidan con la búsqueda' : 'No hay proformas registradas'}
                                         </TableCell>
                                     </TableRow>
@@ -175,6 +178,18 @@ export default function ProformasIndex({ proformas }: Props) {
                                             </TableCell>
                                             <TableCell>
                                                 {proforma.usuarioCreador?.name || 'Sin asignar'}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                <div className="whitespace-nowrap">
+                                                    <div>{new Date(proforma.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    <div className="text-xs">{new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                <div className="whitespace-nowrap">
+                                                    <div>{new Date(proforma.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    <div className="text-xs">{new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-1">

@@ -170,6 +170,7 @@ class VentaController extends Controller
                     'canal_origen'               => $venta->canal_origen,
                     'politica_pago'              => $venta->politica_pago, // ✅ NUEVO
                     'tipo_pago_id'               => $venta->tipo_pago_id,  // ✅ NUEVO
+                    'estado_pago'                => $venta->estado_pago,   // ✅ NUEVO: Estado de pago
                     'estado'                     => $venta->estado,
                     'estado_logistico'           => $venta->estado_logistico,
                     'estado_logistico_id'        => $venta->estado_logistico_id,
