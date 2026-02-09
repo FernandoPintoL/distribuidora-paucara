@@ -76,7 +76,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
     // Rutas para crédito de clientes
     Route::get('clientes/{cliente}/credito', function (\App\Models\Cliente $cliente) {
-        return \Inertia\Inertia::render('clientes/credito', ['clienteId' => $cliente->id]);
+        return \Inertia\Inertia::render('clientes/credito', [
+            'clienteId' => $cliente->id,
+            'tipos_pago' => \App\Models\TipoPago::select('id', 'nombre', 'codigo')->where('codigo', '!=', 'CREDITO')->get(),
+        ]);
     })->name('clientes.credito');
 
     // ✅ FASE 3: Ruta para página principal de créditos del usuario actual

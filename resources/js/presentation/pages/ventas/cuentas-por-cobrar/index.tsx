@@ -72,6 +72,12 @@ interface FiltrosCuentasPorCobrar {
     solo_vencidas?: boolean;
 }
 
+interface TipoPago {
+    id: number;
+    nombre: string;
+    codigo: string;
+}
+
 interface CuentasPorCobrarIndexResponse {
     cuentas_por_cobrar: {
         data: CuentaPorCobrar[];
@@ -91,6 +97,7 @@ interface CuentasPorCobrarIndexResponse {
     datosParaFiltros: {
         clientes: Cliente[];
     };
+    tipos_pago: TipoPago[];
 }
 
 interface Props extends InertiaPageProps {
@@ -760,6 +767,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                     onPagoRegistrado={handlePagoRegistrado}
                     cuentaIdPreseleccionada={cuentaSeleccionadaPago?.id}
                     tipo="ventas"
+                    tipos_pago={cuentasPorCobrar?.tipos_pago || []}
                 />
 
                 {/* Modal de confirmación para anular pago */}

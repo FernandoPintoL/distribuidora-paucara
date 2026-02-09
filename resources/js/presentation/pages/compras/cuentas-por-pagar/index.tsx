@@ -683,6 +683,7 @@ const CuentasPorPagarIndex: React.FC<Props> = ({ cuentasPorPagar }) => {
                     cuentaIdPreseleccionada={cuentaSeleccionadaPago?.id}
                     tipo="compras"
                     verificarCaja={false}
+                    tipos_pago={cuentasPorPagar?.datosParaFiltros?.tipos_pago || []}
                 />
 
                 {/* Modal de confirmación para anular pago */}

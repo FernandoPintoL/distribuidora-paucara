@@ -72,7 +72,7 @@ class CuentaPorPagarController extends Controller
                 'estadisticas'      => $estadisticas,
                 'datosParaFiltros'  => [
                     'proveedores' => Proveedor::select('id', 'nombre')->get(),
-                    'tipos_pago'  => [], // Agregar tipos de pago si es necesario
+                    'tipos_pago'  => TipoPago::select('id', 'nombre', 'codigo')->where('codigo', '!=', 'CREDITO')->get(),
                 ],
             ],
         ]);

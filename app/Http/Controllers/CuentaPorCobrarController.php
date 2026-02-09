@@ -84,6 +84,7 @@ class CuentaPorCobrarController extends Controller
                 'datosParaFiltros'   => [
                     'clientes' => Cliente::select('id', 'nombre', 'codigo_cliente')->get(),
                 ],
+                'tipos_pago'         => TipoPago::select('id', 'nombre', 'codigo')->where('codigo', '!=', 'CREDITO')->get(),
             ],
         ]);
     }

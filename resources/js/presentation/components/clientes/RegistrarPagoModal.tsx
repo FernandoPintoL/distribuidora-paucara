@@ -21,6 +21,12 @@ interface CuentaPendiente {
     estado: string;
 }
 
+interface TipoPago {
+    id: number;
+    nombre: string;
+    codigo: string;
+}
+
 interface RegistrarPagoModalProps {
     show: boolean;
     onHide: () => void;
@@ -30,6 +36,7 @@ interface RegistrarPagoModalProps {
     cuentaIdPreseleccionada?: number;
     tipo?: 'compras' | 'ventas';
     verificarCaja?: boolean;
+    tipos_pago?: TipoPago[];
 }
 
 export default function RegistrarPagoModal({
@@ -41,6 +48,7 @@ export default function RegistrarPagoModal({
     cuentaIdPreseleccionada,
     tipo = 'compras',
     verificarCaja = true,
+    tipos_pago = [],
 }: RegistrarPagoModalProps) {
 
     console.log('✅ RegistrarPagoModal abierto:', {
@@ -456,10 +464,19 @@ export default function RegistrarPagoModal({
                                 className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-950 text-gray-900 dark:text-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">-- Seleccionar --</option>
-                                <option value="1">Efectivo</option>
-                                <option value="2">Transferencia</option>
-                                <option value="3">Cheque</option>
-                                <option value="4">Tarjeta</option>
+                                {Array.isArray(tipos_pago) && tipos_pago.length > 0 ? (
+                                    tipos_pago.map((tipo) => (
+                                        <option key={tipo.id} value={String(tipo.id)}>
+                                            {tipo.nombre}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <>
+                                        <option value="1">Efectivo</option>
+                                        <option value="2">Transferencia / QR</option>
+                                        <option value="4">Cheque</option>
+                                    </>
+                                )}
                             </select>
                         </div>
 

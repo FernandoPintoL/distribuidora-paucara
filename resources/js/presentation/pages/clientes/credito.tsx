@@ -49,7 +49,7 @@ interface CreditoDetallesData {
 }
 
 export default function CreditoPage() {
-    const { clienteId } = usePage<{ clienteId: number }>().props;
+    const { clienteId, tipos_pago = [] } = usePage<{ clienteId: number; tipos_pago?: Array<{ id: number; nombre: string; codigo: string }> }>().props;
     const [credito, setCredito] = useState<CreditoDetallesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -843,6 +843,7 @@ export default function CreditoPage() {
                             setSelectedCuentaId(undefined);
                             cargarDetallesCredito();
                         }}
+                        tipos_pago={tipos_pago}
                     />
                 );
             })()}
