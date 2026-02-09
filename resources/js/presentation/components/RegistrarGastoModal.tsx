@@ -13,6 +13,11 @@ const CATEGORIAS_GASTO = {
     'LIMPIEZA': 'Limpieza',
     'MANTENIMIENTO': 'Mantenimiento',
     'SERVICIOS': 'Servicios',
+    'ALIMENTACION_DESAYUNO': '🍳 Desayuno',
+    'ALIMENTACION_ALMUERZO': '🍽️ Almuerzo',
+    'ALIMENTACION_CENA': '🥘 Cena',
+    'ALIMENTACION_REFRIGERIO': '☕ Refrigerio',
+    'ALIMENTACION_OTROS': '🍴 Otros Alimentos',
     'VARIOS': 'Varios',
 };
 
@@ -71,6 +76,18 @@ export default function RegistrarMovimientoModal({
                 total_tipos_ajuste: tiposOperacionClasificados.AJUSTE?.length || 0,
                 total_pagos: tiposPago.length,
             });
+
+            // ✅ NUEVO: Seleccionar "Efectivo" por defecto si está disponible
+            if (tiposPago && tiposPago.length > 0) {
+                const efectivo = tiposPago.find(tipo =>
+                    tipo.codigo?.toUpperCase() === 'EFECTIVO' ||
+                    tipo.nombre?.toUpperCase() === 'EFECTIVO'
+                );
+                if (efectivo) {
+                    console.log('✅ [RegistrarMovimientoModal] Tipo de pago "Efectivo" seleccionado por defecto:', efectivo);
+                    setData('tipo_pago_id', efectivo.id.toString());
+                }
+            }
         }
     }, [show, tiposOperacion, tiposOperacionClasificados, tiposPago]);
 

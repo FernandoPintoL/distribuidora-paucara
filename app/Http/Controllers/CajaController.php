@@ -1532,7 +1532,7 @@ class CajaController extends Controller
             'tipo_pago_id'      => 'nullable|exists:tipos_pago,id',
             'monto'             => 'required|numeric|min:0.01',
             'numero_documento'  => 'nullable|string|max:50',
-            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS,SUELDO,BONO,COMISIÓN,LIQUIDACIÓN,ADELANTO,PRÉSTAMO,OTROS',
+            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,ALIMENTACION_DESAYUNO,ALIMENTACION_ALMUERZO,ALIMENTACION_CENA,ALIMENTACION_REFRIGERIO,ALIMENTACION_OTROS,VARIOS,SUELDO,BONO,COMISIÓN,LIQUIDACIÓN,ADELANTO,PRÉSTAMO,OTROS',
             'observaciones'     => 'nullable|string|max:500',
             'comprobante'       => 'nullable|file|mimes:jpeg,png,webp,pdf|max:10240', // 10MB
         ]);
