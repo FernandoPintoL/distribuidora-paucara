@@ -38,6 +38,19 @@ interface ProformasSectionProps {
     setFiltroUsuarioAprobador: (value: string) => void;
     usuariosAprobadores: Array<{ id: number; name: string }>;
     estadosLogistica: Array<{ id: number; nombre: string; codigo: string }>;
+    // ✅ Filtros de fechas y horas
+    filtroFechaVencimientoDesde: string;
+    setFiltroFechaVencimientoDesde: (value: string) => void;
+    filtroFechaVencimientoHasta: string;
+    setFiltroFechaVencimientoHasta: (value: string) => void;
+    filtroFechaEntregaSolicitadaDesde: string;
+    setFiltroFechaEntregaSolicitadaDesde: (value: string) => void;
+    filtroFechaEntregaSolicitadaHasta: string;
+    setFiltroFechaEntregaSolicitadaHasta: (value: string) => void;
+    filtroHoraEntregaSolicitadaDesde: string;
+    setFiltroHoraEntregaSolicitadaDesde: (value: string) => void;
+    filtroHoraEntregaSolicitadaHasta: string;
+    setFiltroHoraEntregaSolicitadaHasta: (value: string) => void;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
     onRechazarProforma?: (proforma: ProformaAppExterna) => void;
@@ -70,6 +83,19 @@ export function ProformasSection({
     setFiltroUsuarioAprobador,
     usuariosAprobadores,
     estadosLogistica,
+    // ✅ Filtros de fechas y horas
+    filtroFechaVencimientoDesde,
+    setFiltroFechaVencimientoDesde,
+    filtroFechaVencimientoHasta,
+    setFiltroFechaVencimientoHasta,
+    filtroFechaEntregaSolicitadaDesde,
+    setFiltroFechaEntregaSolicitadaDesde,
+    filtroFechaEntregaSolicitadaHasta,
+    setFiltroFechaEntregaSolicitadaHasta,
+    filtroHoraEntregaSolicitadaDesde,
+    setFiltroHoraEntregaSolicitadaDesde,
+    filtroHoraEntregaSolicitadaHasta,
+    setFiltroHoraEntregaSolicitadaHasta,
     cambiarPagina,
     onVerProforma,
     onRechazarProforma,
@@ -108,6 +134,10 @@ export function ProformasSection({
         if (soloVencidas) count++;
         if (dateFrom || dateTo) count++;
         if (amountFrom || amountTo) count++;
+        // ✅ Filtros de fechas y horas
+        if (filtroFechaVencimientoDesde || filtroFechaVencimientoHasta) count++;
+        if (filtroFechaEntregaSolicitadaDesde || filtroFechaEntregaSolicitadaHasta) count++;
+        if (filtroHoraEntregaSolicitadaDesde || filtroHoraEntregaSolicitadaHasta) count++;
         return count;
     };
 
@@ -391,6 +421,21 @@ export function ProformasSection({
                             ))}
                         </div>
                     </div>
+
+                    {/* ✅ NUEVO: Botón para filtrar solo vencidas */}
+                    <div>
+                        <Button
+                            onClick={() => setSoloVencidas(!soloVencidas)}
+                            className={`w-full transition-all ${
+                                soloVencidas
+                                    ? 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800'
+                                    : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                            }`}
+                        >
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            {soloVencidas ? '✓ Mostrando solo Vencidas' : '⚠️ Mostrar Solo Vencidas'}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* SECCIÓN 2: Filtros Activos (Chips) */}
@@ -505,6 +550,49 @@ export function ProformasSection({
                                     </button>
                                 </Badge>
                             )}
+                            {/* ✅ Badges de filtros de fechas y horas */}
+                            {(filtroFechaVencimientoDesde || filtroFechaVencimientoHasta) && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    📅 Vencimiento: {filtroFechaVencimientoDesde}-{filtroFechaVencimientoHasta}
+                                    <button
+                                        onClick={() => {
+                                            setFiltroFechaVencimientoDesde('');
+                                            setFiltroFechaVencimientoHasta('');
+                                        }}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {(filtroFechaEntregaSolicitadaDesde || filtroFechaEntregaSolicitadaHasta) && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    📦 Entrega: {filtroFechaEntregaSolicitadaDesde}-{filtroFechaEntregaSolicitadaHasta}
+                                    <button
+                                        onClick={() => {
+                                            setFiltroFechaEntregaSolicitadaDesde('');
+                                            setFiltroFechaEntregaSolicitadaHasta('');
+                                        }}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
+                            {(filtroHoraEntregaSolicitadaDesde || filtroHoraEntregaSolicitadaHasta) && (
+                                <Badge variant="secondary" className="dark:bg-slate-700 dark:text-gray-300 pr-1 pl-3 flex items-center gap-2">
+                                    🕐 Hora: {filtroHoraEntregaSolicitadaDesde}-{filtroHoraEntregaSolicitadaHasta}
+                                    <button
+                                        onClick={() => {
+                                            setFiltroHoraEntregaSolicitadaDesde('');
+                                            setFiltroHoraEntregaSolicitadaHasta('');
+                                        }}
+                                        className="hover:bg-slate-600 rounded-full p-0.5"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </Badge>
+                            )}
                             <Button
                                 size="sm"
                                 variant="outline"
@@ -520,6 +608,13 @@ export function ProformasSection({
                                     setDateTo('');
                                     setAmountFrom('');
                                     setAmountTo('');
+                                    // ✅ Limpiar nuevos filtros de fechas y horas
+                                    setFiltroFechaVencimientoDesde('');
+                                    setFiltroFechaVencimientoHasta('');
+                                    setFiltroFechaEntregaSolicitadaDesde('');
+                                    setFiltroFechaEntregaSolicitadaHasta('');
+                                    setFiltroHoraEntregaSolicitadaDesde('');
+                                    setFiltroHoraEntregaSolicitadaHasta('');
                                 }}
                                 className="dark:border-slate-600 dark:text-slate-300 text-red-600 dark:text-red-400"
                             >
@@ -692,6 +787,87 @@ export function ProformasSection({
                             </div>
                         </div>
 
+                        {/* Separador */}
+                        <div className="border-t dark:border-slate-700 pt-4" />
+
+                        {/* ✅ Rango de Fecha de Vencimiento */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block dark:text-gray-300">📅 Fecha de Vencimiento</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Desde</label>
+                                    <Input
+                                        type="date"
+                                        value={filtroFechaVencimientoDesde}
+                                        onChange={(e) => setFiltroFechaVencimientoDesde(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Hasta</label>
+                                    <Input
+                                        type="date"
+                                        value={filtroFechaVencimientoHasta}
+                                        onChange={(e) => setFiltroFechaVencimientoHasta(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ✅ Rango de Fecha Entrega Solicitada */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block dark:text-gray-300">📦 Fecha Entrega Solicitada</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Desde</label>
+                                    <Input
+                                        type="date"
+                                        value={filtroFechaEntregaSolicitadaDesde}
+                                        onChange={(e) => setFiltroFechaEntregaSolicitadaDesde(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Hasta</label>
+                                    <Input
+                                        type="date"
+                                        value={filtroFechaEntregaSolicitadaHasta}
+                                        onChange={(e) => setFiltroFechaEntregaSolicitadaHasta(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ✅ Rango de Hora Entrega Solicitada */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block dark:text-gray-300">🕐 Hora Entrega Solicitada</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Desde</label>
+                                    <Input
+                                        type="time"
+                                        value={filtroHoraEntregaSolicitadaDesde}
+                                        onChange={(e) => setFiltroHoraEntregaSolicitadaDesde(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium mb-2 block dark:text-gray-400">Hasta</label>
+                                    <Input
+                                        type="time"
+                                        value={filtroHoraEntregaSolicitadaHasta}
+                                        onChange={(e) => setFiltroHoraEntregaSolicitadaHasta(e.target.value)}
+                                        className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Separador */}
+                        <div className="border-t dark:border-slate-700 pt-4" />
+
                         {/* Solo Vencidas */}
                         <div className="flex items-center gap-2 pt-2">
                             <Checkbox
@@ -728,10 +904,7 @@ export function ProformasSection({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Cliente</th>
-                                {/* ✅ NUEVO: Columna Usuario Creador */}
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Usuario Creador</th>
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Estado</th>
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Cliente / Creador </th>
                                 <th
                                     className="px-4 py-2 text-left font-medium dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
                                     onClick={() => handleSort('monto')}
@@ -743,6 +916,10 @@ export function ProformasSection({
                                         )}
                                     </div>
                                 </th>
+                                {/* ✅ NUEVO: Columna Fecha Vencimiento */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Vencimiento</th>
+                                {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">🚚 Entrega Solicitada</th>
                                 {/* <th
                                     className="px-4 py-2 text-left font-medium dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
                                     onClick={() => handleSort('fecha')}
@@ -762,25 +939,47 @@ export function ProformasSection({
                         <tbody>
                             {sortedProformas.map((proforma) => (
                                 <tr key={proforma.id} className="border-t dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-2 font-mono text-xs dark:text-gray-300">{proforma.numero}</td>
-                                    <td className="px-4 py-2 dark:text-gray-300">{proforma.cliente_nombre}</td>
-                                    {/* ✅ NUEVO: Celda Usuario Creador con Rol */}
+                                    <td className="px-4 py-2 font-mono text-xs dark:text-gray-300">
+                                        <p>Folio: {proforma.id} | {proforma.numero}</p>
+                                        <p><div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
+                                            {getEstadoIcon(proforma.estado)}
+                                            {proforma.estado}
+                                        </div></p>                                        
+                                    </td>
                                     <td className="px-4 py-2 dark:text-gray-300">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="font-medium text-sm">{proforma.usuario_creador_nombre}</span>
-                                            <Badge variant="outline" className="w-fit text-xs">
+                                       <p>Cliente: <strong>{proforma.cliente_nombre}</strong></p> 
+                                       <div className="flex flex-col gap-1 text-green-600 dark:text-green-400">
+                                            <span className="font-medium text-sm text-green">Creador: <strong>{proforma.usuario_creador_nombre}</strong></span>
+                                            <Badge variant="outline" className="w-fit text-xs bg-transparent dark:bg-slate-700 dark:text-gray-300">
                                                 {proforma.usuario_creador_rol || 'Sin rol'}
                                             </Badge>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2">
-                                        <div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
-                                            {getEstadoIcon(proforma.estado)}
-                                            {proforma.estado}
-                                        </div>
-                                    </td>
                                     <td className="px-4 py-2 text-right dark:text-gray-300">
                                         Bs {proforma.total.toLocaleString('es-BO', { maximumFractionDigits: 2 })}
+                                    </td>
+                                    {/* ✅ NUEVO: Columna Fecha Vencimiento */}
+                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            {proforma.fecha_vencimiento ? (
+                                                <>
+                                                    <div>{new Date(proforma.fecha_vencimiento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    {estaVencida(proforma) && <div className="text-red-600 dark:text-red-400 text-xs font-semibold">VENCIDA</div>}
+                                                </>
+                                            ) : (
+                                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
+                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            {proforma.fecha_entrega_solicitada ? (
+                                                <div>{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                            ) : (
+                                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                                            )}
+                                        </div>
                                     </td>
                                     {/* <td className="px-4 py-2 text-xs dark:text-gray-300">
                                         {formatDate(proforma.fecha)}

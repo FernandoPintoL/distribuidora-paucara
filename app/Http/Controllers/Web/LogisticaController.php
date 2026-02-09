@@ -46,10 +46,12 @@ class LogisticaController extends Controller
         if (request()->has('search') && request('search') !== '') {
             $search = strtolower(request('search'));
             $query->where(function ($q) use ($search) {
-                // Búsqueda en ID (número exacto)
-                $q->where('id', $search)
+                // Búsqueda en ID (solo si es numérico)
+                if (is_numeric($search)) {
+                    $q->where('id', (int)$search);
+                }
                 // Búsqueda en número de proforma
-                    ->orWhereRaw('LOWER(numero) like ?', ["%{$search}%"])
+                $q->orWhereRaw('LOWER(numero) like ?', ["%{$search}%"])
                 // Búsqueda en cliente (nombre, CI, teléfono, código_cliente)
                     ->orWhereHas('cliente', function ($clienteQuery) use ($search) {
                         $clienteQuery->where(function ($innerQuery) use ($search) {
@@ -98,6 +100,33 @@ class LogisticaController extends Controller
         // ✅ Filtro por usuario aprobador
         if (request()->has('usuario_aprobador_id') && request('usuario_aprobador_id') !== '' && request('usuario_aprobador_id') !== '0') {
             $query->where('usuario_aprobador_id', request('usuario_aprobador_id'));
+        }
+
+        // ✅ Filtro por fecha de vencimiento (desde/hasta)
+        if (request()->has('fecha_vencimiento_desde') && request('fecha_vencimiento_desde') !== '') {
+            $query->where('fecha_vencimiento', '>=', request('fecha_vencimiento_desde'));
+        }
+
+        if (request()->has('fecha_vencimiento_hasta') && request('fecha_vencimiento_hasta') !== '') {
+            $query->where('fecha_vencimiento', '<=', request('fecha_vencimiento_hasta') . ' 23:59:59');
+        }
+
+        // ✅ Filtro por fecha de entrega solicitada (desde/hasta)
+        if (request()->has('fecha_entrega_solicitada_desde') && request('fecha_entrega_solicitada_desde') !== '') {
+            $query->where('fecha_entrega_solicitada', '>=', request('fecha_entrega_solicitada_desde'));
+        }
+
+        if (request()->has('fecha_entrega_solicitada_hasta') && request('fecha_entrega_solicitada_hasta') !== '') {
+            $query->where('fecha_entrega_solicitada', '<=', request('fecha_entrega_solicitada_hasta') . ' 23:59:59');
+        }
+
+        // ✅ Filtro por hora de entrega solicitada (desde/hasta)
+        if (request()->has('hora_entrega_solicitada_desde') && request('hora_entrega_solicitada_desde') !== '') {
+            $query->where('hora_entrega_solicitada', '>=', request('hora_entrega_solicitada_desde'));
+        }
+
+        if (request()->has('hora_entrega_solicitada_hasta') && request('hora_entrega_solicitada_hasta') !== '') {
+            $query->where('hora_entrega_solicitada', '<=', request('hora_entrega_solicitada_hasta'));
         }
 
         if (request()->has('solo_vencidas') && request('solo_vencidas') === 'true') {

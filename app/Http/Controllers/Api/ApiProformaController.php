@@ -726,6 +726,18 @@ class ApiProformaController extends Controller
             $query->where('numero', 'like', '%' . $request->numero . '%');
         }
 
+        // ✅ Búsqueda por cliente (nombre, teléfono, NIT) - case insensitive
+        if ($request->filled('cliente')) {
+            $searchCliente = strtolower($request->cliente);
+            $query->whereHas('cliente', function ($clienteQuery) use ($searchCliente) {
+                $clienteQuery->where(function ($q) use ($searchCliente) {
+                    $q->whereRaw('LOWER(nombre) like ?', ["%{$searchCliente}%"])
+                      ->orWhereRaw('LOWER(nit) like ?', ["%{$searchCliente}%"])
+                      ->orWhereRaw('LOWER(telefono) like ?', ["%{$searchCliente}%"]);
+                });
+            });
+        }
+
         // ========================================
         // RELACIONES Y ORDENAMIENTO
         // ========================================
@@ -764,6 +776,9 @@ class ApiProformaController extends Controller
                             'codigo' => $proforma->numero,
                             'fecha' => $proforma->fecha?->format('Y-m-d'),
                             'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                            // ✅ NUEVO: Agregar fecha entrega solicitada
+                            'fecha_entrega_solicitada' => $proforma->fecha_entrega_solicitada?->format('Y-m-d'),
+                            'hora_entrega_solicitada' => $proforma->hora_entrega_solicitada,
                             // ✅ MODIFICADO: Devolver objeto estado completo en lugar de solo código
                             'estado' => $proforma->estadoLogistica ? [
                                 'id' => $proforma->estadoLogistica->id,
@@ -775,6 +790,13 @@ class ApiProformaController extends Controller
                             ] : null,
                             'total' => (float) $proforma->total,
                             'moneda' => 'BOB',
+                            // ✅ NUEVO: Información del cliente
+                            'cliente' => [
+                                'id' => $proforma->cliente->id,
+                                'nombre' => $proforma->cliente->nombre,
+                                'telefono' => $proforma->cliente->telefono,
+                                'nit' => $proforma->cliente->nit,
+                            ],
                             'cantidad_items' => $proforma->detalles->count(),
                             'total_productos' => (float) $proforma->detalles->sum('cantidad'),
                             'tiene_reserva_activa' => $proforma->reservasActivas()->count() > 0,
@@ -1088,23 +1110,33 @@ class ApiProformaController extends Controller
                 ], 400);
             }
 
-            // 1️⃣ Valida que la dirección confirmada pertenece al cliente
-            $direccionConfirmadaId = $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id;
-            $direccionExiste = $proforma->cliente->direcciones()->where('id', $direccionConfirmadaId)->exists();
+            // 1️⃣ ✅ MEJORADO: Valida que la dirección confirmada pertenece al cliente (si se proporciona)
+            // Se acepta NULL si no hay dirección confirmada
+            $direccionConfirmadaId = $request->direccion_entrega_confirmada_id;
 
-            if (!$direccionExiste) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La dirección de entrega confirmada no pertenece a este cliente',
-                ], 422);
+            if ($direccionConfirmadaId) {
+                // Validar que la dirección pertenece al cliente actual
+                $direccionExiste = $proforma->cliente->direcciones()
+                    ->where('id', $direccionConfirmadaId)
+                    ->exists();
+
+                if (!$direccionExiste) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La dirección de entrega confirmada no pertenece a este cliente',
+                    ], 422);
+                }
             }
+
+            // Si se proporciona dirección confirmada, usarla; si no, usar la solicitada (puede ser NULL)
+            $direccionFinal = $direccionConfirmadaId ?? $proforma->direccion_entrega_solicitada_id;
 
             // Actualizar proforma con confirmación del vendedor y datos de contacto
             $proforma->update([
                 'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_solicitada,
                 'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_solicitada,
                 'hora_entrega_confirmada_fin' => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_solicitada_fin,
-                'direccion_entrega_confirmada_id' => $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id,
+                'direccion_entrega_confirmada_id' => $direccionFinal,
                 'coordinacion_completada' => true,
                 'comentario_coordinacion' => $request->comentario_coordinacion,
                 // Datos de intentos de contacto (se envían desde la pantalla principal)

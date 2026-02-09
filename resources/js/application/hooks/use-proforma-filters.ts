@@ -11,6 +11,12 @@ interface ProformaFilterState {
     filtroEstadoLogistica: string;
     filtroCoordinacionCompletada: string;
     filtroUsuarioAprobador: string;
+    filtroFechaVencimientoDesde: string;
+    filtroFechaVencimientoHasta: string;
+    filtroFechaEntregaSolicitadaDesde: string;
+    filtroFechaEntregaSolicitadaHasta: string;
+    filtroHoraEntregaSolicitadaDesde: string;
+    filtroHoraEntregaSolicitadaHasta: string;
     paginationInfo: {
         current_page: number;
         last_page: number;
@@ -36,6 +42,12 @@ export function useProformaFilters(initialPaginationInfo: any) {
     const [filtroEstadoLogistica, setFiltroEstadoLogistica] = useState(urlParams.get('estado_logistica_id') || '');
     const [filtroCoordinacionCompletada, setFiltroCoordinacionCompletada] = useState(urlParams.get('coordinacion_completada') || '');
     const [filtroUsuarioAprobador, setFiltroUsuarioAprobador] = useState(urlParams.get('usuario_aprobador_id') || '');
+    const [filtroFechaVencimientoDesde, setFiltroFechaVencimientoDesde] = useState(urlParams.get('fecha_vencimiento_desde') || '');
+    const [filtroFechaVencimientoHasta, setFiltroFechaVencimientoHasta] = useState(urlParams.get('fecha_vencimiento_hasta') || '');
+    const [filtroFechaEntregaSolicitadaDesde, setFiltroFechaEntregaSolicitadaDesde] = useState(urlParams.get('fecha_entrega_solicitada_desde') || '');
+    const [filtroFechaEntregaSolicitadaHasta, setFiltroFechaEntregaSolicitadaHasta] = useState(urlParams.get('fecha_entrega_solicitada_hasta') || '');
+    const [filtroHoraEntregaSolicitadaDesde, setFiltroHoraEntregaSolicitadaDesde] = useState(urlParams.get('hora_entrega_solicitada_desde') || '');
+    const [filtroHoraEntregaSolicitadaHasta, setFiltroHoraEntregaSolicitadaHasta] = useState(urlParams.get('hora_entrega_solicitada_hasta') || '');
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
     const [paginationInfo, setPaginationInfo] = useState(initialPaginationInfo);
 
@@ -85,6 +97,33 @@ export function useProformaFilters(initialPaginationInfo: any) {
             params.usuario_aprobador_id = filtroUsuarioAprobador;
         }
 
+        // ✅ Agregar filtros de fecha de vencimiento
+        if (filtroFechaVencimientoDesde && filtroFechaVencimientoDesde !== '') {
+            params.fecha_vencimiento_desde = filtroFechaVencimientoDesde;
+        }
+
+        if (filtroFechaVencimientoHasta && filtroFechaVencimientoHasta !== '') {
+            params.fecha_vencimiento_hasta = filtroFechaVencimientoHasta;
+        }
+
+        // ✅ Agregar filtros de fecha de entrega solicitada
+        if (filtroFechaEntregaSolicitadaDesde && filtroFechaEntregaSolicitadaDesde !== '') {
+            params.fecha_entrega_solicitada_desde = filtroFechaEntregaSolicitadaDesde;
+        }
+
+        if (filtroFechaEntregaSolicitadaHasta && filtroFechaEntregaSolicitadaHasta !== '') {
+            params.fecha_entrega_solicitada_hasta = filtroFechaEntregaSolicitadaHasta;
+        }
+
+        // ✅ Agregar filtros de hora de entrega solicitada
+        if (filtroHoraEntregaSolicitadaDesde && filtroHoraEntregaSolicitadaDesde !== '') {
+            params.hora_entrega_solicitada_desde = filtroHoraEntregaSolicitadaDesde;
+        }
+
+        if (filtroHoraEntregaSolicitadaHasta && filtroHoraEntregaSolicitadaHasta !== '') {
+            params.hora_entrega_solicitada_hasta = filtroHoraEntregaSolicitadaHasta;
+        }
+
         // Actualizar paginación inmediatamente (CRITICAL FIX: evitar race condition)
         setPaginationInfo((prev: any) => ({
             ...prev,
@@ -95,7 +134,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
 
         // Use FilterService for navigation (proper service layer abstraction)
         FilterService.navigateProformaFilters(params);
-    }, [filtroEstadoProforma, searchProforma, soloVencidas, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador]);
+    }, [filtroEstadoProforma, searchProforma, soloVencidas, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador, filtroFechaVencimientoDesde, filtroFechaVencimientoHasta, filtroFechaEntregaSolicitadaDesde, filtroFechaEntregaSolicitadaHasta, filtroHoraEntregaSolicitadaDesde, filtroHoraEntregaSolicitadaHasta]);
 
     // Aplicar filtros con debounce
     useEffect(() => {
@@ -112,7 +151,7 @@ export function useProformaFilters(initialPaginationInfo: any) {
         return () => {
             if (timeout) clearTimeout(timeout);
         };
-    }, [filtroEstadoProforma, soloVencidas, searchProforma, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador, aplicarFiltros]);
+    }, [filtroEstadoProforma, soloVencidas, searchProforma, filtroLocalidad, filtroTipoEntrega, filtroPoliticaPago, filtroEstadoLogistica, filtroCoordinacionCompletada, filtroUsuarioAprobador, filtroFechaVencimientoDesde, filtroFechaVencimientoHasta, filtroFechaEntregaSolicitadaDesde, filtroFechaEntregaSolicitadaHasta, filtroHoraEntregaSolicitadaDesde, filtroHoraEntregaSolicitadaHasta, aplicarFiltros]);
 
     // Cambiar página
     const cambiarPagina = (page: number) => {
@@ -138,6 +177,18 @@ export function useProformaFilters(initialPaginationInfo: any) {
         setFiltroCoordinacionCompletada,
         filtroUsuarioAprobador,
         setFiltroUsuarioAprobador,
+        filtroFechaVencimientoDesde,
+        setFiltroFechaVencimientoDesde,
+        filtroFechaVencimientoHasta,
+        setFiltroFechaVencimientoHasta,
+        filtroFechaEntregaSolicitadaDesde,
+        setFiltroFechaEntregaSolicitadaDesde,
+        filtroFechaEntregaSolicitadaHasta,
+        setFiltroFechaEntregaSolicitadaHasta,
+        filtroHoraEntregaSolicitadaDesde,
+        setFiltroHoraEntregaSolicitadaDesde,
+        filtroHoraEntregaSolicitadaHasta,
+        setFiltroHoraEntregaSolicitadaHasta,
         paginationInfo,
         setPaginationInfo,
         cambiarPagina,

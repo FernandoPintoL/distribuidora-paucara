@@ -190,6 +190,19 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
                     setFiltroUsuarioAprobador={proformaFilters.setFiltroUsuarioAprobador}
                     usuariosAprobadores={usuariosAprobadores}
                     estadosLogistica={estadosLogistica}
+                    // ✅ Filtros de fechas y horas
+                    filtroFechaVencimientoDesde={proformaFilters.filtroFechaVencimientoDesde}
+                    setFiltroFechaVencimientoDesde={proformaFilters.setFiltroFechaVencimientoDesde}
+                    filtroFechaVencimientoHasta={proformaFilters.filtroFechaVencimientoHasta}
+                    setFiltroFechaVencimientoHasta={proformaFilters.setFiltroFechaVencimientoHasta}
+                    filtroFechaEntregaSolicitadaDesde={proformaFilters.filtroFechaEntregaSolicitadaDesde}
+                    setFiltroFechaEntregaSolicitadaDesde={proformaFilters.setFiltroFechaEntregaSolicitadaDesde}
+                    filtroFechaEntregaSolicitadaHasta={proformaFilters.filtroFechaEntregaSolicitadaHasta}
+                    setFiltroFechaEntregaSolicitadaHasta={proformaFilters.setFiltroFechaEntregaSolicitadaHasta}
+                    filtroHoraEntregaSolicitadaDesde={proformaFilters.filtroHoraEntregaSolicitadaDesde}
+                    setFiltroHoraEntregaSolicitadaDesde={proformaFilters.setFiltroHoraEntregaSolicitadaDesde}
+                    filtroHoraEntregaSolicitadaHasta={proformaFilters.filtroHoraEntregaSolicitadaHasta}
+                    setFiltroHoraEntregaSolicitadaHasta={proformaFilters.setFiltroHoraEntregaSolicitadaHasta}
                     cambiarPagina={proformaFilters.cambiarPagina}
                     onVerProforma={handleVerProforma}
                     onRechazarProforma={handleRechazarProforma}
