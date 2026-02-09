@@ -429,7 +429,7 @@ class ImpresionService
     {
         // Cargar relaciones necesarias
         $venta->load([
-            'cliente',
+            'cliente.localidad',  // ✅ NUEVO: Cargar localidad del cliente
             'detalles.producto.stock.almacen',
             'usuario',
             'tipoPago',
@@ -438,6 +438,7 @@ class ImpresionService
             'estadoDocumento',
             'movimientoCaja.caja',
             'proforma.usuarioCreador',
+            'direccionCliente',   // ✅ NUEVO: Cargar dirección registrada en la venta
             'accessToken',
         ]);
 

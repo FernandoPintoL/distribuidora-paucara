@@ -215,6 +215,7 @@ class EntregaController extends Controller
         // Una venta puede estar en múltiples entregas consolidadas (pivot),
         // pero solo si no tiene una entrega principal asignada
         // ✅ NUEVO: Paginar para evitar carga inicial lenta
+        // ✅ NUEVO: Solo ventas APROBADAS (estado_documento_id = 3)
         $perPage = 25; // Mostrar 25 ventas por página
         $ventasQuery = \App\Models\Venta::query()
             ->with([
@@ -226,6 +227,7 @@ class EntregaController extends Controller
             ])
             ->whereNull('entrega_id')       // ✅ Phase 3: No tiene entrega principal asignada
             ->where('requiere_envio', true) // ✅ Solo ventas que requieren envío
+            ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS (ID 3)
             ->whereNotNull('cliente_id')    // Debe tener cliente
             ->whereHas('detalles')          // Debe tener detalles de productos
             ->latest();
@@ -315,13 +317,16 @@ class EntregaController extends Controller
             ]);
 
         // 4. Obtener choferes activos (solo empleados con rol Chofer)
+        // ✅ IMPORTANTE: Devolver user_id (no empleado.id) porque CrearEntregaPorLocalidadService::validarChofer()
+        //    espera recibir el ID del User, no del Empleado
         $choferes = Empleado::query()
             ->with('user.roles')
             ->where('estado', 'activo')
             ->get()
             ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'))
             ->map(fn($e) => [
-                'id'             => $e->id,
+                'id'             => $e->user_id,  // ✅ CAMBIO: user_id en lugar de empleado.id
+                'empleado_id'    => $e->id,       // ✅ NUEVO: Incluir empleado.id como referencia
                 'name'           => $e->user->name ?? $e->nombre,
                 'nombre'         => $e->user->name ?? $e->nombre,
                 'email'          => $e->user->email ?? $e->email,
@@ -378,6 +383,7 @@ class EntregaController extends Controller
             ])
             ->whereNull('entrega_id')
             ->where('requiere_envio', true)
+            ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS
             ->whereNotNull('cliente_id')
             ->whereHas('detalles');
 

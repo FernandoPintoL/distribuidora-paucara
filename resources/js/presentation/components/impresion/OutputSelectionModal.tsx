@@ -107,6 +107,18 @@ export function OutputSelectionModal({
     const formatosDisponibles = FORMATO_CONFIG[tipoDocumento];
     const formatoDefault = formatosDisponibles[0].formato;
 
+    // ✅ DEBUG: Log cuando se abre el modal
+    useEffect(() => {
+        if (isOpen) {
+            console.log('🖨️ [OutputSelectionModal] Modal abierto:', {
+                documentoId: documentoId,
+                tipoDocumento: tipoDocumento,
+                printType: printType,
+                documentoInfo: documentoInfo,
+            });
+        }
+    }, [isOpen, documentoId, tipoDocumento]);
+
     // Cargar impresoras disponibles cuando se selecciona imprimir
     useEffect(() => {
         if (accion === 'imprimir' && cargarImpresoras) {
@@ -215,6 +227,12 @@ export function OutputSelectionModal({
 
         try {
             const url = construirURL(formato, 'stream', 'imprimir');
+            console.log('🖨️ [OutputSelectionModal] Construyendo URL de impresión:', {
+                documentoId: documentoId,
+                tipoDocumento: tipoDocumento,
+                formato: formato,
+                urlGenerada: url,
+            });
             window.open(url, '_blank');
             NotificationService.success('Documento enviado a impresión');
             handleClose();

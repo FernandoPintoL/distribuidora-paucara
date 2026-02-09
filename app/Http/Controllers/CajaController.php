@@ -131,8 +131,14 @@ class CajaController extends Controller
                 ];
             });
 
-        // Obtener tipos de operación disponibles
-        $tiposOperacion = TipoOperacionCaja::all(['id', 'codigo', 'nombre']);
+        // ✅ Obtener tipos de operación clasificados (ENTRADA/SALIDA/AJUSTE)
+        $tiposOperacionClasificados = TipoOperacionCaja::obtenerTiposClasificados();
+
+        // Para compatibilidad: mantener array plano de todos los tipos
+        $tiposOperacion = collect($tiposOperacionClasificados)
+            ->flatten()
+            ->values()
+            ->all();
 
         // ✅ NUEVO: Obtener tipos de pago disponibles
         $tiposPago = \App\Models\TipoPago::all(['id', 'codigo', 'nombre']);
@@ -229,6 +235,7 @@ class CajaController extends Controller
             'totalMovimientos'   => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
             'historicoAperturas' => $historicoAperturas,
             'tiposOperacion'     => $tiposOperacion,
+            'tiposOperacionClasificados' => $tiposOperacionClasificados, // ✅ NUEVO: Tipos clasificados por ENTRADA/SALIDA/AJUSTE
             'tiposPago'          => $tiposPago, // ✅ NUEVO: Tipos de pago
             'esVistaAdmin'       => ($aperturaCaja !== null || $userId !== null),
             'usuarioDestino'     => $usuarioDestino,
@@ -518,6 +525,9 @@ class CajaController extends Controller
 
                     // Otros totales
                     'sumatoria_gastos'            => (float) ($datos['sumatorialGastos'] ?? 0),
+                    'sumatoria_pagos_sueldo'      => (float) ($datos['sumatorialPagosSueldo'] ?? 0),
+                    'sumatoria_anticipos'         => (float) ($datos['sumatorialAnticipos'] ?? 0),
+                    'sumatoria_anulaciones'       => (float) ($datos['sumatorialAnulaciones'] ?? 0),
                     'monto_pagos_creditos'        => (float) ($datos['montoPagosCreditos'] ?? 0),
 
                     // Agrupaciones (para desglose)
@@ -1406,7 +1416,7 @@ class CajaController extends Controller
             'tipo_pago_id'      => 'nullable|exists:tipos_pago,id',
             'monto'             => 'required|numeric|min:0.01',
             'numero_documento'  => 'nullable|string|max:50',
-            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS',
+            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS,SUELDO,BONO,COMISIÓN,LIQUIDACIÓN,ADELANTO,PRÉSTAMO,OTROS',
             'observaciones'     => 'nullable|string|max:500',
             'comprobante'       => 'nullable|file|mimes:jpeg,png,webp,pdf|max:10240', // 10MB
         ]);
@@ -1430,17 +1440,17 @@ class CajaController extends Controller
 
             $tipoOperacion = TipoOperacionCaja::findOrFail($request->tipo_operacion_id);
 
-            // Determinar el signo del monto según el tipo de operación
+            // ✅ Determinar el signo del monto según el tipo de operación
             $monto = $request->monto;
-            if (in_array($tipoOperacion->codigo, ['GASTOS', 'COMPRA'])) {
+            if (in_array($tipoOperacion->codigo, ['GASTOS', 'COMPRA', 'PAGO_SUELDO', 'ANTICIPO', 'ANULACION'])) {
                 $monto = -abs($monto); // Egresos son negativos
             } else {
                 $monto = abs($monto); // Ingresos son positivos
             }
 
-            // Construir observaciones con categoría si es GASTO
+            // ✅ Construir observaciones con categoría según tipo de operación
             $observaciones = $request->observaciones ?? '';
-            if ($tipoOperacion->codigo === 'GASTOS' && $request->categoria) {
+            if (in_array($tipoOperacion->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']) && $request->categoria) {
                 $observaciones = "[{$request->categoria}] {$observaciones}";
             }
 
@@ -1497,7 +1507,10 @@ class CajaController extends Controller
                 'con_comprobante' => $request->hasFile('comprobante'),
             ]);
 
-            return back()->with('success', "Movimiento de {$tipoOperacion->nombre} registrado correctamente");
+            // ✅ NUEVO: Retornar con el ID del movimiento en la URL para capturarlo en el frontend
+            return back()
+                ->with('success', "Movimiento de {$tipoOperacion->nombre} registrado correctamente")
+                ->with('movimiento_id', $movimiento->id); // ✅ Pasar ID del movimiento
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1505,6 +1518,119 @@ class CajaController extends Controller
             return back()->withErrors([
                 'error' => 'Error al registrar movimiento: ' . $e->getMessage(),
             ])->withInput();
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Registrar movimiento (versión JSON para impresión inmediata)
+     * POST /cajas/movimientos-json
+     */
+    public function registrarMovimientoJson(Request $request)
+    {
+        $request->validate([
+            'tipo_operacion_id' => 'required|exists:tipo_operacion_caja,id',
+            'tipo_pago_id'      => 'nullable|exists:tipos_pago,id',
+            'monto'             => 'required|numeric|min:0.01',
+            'numero_documento'  => 'nullable|string|max:50',
+            'categoria'         => 'nullable|in:TRANSPORTE,LIMPIEZA,MANTENIMIENTO,SERVICIOS,VARIOS,SUELDO,BONO,COMISIÓN,LIQUIDACIÓN,ADELANTO,PRÉSTAMO,OTROS',
+            'observaciones'     => 'nullable|string|max:500',
+            'comprobante'       => 'nullable|file|mimes:jpeg,png,webp,pdf|max:10240', // 10MB
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+
+            // Verificar que hay caja abierta
+            $cajaAbierta = AperturaCaja::where('user_id', $user->id)
+                ->whereDoesntHave('cierre')
+                ->latest('fecha')
+                ->first();
+
+            if (! $cajaAbierta) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe tener una caja abierta para registrar movimientos',
+                ], 400);
+            }
+
+            $tipoOperacion = TipoOperacionCaja::findOrFail($request->tipo_operacion_id);
+
+            // ✅ Determinar el signo del monto según el tipo de operación
+            $monto = $request->monto;
+            if (in_array($tipoOperacion->codigo, ['GASTOS', 'COMPRA', 'PAGO_SUELDO', 'ANTICIPO', 'ANULACION'])) {
+                $monto = -abs($monto); // Egresos son negativos
+            } else {
+                $monto = abs($monto); // Ingresos son positivos
+            }
+
+            // ✅ Construir observaciones con categoría según tipo de operación
+            $observaciones = $request->observaciones ?? '';
+            if (in_array($tipoOperacion->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']) && $request->categoria) {
+                $observaciones = "[{$request->categoria}] {$observaciones}";
+            }
+
+            // Crear movimiento
+            $movimiento = MovimientoCaja::create([
+                'caja_id'           => $cajaAbierta->caja_id,
+                'tipo_operacion_id' => $request->tipo_operacion_id,
+                'tipo_pago_id'      => $request->tipo_pago_id,
+                'numero_documento'  => $request->numero_documento,
+                'descripcion'       => $tipoOperacion->nombre,
+                'monto'             => $monto,
+                'fecha'             => now(),
+                'user_id'           => $user->id,
+                'observaciones'     => $observaciones,
+            ]);
+
+            // Guardar comprobante si se proporcionó
+            if ($request->hasFile('comprobante')) {
+                $archivo = $request->file('comprobante');
+                $hash    = hash_file('sha256', $archivo->getRealPath());
+                $directorio    = 'comprobantes/' . now()->format('Y/m/d');
+                $nombreArchivo = $hash . '.' . $archivo->getClientOriginalExtension();
+                $ruta = Storage::disk('public')->putFileAs($directorio, $archivo, $nombreArchivo);
+
+                ComprobanteMovimiento::create([
+                    'movimiento_caja_id' => $movimiento->id,
+                    'user_id'            => $user->id,
+                    'ruta_archivo'       => $ruta,
+                    'nombre_original'    => $archivo->getClientOriginalName(),
+                    'tipo_archivo'       => $archivo->getClientMimeType(),
+                    'tamaño'             => $archivo->getSize(),
+                    'hash'               => $hash,
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info("✅ Movimiento registrado (JSON)", [
+                'movimiento_id'   => $movimiento->id,
+                'tipo'            => $tipoOperacion->codigo,
+                'monto'           => $monto,
+                'usuario'         => $user->name,
+            ]);
+
+            // ✅ NUEVO: Retornar JSON con el ID del movimiento para impresión inmediata
+            return response()->json([
+                'success'       => true,
+                'message'       => "Movimiento de {$tipoOperacion->nombre} registrado correctamente",
+                'movimiento_id' => $movimiento->id,
+                'tipo_operacion' => [
+                    'id'     => $tipoOperacion->id,
+                    'nombre' => $tipoOperacion->nombre,
+                    'codigo' => $tipoOperacion->codigo,
+                ],
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("❌ Error registrando movimiento (JSON): " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar movimiento: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -1703,6 +1829,60 @@ class CajaController extends Controller
         }
 
         return $pdf->download('movimiento-caja-' . $movimiento->id . '.pdf');
+    }
+
+    /**
+     * Eliminar un movimiento de caja
+     * ✅ NUEVO: Solo permite eliminar GASTOS, PAGO_SUELDO, ANTICIPO
+     */
+    public function eliminarMovimiento(MovimientoCaja $movimiento)
+    {
+        $this->authorize('cajas.transacciones');
+
+        try {
+            // ✅ VALIDACIÓN: Solo permitir eliminar ciertos tipos
+            $tiposEliminables = ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO'];
+            $tipoCodigo = $movimiento->tipoOperacion->codigo;
+
+            if (!in_array($tipoCodigo, $tiposEliminables)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "No se puede eliminar movimientos de tipo {$movimiento->tipoOperacion->nombre}. Solo se pueden eliminar GASTOS, PAGOS DE SUELDO o ANTICIPOS.",
+                ], 403);
+            }
+
+            // ✅ Registrar información del movimiento antes de eliminar (para auditoría)
+            $movimientoData = [
+                'id' => $movimiento->id,
+                'tipo' => $movimiento->tipoOperacion->nombre,
+                'monto' => $movimiento->monto,
+                'descripcion' => $movimiento->observaciones,
+                'usuario_id' => $movimiento->user_id,
+                'fecha' => $movimiento->fecha,
+            ];
+
+            Log::info('🗑️ [CajaController::eliminarMovimiento] Eliminando movimiento', $movimientoData);
+
+            // ✅ Eliminar el movimiento
+            $movimiento->delete();
+
+            Log::info('✅ [CajaController::eliminarMovimiento] Movimiento eliminado exitosamente', $movimientoData);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Movimiento de {$movimiento->tipoOperacion->nombre} eliminado exitosamente.",
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [CajaController::eliminarMovimiento] Error al eliminar movimiento', [
+                'movimiento_id' => $movimiento->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el movimiento: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -27,7 +27,9 @@ interface Cierre {
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
     totalMovimientos: number;
-    efectivoEsperado?: { apertura: number; ventas_efectivo: number; pagos_credito: number; gastos: number; total: number };  // ✅ Efectivo real esperado
+    efectivoEsperado?: { apertura: number; ventas_efectivo: number; pagos_credito: number; gastos: number; pagos_sueldo?: number; anticipos?: number; anulaciones?: number; total_egresos?: number; total: number };  // ✅ Efectivo real esperado
+    datosActualizados?: any; // ✅ NUEVO: Datos frescos del servidor
+    cargandoDatos?: boolean; // ✅ NUEVO: Indicador de carga
     onAbrirClick: () => void;
     onCerrarClick: () => void;
     onGastoClick?: () => void;
@@ -43,6 +45,8 @@ export function CajaEstadoCard({
     cajaAbiertaHoy,
     totalMovimientos,
     efectivoEsperado,
+    datosActualizados,
+    cargandoDatos = false,
     onAbrirClick,
     onCerrarClick,
     onGastoClick,
@@ -72,6 +76,10 @@ export function CajaEstadoCard({
     };
 
     const isDiaAnterior = esDiaAnterior();
+
+    // ✅ MEJORADO: Usar datos frescos del servidor si están disponibles
+    const efectivoActual = datosActualizados?.efectivo_esperado || efectivoEsperado;
+
     if (!cajaAbiertaHoy) {
         return (
             <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
@@ -177,13 +185,13 @@ export function CajaEstadoCard({
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Entradas (Efectivo Real)
                             </label>
-                            {efectivoEsperado ? (
+                            {efectivoActual ? (
                                 <>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Ventas: {formatCurrency(efectivoEsperado.ventas_efectivo)} + Pagos: {formatCurrency(efectivoEsperado.pagos_credito)}
+                                        Ventas: {formatCurrency(efectivoActual.ventas_efectivo)} + Pagos: {formatCurrency(efectivoActual.pagos_credito)}
                                     </p>
                                     <p className="text-lg font-semibold text-green-600 dark:text-green-400 mt-1">
-                                        +{formatCurrency(efectivoEsperado.ventas_efectivo + efectivoEsperado.pagos_credito)}
+                                        +{formatCurrency(efectivoActual.ventas_efectivo + efectivoActual.pagos_credito)}
                                     </p>
                                 </>
                             ) : (
@@ -194,16 +202,21 @@ export function CajaEstadoCard({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Salidas (Gastos)
-                            </label>
-                            {efectivoEsperado ? (
-                                <p className="text-lg font-semibold text-red-600 dark:text-red-400">
-                                    -{formatCurrency(efectivoEsperado.gastos)}
+                            <div className="flex items-center justify-between">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Salidas (Egresos)
+                                </label>
+                                {cargandoDatos && (
+                                    <span className="text-xs text-blue-600 dark:text-blue-400">Actualizando...</span>
+                                )}
+                            </div>
+                            {efectivoActual ? (
+                                <p className="text-lg font-semibold text-red-600 dark:text-red-400 mt-1">
+                                    -{formatCurrency(efectivoActual.total_egresos || efectivoActual.gastos || 0)}
                                 </p>
                             ) : (
                                 <p className="text-lg font-semibold text-gray-500 dark:text-gray-400">
-                                    Sin gastos
+                                    Sin egresos
                                 </p>
                             )}
                         </div>
@@ -213,7 +226,7 @@ export function CajaEstadoCard({
                                 💰 Total Esperado
                             </label>
                             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                                {efectivoEsperado ? formatCurrency(efectivoEsperado.total) : formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos)}
+                                {efectivoActual ? formatCurrency(efectivoActual.total) : formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos)}
                             </p>
                         </div>
                     </div>

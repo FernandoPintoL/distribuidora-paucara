@@ -123,6 +123,21 @@ class CierreCajaService
                 ->where('tipoOperacion.codigo', 'GASTOS')
                 ->sum('monto'));
 
+        // ✅ NUEVO: SUMATORIA DE PAGOS DE SUELDO
+        $sumatorialPagosSueldo = abs($movimientos
+                ->where('tipoOperacion.codigo', 'PAGO_SUELDO')
+                ->sum('monto'));
+
+        // ✅ NUEVO: SUMATORIA DE ANTICIPOS
+        $sumatorialAnticipos = abs($movimientos
+                ->where('tipoOperacion.codigo', 'ANTICIPO')
+                ->sum('monto'));
+
+        // ✅ NUEVO: SUMATORIA DE ANULACIONES
+        $sumatorialAnulaciones = abs($movimientos
+                ->where('tipoOperacion.codigo', 'ANULACION')
+                ->sum('monto'));
+
         // 1️⃣7️⃣ SUMATORIA DE VENTAS ANULADAS
         $sumatorialVentasAnuladas = $this->calcularVentasAnuladas($aperturaCaja);
 
@@ -156,6 +171,9 @@ class CierreCajaService
             'sumatorialVentasEfectivo'  => $sumatorialVentasEfectivo,
             'sumatorialVentasCredito'   => $sumatorialVentasCredito,
             'sumatorialGastos'          => $sumatorialGastos,
+            'sumatorialPagosSueldo'     => $sumatorialPagosSueldo, // ✅ NUEVO
+            'sumatorialAnticipos'       => $sumatorialAnticipos, // ✅ NUEVO
+            'sumatorialAnulaciones'     => $sumatorialAnulaciones, // ✅ NUEVO
             'sumatorialVentasAnuladas'  => $sumatorialVentasAnuladas,
             'ventasTotales'             => $sumatorialVentasEfectivo + $sumatorialVentasCredito,
         ];
@@ -381,9 +399,24 @@ class CierreCajaService
             ->where('tipoPago.nombre', 'Efectivo')
             ->sum('monto');
 
+        // ✅ Calcular TODOS los egresos (gastos, pagos de sueldo, anticipos, anulaciones)
         $gastos = abs($movimientos
                 ->where('tipoOperacion.codigo', 'GASTOS')
                 ->sum('monto'));
+
+        $pagosSueldo = abs($movimientos
+                ->where('tipoOperacion.codigo', 'PAGO_SUELDO')
+                ->sum('monto'));
+
+        $anticipos = abs($movimientos
+                ->where('tipoOperacion.codigo', 'ANTICIPO')
+                ->sum('monto'));
+
+        $anulaciones = abs($movimientos
+                ->where('tipoOperacion.codigo', 'ANULACION')
+                ->sum('monto'));
+
+        $totalEgresos = $gastos + $pagosSueldo + $anticipos + $anulaciones;
 
         return [
             'apertura'          => $montoApertura,
@@ -392,7 +425,11 @@ class CierreCajaService
             'pagos_credito'     => $pagosCreditoEfectivo,
             'pagos_credito_all' => $pagosCreditoAll,
             'gastos'            => $gastos,
-            'total'             => $montoApertura + $ventasEfectivo + $pagosCreditoEfectivo - $gastos,
+            'pagos_sueldo'      => $pagosSueldo,
+            'anticipos'         => $anticipos,
+            'anulaciones'       => $anulaciones,
+            'total_egresos'     => $totalEgresos,
+            'total'             => $montoApertura + $ventasEfectivo + $pagosCreditoEfectivo - $totalEgresos,
         ];
     }
 

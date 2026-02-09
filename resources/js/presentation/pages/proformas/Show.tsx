@@ -791,6 +791,99 @@ export default function ProformasShow({ item: proforma }: Props) {
     }
 
     // Flujo combinado: Aprobar + Convertir con Pago
+    /**
+     * ✅ NUEVO: Función independiente para actualizar detalles de proforma
+     *
+     * Puede ser llamada:
+     * 1. Desde un botón en la UI para guardar cambios sin aprobar
+     * 2. Desde handleAprobarYConvertirConPago() como PASO 0 del flujo de aprobación
+     *
+     * @returns Promise<boolean> - true si se actualizó exitosamente, false si no hay cambios o error
+     */
+    const actualizarDetallesProforma = async (mostrarNotificaciones: boolean = true): Promise<boolean> => {
+        console.log('%c✏️ Intentando actualizar detalles de proforma', 'color: blue;');
+
+        // Validar que la proforma está en estado PENDIENTE
+        if (proforma.estado !== 'PENDIENTE') {
+            if (mostrarNotificaciones) {
+                toast.error('Solo se pueden actualizar detalles de proformas pendientes');
+            }
+            console.log('%c⏭️ Actualización omitida: Proforma no está en estado "pendiente"', 'color: orange;', {
+                estado: proforma.estado,
+            });
+            return false;
+        }
+
+        // Detectar si hay cambios entre los detalles editables y los originales
+        const hayChangios = (
+            editableDetalles.length !== proforma.detalles.length ||
+            editableDetalles.some((d, i) => {
+                const original = proforma.detalles[i];
+                return !original ||
+                    d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad) ||
+                    d.precio_unitario !== original.precio_unitario;
+            })
+        );
+
+        if (!hayChangios) {
+            if (mostrarNotificaciones) {
+                console.log('%c⏭️ No hay cambios en los detalles', 'color: orange;');
+            }
+            return false;
+        }
+
+        try {
+            console.log('%c📤 Enviando detalles actualizados al servidor...', 'color: blue;');
+
+            // Preparar detalles para enviar
+            const detallesParaGuardar = editableDetalles.map(d => ({
+                producto_id: d.producto_id,
+                cantidad: d.cantidad,
+                precio_unitario: d.precio_unitario,
+                subtotal: d.subtotal,
+            }));
+
+            // Realizar petición POST
+            const response = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
+                method: 'POST',
+                redirect: 'manual',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ detalles: detallesParaGuardar }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = `Error al actualizar detalles: ${errorData.message || 'Error desconocido'}`;
+                if (mostrarNotificaciones) {
+                    toast.error(errorMsg);
+                }
+                console.error('%c❌ Error en actualización de detalles', 'color: red;', errorData);
+                throw new Error(errorMsg);
+            }
+
+            const actualizarData = await response.json();
+            console.log('%c✅ Detalles actualizados exitosamente', 'color: green;', actualizarData);
+
+            if (mostrarNotificaciones) {
+                toast.success('✅ Detalles actualizados correctamente');
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('%c❌ Error actualizando detalles:', 'color: red;', error);
+            if (mostrarNotificaciones) {
+                toast.error(error instanceof Error ? error.message : 'Error al actualizar detalles');
+            }
+            throw error;
+        }
+    };
+
     const handleAprobarYConvertirConPago = async () => {
         console.log('%c📋 Iniciando flujo combinado: Aprobar + Convertir', 'color: blue; font-weight: bold;');
 
@@ -805,70 +898,32 @@ export default function ProformasShow({ item: proforma }: Props) {
         }
 
         try {
-            // PASO 0: Detectar cambios en detalles y actualizar si es necesario
-            // ✅ NUEVO: Solo actualizar si la proforma está en estado "pendiente"
-            console.log('%c🔍 PASO 0: Validando estado de proforma...', 'color: blue;', {
-                estado: proforma.estado,
-                esEditable: proforma.estado === 'PENDIENTE',
-            });
+            // PASO 0: Intentar actualizar detalles usando función independiente
+            // ✅ REFACTORIZADO: Usa actualizarDetallesProforma() que es reutilizable
+            console.log('%c🔍 PASO 0: Detectando cambios en detalles...', 'color: blue;');
 
-            const hayChangios = proforma.estado === 'PENDIENTE' && (
-                editableDetalles.length !== proforma.detalles.length ||
-                editableDetalles.some((d, i) => {
-                    const original = proforma.detalles[i];
-                    return !original ||
-                        d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad) ||
-                        d.precio_unitario !== original.precio_unitario;
-                })
-            );
+            try {
+                // Intentar actualizar (mostrarNotificaciones=false para no duplicar mensajes)
+                const seActualizaron = await actualizarDetallesProforma(false);
 
-            if (hayChangios) {
-                console.log('%c⏳ PASO 0: Actualizando detalles de proforma...', 'color: blue;');
+                if (seActualizaron) {
+                    console.log('%c✅ PASO 0 completado: Detalles actualizados', 'color: green;');
+                    toast.success('✅ Detalles actualizados correctamente');
 
-                const detallesParaGuardar = editableDetalles.map(d => ({
-                    producto_id: d.producto_id,
-                    cantidad: d.cantidad,
-                    precio_unitario: d.precio_unitario,
-                    subtotal: d.subtotal,
-                }));
-
-                const actualizarResponse = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
-                    method: 'POST',
-                    redirect: 'manual', // ✅ NO seguir redirects automáticamente
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
-                    },
-                    body: JSON.stringify({ detalles: detallesParaGuardar }),
-                });
-
-                if (!actualizarResponse.ok) {
-                    const errorData = await actualizarResponse.json();
-                    const errorMsg = `Error al actualizar detalles: ${errorData.message || 'Error desconocido'}`;
-                    toast.error(errorMsg);
-                    throw new Error(errorMsg);
-                }
-
-                const actualizarData = await actualizarResponse.json();
-                console.log('%c✅ PASO 0 completado: Detalles actualizados', 'color: green;', actualizarData);
-                toast.success('✅ Detalles actualizados correctamente');
-
-                // Actualizar estado del flujo
-                if (approvalFlow) {
-                    approvalFlow.setLoading(true, 'approving');
-                }
-            } else {
-                // ✅ NUEVO: Log claro cuando no hay cambios o proforma no está en pendiente
-                if (proforma.estado !== 'PENDIENTE') {
-                    console.log('%c⏭️ PASO 0 omitido: Proforma no está en estado "pendiente"', 'color: orange;', {
-                        estado: proforma.estado,
-                        razon: 'Solo se actualizan detalles si la proforma está pendiente'
-                    });
+                    // Actualizar estado del flujo
+                    if (approvalFlow) {
+                        approvalFlow.setLoading(true, 'approving');
+                    }
                 } else {
-                    console.log('%c⏭️ PASO 0 omitido: No hay cambios en detalles', 'color: orange;');
+                    // Sin cambios o proforma no está pendiente
+                    console.log('%c⏭️ PASO 0 omitido: Sin cambios en detalles o proforma no está pendiente', 'color: orange;');
                 }
+            } catch (error) {
+                // Si hay error en actualización, propagar
+                const errorMsg = error instanceof Error ? error.message : 'Error al actualizar detalles';
+                console.error('%c❌ Error en PASO 0:', 'color: red;', errorMsg);
+                toast.error(errorMsg);
+                throw error;
             }
 
             // PASO 1: Aprobar proforma con coordinación
@@ -1000,37 +1055,6 @@ export default function ProformasShow({ item: proforma }: Props) {
             console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
             toast.success('✅ Proforma convertida a venta exitosamente');
 
-            // ✅ PASO 3: Actualizar stocks (nuevo endpoint simplificado)
-            console.log('%c⏳ PASO 3: Actualizando stocks...', 'color: blue;');
-
-            const procesarResponse = await fetch(`/proformas/${proforma.id}/procesar-venta`, {
-                method: 'POST',
-                redirect: 'manual', // ✅ NO seguir redirects automáticamente
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
-                },
-            });
-
-            // ✅ Detectar redirects
-            if (procesarResponse.redirected || (procesarResponse.status >= 300 && procesarResponse.status < 400)) {
-                console.warn('⚠️ Servidor está redirigiendo en procesar-venta:', {
-                    redirectedTo: procesarResponse.url,
-                    status: procesarResponse.status,
-                });
-                toast('⚠️ Proforma convertida, pero hubo un aviso al actualizar stocks');
-            } else if (!procesarResponse.ok) {
-                const errorData = await procesarResponse.json();
-                console.warn('⚠️ PASO 3 completado con aviso:', errorData);
-                toast('⚠️ Proforma convertida, pero hubo un aviso al actualizar stocks');
-            } else {
-                const procesarData = await procesarResponse.json();
-                console.log('%c✅ PASO 3 completado: Stocks actualizados', 'color: green;', procesarData);
-                toast.success('✅ Stocks actualizados correctamente');
-            }
-
             // Actualizar estado del flujo con éxito
             if (approvalFlow) {
                 approvalFlow.setVentaCreada(convertirData.data?.venta || {});
@@ -1042,7 +1066,7 @@ export default function ProformasShow({ item: proforma }: Props) {
             setShowAprobarDialog(false);
 
             // Mostrar notificación de éxito
-            const successMessage = `Proforma aprobada, convertida a venta y stocks actualizados exitosamente`;
+            const successMessage = `Proforma aprobada, convertida a venta y reservas consumidas exitosamente`;
             console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
 
             // ✅ NUEVO: Obtener la venta creada para imprimir
@@ -1391,6 +1415,18 @@ export default function ProformasShow({ item: proforma }: Props) {
                     </div>
                     <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
 
+                        {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
+                        {proforma.estado === 'PENDIENTE' && (
+                            <Button
+                                variant="outline"
+                                onClick={() => actualizarDetallesProforma(true)}
+                                className="border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                title="Guardar los cambios realizados en los detalles sin aprobar la proforma"
+                            >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Guardar Cambios
+                            </Button>
+                        )}
 
                         {puedeAprobar && (
                             <Button

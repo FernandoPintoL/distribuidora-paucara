@@ -7,7 +7,7 @@
 <div class="separador"></div>
 
 {{-- ==================== INFO DEL DOCUMENTO ==================== --}}
-<div class="documento-titulo">{{ $documento->tipoDocumento->nombre ?? 'VENTA' }} N°{{ $documento->id }}</div>
+<div class="documento-titulo">{{ $documento->tipoDocumento->nombre ?? 'Folio: ' }} N°{{ $documento->id }}</div>
 <div class="documento-numero">{{ $documento->numero }}</div>
 <div class="center" style="margin-top: 3px;">
     <p style="margin: 2px 0;"><strong>Creado:</strong> {{ $documento->created_at->format('d/m/Y H:i') }}</p>
@@ -19,9 +19,20 @@
 {{-- ==================== INFO DEL CLIENTE ==================== --}}
 <div class="documento-info">
     <p><strong>Cliente:</strong> {{ $documento->cliente->nombre }}</p>
-    <p><strong>Cód. Cliente:</strong> #{{ $documento->cliente->id }}</p>
+    <p><strong>Cód. Cliente:</strong> #{{ $documento->cliente->id }} | {{ $documento->cliente->codigo_cliente }}</p>
     @if($documento->cliente->nit)
     <p><strong>NIT/CI:</strong> {{ $documento->cliente->nit }}</p>
+    @endif
+    {{-- ✅ NUEVO: Mostrar localidad del cliente --}}
+    @if($documento->cliente->localidad)
+    <p><strong>Localidad:</strong> {{ $documento->cliente->localidad->nombre ?? 'Sin localidad' }}</p>
+    @endif
+    {{-- ✅ NUEVO: Mostrar dirección registrada en la venta --}}
+    {{-- @if($documento->direccionCliente)
+    <p><strong>Dirección:</strong> {{ $documento->direccionCliente->direccion ?? 'Sin dirección' }}</p>
+    @endif --}}
+    @if($documento->direccionCliente)
+    <p style="center"><strong>Dir:</strong> {{ $documento->direccionCliente->observaciones ?? 'Sin direccion' }}</p>
     @endif
     @if($documento->usuario)
     <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>

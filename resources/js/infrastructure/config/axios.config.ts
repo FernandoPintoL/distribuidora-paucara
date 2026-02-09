@@ -38,7 +38,7 @@ export function configureAxios() {
         }
 
         // Si hay un token Bearer almacenado, agregarlo también
-        const bearerToken = localStorage.getItem('auth_token');
+        const bearerToken = sessionStorage.getItem('auth_token');
         if (bearerToken) {
             config.headers.Authorization = `Bearer ${bearerToken}`;
         }
@@ -59,7 +59,8 @@ export function configureAxios() {
 
                 if (!skipErrorHandler) {
                     // Si no autenticado, limpiar tokens y redirigir al login
-                    localStorage.removeItem('auth_token');
+                    sessionStorage.removeItem('auth_token');
+                    localStorage.removeItem('auth_token'); // También limpiar localStorage por compatibilidad
                     window.location.href = '/login';
                 }
             }

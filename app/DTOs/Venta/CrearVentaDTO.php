@@ -18,6 +18,7 @@ class CrearVentaDTO extends BaseDTO
         public string $fecha,
         public array $detalles, // Array de { producto_id, cantidad, precio_unitario }
         public float $subtotal,
+        public float $descuento = 0,  // ✅ NUEVO: Descuento que viene del frontend
         public float $impuesto,
         public float $total,
         public ?float $peso_total_estimado = null,  // ✅ NUEVO: Peso total en kg (cantidad * peso_producto)
@@ -78,6 +79,7 @@ class CrearVentaDTO extends BaseDTO
             fecha: $request->input('fecha', today()->toDateString()),
             detalles: $detallesCorregidos,
             subtotal: (float) $request->input('subtotal', 0),
+            descuento: (float) $request->input('descuento', 0),  // ✅ NUEVO: Mapear descuento del frontend
             impuesto: (float) $request->input('impuesto', 0),
             total: (float) $request->input('total', 0),
             peso_total_estimado: $request->has('peso_total_estimado') ? (float) $request->input('peso_total_estimado') : null,  // ✅ NUEVO

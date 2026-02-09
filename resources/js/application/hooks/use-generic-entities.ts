@@ -46,11 +46,16 @@ export function useGenericEntities<T extends BaseEntity, F extends BaseFormData>
         router.delete(service.destroyUrl(entity.id), {
           preserveState: true,
           onSuccess: () => {
-            router.reload({ only: [service.constructor.name.toLowerCase().replace('service', '')] });
+            // Redireccionar a la ruta del listado después de eliminar
+            const indexUrl = service.indexUrl();
+            // ✅ CORREGIDO: Usar visit en lugar de get para asegurar navegación correcta
+            router.visit(indexUrl);
             resolve();
           },
-          onError: (errors) => {
-            reject(new Error('Error al eliminar el registro'));
+          onError: (errors: any) => {
+            // ✅ MEJORADO: Extraer mensaje de error del backend
+            const errorMessage = errors?.message || errors?.error || `Error al eliminar ${entityName}`;
+            reject(new Error(errorMessage));
           },
           onFinish: () => {
             setIsLoading(false);
@@ -62,7 +67,7 @@ export function useGenericEntities<T extends BaseEntity, F extends BaseFormData>
       NotificationService.promise(deletePromise, {
         loading: `Eliminando ${entityName}...`,
         success: `${entityName} eliminado correctamente`,
-        error: `Error al eliminar ${entityName}`
+        error: (err: any) => err?.message || `Error al eliminar ${entityName}`
       });
     }
   }, [service]);

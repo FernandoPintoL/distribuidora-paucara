@@ -14,11 +14,31 @@ import type { AperturaCaja, MovimientoCaja } from '@/domain/entities/cajas';
 import { formatCurrency, formatDateTime, getMovimientoIcon, getMovimientoColor, toNumber } from '@/lib/cajas.utils';
 import { ComprobantesMovimiento } from '@/presentation/components/ComprobantesMovimiento';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/presentation/components/ui/alert-dialog';
+import { Loader2, Trash2 } from 'lucide-react';
 
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
     movimientosHoy: MovimientoCaja[];
-    efectivoEsperado?: { apertura: number; ventas_efectivo: number; pagos_credito: number; gastos: number; total: number };  // ✅ Viene del backend
+    efectivoEsperado?: {
+        apertura: number
+        ventas_efectivo: number
+        pagos_credito: number
+        gastos: number
+        pagos_sueldo?: number  // ✅ NUEVO
+        anticipos?: number  // ✅ NUEVO
+        anulaciones?: number  // ✅ NUEVO
+        total_egresos?: number  // ✅ NUEVO: Total de todos los egresos
+        total: number
+    };
     ventasPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;   // ✅ Viene del backend
     ventasPorEstado?: Array<{ estado: string; total: number; count: number }>;    // ✅ Viene del backend
     pagosPorTipoPago?: Array<{ tipo: string; total: number; count: number }>;     // ✅ Viene del backend
@@ -26,6 +46,7 @@ interface Props {
     ventasTotales?: number;  // ✅ NUEVO: Total de ventas de CierreCajaService
     ventasAnuladas?: number;  // ✅ NUEVO: Ventas anuladas de CierreCajaService
     ventasCredito?: number;  // ✅ NUEVO: Ventas a crédito de CierreCajaService
+    cargandoDatos?: boolean;  // ✅ NUEVO: Indicador si se están cargando datos del servidor
 }
 
 // ✅ NUEVO: Función para obtener colores según el tipo de operación
@@ -54,7 +75,7 @@ const getTipoOperacionColor = (codigo: string): string => {
     }
 };
 
-export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0 }: Props) {
+export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, cargandoDatos = false }: Props) {
 
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');
@@ -73,6 +94,10 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
     const [mostrarModalMovimientoIndividual, setMostrarModalMovimientoIndividual] = useState(false);
     const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<MovimientoCaja | null>(null);
+    const [mostrarDialogoEliminacion, setMostrarDialogoEliminacion] = useState(false);
+    const [movimientoAEliminar, setMovimientoAEliminar] = useState<MovimientoCaja | null>(null);
+    const [eliminandoMovimiento, setEliminandoMovimiento] = useState(false);
+
 
     if (!cajaAbiertaHoy || movimientosHoy.length === 0) {
         return (
@@ -93,6 +118,9 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
             </div>
         );
     }
+
+    // ✅ MEJORADO: Usar datos frescos recibidos desde Cajas/Index.tsx (via props)
+    const efectivoActual = efectivoEsperado;
 
     // ✅ NUEVO: Determinar si la caja es de hoy o de otro día
     const fechaApertura = new Date(cajaAbiertaHoy.fecha);
@@ -269,6 +297,48 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
         link.click();
     };
 
+    // ✅ NUEVO: Función para eliminar movimiento
+    const handleEliminarMovimiento = async () => {
+        if (!movimientoAEliminar) return;
+
+        setEliminandoMovimiento(true);
+        try {
+            const response = await fetch(
+                `/cajas/movimiento/${movimientoAEliminar.id}/eliminar`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json();
+                console.error('❌ Error al eliminar movimiento:', data);
+                alert(`Error: ${data.message || 'No se pudo eliminar el movimiento'}`);
+                return;
+            }
+
+            const data = await response.json();
+            console.log('✅ Movimiento eliminado:', data);
+
+            // Mostrar notificación de éxito
+            alert('✅ Movimiento eliminado exitosamente');
+
+            // Recargar la página
+            window.location.reload();
+        } catch (error) {
+            console.error('❌ Error en solicitud de eliminación:', error);
+            alert('Error al eliminar el movimiento');
+        } finally {
+            setEliminandoMovimiento(false);
+            setMostrarDialogoEliminacion(false);
+            setMovimientoAEliminar(null);
+        }
+    };
+
     return (
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div className="p-6">
@@ -303,18 +373,23 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         )}
                     </div>
                 </div>
-                {/* ✅ NUEVO: Efectivo Esperado en Caja */}
-                {efectivoEsperado && (
+                {/* ✅ MEJORADO: Efectivo Esperado en Caja - Ahora con datos frescos del servidor */}
+                {efectivoActual && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-3">
-                        <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            💰 Efectivo Esperado en Caja
-                        </h4>
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                💰 Efectivo Esperado en Caja
+                            </h4>
+                            {cargandoDatos && (
+                                <span className="text-xs text-blue-600 dark:text-blue-400">Actualizando...</span>
+                            )}
+                        </div>
                         <table className="w-full text-xs">
                             <tbody>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">Apertura</td>
                                     <td className="text-right py-1 px-2 font-semibold text-gray-700 dark:text-gray-300">
-                                        {formatCurrency(efectivoEsperado.apertura)}
+                                        {formatCurrency(efectivoActual.apertura)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/5">
@@ -322,13 +397,13 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                         <strong>+ Ventas Efectivo</strong>
                                     </td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                       +{formatCurrency(efectivoEsperado.ventas_efectivo)}
+                                       +{formatCurrency(efectivoActual.ventas_efectivo)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2"><strong>+ Ventas en Efectivo + Transferencias</strong></td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoEsperado.ventas_efectivo)}
+                                        +{formatCurrency(efectivoActual.ventas_efectivo)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
@@ -343,7 +418,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2"><strong>+CXC Efectivo (Pagos de Crédito)</strong></td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoEsperado.pagos_credito)}
+                                        +{formatCurrency(efectivoActual.pagos_credito)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
@@ -361,19 +436,56 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">+ Entrada Efectivo</td>
                                     <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoEsperado.pagos_credito)}
+                                        +{formatCurrency(efectivoActual.pagos_credito)}
                                     </td>
                                 </tr>
                                 <tr className="border-b border-yellow-200 dark:border-yellow-700">
                                     <td className="py-1 px-2">- Salida Efectivo</td>
                                     <td className="text-right py-1 px-2 font-semibold text-red-700 dark:text-red-300">
-                                        -{formatCurrency(efectivoEsperado.gastos)}
+                                        -{formatCurrency(efectivoActual.total_egresos || efectivoActual.gastos || 0)}
                                     </td>
                                 </tr>
+                                {/* ✅ NUEVO: Desglose de egresos */}
+                                {/* {(efectivoActual.gastos || efectivoActual.pagos_sueldo || efectivoActual.anticipos || efectivoActual.anulaciones) && (
+                                    <>
+                                        {efectivoActual.gastos > 0 && (
+                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Gastos</td>
+                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
+                                                    -{formatCurrency(efectivoActual.gastos)}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {(efectivoActual.pagos_sueldo || 0) > 0 && (
+                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Pagos de Sueldo</td>
+                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
+                                                    -{formatCurrency(efectivoActual.pagos_sueldo || 0)}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {(efectivoActual.anticipos || 0) > 0 && (
+                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Anticipos</td>
+                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
+                                                    -{formatCurrency(efectivoActual.anticipos || 0)}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {(efectivoActual.anulaciones || 0) > 0 && (
+                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
+                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Anulaciones</td>
+                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
+                                                    -{formatCurrency(efectivoActual.anulaciones || 0)}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </>
+                                )} */}
                                 <tr className="bg-yellow-100 dark:bg-yellow-900/30">
                                     <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200">=  Efectivo Esperado Caja</td>
                                     <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
-                                        {formatCurrency(efectivoEsperado.total)}
+                                        {formatCurrency(efectivoActual.total)}
                                     </td>
                                 </tr>
                                 <tr className="bg-yellow-100 dark:bg-green-900/30">
@@ -752,6 +864,20 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                                 </svg>
                                             </button>
 
+                                            {/* ✅ NUEVO: Botón Eliminar (solo para GASTOS, PAGO_SUELDO, ANTICIPO) */}
+                                            {['GASTOS', 'PAGO_SUELDO', 'ANTICIPO'].includes(movimiento.tipo_operacion.codigo) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setMovimientoAEliminar(movimiento);
+                                                        setMostrarDialogoEliminacion(true);
+                                                    }}
+                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition"
+                                                    title="Eliminar este movimiento"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+
                                             {/* Monto */}
                                             <div className="flex items-center">
                                                 {getMovimientoIcon(toNumber(movimiento.monto))}
@@ -800,6 +926,73 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         }}
                     />
                 )}
+
+                {/* ✅ NUEVO: Diálogo de Confirmación para Eliminar */}
+                <AlertDialog open={mostrarDialogoEliminacion} onOpenChange={setMostrarDialogoEliminacion}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                ¿Eliminar movimiento?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Se eliminará el movimiento de <strong>{movimientoAEliminar?.tipo_operacion.nombre}</strong>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+
+                        {/* ✅ Detalles del movimiento */}
+                        <div className="space-y-3 py-4 border-y border-gray-200 dark:border-gray-700">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monto:</span>
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {formatCurrency(Math.abs(toNumber(movimientoAEliminar?.monto || 0)))}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha:</span>
+                                <span className="text-sm text-gray-900 dark:text-gray-100">
+                                    {movimientoAEliminar && formatDateTime(movimientoAEliminar.fecha)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-start">
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Observación:</span>
+                                <span className="text-sm text-gray-900 dark:text-gray-100 text-right max-w-xs">
+                                    {movimientoAEliminar?.observaciones || 'Sin observaciones'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* ✅ Advertencia */}
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                            <p className="text-sm text-red-800 dark:text-red-200">
+                                <strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+
+                        {/* ✅ Botones */}
+                        <div className="flex gap-3 justify-end">
+                            <AlertDialogCancel disabled={eliminandoMovimiento}>
+                                Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleEliminarMovimiento}
+                                disabled={eliminandoMovimiento}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                {eliminandoMovimiento ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Eliminar
+                                    </>
+                                )}
+                            </AlertDialogAction>
+                        </div>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

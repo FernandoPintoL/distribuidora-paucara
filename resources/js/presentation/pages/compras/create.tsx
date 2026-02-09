@@ -751,65 +751,6 @@ export default function CompraForm() {
 
   const selectedMoneda = props.monedas.find(m => m.id === Number(data.moneda_id));
 
-  // Estados para validación de caja abierta
-  interface CajaInfo {
-    tiene_caja_abierta: boolean;
-    es_de_hoy?: boolean;
-    dias_atras?: number;
-    caja_nombre?: string;
-    usuario_caja?: string;
-    mensaje?: string;
-  }
-
-  const [cajaInfo, setCajaInfo] = useState<CajaInfo | null>(null);
-  const [cargandoCaja, setCargandoCaja] = useState(true);
-
-  // Verificar si hay caja abierta (de cualquier día)
-  useEffect(() => {
-    const verificarCaja = async () => {
-      try {
-        const response = await fetch('/compras/check-caja-abierta');
-        const data = await response.json();
-        setCajaInfo(data);
-        console.log('✅ Estado de caja:', data);
-      } catch (error) {
-        console.error('❌ Error verificando caja:', error);
-        // Si hay error, permitir acceso (mejor UX que bloquear)
-        setCajaInfo({ tiene_caja_abierta: true });
-      } finally {
-        setCargandoCaja(false);
-      }
-    };
-
-    verificarCaja();
-  }, []);
-
-  // Mostrar alert si no hay caja abierta
-  if (!cargandoCaja && !cajaInfo?.tiene_caja_abierta) {
-    return (
-      <AppLayout breadcrumbs={[
-        { title: 'Compras', href: '/compras' },
-        { title, href: '#' }
-      ]}>
-        <Head title={title} />
-        <div className="p-6 space-y-4">
-          <Alert className="border-red-500 bg-red-50 dark:bg-red-900/20">
-            <AlertTitle className="text-red-700 dark:text-red-400">🚫 Caja Cerrada</AlertTitle>
-            <AlertDescription className="text-red-600 dark:text-red-300 mt-2">
-              No puedes crear una compra sin una caja abierta. Por favor, abre una caja primero desde el módulo de Cajas.
-            </AlertDescription>
-          </Alert>
-          <Link
-            href="/cajas"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-          >
-            Ir a Cajas
-          </Link>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout breadcrumbs={[
       { title: 'Compras', href: '/compras' },
@@ -820,40 +761,6 @@ export default function CompraForm() {
       <form onSubmit={submit} className="space-y-6 p-6">
         {/* Campo hidden para moneda_id */}
         <input type="hidden" name="moneda_id" value={data.moneda_id} />
-
-        {/* Indicador de verificación de caja */}
-        {cargandoCaja && (
-          <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-900/20">
-            <AlertDescription className="text-blue-700 dark:text-blue-300 flex items-center gap-2">
-              <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
-              Verificando estado de caja...
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Indicador de caja abierta */}
-        {/* {!cargandoCaja && cajaInfo && cajaInfo.tiene_caja_abierta ? (
-          <Alert className={`${cajaInfo.es_de_hoy
-            ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
-            : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'
-            }`}>
-            <AlertDescription className={`${cajaInfo.es_de_hoy
-              ? 'text-green-700 dark:text-green-300'
-              : 'text-yellow-700 dark:text-yellow-300'
-              } flex items-center gap-2`}>
-              <span className={`text-lg ${cajaInfo.es_de_hoy ? '✅' : '⚠️'}`}></span>
-              <div>
-                <strong>{cajaInfo.mensaje}</strong>
-                {cajaInfo.caja_nombre && (
-                  <div className="text-sm mt-1">
-                    Caja: <strong>{cajaInfo.caja_nombre}</strong>
-                    {cajaInfo.usuario_caja && ` • Operador: ${cajaInfo.usuario_caja}`}
-                  </div>
-                )}
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : null} */}
 
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{title}</h1>

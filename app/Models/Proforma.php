@@ -367,7 +367,24 @@ class Proforma extends Model
         // Liberar cada reserva en stock_productos (actualizar cantidad_disponible y cantidad_reservada)
         foreach ($reservasActivas as $reserva) {
             if ($reserva->stockProducto) {
-                $reserva->stockProducto->liberarReserva($reserva->cantidad_reservada);
+                $stock = $reserva->stockProducto;
+                $cantidadAnterior = $stock->cantidad_disponible;
+
+                // Liberar la reserva
+                $stock->liberarReserva($reserva->cantidad_reservada);
+
+                // ✅ NUEVO: Registrar movimiento de liberación en movimientos_inventario
+                \App\Models\MovimientoInventario::create([
+                    'stock_producto_id'  => $stock->id,
+                    'cantidad'           => $reserva->cantidad_reservada,  // Positiva = Liberación
+                    'cantidad_anterior'  => $cantidadAnterior,
+                    'cantidad_posterior' => $stock->cantidad_disponible,
+                    'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                    'numero_documento'   => "PRO-{$this->numero}",
+                    'observacion'        => "Liberación de reserva proforma (rechazada por: {$motivo})",
+                    'fecha'              => now(),
+                    'user_id'            => auth()->id(),
+                ]);
             }
         }
 
@@ -504,6 +521,19 @@ class Proforma extends Model
                             'estado' => ReservaProforma::ACTIVA,
                         ]);
 
+                        // ✅ NUEVO: Registrar movimiento en movimientos_inventario
+                        \App\Models\MovimientoInventario::create([
+                            'stock_producto_id'  => $stock->id,
+                            'cantidad'           => -$cantidadAReservar,  // Negativa = Reserva (bloqueo)
+                            'cantidad_anterior'  => $stock->cantidad_disponible + $cantidadAReservar,
+                            'cantidad_posterior' => $stock->cantidad_disponible,
+                            'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                            'numero_documento'   => "PRO-{$this->numero}",  // Referencia a la proforma
+                            'observacion'        => "Reserva proforma: {$cantidadAReservar} unidades (vencimiento: " . now()->addDays(3)->format('d/m/Y') . ")",
+                            'fecha'              => now(),
+                            'user_id'            => auth()->id(),
+                        ]);
+
                         $cantidadPendiente -= $cantidadAReservar;
 
                         \Illuminate\Support\Facades\Log::info('Stock reservado para proforma', [
@@ -616,7 +646,7 @@ class Proforma extends Model
      * @throws \Exception Si alguna reserva falla al consumirse
      * @return bool True si todas las reservas se consumieron exitosamente
      */
-    public function consumirReservas(): bool
+    public function consumirReservas(?string $numeroVenta = null): bool
     {
         // Validación: Debe tener reservas activas
         $reservasActivas = $this->reservasActivas()->get();
@@ -651,7 +681,7 @@ class Proforma extends Model
 
         foreach ($reservasActivas as $reserva) {
             try {
-                if (!$reserva->consumir()) {
+                if (!$reserva->consumir($numeroVenta)) {
                     $errores[] = "Reserva ID {$reserva->id} falló al consumirse";
 
                     \Illuminate\Support\Facades\Log::error('Fallo al consumir reserva individual', [
@@ -684,6 +714,7 @@ class Proforma extends Model
             'proforma_id' => $this->id,
             'numero' => $this->numero,
             'reservas_consumidas' => $reservasConsumidas,
+            'numero_venta' => $numeroVenta,
         ]);
 
         return true;

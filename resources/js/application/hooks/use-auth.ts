@@ -12,6 +12,7 @@ export type AuthShared = {
     user: AuthUser
     roles: string[]
     permissions: string[]
+    sanctumToken?: string // ✅ Token Sanctum para autenticación WebSocket
   }
 }
 

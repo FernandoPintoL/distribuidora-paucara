@@ -160,11 +160,12 @@ class VentaService
             ]);
 
             $venta = Venta::create([
-                'numero'                     => Venta::generarNumero(),
+                'numero'                     => '0',  // ✅ TEMP: Se asignará al ID después de crear
                 'cliente_id'                 => $dto->cliente_id,
                 'usuario_id'                 => $dto->usuario_id ?? Auth::id(),
                 'fecha'                      => $dto->fecha,
                 'subtotal'                   => $dto->subtotal,
+                'descuento'                  => $dto->descuento,  // ✅ NUEVO: Registrar descuento del frontend
                 'impuesto'                   => $dto->impuesto,
                 'total'                      => $dto->total,
                 'peso_total_estimado'        => $dto->peso_total_estimado ?? 0, // ✅ NUEVO: Peso total calculado
@@ -193,9 +194,12 @@ class VentaService
                 'caja_id'                    => $cajaId, // ✅ NUEVO: Caja donde se registró la venta
             ]);
 
-            Log::info('✅ [VentaService::crear] Venta creada en BD', [
+            // ✅ NUEVO: Asignar número de venta con formato VEN + FECHA + ID
+            $numeroVenta = 'VEN' . now()->format('Ymd') . '-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT);
+            $venta->update(['numero' => $numeroVenta]);
+            Log::info('✅ [VentaService::crear] Número de venta asignado con ID', [
                 'venta_id'     => $venta->id,
-                'venta_numero' => $venta->numero,
+                'venta_numero' => $numeroVenta,
             ]);
 
             // ✅ Almacenar cajaId para que el observer lo use

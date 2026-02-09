@@ -44,6 +44,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | WebSocket Secret Key
+    |--------------------------------------------------------------------------
+    |
+    | Clave secreta para autenticar peticiones HTTP desde Laravel a Node.js
+    | Debe coincidir con WS_SECRET en el servidor WebSocket
+    |
+    */
+    'secret' => env('WEBSOCKET_SECRET', 'cobrador-websocket-secret-key-2025'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Retry Configuration
     |--------------------------------------------------------------------------
     |

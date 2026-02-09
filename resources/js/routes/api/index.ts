@@ -98,7 +98,7 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     modulosSidebar.form = modulosSidebarForm
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 export const dashboardRedirect = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -113,7 +113,7 @@ dashboardRedirect.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 dashboardRedirect.url = (options?: RouteQueryOptions) => {
@@ -122,7 +122,7 @@ dashboardRedirect.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 dashboardRedirect.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -131,7 +131,7 @@ dashboardRedirect.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =>
 })
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -141,7 +141,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 
     /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
     const dashboardRedirectForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -151,7 +151,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 
             /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
         dashboardRedirectForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -160,7 +160,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
         })
             /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
         dashboardRedirectForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

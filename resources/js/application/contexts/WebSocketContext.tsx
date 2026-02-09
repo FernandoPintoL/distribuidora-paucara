@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { usePage } from '@inertiajs/react';
 import websocketService from '@/infrastructure/services/websocket.service';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -32,6 +33,7 @@ export function WebSocketProvider({
   autoConnect = true,
   channels = []
 }: WebSocketProviderProps) {
+  const { props } = usePage();
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
   const [socketId, setSocketId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +68,18 @@ export function WebSocketProvider({
       setStatus('connecting');
       setError(null);
 
-      // Obtener el token del localStorage si no se proporciona
-      const authToken = token || localStorage.getItem('auth_token');
+      // 🔍 DEBUG: Verificar dónde viene el token
+      console.log('🔍 [WebSocketContext Debug] Token recibido como parámetro:', token ? `${token.substring(0, 20)}...` : 'undefined');
+
+      // Obtener el token del sessionStorage si no se proporciona
+      const authToken = token || sessionStorage.getItem('auth_token');
+
       if (!authToken) {
         throw new Error('No authentication token found. Por favor inicia sesión nuevamente.');
       }
+
+      console.log('✅ [WebSocketContext] Token seleccionado:', `${authToken.substring(0, 20)}...`);
+      console.log('✅ [WebSocketContext] Usando token de:', token ? 'parámetro directo' : 'localStorage');
 
       // Crear promesa de conexión y almacenarla
       // Note: websocketService.connect() automatically resolves the URL from runtime config
@@ -119,26 +128,25 @@ export function WebSocketProvider({
 
   /**
    * Efecto: Conectar automáticamente cuando se monta el Provider
-   * Espera a que el token esté disponible antes de intentar conectar
+   * Usa el token desde props.auth.sanctumToken (más confiable que sessionStorage)
    */
   useEffect(() => {
     if (!autoConnect || connectionInitializedRef.current) {
       return;
     }
 
-    // Esperar a que el token esté disponible antes de conectar
-    const checkAndConnect = setInterval(() => {
-      const token = localStorage.getItem('auth_token');
-      if (token && !connectionInitializedRef.current) {
-        console.log('🚀 Iniciando conexión automática del WebSocket Context...');
-        clearInterval(checkAndConnect);
-        connect(token);
-      }
-    }, 500);
+    // ✅ NUEVO: Obtener token de props de Inertia (mucho más confiable)
+    const sanctumToken = (props?.auth as any)?.sanctumToken;
+    const userId = (props?.auth as any)?.user?.id;
 
-    // Limpiar el intervalo cuando se desmonte
-    return () => clearInterval(checkAndConnect);
-  }, [autoConnect, connect]);
+    console.log('🔍 [WebSocketContext] Token disponible en props:', sanctumToken ? `${sanctumToken.substring(0, 20)}...` : 'null');
+    console.log('🔍 [WebSocketContext] User ID:', userId);
+
+    if (sanctumToken && !connectionInitializedRef.current) {
+      console.log('🚀 Iniciando conexión automática del WebSocket Context con token de props...');
+      connect(sanctumToken, userId);
+    }
+  }, [autoConnect, connect, (props?.auth as any)?.sanctumToken, (props?.auth as any)?.user?.id]);
 
   /**
    * Listeners para eventos del servicio

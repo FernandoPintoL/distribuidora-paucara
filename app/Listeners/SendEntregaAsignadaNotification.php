@@ -53,20 +53,44 @@ class SendEntregaAsignadaNotification
                 $entrega->load('chofer');
             }
 
-            // ✅ Usar el servicio especializado de entregas
-            // Esto GUARDA la notificación en la BD
-            $result = $this->notificationService->notifyAsignada($entrega);
+            // ✅ 1. Notificar al CHOFER que tiene una entrega asignada
+            // Esto GUARDA la notificación en la BD + envía por WebSocket
+            $resultChofer = $this->notificationService->notifyAsignada($entrega);
 
-            if ($result) {
-                Log::info('✅ Notificación de entrega asignada procesada exitosamente', [
+            if ($resultChofer) {
+                Log::info('✅ Notificación al chofer procesada exitosamente', [
                     'entrega_id' => $entrega->id,
                     'entrega_numero' => $entrega->numero_entrega,
                     'chofer_id' => $entrega->chofer_id,
+                    'chofer_name' => $entrega->chofer?->name,
                 ]);
             } else {
-                Log::warning('⚠️ La notificación WebSocket no pudo enviarse (pero se guardó en BD)', [
+                Log::warning('⚠️ La notificación al chofer no pudo enviarse (pero se guardó en BD)', [
                     'entrega_id' => $entrega->id,
                     'chofer_id' => $entrega->chofer_id,
+                ]);
+            }
+
+            // ✅ 2. NUEVO: Notificar a los CLIENTES que sus ventas están en preparación de carga
+            // Esto obtiene cliente.user_id (NO cliente_id) para WebSocket
+            try {
+                $resultClientes = $this->notificationService->notificarClientesEntregaEnPreparacion($entrega);
+
+                if ($resultClientes) {
+                    Log::info('✅ Notificaciones a clientes procesadas exitosamente', [
+                        'entrega_id' => $entrega->id,
+                        'entrega_numero' => $entrega->numero_entrega,
+                    ]);
+                } else {
+                    Log::warning('⚠️ No se pudieron notificar clientes', [
+                        'entrega_id' => $entrega->id,
+                        'entrega_numero' => $entrega->numero_entrega,
+                    ]);
+                }
+            } catch (\Exception $clienteError) {
+                Log::error('❌ Error notificando clientes (pero el chofer sí fue notificado)', [
+                    'entrega_id' => $entrega->id,
+                    'error' => $clienteError->getMessage(),
                 ]);
             }
 

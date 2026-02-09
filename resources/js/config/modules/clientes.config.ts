@@ -3,6 +3,7 @@ import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Cliente, ClienteFormData } from '@/domain/entities/clientes';
 import FileUploadPreview from '@/presentation/components/generic/FileUploadPreview';
 import MapPickerWithLocations from '@/presentation/components/maps/MapPickerWithLocations';
+import LocationModal from '@/presentation/components/maps/LocationModal';
 import VentanasEntregaSelector from '@/presentation/components/clientes/VentanasEntregaSelector';
 import React, { createElement } from 'react';
 
@@ -437,9 +438,90 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             placeholder: 'Seleccione una localidad',
             extraDataKey: 'localidades',
             options: [], // Se cargarán dinámicamente
-            colSpan: 3,
+            colSpan: 2,
             section: 'Direcciones',
             description: 'Selecciona la localidad donde reside el cliente',
+        },
+        // ✅ NUEVO: Botón para abrir modal de registro de dirección personal
+        {
+            key: 'ir_a_direcciones',
+            label: '',
+            type: 'custom',
+            colSpan: 1,
+            section: 'Direcciones',
+            render: ({ value, onChange, disabled, formData }) => {
+                const [isModalOpen, setIsModalOpen] = React.useState(false);
+                const direcciones = Array.isArray(formData?.direcciones) ? formData.direcciones : [];
+                const clienteId = formData?.id || null;
+                const localidadId = formData?.localidad_id || null;
+
+                return createElement('div', { className: 'flex items-end h-full gap-2' },
+                    createElement('button', {
+                        type: 'button',
+                        onClick: () => setIsModalOpen(true),
+                        disabled: disabled,
+                        className: 'w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap'
+                    },
+                        createElement('span', null, '📍'),
+                        createElement('span', null, 'Agregar')
+                    ),
+                    // Modal para registrar dirección
+                    isModalOpen ? createElement('div', {
+                        className: 'fixed inset-0 bg-black/50 flex items-center justify-center z-50',
+                        onClick: () => setIsModalOpen(false)
+                    },
+                        createElement('div', {
+                            className: 'bg-white dark:bg-zinc-900 rounded-lg p-6 max-w-xl max-h-[80vh] overflow-auto',
+                            onClick: (e: any) => e.stopPropagation()
+                        },
+                            createElement('h2', { className: 'text-lg font-semibold mb-4' }, 'Registrar Dirección'),
+                            createElement(LocationModal, {
+                                isOpen: true,
+                                latitude: -17.78629,
+                                longitude: -63.18117,
+                                geocodedAddress: '',
+                                clienteId: clienteId, // ✨ Pasar cliente ID
+                                localidadId: localidadId, // ✨ Pasar localidad ID
+                                existingData: {
+                                    direccion: '',
+                                    latitud: -17.78629,
+                                    longitud: -63.18117,
+                                    observaciones: '',
+                                    es_principal: true // ✅ Marcar automáticamente como principal
+                                },
+                                onClose: () => setIsModalOpen(false),
+                                onSaveSuccess: clienteId ? (data: any) => {
+                                    // Si se guardó en la BD, recargar direcciones desde API
+                                    const reloadDirecciones = async () => {
+                                        try {
+                                            const response = await fetch(`/api/clientes/${clienteId}/direcciones`);
+                                            if (response.ok) {
+                                                const result = await response.json();
+                                                // Actualizar las direcciones en el formulario
+                                                window.dispatchEvent(new CustomEvent('updateDirecciones', {
+                                                    detail: { direcciones: result.data || [] }
+                                                }));
+                                            }
+                                        } catch (error) {
+                                            console.error('Error al recargar direcciones:', error);
+                                        }
+                                    };
+                                    reloadDirecciones();
+                                    setIsModalOpen(false);
+                                } : undefined,
+                                onSave: !clienteId ? (data: any) => {
+                                    // Si no hay clienteId (cliente nuevo), guardar localmente
+                                    const newAddresses = [...direcciones, data];
+                                    window.dispatchEvent(new CustomEvent('updateDirecciones', {
+                                        detail: { direcciones: newAddresses }
+                                    }));
+                                    setIsModalOpen(false);
+                                } : undefined
+                            })
+                        )
+                    ) : null
+                );
+            }
         },
         // Campo personalizado para ubicaciones en el mapa con modal
         {
@@ -451,29 +533,33 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             render: ({ value, onChange, disabled, formData }) => {
                 // value es un array de DireccionData
                 const addresses = Array.isArray(value) ? value : [];
-                // Obtener localidad_id del formulario actual
+                // Obtener localidad_id y cliente_id del formulario actual
                 const localidadId = formData?.localidad_id || null;
+                const clienteId = formData?.id || null; // ID del cliente si está en edición
 
-                return createElement(MapPickerWithLocations, {
-                    addresses: addresses,
-                    onAddressesChange: (newAddresses: any[]) => {
-                        onChange(newAddresses);
-                    },
-                    label: 'Ubicaciones del cliente',
-                    description: 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
-                    disabled: Boolean(disabled),
-                    height: '450px',
-                    localidadId: localidadId,
-                    // ✨ NUEVO: Callback para actualizar localidad cuando se detecta
-                    onLocalidadDetected: (id: number, nombre: string) => {
-                        // Disparar evento personalizado para que el formulario lo detecte
-                        const event = new CustomEvent('localidadDetected', {
-                            detail: { localidadId: id, localidadNombre: nombre }
-                        });
-                        window.dispatchEvent(event);
-                        console.log(`✅ Localidad auto-detectada: ${nombre} (ID: ${id})`);
-                    }
-                });
+                return createElement('div', { id: 'direcciones-section' },
+                    createElement(MapPickerWithLocations, {
+                        addresses: addresses,
+                        onAddressesChange: (newAddresses: any[]) => {
+                            onChange(newAddresses);
+                        },
+                        label: 'Ubicaciones del cliente',
+                        description: 'Haz clic en el mapa para agregar una nueva ubicación o en un marcador para editarla',
+                        disabled: Boolean(disabled),
+                        height: '450px',
+                        localidadId: localidadId,
+                        clienteId: clienteId, // ✨ NUEVO: Pasar cliente ID para guardar en BD
+                        // ✨ NUEVO: Callback para actualizar localidad cuando se detecta
+                        onLocalidadDetected: (id: number, nombre: string) => {
+                            // Disparar evento personalizado para que el formulario lo detecte
+                            const event = new CustomEvent('localidadDetected', {
+                                detail: { localidadId: id, localidadNombre: nombre }
+                            });
+                            window.dispatchEvent(event);
+                            console.log(`✅ Localidad auto-detectada: ${nombre} (ID: ${id})`);
+                        }
+                    })
+                );
             }
         },
         // 📅 SECCIÓN DE VENTANAS DE ENTREGA

@@ -106,6 +106,14 @@ abstract class BaseWebSocketService
 
             $response = $request->post($url, $data);
 
+            Log::info('🔍 [BaseWebSocketService::send] POST response', [
+                'endpoint' => $endpoint,
+                'url' => $url,
+                'status' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $response->body(),
+            ]);
+
             if ($response->successful()) {
                 if ($this->debug) {
                     Log::info('Notificación WebSocket enviada exitosamente', [
@@ -115,7 +123,7 @@ abstract class BaseWebSocketService
                 }
                 return true;
             } else {
-                Log::warning('Error al enviar notificación WebSocket', [
+                Log::warning('❌ Error al enviar notificación WebSocket', [
                     'endpoint' => $endpoint,
                     'status'   => $response->status(),
                     'body'     => $response->body(),

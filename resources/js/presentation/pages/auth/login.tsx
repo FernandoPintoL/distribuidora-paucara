@@ -18,10 +18,29 @@ export default function Login({ status }: LoginProps) {
 
     // ✅ Log cuando el usuario se autentica (el token está disponible en props.auth.sanctumToken)
     useEffect(() => {
-        if (props?.auth?.user && (props?.auth as any)?.sanctumToken) {
-            console.log('✅ Usuario autenticado exitosamente');
-            console.log(`✅ Token SANCTUM disponible en props.auth.sanctumToken`);
-            console.log(`✅ Usuario: ${props?.auth?.user?.name}`);
+        console.log('🔍 [Login Debug] Verificando autenticación...');
+        console.log('🔍 [Login Debug] props.auth:', JSON.stringify((props?.auth as any), (key, value) => {
+            // No mostrar el token completo en logs (seguridad), solo primeros 20 caracteres
+            if (key === 'sanctumToken' && typeof value === 'string') {
+                return `${value.substring(0, 20)}...`;
+            }
+            return value;
+        }, 2));
+
+        if (props?.auth?.user) {
+            console.log(`✅ Usuario autenticado: ${props?.auth?.user?.name} (ID: ${props?.auth?.user?.id})`);
+
+            const sanctumToken = (props?.auth as any)?.sanctumToken;
+            if (sanctumToken) {
+                console.log(`✅ ✓ Token SANCTUM disponible en props.auth.sanctumToken`);
+                console.log(`✅ Token: ${sanctumToken.substring(0, 20)}...`);
+            } else {
+                console.error(`❌ ✗ Token SANCTUM NO disponible en props.auth.sanctumToken`);
+                console.error(`❌ Esto causará fallback a localStorage (puede reutilizar token viejo)`);
+                console.error('❌ Props actuales:', JSON.stringify((props?.auth as any), null, 2));
+            }
+        } else {
+            console.log('⏳ Usuario aún no autenticado...');
         }
     }, [props?.auth?.sanctumToken, props?.auth?.user]);
 

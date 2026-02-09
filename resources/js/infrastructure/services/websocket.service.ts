@@ -56,13 +56,17 @@ class WebSocketService {
 
           // 🔐 Autenticar inmediatamente después de conectarse
           if (config.auth?.token) {
-            console.log('🔐 Enviando autenticación al servidor...');
+            console.log('🔐 Enviando autenticación al servidor WebSocket...');
+            console.log(`🔐 Token: ${config.auth.token.substring(0, 20)}...`);
+            console.log(`🔐 User ID: ${config.auth.userId}`);
             this.socket!.emit('authenticate', {
               token: config.auth.token,
               userId: config.auth.userId,
               user_id: config.auth.userId, // Legacy
               type: 'web' // Identificar como cliente web
             });
+          } else {
+            console.warn('⚠️  WebSocket conectado pero NO hay token para autenticar');
           }
 
           this.emitLocal('websocket:connected', { socketId: this.socket?.id });
@@ -149,6 +153,20 @@ class WebSocketService {
 
     // Remove all listeners for this channel
     this.listeners.delete(channelName);
+  }
+
+  /**
+   * Actualizar token en sessionStorage
+   * Se llama cuando el token cambia (login/logout)
+   */
+  updateToken(newToken: string | null): void {
+    if (newToken) {
+      sessionStorage.setItem('auth_token', newToken);
+      console.log(`✅ Token actualizado en sessionStorage: ${newToken.substring(0, 20)}...`);
+    } else {
+      sessionStorage.removeItem('auth_token');
+      console.log(`🗑️  Token removido de sessionStorage`);
+    }
   }
 
   /**

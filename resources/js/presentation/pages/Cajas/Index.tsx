@@ -15,7 +15,7 @@
  */
 
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import AppLayout from '@/layouts/app-layout';
 import AperturaCajaModal from '@/presentation/components/AperturaCajaModal';
@@ -60,9 +60,77 @@ export default function Index(props: CajasIndexProps) {
     const [showMovimientoModal, setShowMovimientoModal] = useState(false);
     const [isConsolidating, setIsConsolidating] = useState(false);
     const [showConsolidateDialog, setShowConsolidateDialog] = useState(false);
-    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; printType?: 'cierre' | 'movimientos' }>({ isOpen: false });
+    const [outputModal, setOutputModal] = useState<{ isOpen: boolean; printType?: 'cierre' | 'movimientos'; movimientoId?: number }>({ isOpen: false });
+
+    // ✅ NUEVO: Estado para datos frescos del servidor (una sola llamada AJAX)
+    const [datosActualizados, setDatosActualizados] = useState<any>(null);
+    const [cargandoDatos, setCargandoDatos] = useState(false);
 
     const { movimientosHoy, totalMovimientos, esVistaAdmin = false, usuarioDestino, historicoAperturas } = props;
+
+    // ✅ NUEVO: useEffect para cargar datos frescos del servidor (una sola llamada)
+    useEffect(() => {
+        if (cajaAbiertaHoy?.id) {
+            setCargandoDatos(true);
+            console.log('🔵 [Cajas/Index] Iniciando petición a /cajas/' + cajaAbiertaHoy.id + '/datos-cierre');
+
+            fetch(`/cajas/${cajaAbiertaHoy.id}/datos-cierre`)
+                .then(res => {
+                    console.log('🟦 [Cajas/Index] Response status:', res.status);
+                    return res.json();
+                })
+                .then(result => {
+                    console.log('🟩 [Cajas/Index] Respuesta completa del backend:', result);
+                    if (result.success && result.data) {
+                        console.log('✅ [Cajas/Index] Datos cargados exitosamente');
+                        setDatosActualizados(result.data);
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ [Cajas/Index] Error cargando datos frescos:', err);
+                })
+                .finally(() => {
+                    console.log('🔴 [Cajas/Index] Petición finalizada');
+                    setCargandoDatos(false);
+                });
+        }
+    }, [cajaAbiertaHoy?.id]);
+
+    // ✅ NUEVO: Callback cuando se registra exitosamente un movimiento
+    const handleMovimientoRegistrado = (movimiento: any) => {
+        console.log('✅ [Cajas/Index] Movimiento registrado:', {
+            movimientoId: movimiento?.id,
+            tipo: movimiento?.tipo_operacion?.nombre || movimiento?.tipo_operacion?.codigo,
+            monto: movimiento?.monto,
+        });
+
+        const movimientoId = movimiento?.id;
+
+        if (!movimientoId) {
+            console.error('❌ [Cajas/Index] No se pudo obtener el ID del movimiento');
+            toast.error('Error: No se pudo obtener el ID del movimiento');
+            return;
+        }
+
+        // ✅ VALIDAR que el ID es válido (número razonable)
+        if (movimientoId > 1000000) {
+            console.error('❌ [Cajas/Index] ID inválido (demasiado grande):', movimientoId);
+            toast.error('Error: ID de movimiento inválido');
+            return;
+        }
+
+        console.log('🖨️ [Cajas/Index] Abriendo OutputSelectionModal para movimiento:', movimientoId);
+
+        // ✅ NUEVO: Abrir OutputSelectionModal para que el usuario seleccione formato
+        setOutputModal({
+            isOpen: true,
+            printType: 'movimientos',
+            movimientoId: movimientoId,
+        });
+    };
+
+    // ✅ MEJORADO: Usar datos frescos del servidor si están disponibles
+    const efectivoEsperadoActual = datosActualizados?.efectivo_esperado || props.efectivoEsperado;
 
     // ✅ Título dinámico según contexto
     const titulo = esVistaAdmin ? `Caja de ${usuarioDestino?.name}` : 'Gestión de Cajas';
@@ -157,7 +225,9 @@ export default function Index(props: CajasIndexProps) {
                     <CajaEstadoCard
                         cajaAbiertaHoy={cajaAbiertaHoy}
                         totalMovimientos={totalMovimientos}
-                        efectivoEsperado={props.efectivoEsperado}
+                        efectivoEsperado={efectivoEsperadoActual}
+                        datosActualizados={datosActualizados}
+                        cargandoDatos={cargandoDatos}
                         onAbrirClick={handleAbrirModal}
                         onCerrarClick={handleAbrirCierreModal}
                         onGastoClick={() => setShowMovimientoModal(true)}
@@ -211,7 +281,7 @@ export default function Index(props: CajasIndexProps) {
                             <MovimientosDelDiaTable
                                 cajaAbiertaHoy={cajaAbiertaHoy}
                                 movimientosHoy={movimientosHoy}
-                                efectivoEsperado={props.efectivoEsperado}
+                                efectivoEsperado={efectivoEsperadoActual}
                                 ventasPorTipoPago={props.ventasPorTipoPago}
                                 ventasPorEstado={props.ventasPorEstado}
                                 pagosPorTipoPago={props.pagosPorTipoPago}
@@ -219,6 +289,7 @@ export default function Index(props: CajasIndexProps) {
                                 ventasTotales={props.ventasTotales}
                                 ventasAnuladas={props.ventasAnuladas}
                                 ventasCredito={props.ventasCredito}
+                                cargandoDatos={cargandoDatos}
                             />
                         </TabsContent>
 
@@ -256,7 +327,9 @@ export default function Index(props: CajasIndexProps) {
                 show={showMovimientoModal}
                 onClose={() => setShowMovimientoModal(false)}
                 tiposOperacion={props.tiposOperacion || []}
+                tiposOperacionClasificados={props.tiposOperacionClasificados || { ENTRADA: [], SALIDA: [], AJUSTE: [] }}
                 tiposPago={props.tiposPago || []}
+                onSuccessWithMovement={handleMovimientoRegistrado} // ✅ NUEVO: Callback para abrir print modal
             />
 
             {/* ✅ NUEVO: Diálogo de confirmación para consolidación - Mejorado */}
@@ -460,9 +533,13 @@ export default function Index(props: CajasIndexProps) {
                 <OutputSelectionModal
                     isOpen={outputModal.isOpen}
                     onClose={() => setOutputModal({ isOpen: false })}
-                    documentoId={cajaAbiertaHoy.id}
-                    tipoDocumento={'caja' as TipoDocumento}
+                    documentoId={outputModal.movimientoId || cajaAbiertaHoy.id}
+                    tipoDocumento={outputModal.movimientoId ? ('movimiento' as TipoDocumento) : ('caja' as TipoDocumento)}
                     printType={outputModal.printType}
+                    documentoInfo={outputModal.movimientoId ? {
+                        numero: `Movimiento #${outputModal.movimientoId}`,
+                        fecha: new Date().toLocaleDateString('es-ES'),
+                    } : undefined}
                 />
             )}
 

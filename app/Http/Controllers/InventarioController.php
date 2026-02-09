@@ -475,7 +475,8 @@ class InventarioController extends Controller
         $query = MovimientoInventario::with([
             'stockProducto.producto:id,nombre,sku',
             'stockProducto.almacen:id,nombre',
-            'user:id,name',
+            'user:id,name,email',  // ✅ MODIFICADO: Agregar email
+            'user.roles:id,name',  // ✅ NUEVO: Cargar roles del usuario
         ])->porFecha($fechaInicio, $fechaFin);
 
         if ($tipo && ! empty($tipo)) {
@@ -533,6 +534,7 @@ class InventarioController extends Controller
                     'usuario'           => [
                         'id'   => $movimiento->user_id,
                         'name' => $movimiento->user?->name ?? 'Sistema',
+                        'rol'  => $movimiento->user?->roles?->first()?->name ?? 'Sin rol',  // ✅ NUEVO: Agregar rol
                     ],
                     'producto'          => [
                         'id'        => null,
@@ -572,6 +574,7 @@ class InventarioController extends Controller
                 'usuario'           => [
                     'id'   => $movimiento->user_id,
                     'name' => $movimiento->user?->name ?? 'Sistema',
+                    'rol'  => $movimiento->user?->roles?->first()?->name ?? 'Sin rol',  // ✅ NUEVO: Agregar rol
                 ],
                 'producto'          => [
                     'id'        => $stockProducto->producto->id,
@@ -663,6 +666,8 @@ class InventarioController extends Controller
             return 'ENTRADA';
         } elseif (str_starts_with($tipo, 'SALIDA_')) {
             return 'SALIDA';
+        } elseif (str_starts_with($tipo, 'RESERVA') || str_starts_with($tipo, 'LIBERACION')) {
+            return 'RESERVA';  // ✅ NUEVO: Identificar movimientos de reserva
         } else {
             return 'AJUSTE';
         }
@@ -682,6 +687,9 @@ class InventarioController extends Controller
             'SALIDA_MERMA'       => 'Merma',
             'SALIDA_AJUSTE'      => 'Ajuste de inventario',
             'SALIDA_TRANSFERENCIA' => 'Transferencia enviada',
+            // ✅ NUEVO: Tipos de reserva
+            'RESERVA_PROFORMA'   => 'Reserva de proforma',
+            'LIBERACION_RESERVA' => 'Liberación de reserva',
         ];
 
         return $tipos[$tipo] ?? 'Movimiento desconocido';

@@ -16,6 +16,19 @@ const CATEGORIAS_GASTO = {
     'VARIOS': 'Varios',
 };
 
+const CATEGORIAS_PAGO_SUELDO = {
+    'SUELDO': 'Sueldo',
+    'BONO': 'Bono',
+    'COMISIÓN': 'Comisión',
+    'LIQUIDACIÓN': 'Liquidación',
+};
+
+const CATEGORIAS_ANTICIPO = {
+    'ADELANTO': 'Adelanto de Sueldo',
+    'PRÉSTAMO': 'Préstamo a Empleado',
+    'OTROS': 'Otros Anticipos',
+};
+
 interface TipoOperacion {
     id: number;
     codigo: string;
@@ -32,10 +45,35 @@ interface Props {
     show: boolean;
     onClose: () => void;
     tiposOperacion?: TipoOperacion[];
+    tiposOperacionClasificados?: Record<string, TipoOperacion[]>;
     tiposPago?: TipoPago[];
+    onSuccessWithMovement?: (movimiento: any) => void; // ✅ NUEVO: Callback cuando se registra exitosamente
 }
 
-export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion = [], tiposPago = [] }: Props) {
+export default function RegistrarMovimientoModal({
+    show,
+    onClose,
+    tiposOperacion = [],
+    tiposOperacionClasificados = { ENTRADA: [], SALIDA: [], AJUSTE: [] },
+    tiposPago = [],
+    onSuccessWithMovement // ✅ NUEVO: Callback para pasar el movimiento registrado
+}: Props) {
+    // ✅ DEBUG: Log cuando el modal se abre
+    useEffect(() => {
+        if (show) {
+            console.log('📋 [RegistrarMovimientoModal] Modal abierto con props:', {
+                tiposOperacion: tiposOperacion,
+                tiposOperacionClasificados: tiposOperacionClasificados,
+                tiposPago: tiposPago,
+                total_tipos: tiposOperacion.length,
+                total_tipos_entrada: tiposOperacionClasificados.ENTRADA?.length || 0,
+                total_tipos_salida: tiposOperacionClasificados.SALIDA?.length || 0,
+                total_tipos_ajuste: tiposOperacionClasificados.AJUSTE?.length || 0,
+                total_pagos: tiposPago.length,
+            });
+        }
+    }, [show, tiposOperacion, tiposOperacionClasificados, tiposPago]);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         tipo_operacion_id: '',
         tipo_pago_id: '',
@@ -53,6 +91,12 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
         if (data.tipo_operacion_id && tiposOperacion) {
             const tipo = tiposOperacion.find(t => t.id.toString() === data.tipo_operacion_id);
             setTipoSeleccionado(tipo || null);
+            console.log('🔍 [RegistrarMovimientoModal] Tipo seleccionado:', {
+                tipo_id: data.tipo_operacion_id,
+                tipo_nombre: tipo?.nombre,
+                tipo_codigo: tipo?.codigo,
+                total_tipos_disponibles: tiposOperacion.length,
+            });
         }
     }, [data.tipo_operacion_id, tiposOperacion]);
 
@@ -64,17 +108,76 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        post('/cajas/movimientos', {
-            onSuccess: () => {
-                toast.success('Movimiento registrado exitosamente');
-                reset();
-                onClose();
+        console.log('📤 [RegistrarMovimientoModal] Enviando movimiento:', {
+            tipo_operacion_id: data.tipo_operacion_id,
+            tipo_operacion_nombre: tipoSeleccionado?.nombre,
+            tipo_operacion_codigo: tipoSeleccionado?.codigo,
+            tipo_pago_id: data.tipo_pago_id,
+            monto: data.monto,
+            categoria: data.categoria,
+            numero_documento: data.numero_documento,
+            observaciones: data.observaciones,
+            tiene_comprobante: !!data.comprobante,
+            comprobante_nombre: data.comprobante?.name,
+        });
+
+        // ✅ NUEVO: Usar endpoint JSON en lugar de Inertia
+        fetch('/cajas/movimientos-json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
             },
-            onError: (errors) => {
-                Object.values(errors).forEach(error => {
-                    toast.error(error as string);
-                });
+            body: JSON.stringify({
+                tipo_operacion_id: data.tipo_operacion_id,
+                tipo_pago_id: data.tipo_pago_id,
+                monto: data.monto,
+                numero_documento: data.numero_documento,
+                categoria: data.categoria,
+                observaciones: data.observaciones,
+            }),
+        })
+        .then(async (response) => {
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Error al registrar movimiento');
             }
+
+            console.log('✅ [RegistrarMovimientoModal] Movimiento registrado exitosamente en backend:', {
+                movimientoId: result.movimiento_id,
+                tipoOperacion: result.tipo_operacion,
+            });
+
+            toast.success('Movimiento registrado exitosamente');
+
+            // ✅ VALIDAR que el ID fue retornado correctamente
+            if (!result.movimiento_id) {
+                throw new Error('No se obtuvo movimiento_id del backend');
+            }
+
+            console.log('✅ [RegistrarMovimientoModal] ID del movimiento obtenido:', result.movimiento_id);
+
+            // ✅ NUEVO: Crear objeto movimiento con los datos retornados
+            const movimientoData = {
+                id: result.movimiento_id,
+                tipo_operacion: result.tipo_operacion || tipoSeleccionado,
+                monto: data.monto,
+                observaciones: data.observaciones,
+            };
+
+            // ✅ NUEVO: Llamar callback con el movimiento
+            if (onSuccessWithMovement) {
+                console.log('📤 [RegistrarMovimientoModal] Pasando movimiento al callback:', movimientoData);
+                onSuccessWithMovement(movimientoData);
+            }
+
+            reset();
+            onClose();
+        })
+        .catch((error) => {
+            console.error('❌ [RegistrarMovimientoModal] Error en respuesta del backend:', error);
+            toast.error(error.message || 'Error al registrar movimiento');
         });
     };
 
@@ -84,6 +187,9 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
             case 'GASTOS':
             case 'COMPRA':
                 return 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800';
+            case 'PAGO_SUELDO':
+            case 'ANTICIPO':
+                return 'bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800';
             case 'AJUSTE':
                 return 'bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800';
             default:
@@ -98,6 +204,10 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                 return '💸';
             case 'COMPRA':
                 return '🛒';
+            case 'PAGO_SUELDO':
+                return '💰';
+            case 'ANTICIPO':
+                return '🤑';
             case 'AJUSTE':
                 return '🔧';
             default:
@@ -106,7 +216,24 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
     };
 
     const esGasto = tipoSeleccionado?.codigo === 'GASTOS';
-    const esEgreso = ['GASTOS', 'COMPRA'].includes(tipoSeleccionado?.codigo || '');
+    const esPagoSueldo = tipoSeleccionado?.codigo === 'PAGO_SUELDO';
+    const esAnticipo = tipoSeleccionado?.codigo === 'ANTICIPO';
+    const esEgreso = ['GASTOS', 'COMPRA', 'PAGO_SUELDO', 'ANTICIPO'].includes(tipoSeleccionado?.codigo || '');
+
+    // ✅ DEBUG: Log para verificar estado de tipoSeleccionado
+    useEffect(() => {
+        console.log('🎯 [RegistrarMovimientoModal] Estado actual:', {
+            tipoSeleccionado: tipoSeleccionado,
+            tipoSeleccionado_codigo: tipoSeleccionado?.codigo,
+            esGasto: esGasto,
+            esPagoSueldo: esPagoSueldo,
+            esAnticipo: esAnticipo,
+            esEgreso: esEgreso,
+            data_tipo_operacion_id: data.tipo_operacion_id,
+            data_categoria: data.categoria,
+            mostrar_categoria: (esGasto || esPagoSueldo || esAnticipo),
+        });
+    }, [tipoSeleccionado, esGasto, esPagoSueldo, esAnticipo, data.tipo_operacion_id]);
 
     const handleArchivoSeleccionado = (e: React.ChangeEvent<HTMLInputElement>) => {
         const archivo = e.target.files?.[0];
@@ -168,11 +295,47 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                                     <SelectValue placeholder="Selecciona el tipo de movimiento" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {tiposOperacionValidos.map((tipo) => (
-                                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                                            {tipo.nombre}
-                                        </SelectItem>
-                                    ))}
+                                    {/* ENTRADA - Ingresos de dinero */}
+                                    {tiposOperacionClasificados.ENTRADA && tiposOperacionClasificados.ENTRADA.length > 0 && (
+                                        <>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20">
+                                                📥 ENTRADA - Ingresos
+                                            </div>
+                                            {tiposOperacionClasificados.ENTRADA.map((tipo) => (
+                                                <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                                    {tipo.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* SALIDA - Egresos de dinero */}
+                                    {tiposOperacionClasificados.SALIDA && tiposOperacionClasificados.SALIDA.length > 0 && (
+                                        <>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                                                📤 SALIDA - Egresos
+                                            </div>
+                                            {tiposOperacionClasificados.SALIDA.map((tipo) => (
+                                                <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                                    {tipo.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* AJUSTE - Operaciones especiales */}
+                                    {tiposOperacionClasificados.AJUSTE && tiposOperacionClasificados.AJUSTE.length > 0 && (
+                                        <>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20">
+                                                🔧 AJUSTE - Especiales
+                                            </div>
+                                            {tiposOperacionClasificados.AJUSTE.map((tipo) => (
+                                                <SelectItem key={tipo.id} value={tipo.id.toString()}>
+                                                    {tipo.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                             {errors.tipo_operacion_id && (
@@ -180,10 +343,12 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                             )}
                         </div>
 
-                        {/* Campo de categoría solo si es GASTO */}
-                        {esGasto && (
+                        {/* Campo de categoría según tipo de movimiento */}
+                        {(esGasto || esPagoSueldo || esAnticipo) && (
                             <div className="space-y-2">
-                                <Label htmlFor="categoria" className="text-gray-900 dark:text-gray-100">Categoría *</Label>
+                                <Label htmlFor="categoria" className="text-gray-900 dark:text-gray-100">
+                                    {esGasto ? 'Categoría de Gastos' : esPagoSueldo ? 'Tipo de Pago de Sueldo' : 'Tipo de Anticipo'} *
+                                </Label>
                                 <Select
                                     value={data.categoria}
                                     onValueChange={(value) => setData('categoria', value)}
@@ -192,7 +357,11 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                                         <SelectValue placeholder="Selecciona una categoría" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(CATEGORIAS_GASTO).map(([codigo, nombre]) => (
+                                        {Object.entries(
+                                            esGasto ? CATEGORIAS_GASTO :
+                                            esPagoSueldo ? CATEGORIAS_PAGO_SUELDO :
+                                            CATEGORIAS_ANTICIPO
+                                        ).map(([codigo, nombre]) => (
                                             <SelectItem key={codigo} value={codigo}>
                                                 {nombre}
                                             </SelectItem>
@@ -364,7 +533,7 @@ export default function RegistrarMovimientoModal({ show, onClose, tiposOperacion
                         </Button>
                         <Button
                             type="submit"
-                            disabled={processing || !data.tipo_operacion_id || !data.monto || (esGasto && !data.categoria)}
+                            disabled={processing || !data.tipo_operacion_id || !data.monto || ((esGasto || esPagoSueldo || esAnticipo) && !data.categoria)}
                             className={getColorButton()}
                         >
                             {processing ? (

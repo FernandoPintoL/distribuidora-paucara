@@ -1208,10 +1208,6 @@ export default function VentaForm() {
                                 </p>
                             )}
                         </div>
-
-                        {/* Información del Cliente */}
-
-
                         {/* Campo moneda oculto - se establece automáticamente a BOB */}
                         <input
                             type="hidden"
@@ -1422,16 +1418,18 @@ export default function VentaForm() {
 
                         {/* ✅ NUEVO: Resumen completo de la transacción */}
                         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
-                            {/* <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
-                                <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrency(data.subtotal)}</span>
-                            </div>
- */}
+
                             {data.descuento > 0 && (
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
-                                    <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
-                                </div>
+                                <>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
+                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.subtotal)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
+                                        <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
+                                    </div>
+                                </>
                             )}
 
                             <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-200 dark:border-zinc-700">
@@ -1443,7 +1441,7 @@ export default function VentaForm() {
                                 <>
                                     <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200 dark:border-zinc-700">
                                         <span className="text-gray-700 dark:text-gray-300">Monto Pagado:</span>
-                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrency(data.monto_pagado_inicial)}</span>
+                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.monto_pagado_inicial)}</span>
                                     </div>
 
                                     <div className={`flex justify-between items-center text-sm font-medium ${data.monto_pagado_inicial - data.total < 0
@@ -1451,7 +1449,7 @@ export default function VentaForm() {
                                         : 'text-green-600 dark:text-green-400'
                                         }`}>
                                         <span>Cambio / Vuelto:</span>
-                                        <span className="text-right">{formatCurrency(Math.max(0, data.monto_pagado_inicial - data.total))}</span>
+                                        <span className="text-right">{formatCurrencyWith2Decimals(Math.max(0, data.monto_pagado_inicial - data.total))}</span>
                                     </div>
                                 </>
                             )}

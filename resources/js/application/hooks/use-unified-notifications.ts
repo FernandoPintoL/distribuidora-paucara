@@ -4,7 +4,7 @@
  * Supports role-based filtering and notification persistence
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import websocketService from '@/infrastructure/services/websocket.service';
 import {
   BaseNotification,
@@ -37,6 +37,8 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     orgId,
   } = options;
 
+  // ✅ CRITICAL: Usar state en lugar de ref para trigger re-renders cuando lleguen notificaciones
+  const [notifications, setNotifications] = useState<BaseNotification[]>([]);
   const notificationsRef = useRef<Map<string, BaseNotification>>(new Map());
   const listenersRef = useRef<Map<string, () => void>>(new Map());
 
@@ -66,19 +68,19 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     const notificationMap: Record<string, { title: string; message: (data: any) => string }> = {
       'proforma.creada': {
         title: '📋 Nueva Proforma',
-        message: (d) => `${d.clienteNombre} - ${d.numero}`,
+        message: (d) => `${d.clienteNombre || d.cliente?.nombre || 'Cliente'} - ${d.numero || d.proforma_numero}`,
       },
       'proforma.aprobada': {
         title: '✅ Proforma Aprobada',
-        message: (d) => `${d.clienteNombre} - ${d.numero}`,
+        message: (d) => `${d.clienteNombre || d.cliente?.nombre || 'Cliente'} - ${d.numero || d.proforma_numero}`,
       },
       'proforma.rechazada': {
         title: '❌ Proforma Rechazada',
-        message: (d) => `${d.clienteNombre} - ${d.numero}`,
+        message: (d) => `${d.clienteNombre || d.cliente?.nombre || 'Cliente'} - ${d.numero || d.proforma_numero}`,
       },
       'proforma.convertida': {
         title: '🔄 Proforma Convertida',
-        message: (d) => `${d.clienteNombre} - Venta ${d.ventaNumero}`,
+        message: (d) => `${d.clienteNombre || d.cliente?.nombre || 'Cliente'} - Venta ${d.ventaNumero}`,
       },
       'proforma.coordinacion-actualizada': {
         title: '📝 Coordinación Actualizada',
@@ -107,6 +109,38 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       'entrega.rechazada': {
         title: '❌ Entrega Rechazada',
         message: (d) => `${d.clienteNombre} - ${d.razon}`,
+      },
+      'venta.preparacion-carga': {
+        title: '📦 Venta en Preparación',
+        message: (d) => `${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} en preparación - ${d.numero_entrega || 'Entrega'}`,
+      },
+      'venta.listo-para-entrega': {
+        title: '✅ Venta Lista para Entrega',
+        message: (d) => `${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} lista${d.cantidad_ventas > 1 ? 's' : ''} para envío - ${d.numero_entrega || 'Entrega'}`,
+      },
+      'venta.listo-para-entrega-admin': {
+        title: '📦 Ventas Listas para Envío',
+        message: (d) => `${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} de ${d.clientes_unicos || 1} cliente${d.clientes_unicos > 1 ? 's' : ''} - Entrega ${d.numero_entrega || 'N/A'}`,
+      },
+      'venta.en-transito': {
+        title: '🚚 Venta en Tránsito',
+        message: (d) => `${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} en camino - Chofer: ${d.chofer?.nombre || 'N/A'}`,
+      },
+      'venta.entregada': {
+        title: '✅ Venta Entregada',
+        message: (d) => `Tu venta ${d.venta_numero} ha sido entregada`,
+      },
+      'venta.entregada-admin': {
+        title: '✅ Venta Entregada',
+        message: (d) => `Venta ${d.venta_numero} de ${d.cliente_nombre} ha sido entregada`,
+      },
+      'entrega.en-transito-admin': {
+        title: '🚚 Entrega en Tránsito',
+        message: (d) => `${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} de ${d.clientes_unicos || 1} cliente${d.clientes_unicos > 1 ? 's' : ''} en camino`,
+      },
+      'entrega.finalizada-admin': {
+        title: '✅ Entrega Finalizada',
+        message: (d) => `Entrega ${d.numero_entrega} completada - ${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} entregada${d.cantidad_ventas > 1 ? 's' : ''}`,
       },
       'ubicacion.actualizada': {
         title: '📍 Ubicación Actualizada',
@@ -193,10 +227,31 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
           return;
         }
 
+        // ✅ DEDUPLICACIÓN: Evitar notificaciones duplicadas
+        // Si ya existe una notificación con el mismo evento + datos en los últimos 500ms, ignorarla
+        const eventKey = `${eventName}:${eventData.id || eventData.proforma_id || eventData.numero}`;
+        const lastNotifTime = (window as any).__lastNotificationEvents?.[eventKey] || 0;
+        const now = Date.now();
+
+        if (now - lastNotifTime < 500) { // Si llegó en menos de 500ms, es duplicada
+          console.log(`⏭️ Notificación duplicada ignorada: ${eventName} (misma dentro de 500ms)`);
+          return;
+        }
+
+        // Registrar que recibimos este evento
+        if (!(window as any).__lastNotificationEvents) {
+          (window as any).__lastNotificationEvents = {};
+        }
+        (window as any).__lastNotificationEvents[eventKey] = now;
+
         const notification = createNotification(eventName, eventData);
         notificationsRef.current.set(notification.id, notification);
 
+        // ✅ CRITICAL: Actualizar state para trigger re-render del componente
+        setNotifications(Array.from(notificationsRef.current.values()));
+
         console.log(`📬 Notificación recibida: ${eventName}`, notification);
+        console.log(`🔔 Total de notificaciones: ${notificationsRef.current.size}, No leídas: ${Array.from(notificationsRef.current.values()).filter(n => !n.read).length}`);
 
         // Play notification sound
         // playNotificationSound();  // Desactivado temporalmente
@@ -259,6 +314,14 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       'entrega.completada',
       'entrega.creada',
       'entrega.rechazada',
+      'venta.preparacion-carga',
+      'venta.listo-para-entrega',
+      'venta.listo-para-entrega-admin',
+      'venta.en-transito',
+      'venta.entregada',
+      'venta.entregada-admin',
+      'entrega.en-transito-admin',
+      'entrega.finalizada-admin',
       'ubicacion.actualizada',
       'ubicacion.llegada-confirmada',
       'ruta.planificada',
@@ -351,6 +414,8 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
    */
   const clearNotifications = useCallback(() => {
     notificationsRef.current.clear();
+    // ✅ Actualizar state para re-render
+    setNotifications([]);
   }, []);
 
   /**
@@ -360,16 +425,20 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     const notification = notificationsRef.current.get(notificationId);
     if (notification) {
       notification.read = true;
+      // ✅ Actualizar state para re-render
+      setNotifications(Array.from(notificationsRef.current.values()));
     }
   }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return {
     getNotifications,
     clearNotifications,
     markAsRead,
     requestNotificationPermission,
-    notifications: Array.from(notificationsRef.current.values()),
-    unreadCount: Array.from(notificationsRef.current.values()).filter(n => !n.read).length,
+    notifications, // ✅ Ahora es state, causa re-renders
+    unreadCount, // ✅ Calcula desde state
   };
 };
 

@@ -171,9 +171,6 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             <SortableHeader field="numero">Número</SortableHeader>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Factura
-                            </th>
                             <SortableHeader field="proveedor">Proveedor</SortableHeader>
                             <SortableHeader field="total">Total</SortableHeader>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -185,13 +182,7 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                         {comprasSeguras.map((compra) => (
                             <tr key={compra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                    {/* <Link
-                                        href={`/compras/${compra.id}`}
-                                        className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                    >
-                                       
-                                    </Link> */}
-                                    #{compra.id} | {compra.numero}
+                                    Folio: {compra.id} | {compra.numero}
                                     <div className="font-medium">
                                         {new Date(compra.fecha).toLocaleDateString('es-ES', {
                                             year: 'numeric',
@@ -202,16 +193,15 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(compra.estado_documento)}`}>
                                         {compra.estado_documento?.nombre ?? 'Sin estado'}
                                     </span>
-                                </td>
-
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                    {compra.numero_factura ? (
+                                    <p>
+                                        {compra.numero_factura ? (
                                         <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">
                                             {compra.numero_factura}
                                         </span>
                                     ) : (
                                         <span className="text-gray-400 text-xs">Sin factura</span>
                                     )}
+                                    </p>
                                 </td>
 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">

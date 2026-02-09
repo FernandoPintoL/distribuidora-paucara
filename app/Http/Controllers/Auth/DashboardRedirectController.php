@@ -33,11 +33,22 @@ class DashboardRedirectController extends Controller
      *
      * IMPORTANTE: El frontend es "tonto", solo obedece lo que el backend decide
      */
-    public function redirect()
+    public function redirect(\Illuminate\Http\Request $request)
     {
         $user = Auth::user();
+        $sessionId = $request->session()->getId();
+
+        // 🔍 DEBUG: Log al entrar al redirect controller
+        \Log::info('🔍 [DashboardRedirectController] Entrada al redirect', [
+            'user_id' => $user?->id,
+            'user_name' => $user?->name,
+            'session_id' => $sessionId,
+            'session_has_sanctum_token' => $request->session()->has('sanctum_token'),
+            'sanctum_token_preview' => $request->session()->get('sanctum_token') ? substr($request->session()->get('sanctum_token'), 0, 20) . '...' : 'null',
+        ]);
 
         if (!$user) {
+            \Log::warning('🔍 [DashboardRedirectController] Usuario no autenticado, redirigiendo a login');
             return redirect()->route('login');
         }
 
@@ -46,7 +57,13 @@ class DashboardRedirectController extends Controller
         $dashboardUrl = $this->dashboardService->getDashboardRoute($user);
 
         // Log para debugging
-        \Log::info('Dashboard redirect', $this->dashboardService->getRedirectInfo($user));
+        \Log::info('🔍 [DashboardRedirectController] Redirigiendo usuario', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'dashboard_url' => $dashboardUrl,
+            'session_id' => $sessionId,
+            ...$this->dashboardService->getRedirectInfo($user),
+        ]);
 
         // ✅ Usar Inertia::location() para redirecciones externas en Inertia
         // Esto maneja correctamente las peticiones Inertia vs no-Inertia

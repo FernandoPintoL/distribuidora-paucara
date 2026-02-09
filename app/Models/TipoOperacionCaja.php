@@ -37,5 +37,66 @@ class TipoOperacionCaja extends Model
 
     const INGRESO_EXTRA = 'INGRESO_EXTRA';
 
-    const CREDITO = 'CREDITO';  // ✅ NUEVO: Tipo de operación para créditos otorgados
+    const CREDITO = 'CREDITO';  // ✅ Tipo de operación para créditos otorgados
+
+    const PAGO_SUELDO = 'PAGO_SUELDO';  // ✅ NUEVO: Tipo de operación para pagos de sueldo
+
+    const ANTICIPO = 'ANTICIPO';  // ✅ NUEVO: Tipo de operación para anticipos
+
+    /**
+     * ✅ Obtener tipos de operación clasificados por dirección (ENTRADA/SALIDA/AJUSTE)
+     * Agrupa los tipos para mejor presentación en UI
+     *
+     * @return array Array con estructura: ['ENTRADA' => [...], 'SALIDA' => [...], 'AJUSTE' => [...]]
+     */
+    public static function obtenerTiposClasificados(): array
+    {
+        $todos = self::all(['id', 'codigo', 'nombre']);
+
+        // Clasificación de tipos según dirección del flujo de dinero
+        $clasificacion = [
+            'ENTRADA' => [
+                'VENTA',     // Cliente compra
+                'PAGO',      // Cliente paga deuda
+            ],
+            'SALIDA' => [
+                'COMPRA',    // Compra a proveedor
+                'GASTOS',    // Gasto operacional
+                'PAGO_SUELDO', // Pago a empleados
+                'ANTICIPO',  // Anticipo a empleados
+                'ANULACION', // Devolución/anulación
+            ],
+            'AJUSTE' => [
+                'AJUSTE',    // Ajuste manual
+                'CREDITO',   // Otorgamiento de crédito
+            ],
+        ];
+
+        // Excluir del modal (tienen sus propios diálogos)
+        $excluidos = ['APERTURA', 'CIERRE'];
+
+        // Agrupar por clasificación
+        $resultado = [
+            'ENTRADA' => [],
+            'SALIDA' => [],
+            'AJUSTE' => [],
+        ];
+
+        foreach ($todos as $tipo) {
+            // Excluir tipos especiales
+            if (in_array($tipo->codigo, $excluidos)) {
+                continue;
+            }
+
+            // Encontrar la clasificación del tipo
+            foreach ($clasificacion as $clase => $codigos) {
+                if (in_array($tipo->codigo, $codigos)) {
+                    $resultado[$clase][] = $tipo;
+                    break;
+                }
+            }
+        }
+
+        return $resultado;
+    }
 }

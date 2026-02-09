@@ -121,7 +121,7 @@ export default function EstadisticasCompras({ estadisticas, className = '' }: Pr
             </div>
 
             {/* Detalle de Estados (span completo en móvil) */}
-            {estadisticas.compras_por_estado.length > 0 && (
+            {/* {estadisticas.compras_por_estado.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 md:col-span-2 lg:col-span-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                         Distribución por Estados
@@ -144,7 +144,7 @@ export default function EstadisticasCompras({ estadisticas, className = '' }: Pr
                         ))}
                     </div>
                 </div>
-            )}
+            )} */}
         </div>
     );
 }

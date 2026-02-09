@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 export const getRedirectApi = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ getRedirectApi.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 getRedirectApi.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ getRedirectApi.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 getRedirectApi.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ getRedirectApi.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
 getRedirectApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ getRedirectApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
     const getRedirectApiForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ getRedirectApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
         getRedirectApiForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ getRedirectApi.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::getRedirectApi
- * @see app/Http/Controllers/Auth/DashboardRedirectController.php:64
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
  * @route '/api/dashboard-redirect'
  */
         getRedirectApiForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

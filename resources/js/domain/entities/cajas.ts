@@ -115,6 +115,7 @@ export interface CajasIndexProps {
     totalMovimientos: number;
     historicoAperturas?: AperturaHistorico[];
     tiposOperacion?: TipoOperacion[];
+    tiposOperacionClasificados?: Record<string, TipoOperacion[]>; // ✅ NUEVO: Tipos clasificados por ENTRADA/SALIDA/AJUSTE
     tiposPago?: any[]; // ✅ NUEVO: Tipos de pago
     esVistaAdmin?: boolean; // ✅ NUEVO: Identificar si es vista admin
     usuarioDestino?: Usuario; // ✅ NUEVO: Usuario del cual se ve la caja

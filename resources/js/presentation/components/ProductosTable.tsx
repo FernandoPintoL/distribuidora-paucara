@@ -261,7 +261,10 @@ export default function ProductosTable({
                     tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado,
                     // ✅ NUEVO: Incluir es_combo
                     es_combo: p.es_combo || false,
-                    combo_items: p.combo_items || []
+                    combo_items: p.combo_items || [],
+                    // ✅ NUEVO: Incluir límites
+                    limite_productos: p.limite_productos || null,
+                    limite_venta: p.limite_venta || null
                 };
             });
 
@@ -809,6 +812,9 @@ export default function ProductosTable({
                                                     );
                                                 }
 
+                                                const limiteProductos = (productoInfo as any)?.limite_productos;
+                                                const limiteVenta = (productoInfo as any)?.limite_venta;
+
                                                 return (
                                                     <div className="text-xs">
                                                         <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${
@@ -821,6 +827,16 @@ export default function ProductosTable({
                                                         {stockTotal > stockDisponible && (
                                                             <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                                                                 Total: {stockTotal}
+                                                            </div>
+                                                        )}
+                                                        {limiteVenta !== null && limiteVenta !== undefined && (
+                                                            <div className="text-[10px] text-orange-600 dark:text-orange-400 mt-1 font-semibold">
+                                                                Límite Venta: {limiteVenta}
+                                                            </div>
+                                                        )}
+                                                        {limiteProductos !== null && limiteProductos !== undefined && (
+                                                            <div className="text-[10px] text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">
+                                                                Límite Productos: {limiteProductos}
                                                             </div>
                                                         )}
                                                     </div>

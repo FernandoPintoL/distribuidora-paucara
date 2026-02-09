@@ -147,6 +147,7 @@
 
         .documento-numero {
             text-align: center;
+            font-weight: bold;
             margin: 2px 0;
         }
 

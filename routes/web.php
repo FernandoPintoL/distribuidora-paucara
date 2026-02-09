@@ -424,6 +424,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/cerrar', [\App\Http\Controllers\CajaController::class, 'cerrarCaja'])->name('cerrar');
         Route::get('/movimientos', [\App\Http\Controllers\CajaController::class, 'movimientosDia'])->name('movimientos');
         Route::post('/movimientos', [\App\Http\Controllers\CajaController::class, 'registrarMovimiento'])->name('registrar-movimiento');
+        Route::post('/movimientos-json', [\App\Http\Controllers\CajaController::class, 'registrarMovimientoJson'])->name('registrar-movimiento-json'); // ✅ NUEVO: Para retornar JSON con movimiento_id
 
         // Gastos del usuario
         Route::prefix('gastos')->name('gastos.')->middleware('permission:cajas.gastos')->group(function () {
@@ -460,6 +461,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('/movimiento/{movimiento}/imprimir', [\App\Http\Controllers\CajaController::class, 'imprimirMovimiento'])
             ->where('movimiento', '[0-9]+')
             ->name('movimiento.imprimir')
+            ->middleware('permission:cajas.transacciones');
+
+        // ✅ NUEVO: Ruta para eliminar un movimiento (solo GASTOS, PAGO_SUELDO, ANTICIPO)
+        Route::delete('/movimiento/{movimiento}/eliminar', [\App\Http\Controllers\CajaController::class, 'eliminarMovimiento'])
+            ->where('movimiento', '[0-9]+')
+            ->name('movimiento.eliminar')
             ->middleware('permission:cajas.transacciones');
 
         Route::get('/{caja}/movimientos/exportar-excel', [\App\Http\Controllers\CajaController::class, 'exportarExcel'])

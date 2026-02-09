@@ -1088,50 +1088,15 @@ class ApiProformaController extends Controller
                 ], 400);
             }
 
-            // Validar que si se proporciona dirección confirmada, pertenece al cliente
-            if ($request->filled('direccion_entrega_confirmada_id')) {
-                $direccion = \App\Models\DireccionCliente::findOrFail($request->direccion_entrega_confirmada_id);
-                if ($direccion->cliente_id !== $proforma->cliente_id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La dirección seleccionada no pertenece al cliente de la proforma',
-                    ], 422);
-                }
-            }
+            // 1️⃣ Valida que la dirección confirmada pertenece al cliente
+            $direccionConfirmadaId = $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id;
+            $direccionExiste = $proforma->cliente->direcciones()->where('id', $direccionConfirmadaId)->exists();
 
-            // Validar que la hora confirmada está dentro de las ventanas del cliente (si existen)
-            if ($request->filled('hora_entrega_confirmada') && $request->filled('fecha_entrega_confirmada')) {
-                // 🔧 Soportar ambos formatos H:i y H:i:s
-                $horaRequestFormat = str_contains($request->hora_entrega_confirmada, ':') && substr_count($request->hora_entrega_confirmada, ':') == 2 ? 'H:i:s' : 'H:i';
-                $horaConfirmada = \Carbon\Carbon::createFromFormat($horaRequestFormat, $request->hora_entrega_confirmada);
-                $fechaConfirmada = \Carbon\Carbon::parse($request->fecha_entrega_confirmada);
-                $diaSemana = $fechaConfirmada->dayOfWeek;
-
-                // Obtener ventanas del cliente
-                $ventanas = $proforma->cliente->ventanasEntrega()
-                    ->where('dia_semana', $diaSemana)
-                    ->where('activo', true)
-                    ->first();
-
-                if ($ventanas) {
-                    // Los campos hora_inicio y hora_fin ahora vienen como string en formato 'H:i:s'
-                    // Usar 'H:i:s' para soportar segundos, o 'H:i' si no los tiene
-                    $format = str_contains($ventanas->hora_inicio, ':') && substr_count($ventanas->hora_inicio, ':') == 2 ? 'H:i:s' : 'H:i';
-                    $horaInicio = \Carbon\Carbon::createFromFormat($format, $ventanas->hora_inicio);
-                    $horaFin = \Carbon\Carbon::createFromFormat($format, $ventanas->hora_fin);
-
-                    if (!($horaConfirmada->gte($horaInicio) && $horaConfirmada->lte($horaFin))) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'La hora confirmada está fuera de las ventanas de entrega disponibles para el cliente',
-                            'ventanas_disponibles' => [
-                                'hora_inicio' => $ventanas->hora_inicio,
-                                'hora_fin' => $ventanas->hora_fin,
-                                'dia_semana' => $diaSemana,
-                            ],
-                        ], 422);
-                    }
-                }
+            if (!$direccionExiste) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La dirección de entrega confirmada no pertenece a este cliente',
+                ], 422);
             }
 
             // Actualizar proforma con confirmación del vendedor y datos de contacto
@@ -1168,20 +1133,13 @@ class ApiProformaController extends Controller
                 ], 400);
             }
 
-            // ✅ Emitir eventos para notificaciones y dashboard (envuelto en try-catch para evitar fallos de broadcast)
-            try {
-                event(new ProformaAprobada($proforma, $usuario?->id));
-                // Actualizar métricas del dashboard
-                event(new \App\Events\DashboardMetricsUpdated(
-                    app(\App\Services\DashboardService::class)->getMainMetrics('mes_actual')
-                ));
-            } catch (\Exception $broadcastError) {
-                Log::warning('⚠️  Error al emitir evento de aprobación (no crítico)', [
-                    'proforma_id' => $proforma->id,
-                    'error' => $broadcastError->getMessage(),
-                ]);
-                // El evento falló, pero la aprobación ya fue exitosa, así que continuamos
-            }
+            // ✅ DESACTIVADO: Usar solo servidor WebSocket de Node.js (./paucara/websocket)
+            // Las notificaciones se envían directamente desde SendProformaApprovedNotification listener
+            // No usamos Pusher broadcasting porque tenemos WebSocket nativo en Node.js
+            Log::info('✅ [aprobar] Notificaciones manejadas por servidor WebSocket Node.js (SendProformaApprovedNotification)', [
+                'proforma_id' => $proforma->id,
+                'usuario_id' => $usuario?->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -2122,20 +2080,44 @@ class ApiProformaController extends Controller
                     ], 422);
                 }
 
+                // ✅ NUEVO: Obtener caja abierta ANTES de crear la venta
+                // El listener RegisterCajaMovementFromVentaListener requiere este ID
+                $cajaAbiertaParaGuardar = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                    ->delDia()
+                    ->abiertas()
+                    ->with('caja')
+                    ->latest()
+                    ->first();
+
+                // Si no hay caja de hoy, buscar la más reciente
+                if (!$cajaAbiertaParaGuardar) {
+                    $cajaAbiertaParaGuardar = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                        ->abiertas()
+                        ->with('caja')
+                        ->latest('fecha')
+                        ->first();
+                }
+
                 // Preparar datos para la venta desde la proforma
                 $politicaPago = $request->politica_pago;
-                $montoTotal = $proforma->total;
+                // ✅ CAMBIO: Total SIN impuesto (subtotal - descuento)
+                $montoTotal = max(0, $proforma->subtotal - ($proforma->descuento ?? 0));
+
+                // ✅ NUEVO: Para CONTRA_ENTREGA, monto_pagado = total (para registrar en caja)
+                // pero estado_pago sigue siendo PENDIENTE
+                $montoPagadoInicial = ($politicaPago === 'CONTRA_ENTREGA') ? $montoTotal : 0;
+                $montoPendiente = $montoTotal - $montoPagadoInicial;
 
                 $datosVenta = [
-                    'numero' => \App\Models\Venta::generarNumero(),
+                    'numero' => '0',  // ✅ TEMP: Se asignará al ID después de crear
                     'fecha' => now()->toDateString(),
                     'subtotal' => $proforma->subtotal,
                     'descuento' => $proforma->descuento ?? 0,
-                    'impuesto' => $proforma->impuesto,
-                    'total' => $proforma->total,
+                    'impuesto' => 0,  // ✅ NUEVO: La empresa NO usa impuesto
+                    'total' => $montoTotal,  // ✅ CAMBIO: Total SIN impuesto
                     'monto_total' => $montoTotal,
-                    'monto_pagado' => 0,
-                    'monto_pendiente' => $montoTotal,
+                    'monto_pagado' => $montoPagadoInicial,  // ✅ CAMBIO: = total para CONTRA_ENTREGA
+                    'monto_pendiente' => $montoPendiente,  // ✅ CAMBIO: 0 para CONTRA_ENTREGA
                     'politica_pago' => $politicaPago,
                     'estado_pago' => 'PENDIENTE',
                     'observaciones' => $proforma->observaciones,
@@ -2153,10 +2135,20 @@ class ApiProformaController extends Controller
                     'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
                         ->where('activo', true)
                         ->first()?->id ?? 3,
+                    // ✅ NUEVO: Guardar caja_id en ventas incluso para CONTRA_ENTREGA
+                    'caja_id' => $cajaAbiertaParaGuardar?->caja_id ?? null,
                 ];
 
                 // Crear la venta
                 $venta = \App\Models\Venta::create($datosVenta);
+
+                // ✅ NUEVO: Asignar número de venta con formato VEN + FECHA + ID
+                $numeroVenta = 'VEN' . now()->format('Ymd') . '-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT);
+                $venta->update(['numero' => $numeroVenta]);
+                Log::info('✅ [procesarVenta desde ApiProformaController] Número de venta asignado con ID', [
+                    'venta_id' => $venta->id,
+                    'numero_venta' => $numeroVenta,
+                ]);
 
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {
@@ -2167,6 +2159,37 @@ class ApiProformaController extends Controller
                         'subtotal' => $detalleProforma->subtotal,
                     ]);
                 }
+
+                // 🔑 CRÍTICO: Obtener caja abierta para establecer en atributo especial
+                // El listener RegisterCajaMovementFromVentaListener requiere _caja_id para registrar en caja
+                $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
+                    ->delDia()
+                    ->abiertas()
+                    ->with('caja')
+                    ->latest()
+                    ->first();
+
+                // Si no hay caja de hoy, buscar la más reciente
+                if (!$cajaAbiertaParaRegistro) {
+                    $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
+                        ->abiertas()
+                        ->with('caja')
+                        ->latest('fecha')
+                        ->first();
+                }
+
+                // ✅ Establecer atributo especial para el listener
+                if ($cajaAbiertaParaRegistro) {
+                    $venta->setAttribute('_caja_id', $cajaAbiertaParaRegistro->caja_id);
+                    Log::info('🔑 [procesarVenta] Establecido _caja_id para listener', [
+                        'venta_id' => $venta->id,
+                        'caja_id' => $cajaAbiertaParaRegistro->caja_id,
+                        'caja_nombre' => $cajaAbiertaParaRegistro->caja?->nombre,
+                    ]);
+                }
+
+                // ✅ DISPARO MANUAL DEL EVENTO: VentaCreada (para que se registre en caja)
+                event(new \App\Events\VentaCreada($venta));
 
                 // Marcar la proforma como convertida
                 if (!$proforma->marcarComoConvertida()) {
@@ -2266,6 +2289,13 @@ class ApiProformaController extends Controller
                 $usuario = request()->user();
                 $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
                 $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
+
+                // ✅ NUEVO: Para CONTRA_ENTREGA, forzar monto_pagado = total (para registrar en caja)
+                // Pero estado_pago seguirá siendo PENDIENTE
+                $totalProforma = max(0, $proforma->subtotal - ($proforma->descuento ?? 0));
+                if ($politica === 'CONTRA_ENTREGA') {
+                    $montoPagado = $totalProforma;
+                }
 
                 // 📊 LOG: INICIO DEL FLUJO DE CONVERSIÓN
                 Log::info('🚀 [ApiProformaController::convertirAVenta] INICIO DEL FLUJO', [
@@ -2433,7 +2463,8 @@ class ApiProformaController extends Controller
                 // ✅ MEJORADO: Calcular estado de pago según política
                 // Ahora considera todas las políticas: CONTRA_ENTREGA, ANTICIPADO_100, MEDIO_MEDIO, CREDITO
                 // Nota: $montoPagado y $politica ya fueron definidas en VALIDACIÓN 0.1
-                $total = (float) $proforma->total;
+                // ✅ CAMBIO: Total SIN impuesto (subtotal - descuento)
+                $total = max(0, $proforma->subtotal - ($proforma->descuento ?? 0));
 
                 // Lógica mejorada para determinar estado de pago según política
                 $estadoPago = match($politica) {
@@ -2476,6 +2507,26 @@ class ApiProformaController extends Controller
                     throw new \Exception('No se encontraron los estados logísticos requeridos en la base de datos');
                 }
 
+                // ✅ NUEVO: Obtener caja abierta ANTES de crear la venta
+                // El listener RegisterCajaMovementFromVentaListener requiere este ID
+                $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                    ->delDia()
+                    ->abiertas()
+                    ->with('caja')
+                    ->latest()
+                    ->first();
+
+                // Si no hay caja de hoy, buscar la más reciente
+                if (!$cajaAbiertaParaRegistro) {
+                    $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', $usuario->id)
+                        ->abiertas()
+                        ->with('caja')
+                        ->latest('fecha')
+                        ->first();
+                }
+
+                $cajaIdParaGuardar = $cajaAbiertaParaRegistro?->caja_id ?? null;
+
                 // ✅ NUEVO: Calcular peso total desde detalles
                 // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
                 $pesoTotal = 0;
@@ -2486,12 +2537,12 @@ class ApiProformaController extends Controller
 
                 // Preparar datos para la venta desde la proforma
                 $datosVenta = [
-                    'numero' => \App\Models\Venta::generarNumero(),
+                    'numero' => '0',  // ✅ TEMP: Se asignará al ID después de crear
                     'fecha' => now()->toDateString(),
                     'subtotal' => $proforma->subtotal,
                     'descuento' => $proforma->descuento ?? 0,
-                    'impuesto' => $proforma->impuesto,
-                    'total' => $proforma->total,
+                    'impuesto' => 0,  // ✅ NUEVO: La empresa NO usa impuesto
+                    'total' => max(0, $proforma->subtotal - ($proforma->descuento ?? 0)),  // ✅ CAMBIO: Total SIN impuesto (subtotal - descuento)
                     'peso_total_estimado' => $pesoTotal,  // ✅ NUEVO: Pasar peso calculado
                     'observaciones' => $proforma->observaciones,
                     'cliente_id' => $proforma->cliente_id,
@@ -2523,11 +2574,21 @@ class ApiProformaController extends Controller
                     'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
                         ->where('activo', true)
                         ->first()?->id ?? 3,
+                    // ✅ NUEVO: Guardar caja_id en ventas incluso para CONTRA_ENTREGA
+                    'caja_id' => $cajaAbiertaParaRegistro?->caja_id ?? null,
                 ];
 
                 // Crear la venta
                 // IMPORTANTE: NO se procesa stock aquí, se hace al consumir reservas
                 $venta = \App\Models\Venta::create($datosVenta);
+
+                // ✅ NUEVO: Asignar número de venta con formato VEN + FECHA + ID
+                $numeroVenta = 'VEN' . now()->format('Ymd') . '-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT);
+                $venta->update(['numero' => $numeroVenta]);
+                Log::info('✅ [convertirAVenta] Número de venta asignado con ID', [
+                    'venta_id' => $venta->id,
+                    'numero_venta' => $numeroVenta,
+                ]);
 
                 // 🔑 CRÍTICO: Obtener caja abierta para establecer en atributo especial
                 // El listener RegisterCajaMovementFromVentaListener requiere _caja_id para registrar en caja
@@ -2562,6 +2623,9 @@ class ApiProformaController extends Controller
                     ]);
                 }
 
+                // ✅ DISPARO MANUAL DEL EVENTO: VentaCreada (para que se registre en caja)
+                event(new \App\Events\VentaCreada($venta));
+
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {
                     $venta->detalles()->create([
@@ -2584,13 +2648,15 @@ class ApiProformaController extends Controller
                 ]);
 
                 try {
-                    $proforma->consumirReservas();
+                    $proforma->consumirReservas($numeroVenta);
                     Log::info('✅ [ApiProformaController::convertirAVenta] Reservas consumidas exitosamente', [
                         'proforma_id' => $proforma->id,
+                        'numero_venta' => $numeroVenta,
                     ]);
                 } catch (\Exception $e) {
                     Log::error('❌ [ApiProformaController::convertirAVenta] Error al consumir reservas', [
                         'proforma_id' => $proforma->id,
+                        'numero_venta' => $numeroVenta,
                         'error' => $e->getMessage(),
                     ]);
                     throw $e;
@@ -2645,20 +2711,13 @@ class ApiProformaController extends Controller
                 // Cargar relaciones para la respuesta
                 $venta->load(['cliente', 'detalles.producto', 'moneda', 'estadoDocumento']);
 
-                // ✅ Emitir eventos para notificaciones y dashboard (envuelto en try-catch para evitar fallos de broadcast)
-                try {
-                    event(new ProformaConvertida($proforma, $venta));
-                    // Actualizar métricas del dashboard
-                    event(new \App\Events\DashboardMetricsUpdated(
-                        app(\App\Services\DashboardService::class)->getMainMetrics('mes_actual')
-                    ));
-                } catch (\Exception $broadcastError) {
-                    Log::warning('⚠️  Error al emitir evento de conversión (no crítico)', [
-                        'proforma_id' => $proforma->id,
-                        'error' => $broadcastError->getMessage(),
-                    ]);
-                    // El evento falló, pero la conversión ya fue exitosa, así que continuamos
-                }
+                // ✅ DESACTIVADO: Usar solo servidor WebSocket de Node.js (./paucara/websocket)
+                // Las notificaciones se envían directamente desde SendProformaConvertedNotification listener
+                // No usamos Pusher broadcasting porque tenemos WebSocket nativo en Node.js
+                Log::info('✅ [convertirAVenta] Notificaciones manejadas por servidor WebSocket Node.js (SendProformaConvertedNotification)', [
+                    'proforma_id' => $proforma->id,
+                    'venta_id' => $venta->id,
+                ]);
 
                 // ✅ MEJORADO: Log detallado con información de política de pago
                 Log::info('🎉 [convertirAVenta] FLUJO COMPLETADO EXITOSAMENTE', [
@@ -2961,6 +3020,451 @@ class ApiProformaController extends Controller
     }
 
     /**
+     * ✅ NUEVO: Ajustar reservaciones cuando se actualizan detalles de proforma
+     *
+     * Sincroniza las reservas de stock con los nuevos detalles:
+     * - Libera reservas de productos removidos
+     * - Ajusta cantidades si disminuyeron
+     * - Crea nuevas reservas si aumentaron o se agregaron productos
+     *
+     * @param Proforma $proforma
+     * @param array $detallesGuardados Array de detalles nuevos: [{'producto_id': X, 'cantidad': Y}, ...]
+     * @return void
+     */
+    private function ajustarReservacionesAlActualizarDetalles(Proforma $proforma, array $detallesGuardados)
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info('🔄 Iniciando ajuste de reservaciones para proforma', [
+                'proforma_id' => $proforma->id,
+                'detalles_nuevos' => count($detallesGuardados),
+            ]);
+
+            // 1️⃣ Obtener reservas activas actuales con su stock asociado
+            $reservasActuales = $proforma->reservasActivas()
+                ->with('stockProducto.producto', 'stockProducto.almacen')
+                ->get();
+
+            // 2️⃣ Crear mapa de producto_id → cantidad esperada (de los nuevos detalles)
+            $detallesMap = [];
+            foreach ($detallesGuardados as $detalle) {
+                $producto_id = $detalle['producto_id'];
+                $cantidad = (int) $detalle['cantidad'];
+
+                if (!isset($detallesMap[$producto_id])) {
+                    $detallesMap[$producto_id] = 0;
+                }
+                $detallesMap[$producto_id] += $cantidad;
+            }
+
+            \Illuminate\Support\Facades\Log::info('📊 Mapa de detalles esperados', ['mapa' => $detallesMap]);
+
+            // 3️⃣ Procesar cada reserva actual
+            $reservasALiberar = [];
+            $reservasAActualizar = [];
+
+            foreach ($reservasActuales as $reserva) {
+                $producto_id = $reserva->stockProducto->producto_id;
+                $cantidadActual = $reserva->cantidad_reservada;
+                $cantidadEsperada = $detallesMap[$producto_id] ?? 0;
+
+                if ($cantidadEsperada === 0) {
+                    // ❌ Producto fue removido: marcar para liberar
+                    $reservasALiberar[] = $reserva;
+                    \Illuminate\Support\Facades\Log::info('📤 Producto removido de proforma, liberando reserva', [
+                        'reserva_id' => $reserva->id,
+                        'producto_id' => $producto_id,
+                        'cantidad' => $cantidadActual,
+                    ]);
+                } elseif ($cantidadEsperada < $cantidadActual) {
+                    // 📉 Cantidad disminuyó: ajustar y liberar exceso
+                    $exceso = $cantidadActual - $cantidadEsperada;
+                    $reservasAActualizar[] = [
+                        'reserva' => $reserva,
+                        'cantidad_nueva' => $cantidadEsperada,
+                        'exceso' => $exceso,
+                        'tipo' => 'REDUCCION',
+                    ];
+                    \Illuminate\Support\Facades\Log::info('📉 Cantidad de producto disminuyó, reduciendo reserva', [
+                        'reserva_id' => $reserva->id,
+                        'producto_id' => $producto_id,
+                        'cantidad_anterior' => $cantidadActual,
+                        'cantidad_nueva' => $cantidadEsperada,
+                        'exceso_a_liberar' => $exceso,
+                    ]);
+                } elseif ($cantidadEsperada > $cantidadActual) {
+                    // 📈 Cantidad aumentó: crear nueva reserva para el exceso
+                    $exceso = $cantidadEsperada - $cantidadActual;
+                    $reservasAActualizar[] = [
+                        'reserva' => $reserva,
+                        'cantidad_nueva' => $cantidadEsperada,
+                        'exceso' => $exceso,
+                        'tipo' => 'AUMENTO',
+                    ];
+                    \Illuminate\Support\Facades\Log::info('📈 Cantidad de producto aumentó, aumentando reserva', [
+                        'reserva_id' => $reserva->id,
+                        'producto_id' => $producto_id,
+                        'cantidad_anterior' => $cantidadActual,
+                        'cantidad_nueva' => $cantidadEsperada,
+                        'exceso_a_reservar' => $exceso,
+                    ]);
+                } else {
+                    // ✅ Cantidad igual: no hacer nada
+                    \Illuminate\Support\Facades\Log::info('✅ Cantidad de producto sin cambios', [
+                        'reserva_id' => $reserva->id,
+                        'producto_id' => $producto_id,
+                        'cantidad' => $cantidadActual,
+                    ]);
+                }
+
+                // Eliminar del mapa para saber cuáles son nuevos después
+                unset($detallesMap[$producto_id]);
+            }
+
+            // 4️⃣ Liberar reservas de productos removidos
+            foreach ($reservasALiberar as $reserva) {
+                $this->liberarReservaConMovimiento($reserva, 'Detalle removido de proforma', $proforma->numero);
+            }
+
+            // 5️⃣ Ajustar cantidades de reservas existentes
+            foreach ($reservasAActualizar as $item) {
+                $reserva = $item['reserva'];
+                $cantidadNueva = $item['cantidad_nueva'];
+                $exceso = $item['exceso'];
+                $tipo = $item['tipo'];
+
+                if ($tipo === 'REDUCCION') {
+                    // Reducir cantidad y liberar exceso
+                    $this->reducirReserva($reserva, $cantidadNueva);
+                    // Liberar el exceso como movimiento de inventario
+                    $this->liberarExcesoReserva($reserva, $exceso, 'Cantidad reducida en proforma', $proforma->numero);
+                } else {
+                    // ✅ CORREGIDO: Aumentar cantidad - SOLO ampliar la reserva existente
+                    // NO crear reserva adicional (eso duplicaba el bloqueo de stock)
+                    $this->ampliarReserva($reserva, $cantidadNueva, $proforma);
+                }
+            }
+
+            // 6️⃣ Crear nuevas reservas para productos agregados
+            foreach ($detallesMap as $producto_id => $cantidad) {
+                if ($cantidad > 0) {
+                    $this->crearNuevaReservaParaProducto($proforma, $producto_id, $cantidad);
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::info('✅ Ajuste de reservaciones completado para proforma', [
+                'proforma_id' => $proforma->id,
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error ajustando reservaciones', [
+                'proforma_id' => $proforma->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // No lanzar excepción: solo registrar en log para no bloquear la actualización
+        }
+    }
+
+    /**
+     * Liberar una reserva completa
+     */
+    private function liberarReservaConMovimiento(\App\Models\ReservaProforma $reserva, string $motivo, ?string $numeroProforma = null)
+    {
+        if ($reserva->estado !== \App\Models\ReservaProforma::ACTIVA) {
+            return;
+        }
+
+        try {
+            // Liberar la reserva (devuelve cantidad_disponible)
+            $reserva->liberar();
+
+            // Registrar movimiento en inventario
+            \App\Models\MovimientoInventario::create([
+                'stock_producto_id' => $reserva->stock_producto_id,
+                'cantidad' => $reserva->cantidad_reservada, // Positivo: liberar
+                'fecha' => now(),
+                'observacion' => $motivo,
+                'numero_documento' => $numeroProforma, // ✅ NUEVO: Número de proforma
+                'tipo' => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo' => 'proforma',
+                'referencia_id' => $reserva->proforma_id,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('✅ Reserva liberada completamente', [
+                'reserva_id' => $reserva->id,
+                'cantidad' => $reserva->cantidad_reservada,
+                'motivo' => $motivo,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error liberando reserva', [
+                'reserva_id' => $reserva->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Reducir cantidad de una reserva existente
+     */
+    private function reducirReserva(\App\Models\ReservaProforma $reserva, int $cantidadNueva)
+    {
+        if ($reserva->cantidad_reservada === $cantidadNueva) {
+            return; // No hay cambio
+        }
+
+        try {
+            $cantidadAnterior = $reserva->cantidad_reservada;
+
+            // Actualizar cantidad de la reserva
+            $reserva->update(['cantidad_reservada' => $cantidadNueva]);
+
+            // Actualizar stock_productos (reducir cantidad_reservada y aumentar cantidad_disponible)
+            $diferencia = $cantidadAnterior - $cantidadNueva;
+            \Illuminate\Support\Facades\DB::table('stock_productos')
+                ->where('id', $reserva->stock_producto_id)
+                ->update([
+                    'cantidad_disponible' => \Illuminate\Support\Facades\DB::raw("cantidad_disponible + {$diferencia}"),
+                    'cantidad_reservada' => \Illuminate\Support\Facades\DB::raw("cantidad_reservada - {$diferencia}"),
+                    'fecha_actualizacion' => now(),
+                ]);
+
+            \Illuminate\Support\Facades\Log::info('✅ Reserva reducida', [
+                'reserva_id' => $reserva->id,
+                'cantidad_anterior' => $cantidadAnterior,
+                'cantidad_nueva' => $cantidadNueva,
+                'diferencia' => $diferencia,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error reduciendo reserva', [
+                'reserva_id' => $reserva->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Liberar la parte del exceso cuando se reduce una reserva
+     */
+    private function liberarExcesoReserva(\App\Models\ReservaProforma $reserva, int $exceso, string $motivo, ?string $numeroProforma = null)
+    {
+        try {
+            \App\Models\MovimientoInventario::create([
+                'stock_producto_id' => $reserva->stock_producto_id,
+                'cantidad' => $exceso, // Positivo: liberar
+                'fecha' => now(),
+                'observacion' => $motivo,
+                'numero_documento' => $numeroProforma, // ✅ NUEVO: Número de proforma
+                'tipo' => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo' => 'proforma',
+                'referencia_id' => $reserva->proforma_id,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('✅ Exceso liberado en movimiento de inventario', [
+                'reserva_id' => $reserva->id,
+                'exceso' => $exceso,
+                'motivo' => $motivo,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error registrando liberación de exceso', [
+                'reserva_id' => $reserva->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Ampliar cantidad de una reserva existente
+     */
+    private function ampliarReserva(\App\Models\ReservaProforma $reserva, int $cantidadNueva, ?\App\Models\Proforma $proforma = null)
+    {
+        if ($reserva->cantidad_reservada === $cantidadNueva) {
+            return; // No hay cambio
+        }
+
+        try {
+            $cantidadAnterior = $reserva->cantidad_reservada;
+
+            // Actualizar cantidad de la reserva
+            $reserva->update(['cantidad_reservada' => $cantidadNueva]);
+
+            // Actualizar stock_productos (reducir cantidad_disponible y aumentar cantidad_reservada)
+            $diferencia = $cantidadNueva - $cantidadAnterior;
+            $affected = \Illuminate\Support\Facades\DB::table('stock_productos')
+                ->where('id', $reserva->stock_producto_id)
+                ->where('cantidad_disponible', '>=', $diferencia) // Validar disponibilidad
+                ->update([
+                    'cantidad_disponible' => \Illuminate\Support\Facades\DB::raw("cantidad_disponible - {$diferencia}"),
+                    'cantidad_reservada' => \Illuminate\Support\Facades\DB::raw("cantidad_reservada + {$diferencia}"),
+                    'fecha_actualizacion' => now(),
+                ]);
+
+            if ($affected === 0) {
+                throw new \Exception("Stock insuficiente para ampliar reserva");
+            }
+
+            // ✅ NUEVO: Registrar movimiento en inventario
+            if ($proforma) {
+                \App\Models\MovimientoInventario::create([
+                    'stock_producto_id' => $reserva->stock_producto_id,
+                    'cantidad' => -$diferencia, // Negativo: reservar
+                    'fecha' => now(),
+                    'observacion' => "Cantidad aumentada en proforma (vencimiento: 3 días)",
+                    'numero_documento' => $proforma->numero,
+                    'tipo' => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                    'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                    'referencia_tipo' => 'proforma',
+                    'referencia_id' => $proforma->id,
+                ]);
+            }
+
+            \Illuminate\Support\Facades\Log::info('✅ Reserva ampliada', [
+                'reserva_id' => $reserva->id,
+                'cantidad_anterior' => $cantidadAnterior,
+                'cantidad_nueva' => $cantidadNueva,
+                'diferencia' => $diferencia,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error ampliando reserva', [
+                'reserva_id' => $reserva->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Crear una reserva adicional para ampliar cantidad existente
+     */
+    private function crearReservaAdicional(\App\Models\Proforma $proforma, int $stock_producto_id, int $cantidad)
+    {
+        try {
+            $stockProducto = \App\Models\StockProducto::findOrFail($stock_producto_id);
+
+            // Validar disponibilidad
+            if ($stockProducto->cantidad_disponible < $cantidad) {
+                throw new \Exception(
+                    "Stock insuficiente para reservar adicional. " .
+                    "Disponible: {$stockProducto->cantidad_disponible}, " .
+                    "Solicitado: {$cantidad}"
+                );
+            }
+
+            // Crear nueva reserva
+            $reserva = \App\Models\ReservaProforma::create([
+                'proforma_id' => $proforma->id,
+                'stock_producto_id' => $stock_producto_id,
+                'cantidad_reservada' => $cantidad,
+                'fecha_reserva' => now(),
+                'fecha_expiracion' => now()->addDays(3),
+                'estado' => \App\Models\ReservaProforma::ACTIVA,
+            ]);
+
+            // Reducir cantidad disponible en stock
+            $stockProducto->decrement('cantidad_disponible', $cantidad);
+            $stockProducto->increment('cantidad_reservada', $cantidad);
+
+            // Registrar movimiento en inventario
+            \App\Models\MovimientoInventario::create([
+                'stock_producto_id' => $stock_producto_id,
+                'cantidad' => -$cantidad, // Negativo: reservar
+                'fecha' => now(),
+                'observacion' => "Cantidad aumentada en proforma (vencimiento: 3 días)",
+                'numero_documento' => $proforma->numero, // ✅ NUEVO: Número de proforma
+                'tipo' => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo' => 'proforma',
+                'referencia_id' => $proforma->id,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('✅ Reserva adicional creada', [
+                'reserva_id' => $reserva->id,
+                'proforma_id' => $proforma->id,
+                'stock_producto_id' => $stock_producto_id,
+                'cantidad' => $cantidad,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error creando reserva adicional', [
+                'proforma_id' => $proforma->id,
+                'stock_producto_id' => $stock_producto_id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Crear nueva reserva para un producto agregado a la proforma
+     */
+    private function crearNuevaReservaParaProducto(\App\Models\Proforma $proforma, int $producto_id, int $cantidad)
+    {
+        try {
+            // Obtener el stock del producto (usando el almacén por defecto del cliente si existe)
+            $producto = \App\Models\Producto::findOrFail($producto_id);
+
+            // Si el cliente tiene un almacén preferido, usarlo; si no, usar el almacén 1
+            $almacen_id = $proforma->cliente?->almacen_id ?? 1;
+
+            $stockProducto = $producto->stocks()
+                ->where('almacen_id', $almacen_id)
+                ->firstOrFail();
+
+            // Validar disponibilidad
+            if ($stockProducto->cantidad_disponible < $cantidad) {
+                throw new \Exception(
+                    "Stock insuficiente para reservar. " .
+                    "Producto: {$producto->nombre}, " .
+                    "Disponible: {$stockProducto->cantidad_disponible}, " .
+                    "Solicitado: {$cantidad}"
+                );
+            }
+
+            // Crear nueva reserva
+            $reserva = \App\Models\ReservaProforma::create([
+                'proforma_id' => $proforma->id,
+                'stock_producto_id' => $stockProducto->id,
+                'cantidad_reservada' => $cantidad,
+                'fecha_reserva' => now(),
+                'fecha_expiracion' => now()->addDays(3),
+                'estado' => \App\Models\ReservaProforma::ACTIVA,
+            ]);
+
+            // Reducir cantidad disponible en stock
+            $stockProducto->decrement('cantidad_disponible', $cantidad);
+            $stockProducto->increment('cantidad_reservada', $cantidad);
+
+            // Registrar movimiento en inventario
+            \App\Models\MovimientoInventario::create([
+                'stock_producto_id' => $stockProducto->id,
+                'cantidad' => -$cantidad, // Negativo: reservar
+                'fecha' => now(),
+                'observacion' => "Producto agregado a proforma (vencimiento: 3 días)",
+                'numero_documento' => $proforma->numero, // ✅ NUEVO: Número de proforma
+                'tipo' => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo' => 'proforma',
+                'referencia_id' => $proforma->id,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('✅ Nueva reserva creada para producto agregado', [
+                'reserva_id' => $reserva->id,
+                'proforma_id' => $proforma->id,
+                'producto_id' => $producto_id,
+                'stock_producto_id' => $stockProducto->id,
+                'cantidad' => $cantidad,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error creando nueva reserva', [
+                'proforma_id' => $proforma->id,
+                'producto_id' => $producto_id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * API: Actualizar detalles de una proforma y recalcular totales
      *
      * POST /api/proformas/{proforma}/actualizar-detalles
@@ -3050,6 +3554,9 @@ class ApiProformaController extends Controller
                 'impuesto' => $impuestoNuevo,
                 'total' => $totalNuevo,
             ]);
+
+            // ✅ NUEVO: Ajustar reservaciones para que coincidan con los nuevos detalles
+            $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);
 
             // Recargar relaciones
             $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'estadoLogistica']);

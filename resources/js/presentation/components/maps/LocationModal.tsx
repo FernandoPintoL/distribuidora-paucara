@@ -13,7 +13,9 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Textarea } from '@/presentation/components/ui/textarea';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
-import { MapPin, Save, X } from 'lucide-react';
+import { MapPin, Save, X, Loader2 } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import NotificationService from '@/infrastructure/services/notification.service';
 
 export interface DireccionData {
     id?: number;
@@ -28,21 +30,27 @@ export interface DireccionData {
 interface LocationModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (direccion: DireccionData) => void;
+    onSave?: (direccion: DireccionData) => void;
+    onSaveSuccess?: (direccion: DireccionData) => void;
     latitude: number;
     longitude: number;
     geocodedAddress?: string;
     existingData?: DireccionData | null;
+    clienteId?: number | null; // Cliente ID para guardar en la BD
+    localidadId?: number | null; // Localidad ID del cliente
 }
 
 export default function LocationModal({
     isOpen,
     onClose,
     onSave,
+    onSaveSuccess,
     latitude,
     longitude,
     geocodedAddress = '',
     existingData = null,
+    clienteId = null,
+    localidadId = null,
 }: LocationModalProps) {
     const [formData, setFormData] = useState<DireccionData>({
         direccion: geocodedAddress,
@@ -53,6 +61,7 @@ export default function LocationModal({
     });
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [isSaving, setIsSaving] = useState(false);
 
     // Actualizar formulario cuando cambian las props
     useEffect(() => {
@@ -93,13 +102,78 @@ export default function LocationModal({
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!validate()) {
             return;
         }
 
-        onSave(formData);
-        handleClose();
+        // Si hay clienteId, guardar directamente en la BD
+        if (clienteId) {
+            await saveToDatabase();
+        } else {
+            // Si no hay clienteId, usar el callback antiguo (para formularios)
+            onSave?.(formData);
+            handleClose();
+        }
+    };
+
+    const saveToDatabase = async () => {
+        setIsSaving(true);
+
+        // Preparar los datos para enviar
+        const dataToSend = {
+            direccion: formData.direccion,
+            latitud: formData.latitud,
+            longitud: formData.longitud,
+            observaciones: formData.observaciones,
+            es_principal: formData.es_principal,
+            localidad_id: localidadId, // Usar la localidad del cliente
+        };
+
+        // Determinar si es crear o actualizar
+        const isUpdate = !!existingData?.id;
+        const url = isUpdate
+            ? `/api/clientes/${clienteId}/direcciones/${existingData.id}`
+            : `/api/clientes/${clienteId}/direcciones`;
+        const method = isUpdate ? 'PUT' : 'POST'; // Usar PUT para actualizar (no PATCH)
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify(dataToSend),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Error ${response.status}`);
+            }
+
+            const responseData = await response.json();
+            const savedDireccion = responseData.data;
+
+            // Llamar callback si existe
+            if (onSaveSuccess) {
+                onSaveSuccess(savedDireccion);
+            }
+
+            // Mostrar notificación de éxito
+            const successMessage = isUpdate
+                ? 'Dirección actualizada exitosamente'
+                : 'Dirección registrada exitosamente';
+            NotificationService.success(successMessage);
+
+            handleClose();
+        } catch (error: any) {
+            console.error('Error al guardar dirección:', error);
+            const errorMessage = error.message || 'Error al guardar la dirección';
+            NotificationService.error(errorMessage);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleClose = () => {
@@ -111,6 +185,7 @@ export default function LocationModal({
             es_principal: false,
         });
         setErrors({});
+        setIsSaving(false);
         onClose();
     };
 
@@ -199,13 +274,31 @@ export default function LocationModal({
                 </div>
 
                 <DialogFooter>
-                    <Button type="button" variant="outline" onClick={handleClose}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClose}
+                        disabled={isSaving}
+                    >
                         <X className="h-4 w-4 mr-2" />
                         Cancelar
                     </Button>
-                    <Button type="button" onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Guardar Ubicación
+                    <Button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Guardando...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Guardar Ubicación
+                            </>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

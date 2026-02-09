@@ -12,11 +12,17 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\Traits\RoleCheckerTrait; // ✨ NUEVO
+use App\Models\Traits\CaseInsensitiveRoles; // ✅ NUEVO: Case-insensitive roles
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, RoleCheckerTrait, Notifiable; // ✨ Agregar trait
+    use HasApiTokens, HasFactory, HasRoles, CaseInsensitiveRoles, RoleCheckerTrait, Notifiable {
+        // ✅ Resolver conflicto: usar CaseInsensitiveRoles::hasRole en lugar de HasRoles::hasRole
+        CaseInsensitiveRoles::hasRole insteadof HasRoles;
+        CaseInsensitiveRoles::hasAllRoles insteadof HasRoles;
+        CaseInsensitiveRoles::hasAnyRole insteadof HasRoles;
+    }
 
     /**
      * The attributes that are mass assignable.

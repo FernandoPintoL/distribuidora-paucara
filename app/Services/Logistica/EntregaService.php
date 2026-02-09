@@ -1011,6 +1011,40 @@ class EntregaService
                 'Carga completada - Entrega lista para partida'
             );
 
+            // ✅ NUEVO: Cambiar estado logístico de ventas de EN_PREPARACION a PENDIENTE_ENVIO
+            // IMPORTANTE: Usar estado_logistico_id (FK a estados_logistica) en lugar de estado_logistico (string)
+
+            // 1. Obtener ID del estado EN_PREPARACION (categoría: venta_logistica)
+            $estadoEnPreparacionId = \App\Models\EstadoLogistica::where('codigo', 'EN_PREPARACION')
+                ->where('categoria', 'venta_logistica')
+                ->value('id');
+
+            // 2. Obtener ID del estado PENDIENTE_ENVIO (categoría: venta_logistica)
+            $estadoPendienteEnvioId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+                ->where('categoria', 'venta_logistica')
+                ->value('id');
+
+            if (!$estadoEnPreparacionId || !$estadoPendienteEnvioId) {
+                throw new \Exception('Estados EN_PREPARACION o PENDIENTE_ENVIO no encontrados en tabla estados_logistica (categoría: venta_logistica)');
+            }
+
+            // 3. Actualizar ventas usando estado_logistico_id
+            // ✅ IMPORTANTE: Solo actualizar estado_logistico_id (FK a estados_logistica)
+            // NO actualizar estado_logistico (esa columna NO existe en tabla ventas)
+            $ventasActualizadas = $entrega->ventas()
+                ->where('estado_logistico_id', $estadoEnPreparacionId)
+                ->update([
+                    'estado_logistico_id' => $estadoPendienteEnvioId,
+                    'updated_at'          => now(),
+                ]);
+
+            \Log::info('✅ [LISTO_ENTREGA] Estados logísticos de ventas actualizados a PENDIENTE_ENVIO', [
+                'entrega_id'           => $entrega->id,
+                'cantidad_actualizadas' => $ventasActualizadas,
+                'estado_logistico_id'  => $estadoPendienteEnvioId,
+                'estado_anterior_id'   => $estadoEnPreparacionId,
+            ]);
+
             // Recargar relaciones para WebSocket
             $entrega->load(['chofer', 'ventas.cliente', 'vehiculo']);
 
@@ -1018,6 +1052,17 @@ class EntregaService
         });
 
         $this->logSuccess('Entrega marcada como lista para partida', ['entrega_id' => $entregaId]);
+
+        // ✅ NUEVO: Notificar a clientes sobre cambio de estado logístico
+        try {
+            $notificationService = app(\App\Services\Notifications\EntregaNotificationService::class);
+            $notificationService->notificarClientesListoParaEntrega($entrega);
+        } catch (\Exception $e) {
+            $this->logError('Error notificando a clientes sobre estado logístico', [
+                'entrega_id' => $entregaId,
+                'error'      => $e->getMessage(),
+            ]);
+        }
 
         // Notificar por WebSocket a chofer y cliente
         try {

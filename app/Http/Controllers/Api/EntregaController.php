@@ -15,6 +15,7 @@ use App\Models\Proforma;
 use App\Models\Venta;  // ✅ Importar modelo Venta
 use App\Models\EntregaVentaConfirmacion;  // ✅ Importar modelo confirmaciones
 use App\Services\ImpresionEntregaService;  // ✅ NUEVO: Importar servicio de productos
+use App\Services\WebSocket\EntregaWebSocketService;  // ✅ NUEVO: WebSocket service
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -585,19 +586,52 @@ class EntregaController extends Controller
 
             // Actualizar todas las ventas a EN_TRANSITO (cuando la entrega está en el flujo nuevo)
             if ($nuevoEstado === Entrega::ESTADO_EN_TRANSITO) {
+                // ✅ NUEVO: Obtener IDs de estados EN_TRANSITO y PENDIENTE_ENVIO
                 $estadoEnTransitoId = \App\Models\EstadoLogistica::where('codigo', 'EN_TRANSITO')
                     ->where('categoria', 'venta_logistica')
                     ->value('id');
 
-                if ($estadoEnTransitoId) {
-                    $ventasCount = $entrega->ventas()->update([
-                        'estado_logistico_id' => $estadoEnTransitoId,
-                    ]);
+                $estadoPendienteEnvioId = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
+                    ->where('categoria', 'venta_logistica')
+                    ->value('id');
+
+                if ($estadoEnTransitoId && $estadoPendienteEnvioId) {
+                    // ✅ MEJORADO: Solo actualizar ventas que están en PENDIENTE_ENVIO → EN_TRANSITO
+                    $ventasCount = $entrega->ventas()
+                        ->where('estado_logistico_id', $estadoPendienteEnvioId)
+                        ->update([
+                            'estado_logistico_id' => $estadoEnTransitoId,
+                            'updated_at'          => now(),
+                        ]);
 
                     Log::info('✅ [INICIAR_RUTA] Ventas actualizadas a EN_TRANSITO', [
+                        'entrega_id'              => $entrega->id,
+                        'ventas_actualizadas'    => $ventasCount,
+                        'estado_anterior_id'     => $estadoPendienteEnvioId,
+                        'estado_logistico_id'    => $estadoEnTransitoId,
+                    ]);
+                } elseif ($estadoEnTransitoId && !$estadoPendienteEnvioId) {
+                    // Fallback: Si no encuentra PENDIENTE_ENVIO, actualiza todas
+                    $ventasCount = $entrega->ventas()->update([
+                        'estado_logistico_id' => $estadoEnTransitoId,
+                        'updated_at'          => now(),
+                    ]);
+
+                    Log::warning('⚠️ [INICIAR_RUTA] Estado PENDIENTE_ENVIO no encontrado, se actualizaron todas las ventas', [
                         'entrega_id' => $entrega->id,
                         'ventas_actualizadas' => $ventasCount,
-                        'estado_logistico_id' => $estadoEnTransitoId,
+                    ]);
+                }
+
+                // ✅ NUEVO: Notificar a clientes, admins y cajeros sobre el cambio de estado
+                try {
+                    $entrega->load(['ventas.cliente', 'chofer', 'vehiculo']);
+                    $notificationService = app(\App\Services\Notifications\EntregaNotificationService::class);
+                    $notificationService->notificarClientesEnTransito($entrega);
+                } catch (\Exception $e) {
+                    Log::error('❌ Error notificando sobre inicio de tránsito', [
+                        'entrega_id' => $entrega->id,
+                        'error'      => $e->getMessage(),
                     ]);
                 }
             }
@@ -741,22 +775,15 @@ class EntregaController extends Controller
     public function confirmarVentaEntregada(Request $request, $id, $venta_id)
     {
         try {
+            // ✅ SIMPLIFICADO: Solo lo esencial para confirmar entrega
             $validated = $request->validate([
-                'firma_digital_base64' => 'nullable|string',
-                'fotos' => 'nullable|array',
+                'fotos' => 'nullable|array',                    // ✅ Fotos opcionales
                 'fotos.*' => 'string',
-                'observaciones' => 'nullable|string',
-                // ✅ NUEVO: Contexto de entrega
+                'observaciones' => 'nullable|string|max:500',  // ✅ Observaciones (detallar manualmente pago si aplica)
+                // Contexto de entrega
                 'tienda_abierta' => 'nullable|boolean',
                 'cliente_presente' => 'nullable|boolean',
                 'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
-                // ✅ FASE 1: Confirmación de Pago
-                'estado_pago' => 'nullable|string|in:PAGADO,PARCIAL,NO_PAGADO',
-                'monto_recibido' => 'nullable|numeric|min:0',
-                'tipo_pago_id' => 'nullable|integer|exists:tipos_pago,id',
-                'motivo_no_pago' => 'nullable|string|max:255',
-                // ✅ FASE 2: Foto de comprobante
-                'foto_comprobante' => 'nullable|string',
             ]);
 
             $entrega = Entrega::with('estadoEntrega')->findOrFail($id);
@@ -779,12 +806,7 @@ class EntregaController extends Controller
                 ->where('categoria', 'venta_logistica')
                 ->firstOrFail();
 
-            // ✅ Guardar firma y fotos
-            $firmaUrl = null;
-            if (!empty($validated['firma_digital_base64'])) {
-                $firmaUrl = $this->guardarArchivoBase64($validated['firma_digital_base64'], 'firmas');
-            }
-
+            // ✅ SIMPLIFICADO: Guardar fotos opcionalmente
             $fotosUrls = [];
             if (!empty($validated['fotos'])) {
                 foreach ($validated['fotos'] as $foto) {
@@ -795,112 +817,33 @@ class EntregaController extends Controller
                 }
             }
 
-            // ✅ FASE 2: Guardar foto de comprobante
-            $fotoComprobanteUrl = null;
-            if (!empty($validated['foto_comprobante'])) {
-                $fotoComprobanteUrl = $this->guardarArchivoBase64(
-                    $validated['foto_comprobante'],
-                    'comprobantes'
-                );
-            }
-
             // ✅ CAMBIAR VENTA A ENTREGADA
             $venta->update([
                 'estado_logistico_id' => $estadoEntregada->id,
             ]);
 
-            // ✅ GUARDAR CONFIRMACIÓN EN TABLA SEPARADA
+            // ✅ SIMPLIFICADO: Guardar SOLO la confirmación básica sin pago ni firma
             $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
                 [
                     'entrega_id' => $id,
                     'venta_id' => $venta_id,
                 ],
                 [
-                    'firma_digital_url' => $firmaUrl,
-                    'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,
-                    'observaciones' => $validated['observaciones'] ?? null,
+                    'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,  // ✅ Fotos opcionales
+                    'observaciones' => $validated['observaciones'] ?? null, // ✅ Notas del chofer (detallar pago aquí si aplica)
                     'tienda_abierta' => $validated['tienda_abierta'] ?? null,
                     'cliente_presente' => $validated['cliente_presente'] ?? null,
                     'motivo_rechazo' => $validated['motivo_rechazo'] ?? null,
-                    // ✅ FASE 1: Pago
-                    'estado_pago' => $validated['estado_pago'] ?? null,
-                    'monto_recibido' => $validated['monto_recibido'] ?? null,
-                    'tipo_pago_id' => $validated['tipo_pago_id'] ?? null,
-                    'motivo_no_pago' => $validated['motivo_no_pago'] ?? null,
-                    // ✅ FASE 2: Foto de comprobante
-                    'foto_comprobante' => $fotoComprobanteUrl,
                     'confirmado_por' => Auth::id(),
                     'confirmado_en' => now(),
                 ]
             );
 
-            // ✅ ACTUALIZAR ESTADO DE PAGO EN VENTA (si pagó)
-            if (!empty($validated['estado_pago'])) {
-                $estadoPago = $validated['estado_pago'];  // PAGADO, PARCIAL, NO_PAGADO
-                $montoRecibido = $validated['monto_recibido'] ?? 0;
+            // ✅ SIMPLIFICADO: SIN LÓGICA DE PAGO NI MOVIMIENTOS DE CAJA
+            // El pago se gestiona por separado, no aquí
+            // Si necesita detallar pago, puede escribir en observaciones
 
-                // Calcular montos
-                $montoTotal = $venta->total;
-                $montoPendiente = $montoTotal - $montoRecibido;
-
-                // Actualizar venta con información de pago
-                $venta->update([
-                    'estado_pago' => $estadoPago,
-                    'monto_pagado' => $montoRecibido,
-                    'monto_pendiente' => max(0, $montoPendiente),
-                    'tipo_pago_id' => $validated['tipo_pago_id'] ?? null,
-                ]);
-
-                Log::info('✅ Venta actualizada con información de pago', [
-                    'venta_id' => $venta_id,
-                    'estado_pago' => $estadoPago,
-                    'monto_recibido' => $montoRecibido,
-                    'monto_pendiente' => $montoPendiente,
-                ]);
-
-                // ✅ REGISTRAR MOVIMIENTO DE CAJA PARA CONTRAENTREGA
-                if ($estadoPago === 'PAGADO' && $venta->politica_pago === \App\Models\Venta::POLITICA_CONTRA_ENTREGA) {
-                    try {
-                        $chofer = Auth::user();
-                        $cajaAbierta = $chofer->empleado?->cajaAbierta();
-
-                        if ($cajaAbierta) {
-                            $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'VENTA')->first();
-
-                            if ($tipoOperacion) {
-                                \App\Models\MovimientoCaja::create([
-                                    'caja_id' => $cajaAbierta->id,
-                                    'tipo_operacion_id' => $tipoOperacion->id,
-                                    'numero_documento' => $venta->numero,
-                                    'descripcion' => "Venta #{$venta->numero} - CONTRAENTREGA - Cliente: {$venta->cliente?->nombre}",
-                                    'monto' => $montoRecibido,
-                                    'fecha' => now(),
-                                    'user_id' => Auth::id(),
-                                    'observaciones' => "Cobro en entrega - Entrega #{$id}",
-                                ]);
-
-                                Log::info("✅ MovimientoCaja registrado para contraentrega", [
-                                    'venta_id' => $venta_id,
-                                    'entrega_id' => $id,
-                                    'monto' => $montoRecibido,
-                                    'caja_id' => $cajaAbierta->id,
-                                ]);
-                            }
-                        } else {
-                            Log::warning("⚠️ Chofer no tiene caja abierta", [
-                                'venta_id' => $venta_id,
-                                'chofer_id' => $chofer->id,
-                            ]);
-                        }
-                    } catch (\Exception $e) {
-                        Log::error("❌ Error registrando MovimientoCaja: " . $e->getMessage(), [
-                            'venta_id' => $venta_id,
-                        ]);
-                    }
-                }
-            }
-
-            Log::info('✅ Venta entregada y registrada', [
+            Log::info('✅ Venta entregada', [
                 'entrega_id' => $id,
                 'venta_id' => $venta_id,
                 'confirmacion_id' => $confirmacion->id,
@@ -916,19 +859,32 @@ class EntregaController extends Controller
                 'vehiculo',
             ]);
 
+            // ✅ NUEVO: Notificar a cliente, admin y cajero que venta fue entregada
+            try {
+                $wsService = app(EntregaWebSocketService::class);
+                $wsService->notifyVentaEntregada($venta, $entrega, $venta->cliente);
+                Log::info('✅ Notificación WebSocket enviada sobre venta entregada');
+            } catch (\Exception $e) {
+                Log::warning('⚠️ No se pudo enviar notificación WebSocket sobre venta entregada', [
+                    'venta_id' => $venta_id,
+                    'error' => $e->getMessage(),
+                ]);
+                // No interrumpir el flujo si falla la notificación WebSocket
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Venta entregada correctamente',
-                'data' => $entrega,  // ✅ Retornar Entrega completa
-                'metadata' => [      // ✅ Metadatos de la confirmación
+                'data' => $entrega,
+                'metadata' => [
                     'venta_confirmada' => [
                         'venta_id' => $venta->id,
                         'venta_numero' => $venta->numero,
                         'confirmacion_id' => $confirmacion->id,
+                        'estado_logistico' => 'ENTREGADA',
                     ],
                     'archivos' => [
                         'fotos_guardadas' => count($fotosUrls),
-                        'firma_guardada' => $firmaUrl ? true : false,
                     ],
                 ],
             ]);
@@ -1041,6 +997,19 @@ class EntregaController extends Controller
                 'estado_nuevo' => $entrega->estado,
                 'fecha_entrega' => $entrega->fecha_entrega,
             ]);
+
+            // ✅ NUEVO: Notificar a admin/cajeros que la entrega fue finalizada
+            try {
+                $wsService = app(EntregaWebSocketService::class);
+                $wsService->notifyAdminsEntregaFinalizada($entrega, $entrega->ventas);
+                Log::info('✅ Notificación WebSocket enviada a admins/cajeros sobre entrega finalizada');
+            } catch (\Exception $e) {
+                Log::warning('⚠️ No se pudo enviar notificación WebSocket sobre entrega finalizada', [
+                    'entrega_id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+                // No interrumpir el flujo si falla la notificación WebSocket
+            }
 
             return response()->json([
                 'success' => true,

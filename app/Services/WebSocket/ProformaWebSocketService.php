@@ -18,6 +18,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'id' => $proforma->id,
             'numero' => $proforma->numero,
             'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
             'cliente' => [
                 'id' => $proforma->cliente_id,
                 'nombre' => $proforma->cliente?->nombre ?? 'Cliente',
@@ -51,6 +52,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'id' => $proforma->id,
             'numero' => $proforma->numero,
             'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
             'estado' => $proforma->estado,
             'total' => (float) $proforma->total,
             'usuario_aprobador' => [
@@ -71,6 +73,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'id' => $proforma->id,
             'numero' => $proforma->numero,
             'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
             'estado' => $proforma->estado,
             'usuario_rechazador' => [
                 'id' => $proforma->usuario_aprobador_id ?? auth()->id(),
@@ -92,6 +95,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'venta_id' => $venta->id,
             'venta_numero' => $venta->numero ?? null,
             'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
             'total' => (float) $proforma->total,
             'fecha_conversion' => now()->toIso8601String(),
         ]);
@@ -99,12 +103,13 @@ class ProformaWebSocketService extends BaseWebSocketService
 
     /**
      * ✅ NUEVO: Notificar directamente al cliente cuando su proforma se convierte a venta
-     * Se envía independientemente de si tiene user_id o no
+     * Incluye user_id para enrutamiento correcto en WebSocket
      */
     public function notifyClientConverted($proforma, $venta): bool
     {
         return $this->send('notify/cliente-proforma-converted', [
             'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id, // ✅ CRÍTICO: user_id es el ID real del usuario conectado
             'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente',
             'proforma_id' => $proforma->id,
             'proforma_numero' => $proforma->numero,

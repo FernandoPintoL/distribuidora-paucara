@@ -28,6 +28,7 @@ interface MovimientoInventario {
     motivo: string;
     usuario: {
         name: string;
+        rol?: string;  // ✅ NUEVO: Agregar rol del usuario
     };
 }
 
@@ -60,6 +61,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
             'TRANSFERENCIA_ENTRADA': 'bg-blue-100 text-blue-800',
             'TRANSFERENCIA_SALIDA': 'bg-yellow-100 text-yellow-800',
             'AJUSTE': 'bg-purple-100 text-purple-800',
+            'RESERVA': 'bg-orange-100 text-orange-800',  // ✅ NUEVO: Color para reservas
         };
         return colors[tipo] || 'bg-gray-100 text-gray-800';
     };
@@ -89,12 +91,13 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead>Almacén</TableHead>
                             <TableHead>Motivo</TableHead>
                             <TableHead>Usuario</TableHead>
+                            {/* <TableHead>Rol</TableHead>  {/* ✅ NUEVO: Columna de rol */}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {movimientos.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                                     No hay movimientos para mostrar
                                 </TableCell>
                             </TableRow>
@@ -130,7 +133,20 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                     </TableCell>
                                     <TableCell>{movimiento.almacen.nombre}</TableCell>
                                     <TableCell>{movimiento.motivo}</TableCell>
-                                    <TableCell>{movimiento.usuario.name}</TableCell>
+                                    <TableCell>
+                                        <p>{movimiento.usuario.name}</p>
+                                        {/* <p>
+                                            {movimiento.usuario.rol ? (
+                                                <Badge className="bg-blue-100 text-blue-800">
+                                                    {movimiento.usuario.rol}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-muted-foreground">Sin rol</span>
+                                            )}
+                                        </p> */}
+                                    </TableCell>
+                                    {/* <TableCell>
+                                         {/* ✅ NUEVO: Mostrar rol del usuario */}
                                 </TableRow>
                             ))
                         )}

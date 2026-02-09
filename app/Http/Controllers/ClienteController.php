@@ -560,6 +560,12 @@ class ClienteController extends Controller
                 return $this->errorResponse('No se puede eliminar un cliente con cuentas por cobrar pendientes', null, null, [], 400);
             }
 
+            // ✅ NUEVO: Verificar si tiene proformas registradas
+            $tieneProformas = $cliente->proformas()->exists();
+            if ($tieneProformas) {
+                return $this->errorResponse('No se puede eliminar el cliente porque tiene proformas registradas', null, null, [], 400);
+            }
+
             // Verificar si tiene ventas registradas
             $tieneVentas = $cliente->ventas()->exists();
             if ($tieneVentas) {
@@ -577,7 +583,7 @@ class ClienteController extends Controller
 
             return $this->deleteResponse(
                 'Cliente eliminado exitosamente',
-                $this->isApiRequest() ? null : 'clientes.index'
+                $this->isApiRequest() ? null : '/clientes'
             );
 
         } catch (\Exception $e) {

@@ -42,6 +42,36 @@ class HandleInertiaRequests extends Middleware
         // ✅ Obtener estado de caja del usuario para mostrar en NavHeader
         $cajaStatus = $this->getCajaStatus($request->user());
 
+        // 🔍 DEBUG: Verificar token en sesión con diagnosticos completos
+        $sessionId = $request->session()->getId();
+        $sessionData = $request->session()->all();
+        $sanctumToken = $request->session()->get('sanctum_token');
+
+        \Illuminate\Support\Facades\Log::info('🔍 [HandleInertiaRequests] Estado completo de sesión:', [
+            'session_id' => $sessionId,
+            'session_keys' => array_keys($sessionData),
+            'has_sanctum_token' => isset($sessionData['sanctum_token']),
+            'sanctum_token_is_null' => $sanctumToken === null,
+            'user_id' => $request->user()?->id,
+            'user_name' => $request->user()?->name,
+            'request_path' => $request->getPathInfo(),
+        ]);
+
+        if ($sanctumToken) {
+            \Illuminate\Support\Facades\Log::info('🔍 [HandleInertiaRequests] ✅ Token ENCONTRADO en sesión:', [
+                'token_preview' => substr($sanctumToken, 0, 20) . '...',
+                'user_id' => $request->user()?->id,
+                'user_name' => $request->user()?->name,
+                'session_id' => $sessionId,
+            ]);
+        } else {
+            \Illuminate\Support\Facades\Log::warning('⚠️  [HandleInertiaRequests] ❌ NO hay token en sesión - Se enviarán props con sanctumToken = null', [
+                'session_id' => $sessionId,
+                'user_id' => $request->user()?->id,
+                'request_path' => $request->getPathInfo(),
+            ]);
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -52,7 +82,7 @@ class HandleInertiaRequests extends Middleware
                 // Optimización: Solo cargar permisos cuando sea necesario
                 'permissions' => $request->user() ? $this->getEssentialPermissions($request->user()) : [],
                 // ✅ Compartir token SANCTUM para WebSocket
-                'sanctumToken' => $request->session()->get('sanctum_token'),
+                'sanctumToken' => $sanctumToken,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             // ✅ Estado de caja disponible en todas las páginas
