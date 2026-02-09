@@ -16,6 +16,7 @@ use App\Models\Venta;  // ✅ Importar modelo Venta
 use App\Models\EntregaVentaConfirmacion;  // ✅ Importar modelo confirmaciones
 use App\Services\ImpresionEntregaService;  // ✅ NUEVO: Importar servicio de productos
 use App\Services\WebSocket\EntregaWebSocketService;  // ✅ NUEVO: WebSocket service
+use App\Services\EntregaLocalidadesService;  // ✅ NUEVO: Servicio de localidades de entrega
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -428,6 +429,7 @@ class EntregaController extends Controller
                 'ventas.direccionCliente',  // NUEVO: Cargar ubicación de entrega desde venta
                 'ventas.estadoLogistica',   // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
                 'ventas.detalles.producto.unidad',  // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
+                'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidad del cliente
                 'chofer',  // FASE 3: chofer apunta a users.id, no a empleados.id
                 'vehiculo',
                 'reportes',
@@ -456,10 +458,21 @@ class EntregaController extends Controller
                 'ventas_asignadas' => $entrega->ventas->count(),
             ]);
 
+            // ✅ NUEVO: Obtener localidades de la entrega usando el servicio
+            $localidadesService = new EntregaLocalidadesService();
+            $localidades = $localidadesService->obtenerDatosCompletos($entrega);
+
+            Log::info('📍 [API_SHOWENTREGA] Localidades obtenidas', [
+                'entrega_id' => $entrega->id,
+                'cantidad_localidades' => $localidades['cantidad_localidades'],
+                'localidades' => array_column($localidades['localidades'], 'nombre'),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'data' => $entrega,
-                'productos' => $productosGenerico->toArray(),  // ✅ NUEVO: Incluir productos genéricos
+                'productos' => $productosGenerico->toArray(),  // ✅ Productos genéricos
+                'localidades' => $localidades,  // ✅ NUEVO: Incluir localidades
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -780,6 +793,7 @@ class EntregaController extends Controller
                 'fotos' => 'nullable|array',                    // ✅ Fotos opcionales
                 'fotos.*' => 'string',
                 'observaciones' => 'nullable|string|max:500',  // ✅ Observaciones (detallar manualmente pago si aplica)
+                'observaciones_logistica' => 'nullable|string|max:1000',  // ✅ NUEVO: Estado de entrega (completa, incidentes, etc.)
                 // Contexto de entrega
                 'tienda_abierta' => 'nullable|boolean',
                 'cliente_presente' => 'nullable|boolean',
@@ -818,17 +832,55 @@ class EntregaController extends Controller
             }
 
             // ✅ CAMBIAR VENTA A ENTREGADA
-            $venta->update([
+            $datosActualizacion = [
                 'estado_logistico_id' => $estadoEntregada->id,
-            ]);
+                'observaciones_logistica' => $validated['observaciones_logistica'] ?? null,  // ✅ NUEVO: Guardar observaciones de entrega
+            ];
 
-            // ✅ SIMPLIFICADO: Guardar SOLO la confirmación básica sin pago ni firma
+            // ✅ NUEVO: Si la entrega es completa, cambiar estado_pago a PAGADO
+            if (($validated['observaciones_logistica'] ?? null) === 'Entrega completa') {
+                $datosActualizacion['estado_pago'] = 'PAGADO';
+                Log::info('💳 Estado de pago actualizado a PAGADO por entrega completa', [
+                    'venta_id' => $venta_id,
+                ]);
+            }
+
+            $venta->update($datosActualizacion);
+
+            // ✅ NUEVO: Determinar tipo de entrega y tipo de novedad para reportes
+            $tipoEntrega = 'COMPLETA';
+            $tipoNovedad = null;
+            $tuvoProblema = false;
+
+            $observacionesLogistica = $validated['observaciones_logistica'] ?? null;
+
+            if ($observacionesLogistica && $observacionesLogistica !== 'Entrega completa') {
+                $tipoEntrega = 'NOVEDAD';
+                $tuvoProblema = true;
+
+                // Extraer tipo de novedad (primeras palabras antes del guion)
+                if (strpos($observacionesLogistica, 'Cliente Cerrado') !== false ||
+                    strpos($observacionesLogistica, 'CLIENTE_CERRADO') !== false) {
+                    $tipoNovedad = 'CLIENTE_CERRADO';
+                } elseif (strpos($observacionesLogistica, 'Devolución Parcial') !== false ||
+                          strpos($observacionesLogistica, 'DEVOLUCION_PARCIAL') !== false) {
+                    $tipoNovedad = 'DEVOLUCION_PARCIAL';
+                } elseif (strpos($observacionesLogistica, 'RECHAZADO') !== false ||
+                          strpos($observacionesLogistica, 'Rechazo') !== false) {
+                    $tipoNovedad = 'RECHAZADO';
+                }
+            }
+
+            // ✅ SIMPLIFICADO: Guardar la confirmación con datos para reportes
             $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
                 [
                     'entrega_id' => $id,
                     'venta_id' => $venta_id,
                 ],
                 [
+                    'tipo_entrega' => $tipoEntrega,              // ✅ NUEVO: COMPLETA o NOVEDAD
+                    'tipo_novedad' => $tipoNovedad,             // ✅ NUEVO: Tipo específico de novedad
+                    'tuvo_problema' => $tuvoProblema,           // ✅ NUEVO: Flag para reportes
                     'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,  // ✅ Fotos opcionales
                     'observaciones' => $validated['observaciones'] ?? null, // ✅ Notas del chofer (detallar pago aquí si aplica)
                     'tienda_abierta' => $validated['tienda_abierta'] ?? null,

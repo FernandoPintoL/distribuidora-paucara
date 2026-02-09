@@ -27,6 +27,7 @@ class Venta extends Model
         'total',
         'peso_total_estimado',  // ✅ NUEVO: Peso total en kg (cantidad * peso_producto)
         'observaciones',
+        'observaciones_logistica',  // ✅ NUEVO: Observaciones sobre entrega (completa, incidentes, etc.)
         'cliente_id',
         'usuario_id',
         'estado_documento_id',

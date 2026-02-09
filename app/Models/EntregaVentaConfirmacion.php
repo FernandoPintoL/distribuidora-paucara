@@ -12,6 +12,9 @@ class EntregaVentaConfirmacion extends Model
     protected $fillable = [
         'entrega_id',
         'venta_id',
+        'tipo_entrega',        // ✅ NUEVO: COMPLETA o NOVEDAD
+        'tipo_novedad',        // ✅ NUEVO: CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADO
+        'tuvo_problema',       // ✅ NUEVO: Flag para reportes
         'firma_digital_url',
         'fotos',
         'observaciones',
@@ -33,6 +36,7 @@ class EntregaVentaConfirmacion extends Model
         'fotos' => 'array',                    // Convertir JSON a array
         'tienda_abierta' => 'boolean',
         'cliente_presente' => 'boolean',
+        'tuvo_problema' => 'boolean',          // ✅ NUEVO: Cast boolean
         'confirmado_en' => 'datetime',
         'monto_recibido' => 'decimal:2',       // ✅ Dinero recibido con 2 decimales
     ];

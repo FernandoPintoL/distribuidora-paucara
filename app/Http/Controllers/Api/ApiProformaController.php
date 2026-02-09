@@ -635,6 +635,12 @@ class ApiProformaController extends Controller
             'canal_origen' => 'nullable|string',
             'fecha_desde' => 'nullable|date',
             'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
+            // ✅ NUEVO: Validación para filtros de fecha de vencimiento
+            'fecha_vencimiento_desde' => 'nullable|date',
+            'fecha_vencimiento_hasta' => 'nullable|date|after_or_equal:fecha_vencimiento_desde',
+            // ✅ NUEVO: Validación para filtros de fecha de entrega solicitada
+            'fecha_entrega_solicitada_desde' => 'nullable|date',
+            'fecha_entrega_solicitada_hasta' => 'nullable|date|after_or_equal:fecha_entrega_solicitada_desde',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
             'format' => 'nullable|in:default,app', // Formato de respuesta
@@ -719,6 +725,24 @@ class ApiProformaController extends Controller
 
         if ($request->filled('fecha_hasta')) {
             $query->whereDate('fecha', '<=', $request->fecha_hasta);
+        }
+
+        // ✅ NUEVO: Filtro por fecha de vencimiento
+        if ($request->filled('fecha_vencimiento_desde')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->fecha_vencimiento_desde);
+        }
+
+        if ($request->filled('fecha_vencimiento_hasta')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->fecha_vencimiento_hasta);
+        }
+
+        // ✅ NUEVO: Filtro por fecha de entrega solicitada
+        if ($request->filled('fecha_entrega_solicitada_desde')) {
+            $query->whereDate('fecha_entrega_solicitada', '>=', $request->fecha_entrega_solicitada_desde);
+        }
+
+        if ($request->filled('fecha_entrega_solicitada_hasta')) {
+            $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
         }
 
         // Búsqueda por número de proforma
