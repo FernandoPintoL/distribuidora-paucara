@@ -1372,22 +1372,20 @@ export default function VentaForm() {
                                     Descuento general
                                 </label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
                                     value={data.descuento === 0 && data.descuento.toString() === '0' ? '' : data.descuento}
                                     onChange={(e) => {
                                         const valor = e.target.value;
-                                        // Permitir vacío o solo números y un punto decimal
-                                        if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
-                                            const descuento = valor === '' ? 0 : parseFloat(valor);
-                                            if (!isNaN(descuento) && descuento >= 0) {
-                                                setData('descuento', descuento);
-                                                setData('total', data.subtotal - descuento);
-                                            }
+                                        const descuento = valor === '' ? 0 : parseFloat(valor);
+                                        if (!isNaN(descuento) && descuento >= 0) {
+                                            setData('descuento', descuento);
+                                            setData('total', data.subtotal - descuento);
                                         }
                                     }}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
-                                    placeholder="0"
+                                    placeholder="0.00"
                                 />
                             </div>
 
@@ -1397,21 +1395,19 @@ export default function VentaForm() {
                                     Monto Pagado
                                 </label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
                                     value={data.monto_pagado_inicial === 0 && data.monto_pagado_inicial.toString() === '0' ? '' : data.monto_pagado_inicial}
                                     onChange={(e) => {
                                         const valor = e.target.value;
-                                        // Permitir vacío o solo números y un punto decimal
-                                        if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
-                                            const monto = valor === '' ? 0 : parseFloat(valor);
-                                            if (!isNaN(monto) && monto >= 0) {
-                                                setData('monto_pagado_inicial', monto);
-                                            }
+                                        const monto = valor === '' ? 0 : parseFloat(valor);
+                                        if (!isNaN(monto) && monto >= 0) {
+                                            setData('monto_pagado_inicial', monto);
                                         }
                                     }}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
-                                    placeholder="0"
+                                    placeholder="0.00"
                                 />
                             </div>
                         </div>
