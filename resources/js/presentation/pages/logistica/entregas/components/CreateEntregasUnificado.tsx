@@ -11,11 +11,32 @@ import { useVehiculoRecomendado } from '@/application/hooks/use-vehiculo-recomen
 import type { VentaConDetalles, VehiculoCompleto, ChoferEntrega } from '@/domain/entities/entregas';
 import type { Id } from '@/domain/entities/shared';
 
+interface Entrega {
+    id: number;
+    numero_entrega: string;
+    estado: string;
+    fecha_programada: string;
+    vehiculo_id?: number;
+    chofer_id?: number;
+    peso_kg?: number;
+    volumen_m3?: number;
+}
+
 interface CreateEntregasUnificadoProps {
+    modo?: 'crear' | 'editar';
+    entrega?: Entrega;
     ventas: VentaConDetalles[];
+    ventasAsignadas?: VentaConDetalles[];
     vehiculos: VehiculoCompleto[];
     choferes: ChoferEntrega[];
     ventaPreseleccionada?: number;
+    paginacion?: {
+        current_page: number;
+        per_page: number;
+        total: number;
+        last_page: number;
+        has_more: boolean;
+    };
     onCancel?: () => void;
 }
 
@@ -56,11 +77,17 @@ interface CreateEntregasUnificadoProps {
  * - Footer Sticky: Solo cuando hay ≥1 venta seleccionada
  */
 export default function CreateEntregasUnificado({
+    modo = 'crear',
+    entrega,
     ventas,
+    ventasAsignadas = [],
     vehiculos,
     choferes,
     ventaPreseleccionada,
+    paginacion,
+    onCancel,
 }: CreateEntregasUnificadoProps) {
+    const isEditMode = modo === 'editar';
     // Estado de selección de ventas
     // Usar Id en lugar de number para ser compatible con VentaConDetalles.id
     const [selectedVentaIds, setSelectedVentaIds] = useState<Id[]>(
@@ -151,9 +178,37 @@ export default function CreateEntregasUnificado({
     const isBatchMode = selectedCount > 1;
     const isEmptyMode = selectedCount === 0;
 
+    // ✅ NUEVO: Precarga de datos en modo edición
+    useEffect(() => {
+        if (isEditMode && entrega) {
+            console.log('📝 [Modo Edición] Precargando datos de entrega:', {
+                id: entrega.id,
+                numero_entrega: entrega.numero_entrega,
+                vehiculo_id: entrega.vehiculo_id,
+                chofer_id: entrega.chofer_id,
+            });
+
+            // Cargar datos de la entrega existente
+            updateFormData({
+                vehiculo_id: entrega.vehiculo_id,
+                chofer_id: entrega.chofer_id,
+                peso_kg: entrega.peso_kg,
+                volumen_m3: entrega.volumen_m3,
+                fecha_programada: entrega.fecha_programada,
+            });
+
+            // Pre-seleccionar las ventas asignadas
+            if (ventasAsignadas && ventasAsignadas.length > 0) {
+                const ventasAsignadasIds = ventasAsignadas.map((v) => v.id);
+                setSelectedVentaIds(ventasAsignadasIds);
+                console.log('✅ Ventas asignadas precargadas:', ventasAsignadasIds);
+            }
+        }
+    }, [isEditMode, entrega?.id]); // Solo se ejecuta una vez al montar
+
     // Pre-llenar datos para caso single (1 venta)
     useEffect(() => {
-        if (selectedCount === 1) {
+        if (selectedCount === 1 && !isEditMode) {
             const selectedVenta = ventas.find((v) => v.id === selectedVentaIds[0]);
 
             if (selectedVenta) {
@@ -177,7 +232,7 @@ export default function CreateEntregasUnificado({
                 }
             }
         }
-    }, [selectedCount, selectedVentaIds, ventas]);
+    }, [selectedCount, selectedVentaIds, ventas, isEditMode]);
 
     // Totales seleccionados - DEBE IR ANTES del useEffect que lo usa
     const totals = useMemo(() => {
@@ -588,7 +643,7 @@ export default function CreateEntregasUnificado({
                                     ? 'Selecciona vehículo y chofer'
                                     : capacidadInsuficiente
                                         ? 'Revisa la capacidad del vehículo'
-                                        : 'Crear entregas'
+                                        : isEditMode ? 'Guardar cambios' : 'Crear entregas'
                             }
                             className={`
                                 flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white shadow-lg
@@ -603,14 +658,19 @@ export default function CreateEntregasUnificado({
                             {isSubmitting ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent border-r-transparent rounded-full animate-spin" />
-                                    <span className="hidden sm:inline text-sm font-medium">Creando...</span>
+                                    <span className="hidden sm:inline text-sm font-medium">
+                                        {isEditMode ? 'Guardando...' : 'Creando...'}
+                                    </span>
                                     <span className="sm:hidden text-sm">...</span>
                                 </>
                             ) : (
                                 <>
                                     <Plus className="h-5 w-5" />
                                     <span className="hidden sm:inline text-sm">
-                                        {selectedCount} {selectedCount === 1 ? 'Entrega' : 'Entregas'}
+                                        {isEditMode
+                                            ? 'Guardar Cambios'
+                                            : `${selectedCount} ${selectedCount === 1 ? 'Entrega' : 'Entregas'}`
+                                        }
                                     </span>
                                 </>
                             )}
@@ -635,7 +695,7 @@ export default function CreateEntregasUnificado({
                         {formData.vehiculo_id && formData.chofer_id && !capacidadInsuficiente && (
                             <div className="absolute -top-12 right-0 whitespace-nowrap">
                                 <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs px-3 py-1 rounded-full border border-green-200 dark:border-green-800 shadow-sm">
-                                    ✅ Listo para crear
+                                    ✅ {isEditMode ? 'Listo para guardar' : 'Listo para crear'}
                                 </div>
                             </div>
                         )}

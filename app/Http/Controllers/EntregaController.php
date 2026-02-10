@@ -353,6 +353,218 @@ class EntregaController extends Controller
     }
 
     /**
+     * EDITAR entrega existente
+     * GET /logistica/entregas/{id}/edit
+     *
+     * Reutiliza el mismo formulario que create pero con datos preacargados
+     * Permite:
+     * - Ver ventas actualmente asignadas
+     * - Agregar más ventas
+     * - Cambiar vehículo
+     * - Cambiar chofer
+     */
+    public function edit(Entrega $entrega): InertiaResponse
+    {
+        // 1. Obtener ventas ACTUALMENTE ASIGNADAS a esta entrega
+        $ventasAsignadas = $entrega->ventas()
+            ->with([
+                'cliente.direcciones',
+                'cliente.localidad',
+                'detalles.producto',
+                'estadoDocumento',
+                'direccionCliente',
+            ])
+            ->get()
+            ->map(function ($venta) {
+                // Obtener dirección: prioridad venta -> cliente principal -> primera dirección cliente
+                $direccionCliente = null;
+                if ($venta->direccionCliente) {
+                    $direccionCliente = [
+                        'id'        => $venta->direccionCliente->id,
+                        'direccion' => $venta->direccionCliente->direccion,
+                        'latitud'   => $venta->direccionCliente->latitud,
+                        'longitud'  => $venta->direccionCliente->longitud,
+                    ];
+                } elseif ($venta->cliente?->direcciones?->count()) {
+                    $dirPrincipal = $venta->cliente->direcciones->firstWhere('es_principal', true) ?? $venta->cliente->direcciones->first();
+                    if ($dirPrincipal) {
+                        $direccionCliente = [
+                            'id'        => $dirPrincipal->id,
+                            'direccion' => $dirPrincipal->direccion,
+                            'latitud'   => $dirPrincipal->latitud,
+                            'longitud'  => $dirPrincipal->longitud,
+                        ];
+                    }
+                }
+
+                return [
+                    'id'                          => $venta->id,
+                    'numero_venta'                => $venta->numero ?? "V-{$venta->id}",
+                    'numero'                      => $venta->numero,
+                    'subtotal'                    => (float) $venta->subtotal,
+                    'peso_total_estimado'         => (float) ($venta->peso_total_estimado ?? 0),
+                    'peso_estimado'               => (float) ($venta->peso_total_estimado ?? 0),
+                    'fecha_venta'                 => $venta->fecha?->format('Y-m-d'),
+                    'fecha'                       => $venta->fecha?->format('Y-m-d'),
+                    'estado'                      => $venta->estadoDocumento?->nombre ?? 'Sin estado',
+                    'cliente'                     => [
+                        'id'        => $venta->cliente?->id,
+                        'nombre'    => $venta->cliente?->nombre ?? 'Cliente no disponible',
+                        'telefono'  => $venta->cliente?->telefono,
+                        'localidad' => [
+                            'id'     => $venta->cliente?->localidad?->id,
+                            'nombre' => $venta->cliente?->localidad?->nombre ?? 'Sin localidad',
+                        ],
+                    ],
+                    'direccionCliente'            => $direccionCliente,
+                    'fecha_entrega_comprometida'  => $venta->fecha_entrega_comprometida?->format('Y-m-d'),
+                    'hora_entrega_comprometida'   => $venta->hora_entrega_comprometida?->format('H:i'),
+                    'ventana_entrega_ini'         => $venta->ventana_entrega_ini?->format('H:i'),
+                    'ventana_entrega_fin'         => $venta->ventana_entrega_fin?->format('H:i'),
+                    'cantidad_items'              => $venta->detalles?->count() ?? 0,
+                    'detalles'                    => $venta->detalles?->toArray() ?? [],
+                ];
+            });
+
+        // 2. Obtener ventas sin entrega (para agregar más)
+        $perPage = 25;
+        $ventasDisponiblesQuery = \App\Models\Venta::query()
+            ->with([
+                'cliente.direcciones',
+                'cliente.localidad',
+                'detalles.producto',
+                'estadoDocumento',
+                'direccionCliente',
+            ])
+            ->whereNull('entrega_id')
+            ->where('requiere_envio', true)
+            ->where('estado_documento_id', 3) // Solo APROBADAS
+            ->whereNotNull('cliente_id')
+            ->whereHas('detalles')
+            ->latest();
+
+        $ventasDisponiblesPaginated = $ventasDisponiblesQuery->paginate($perPage);
+
+        $ventasDisponibles = $ventasDisponiblesPaginated->getCollection()
+            ->map(function ($venta) {
+                $direccionCliente = null;
+                if ($venta->direccionCliente) {
+                    $direccionCliente = [
+                        'id'        => $venta->direccionCliente->id,
+                        'direccion' => $venta->direccionCliente->direccion,
+                        'latitud'   => $venta->direccionCliente->latitud,
+                        'longitud'  => $venta->direccionCliente->longitud,
+                    ];
+                } elseif ($venta->cliente?->direcciones?->count()) {
+                    $dirPrincipal = $venta->cliente->direcciones->firstWhere('es_principal', true) ?? $venta->cliente->direcciones->first();
+                    if ($dirPrincipal) {
+                        $direccionCliente = [
+                            'id'        => $dirPrincipal->id,
+                            'direccion' => $dirPrincipal->direccion,
+                            'latitud'   => $dirPrincipal->latitud,
+                            'longitud'  => $dirPrincipal->longitud,
+                        ];
+                    }
+                }
+
+                return [
+                    'id'                          => $venta->id,
+                    'numero_venta'                => $venta->numero ?? "V-{$venta->id}",
+                    'numero'                      => $venta->numero,
+                    'subtotal'                    => (float) $venta->subtotal,
+                    'peso_total_estimado'         => (float) ($venta->peso_total_estimado ?? 0),
+                    'peso_estimado'               => (float) ($venta->peso_total_estimado ?? 0),
+                    'fecha_venta'                 => $venta->fecha?->format('Y-m-d'),
+                    'fecha'                       => $venta->fecha?->format('Y-m-d'),
+                    'estado'                      => $venta->estadoDocumento?->nombre ?? 'Sin estado',
+                    'cliente'                     => [
+                        'id'        => $venta->cliente?->id,
+                        'nombre'    => $venta->cliente?->nombre ?? 'Cliente no disponible',
+                        'telefono'  => $venta->cliente?->telefono,
+                        'localidad' => [
+                            'id'     => $venta->cliente?->localidad?->id,
+                            'nombre' => $venta->cliente?->localidad?->nombre ?? 'Sin localidad',
+                        ],
+                    ],
+                    'direccionCliente'            => $direccionCliente,
+                    'fecha_entrega_comprometida'  => $venta->fecha_entrega_comprometida?->format('Y-m-d'),
+                    'hora_entrega_comprometida'   => $venta->hora_entrega_comprometida?->format('H:i'),
+                    'ventana_entrega_ini'         => $venta->ventana_entrega_ini?->format('H:i'),
+                    'ventana_entrega_fin'         => $venta->ventana_entrega_fin?->format('H:i'),
+                    'cantidad_items'              => $venta->detalles?->count() ?? 0,
+                    'detalles'                    => $venta->detalles?->toArray() ?? [],
+                ];
+            });
+
+        // 3. Obtener todos los vehículos activos
+        $vehiculos = Vehiculo::where('activo', true)
+            ->with('choferAsignado')
+            ->get()
+            ->map(fn($v) => [
+                'id'                 => $v->id,
+                'placa'              => $v->placa,
+                'marca'              => $v->marca,
+                'modelo'             => $v->modelo,
+                'anho'               => $v->anho,
+                'capacidad_carga'    => $v->capacidad_kg,
+                'capacidad_kg'       => $v->capacidad_kg,
+                'estado'             => $v->estado,
+                'activo'             => $v->activo,
+                'chofer_asignado_id' => $v->chofer_asignado_id,
+                'chofer'             => $v->choferAsignado ? [
+                    'id'     => $v->choferAsignado->id,
+                    'name'   => $v->choferAsignado->name,
+                    'nombre' => $v->choferAsignado->name,
+                    'email'  => $v->choferAsignado->email,
+                ] : null,
+            ]);
+
+        // 4. Obtener choferes activos
+        $choferes = Empleado::query()
+            ->with('user.roles')
+            ->where('estado', 'activo')
+            ->get()
+            ->filter(fn($e) => $e->user !== null && $e->user->hasRole('Chofer'))
+            ->map(fn($e) => [
+                'id'             => $e->user_id,
+                'empleado_id'    => $e->id,
+                'name'           => $e->user->name ?? $e->nombre,
+                'nombre'         => $e->user->name ?? $e->nombre,
+                'email'          => $e->user->email ?? $e->email,
+                'telefono'       => $e->telefono,
+                'tiene_licencia' => $e->licencia ? true : false,
+            ])
+            ->values();
+
+        // 5. Renderizar con modo edición
+        return Inertia::render('logistica/entregas/create', [
+            'modo'                   => 'editar',  // 🔧 Nuevo: indicar que estamos en modo edición
+            'entrega'                => [
+                'id'                 => $entrega->id,
+                'numero_entrega'     => $entrega->numero_entrega,
+                'estado'             => $entrega->estado,
+                'fecha_programada'   => $entrega->fecha_programada?->format('Y-m-d'),
+                'vehiculo_id'        => $entrega->vehiculo_id,
+                'chofer_id'          => $entrega->chofer_id,
+                'peso_kg'            => $entrega->peso_kg,
+                'volumen_m3'         => $entrega->volumen_m3,
+            ],
+            'ventasAsignadas'        => $ventasAsignadas,  // 🔧 Nuevo: ventas actuales
+            'ventas'                 => $ventasDisponibles,  // Ventas disponibles para agregar
+            'paginacion'             => [
+                'current_page' => $ventasDisponiblesPaginated->currentPage(),
+                'per_page'     => $ventasDisponiblesPaginated->perPage(),
+                'total'        => $ventasDisponiblesPaginated->total(),
+                'last_page'    => $ventasDisponiblesPaginated->lastPage(),
+                'has_more'     => $ventasDisponiblesPaginated->hasMorePages(),
+            ],
+            'vehiculos'              => $vehiculos,
+            'choferes'               => $choferes,
+            'ventaPreseleccionada'   => null,
+        ]);
+    }
+
+    /**
      * Buscar ventas por criterios (para búsqueda en BD)
      *
      * GET /api/entregas/ventas/search?q=...&fecha_desde=...&fecha_hasta=...

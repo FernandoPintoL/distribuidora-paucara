@@ -182,6 +182,7 @@ export interface VentaFormData extends BaseFormData {
     estado_logistico?: 'SIN_ENTREGA' | 'PENDIENTE_ENVIO' | 'PROGRAMADO' | 'EN_PREPARACION' | 'PREPARANDO' | 'EN_TRANSITO' | 'ENVIADO' | 'ENTREGADA' | 'ENTREGADO' | 'PROBLEMAS' | 'CANCELADA' | 'CANCELADO' | 'PENDIENTE_RETIRO' | 'RETIRADO';
     estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIALMENTE_PAGADO' | 'VENCIDO';  // ✅ NUEVO: Estado de pago
     politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO';  // ✅ NUEVO: Política de pago
+    direccion_cliente_id?: Id | null;  // ✅ NUEVO: FK a dirección del cliente para envíos
     detalles: DetalleVentaFormData[];
 }
 

@@ -673,6 +673,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('optimizar', [\App\Http\Controllers\EntregaController::class, 'optimizarRutas'])->name('optimizar');
             Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])->name('store');
 
+            // ✅ NUEVO: Editar entrega existente
+            // GET /logistica/entregas/{id}/edit - reutiliza formulario de crear
+            Route::get('{entrega}/edit', [\App\Http\Controllers\EntregaController::class, 'edit'])->name('edit');
+
             // ✅ IMPORTANTE: Las rutas con parámetro {entrega} DEBEN estar al final
             Route::get('{entrega}', [\App\Http\Controllers\EntregaController::class, 'show'])->name('show');
             Route::post('{entrega}/asignar', [\App\Http\Controllers\EntregaController::class, 'asignarChoferVehiculo'])->name('asignar');

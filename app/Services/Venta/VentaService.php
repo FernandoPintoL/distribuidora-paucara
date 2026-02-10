@@ -130,27 +130,27 @@ class VentaService
             $monedaDefecto = \App\Models\Moneda::where('codigo', 'BOB')->first() ??
             \App\Models\Moneda::first();
 
-                                       // ✅ NUEVO: Calcular estado_pago dinámicamente
-            $estadoPago = 'PENDIENTE'; // Default
-            if ($dto->monto_pagado_inicial && $dto->monto_pagado_inicial > 0) {
-                if ($dto->monto_pagado_inicial >= $dto->total) {
-                    $estadoPago = 'PAGADO'; // Pagado completamente
-                    Log::info('💰 Estado pago: PAGADA (pago completo)', [
-                        'monto_pagado' => $dto->monto_pagado_inicial,
-                        'total'        => $dto->total,
-                    ]);
-                } else {
-                    $estadoPago = 'PARCIAL'; // Pago parcial
-                    Log::info('💰 Estado pago: PARCIAL (pago incompleto)', [
-                        'monto_pagado' => $dto->monto_pagado_inicial,
-                        'total'        => $dto->total,
-                    ]);
-                }
-            } else {
-                Log::info('💰 Estado pago: PENDIENTE (sin pago inicial)', [
-                    'politica_pago' => $dto->politica_pago,
+            // ✅ NUEVO (2026-02-10): Asignar estado_logistico_id = SIN_ENTREGA si no viene especificado
+            $estadoLogisticoId = $dto->estado_logistico_id;
+            if (!$estadoLogisticoId) {
+                $estadoSinEntrega = \App\Models\EstadoLogistica::where('codigo', 'SIN_ENTREGA')
+                    ->where('categoria', 'venta_logistica')
+                    ->first();
+                $estadoLogisticoId = $estadoSinEntrega?->id;
+                Log::info('📦 [VentaService::crear] Estado logístico asignado a SIN_ENTREGA', [
+                    'estado_id' => $estadoLogisticoId,
+                    'codigo'    => 'SIN_ENTREGA',
                 ]);
             }
+
+                                       // ✅ MODIFICADO (2026-02-10): Estado pago siempre PENDIENTE para ventas nuevas
+            // Las ventas se crean siempre sin pago (estado_pago = PENDIENTE)
+            // El pago se registra después en movimientos_caja
+            $estadoPago = 'PENDIENTE';
+            Log::info('💰 [VentaService::crear] Estado pago: PENDIENTE (nuevas ventas siempre sin pago)', [
+                'politica_pago' => $dto->politica_pago,
+                'nota'          => 'El pago se registra después en movimientos_caja, no al crear',
+            ]);
 
             // 3.1 Crear Venta
             Log::debug('📝 [VentaService::crear] Creando registro de Venta en BD', [
@@ -178,7 +178,7 @@ class VentaService
                 // Campos de logística
                 'requiere_envio'             => $dto->requiere_envio,
                 'canal_origen'               => $dto->canal_origen ?? 'WEB',
-                'estado_logistico_id'        => $dto->estado_logistico_id,
+                'estado_logistico_id'        => $estadoLogisticoId,  // ✅ MODIFICADO (2026-02-10): Usa variable calculada (SIN_ENTREGA por defecto)
                 // Campos de política de pago
                 'tipo_pago_id'               => $dto->tipo_pago_id,  // ✅ NUEVO: Tipo de pago seleccionado
                 'politica_pago'              => $dto->politica_pago ?? 'CONTRA_ENTREGA',

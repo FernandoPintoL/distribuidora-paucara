@@ -34,7 +34,7 @@ class CrearVentaDTO extends BaseDTO
         // Campos de política de pago
         public ?int $tipo_pago_id = null,  // ✅ NUEVO: Tipo de pago seleccionado
         public ?string $politica_pago = 'ANTICIPADO_100',  // ✅ CAMBIO: Por defecto ANTICIPADO_100 para ventas directas
-        public ?string $estado_pago = 'PAGADO',  // ✅ CAMBIO: Por defecto PAGADO (consistente con proformas)
+        public ?string $estado_pago = 'PENDIENTE',  // ✅ CAMBIO (2026-02-10): Por defecto PENDIENTE (ventas nuevas siempre sin pagar)
         // Campos de SLA y compromisos de entrega
         public ?string $fecha_entrega_comprometida = null,
         public ?string $hora_entrega_comprometida = null,
@@ -93,7 +93,7 @@ class CrearVentaDTO extends BaseDTO
             estado_logistico_id: $request->has('estado_logistico_id') ? (int) $request->input('estado_logistico_id') : null,
             tipo_pago_id: $request->has('tipo_pago_id') ? (int) $request->input('tipo_pago_id') : null,  // ✅ NUEVO: Tipo de pago
             politica_pago: $request->input('politica_pago', 'ANTICIPADO_100'),
-            estado_pago: $request->input('estado_pago', 'PAGADO'),  // ✅ CAMBIO: Estado por defecto PAGADO (consistente con proformas)
+            estado_pago: $request->input('estado_pago', 'PENDIENTE'),  // ✅ CAMBIO (2026-02-10): Estado por defecto PENDIENTE para ventas nuevas
             fecha_entrega_comprometida: $request->input('fecha_entrega_comprometida'),
             hora_entrega_comprometida: $request->input('hora_entrega_comprometida'),
             ventana_entrega_ini: $request->input('ventana_entrega_ini'),

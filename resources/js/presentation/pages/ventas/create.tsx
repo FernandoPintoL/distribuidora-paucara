@@ -121,6 +121,16 @@ export default function VentaForm() {
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
 
+    // ✅ NUEVO: Estados para direcciones del cliente
+    const [direccionesDisponibles, setDireccionesDisponibles] = useState<Array<{
+        id: number;
+        direccion: string;
+        localidad?: string;
+        es_principal?: boolean;
+        activa?: boolean;
+    }>>([]);
+    const [cargandoDirecciones, setCargandoDirecciones] = useState(false);
+
     // Estados para validación de caja abierta
     interface CajaInfo {
         tiene_caja_abierta: boolean;
@@ -217,7 +227,9 @@ export default function VentaForm() {
         // ✅ NUEVO: Política de pago por defecto ANTICIPADO_100 para ventas directas
         politica_pago: venta?.politica_pago || 'ANTICIPADO_100',
         // ✅ NUEVO: Estado de pago por defecto PAGADO (consistente con proformas)
-        estado_pago: venta?.estado_pago || 'PAGADO'
+        estado_pago: venta?.estado_pago || 'PAGADO',
+        // ✅ NUEVO: Dirección del cliente para envío
+        direccion_cliente_id: (venta?.direccion_cliente_id ? Number(venta.direccion_cliente_id) : null) as number | null
     });
 
     // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
@@ -329,6 +341,46 @@ export default function VentaForm() {
             setClienteSeleccionado(venta.cliente);
         }
     }, [venta?.cliente, clienteDisplay]);
+
+    // ✅ NUEVO: Cargar direcciones del cliente cuando se selecciona Y requiere_envio es true
+    useEffect(() => {
+        if (data.requiere_envio && data.cliente_id && data.cliente_id !== 0 && typeof data.cliente_id === 'number') {
+            setCargandoDirecciones(true);
+            const cargarDirecciones = async () => {
+                try {
+                    const response = await fetch(`/api/clientes/${data.cliente_id}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success && result.data?.direcciones) {
+                            const direccionesActivas = result.data.direcciones.filter((d: any) => d.activa !== false);
+                            setDireccionesDisponibles(direccionesActivas);
+                            console.log('✅ Direcciones cargadas:', direccionesActivas);
+
+                            // ✅ Si solo hay una dirección activa, seleccionarla automáticamente
+                            if (direccionesActivas.length === 1 && !data.direccion_cliente_id) {
+                                setData('direccion_cliente_id', direccionesActivas[0].id);
+                            }
+                        } else {
+                            setDireccionesDisponibles([]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error cargando direcciones:', error);
+                    setDireccionesDisponibles([]);
+                } finally {
+                    setCargandoDirecciones(false);
+                }
+            };
+            cargarDirecciones();
+        } else {
+            setDireccionesDisponibles([]);
+        }
+    }, [data.requiere_envio, data.cliente_id]);
 
     // ✅ NUEVO: Cargar datos completos del cliente cuando se selecciona
     useEffect(() => {
@@ -1257,15 +1309,101 @@ export default function VentaForm() {
                         {/* Campos de envío - mostrar solo si requiere_envio es true */}
                         {data.requiere_envio && (
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                                {/* ✅ NUEVO: Selector de política de pago para envíos */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Dirección de Envío *
+                                        💳 Política de Pago
+                                    </label>
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                            <input
+                                                type="radio"
+                                                name="politica_pago"
+                                                value="CONTRA_ENTREGA"
+                                                checked={data.politica_pago === 'CONTRA_ENTREGA'}
+                                                onChange={(e) => setData('politica_pago', e.target.value)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Contra Entrega
+                                                </p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    El cliente paga al recibir el pedido
+                                                </p>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                            <input
+                                                type="radio"
+                                                name="politica_pago"
+                                                value="ANTICIPADO_100"
+                                                checked={data.politica_pago === 'ANTICIPADO_100'}
+                                                onChange={(e) => setData('politica_pago', e.target.value)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Anticipado 100%
+                                                </p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    El cliente paga antes de enviar el pedido
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* ✅ NUEVO: Selector de direcciones del cliente */}
+                                {clienteSeleccionado && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            📍 Direcciones del Cliente
+                                        </label>
+                                        {cargandoDirecciones ? (
+                                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                                <span className="text-sm">Cargando direcciones...</span>
+                                            </div>
+                                        ) : direccionesDisponibles.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {direccionesDisponibles.map((dir) => (
+                                                    <label key={dir.id} className="flex items-start gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                                        <input
+                                                            type="radio"
+                                                            name="direccion_cliente"
+                                                            value={dir.id}
+                                                            checked={data.direccion_cliente_id === dir.id}
+                                                            onChange={(e) => setData('direccion_cliente_id', Number(e.target.value))}
+                                                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                {dir.direccion}
+                                                                {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
+                                                            </p>
+                                                            {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400">📍 {dir.localidad}</p>}
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                                                ⚠️ El cliente no tiene direcciones registradas. Completa la dirección manualmente a continuación.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Dirección de Envío {!data.direccion_cliente_id && '*'}
                                     </label>
                                     <textarea
                                         value={data.observaciones || ''}
                                         onChange={(e) => setData('observaciones', e.target.value)}
                                         rows={2}
-                                        placeholder="Calle, número, piso, referencias..."
+                                        placeholder="Calle, número, piso, referencias... (se rellenará automáticamente si seleccionas una dirección del cliente)"
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                     />
                                     {errors.observaciones && <p className="mt-1 text-sm text-red-600">{errors.observaciones}</p>}
