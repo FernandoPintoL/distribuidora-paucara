@@ -57,6 +57,8 @@ class StoreVentaRequest extends FormRequest
             'tipo_pago_id'               => 'nullable|exists:tipos_pago,id',
             'tipo_documento_id'          => 'nullable|exists:tipos_documento,id',
             'requiere_envio'             => 'nullable|boolean',
+            // ✅ CORREGIDO (2026-02-10): direccion_cliente_id solo requerida si requiere_envio=true
+            'direccion_cliente_id'       => 'nullable|exists:direcciones_cliente,id',
             'canal_origen'               => 'nullable|string|in:APP_EXTERNA,WEB,PRESENCIAL',
             'estado_logistico'           => 'nullable|string|in:PENDIENTE_ENVIO,PREPARANDO,ENVIADO,ENTREGADO',
 
@@ -102,6 +104,8 @@ class StoreVentaRequest extends FormRequest
             'estado_documento_id.exists'          => 'El estado del documento seleccionado no existe.',
             'moneda_id.required'                  => 'La moneda es requerida.',
             'moneda_id.exists'                    => 'La moneda seleccionada no existe.',
+            // ✅ NUEVO (2026-02-10): Mensaje para dirección cliente
+            'direccion_cliente_id.exists'         => 'La dirección de cliente seleccionada no existe.',
 
             'detalles.required'                   => 'Los detalles de venta son requeridos.',
             'detalles.array'                      => 'Los detalles deben ser un arreglo.',
@@ -132,6 +136,17 @@ class StoreVentaRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $data = $validator->getData();
+
+            // ✅ NUEVO (2026-02-10): Validar que direccion_cliente_id sea requerida solo cuando requiere_envio=true
+            $requiereEnvio = $data['requiere_envio'] ?? false;
+            $direccionClienteId = $data['direccion_cliente_id'] ?? null;
+
+            if ($requiereEnvio && !$direccionClienteId) {
+                $validator->errors()->add(
+                    'direccion_cliente_id',
+                    'La dirección de entrega es requerida cuando la venta requiere envío.'
+                );
+            }
 
             // Validar coherencia de cálculos de detalles
             if (isset($data['detalles']) && is_array($data['detalles'])) {

@@ -1458,4 +1458,119 @@ class VentaController extends Controller
             'message' => 'Ventas obtenidas',
         ]);
     }
+
+    /**
+     * ✅ NUEVO: Verificar si la reversión de stock se realizó correctamente para ventas anuladas
+     *
+     * Endpoint: GET /api/ventas/{id}/verificar-reversion-stock
+     *
+     * Respuesta:
+     * {
+     *     "success": true,
+     *     "reversión_completa": true,
+     *     "estado": "completa|incompleta|sin_reversiones",
+     *     "movimientos_original": { "SALIDA_VENTA": 2, "CONSUMO_RESERVA": 0 },
+     *     "movimientos_revercion": { "ENTRADA_AJUSTE": 2 },
+     *     "detalles": [
+     *         {
+     *             "stock_producto_id": 71,
+     *             "producto_nombre": "Pepsi 1LTS X 12",
+     *             "cantidad_original": -3,
+     *             "cantidad_revercion": 3,
+     *             "match": true
+     *         }
+     *     ]
+     * }
+     */
+    public function verificarReversionStock(int $id): JsonResponse
+    {
+        try {
+            $venta = Venta::with(['detalles.producto'])->findOrFail($id);
+
+            // Obtener movimientos originales (SALIDA o CONSUMO)
+            $movimientosOriginales = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero)
+                ->whereIn('tipo', ['SALIDA_VENTA', 'CONSUMO_RESERVA'])
+                ->get();
+
+            // Obtener movimientos de reversión
+            $movimientosRevercion = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero . '-REV')
+                ->where('tipo', 'ENTRADA_AJUSTE')
+                ->get();
+
+            // Contar tipos de movimientos originales
+            $tiposOriginales = $movimientosOriginales->groupBy('tipo')->mapWithKeys(fn($group, $tipo) => [
+                $tipo => $group->count(),
+            ])->toArray();
+
+            // Contar tipos de reversiones
+            $tiposRevercion = $movimientosRevercion->groupBy('tipo')->mapWithKeys(fn($group, $tipo) => [
+                $tipo => $group->count(),
+            ])->toArray();
+
+            // Validar que cada movimiento original tenga su correspondiente reversión
+            $detalles = [];
+            $reversionesCompletas = true;
+
+            foreach ($movimientosOriginales as $original) {
+                $reverso = $movimientosRevercion
+                    ->where('stock_producto_id', $original->stock_producto_id)
+                    ->first();
+
+                $match = $reverso && abs($original->cantidad) === $reverso->cantidad;
+
+                if (!$match) {
+                    $reversionesCompletas = false;
+                }
+
+                $detalles[] = [
+                    'stock_producto_id' => $original->stock_producto_id,
+                    'producto_nombre' => $original->stockProducto?->producto?->nombre ?? 'N/A',
+                    'cantidad_original' => $original->cantidad,
+                    'cantidad_revercion' => $reverso?->cantidad ?? null,
+                    'match' => $match,
+                    'estado' => $match ? '✅ Completa' : '❌ Incompleta',
+                ];
+            }
+
+            // Determinar estado general
+            $estado = match (true) {
+                $movimientosOriginales->isEmpty() => 'sin_movimientos',
+                $movimientosRevercion->isEmpty() => 'sin_reversiones',
+                $reversionesCompletas => 'completa',
+                default => 'incompleta',
+            };
+
+            Log::info('✅ Verificación de reversión de stock completada', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'estado' => $estado,
+                'reversiones_completas' => $reversionesCompletas,
+                'movimientos_originales' => $movimientosOriginales->count(),
+                'movimientos_revercion' => $movimientosRevercion->count(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'venta_estado' => $venta->estado,
+                'reversión_completa' => $reversionesCompletas,
+                'estado' => $estado,
+                'movimientos_original' => $tiposOriginales,
+                'movimientos_revercion' => $tiposRevercion,
+                'detalles' => $detalles,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error verificando reversión de stock', [
+                'venta_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar reversión: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

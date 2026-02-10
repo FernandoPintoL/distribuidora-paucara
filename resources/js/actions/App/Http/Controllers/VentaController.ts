@@ -1572,6 +1572,103 @@ export const anular = {
 }
 
 /**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+export const verificarReversionStock = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: verificarReversionStock.url(args, options),
+    method: 'get',
+})
+
+verificarReversionStock.definition = {
+    methods: ["get","head"],
+    url: '/api/ventas/{venta}/verificar-reversion-stock',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+verificarReversionStock.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { venta: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    venta: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        venta: args.venta,
+                }
+
+    return verificarReversionStock.definition.url
+            .replace('{venta}', parsedArgs.venta.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+verificarReversionStock.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: verificarReversionStock.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+verificarReversionStock.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: verificarReversionStock.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+    const verificarReversionStockForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: verificarReversionStock.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+        verificarReversionStockForm.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarReversionStock.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VentaController::verificarReversionStock
+ * @see app/Http/Controllers/VentaController.php:1485
+ * @route '/api/ventas/{venta}/verificar-reversion-stock'
+ */
+        verificarReversionStockForm.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: verificarReversionStock.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    verificarReversionStock.form = verificarReversionStockForm
+/**
 * @see \App\Http\Controllers\VentaController::index
  * @see app/Http/Controllers/VentaController.php:81
  * @route '/api/ventas'
@@ -3126,6 +3223,6 @@ exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | 
         })
     
     exportarPdf.form = exportarPdfForm
-const VentaController = { ventasCliente, registrarPago, imprimir, preview, ventasParaImpresion, verificarStock, productosStockBajo, obtenerStockProducto, obtenerResumenStock, anular, index, store, show, update, destroy, checkCajaAbierta, create, edit, formatosDisponibles, aprobar, rechazar, exportarExcel, exportarPdf }
+const VentaController = { ventasCliente, registrarPago, imprimir, preview, ventasParaImpresion, verificarStock, productosStockBajo, obtenerStockProducto, obtenerResumenStock, anular, verificarReversionStock, index, store, show, update, destroy, checkCajaAbierta, create, edit, formatosDisponibles, aprobar, rechazar, exportarExcel, exportarPdf }
 
 export default VentaController

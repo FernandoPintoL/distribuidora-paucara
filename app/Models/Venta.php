@@ -618,9 +618,14 @@ class Venta extends Model
      */
     public function revertirMovimientosStock(): void
     {
-        // Obtener todos los movimientos relacionados con esta venta
+        // ✅ CORREGIDO (2026-02-10): Buscar AMBOS tipos de movimiento
+        // - SALIDA_VENTA: Ventas creadas directamente (sin proforma)
+        // - CONSUMO_RESERVA: Ventas convertidas desde proforma
         $movimientos = MovimientoInventario::where('numero_documento', $this->numero)
-            ->where('tipo', MovimientoInventario::TIPO_SALIDA_VENTA)
+            ->whereIn('tipo', [
+                MovimientoInventario::TIPO_SALIDA_VENTA,
+                'CONSUMO_RESERVA'  // ✅ Agregar este tipo para proformas convertidas a venta
+            ])
             ->get();
 
         DB::beginTransaction();
@@ -657,7 +662,7 @@ class Venta extends Model
                     'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_posterior' => $cantidadNueva,
                     'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                    'user_id'           => Auth::id(),
+                    'user_id'           => Auth::id() ?? 1,  // ✅ CORREGIDO: Fallback a usuario 1 si no hay autenticación
                 ]);
 
                 // Si el lote queda en cantidad 0 o negativo, eliminarlo completamente (hard delete)
@@ -679,27 +684,31 @@ class Venta extends Model
                     $stockProducto->forceDelete();
                 }
 
-                Log::info('Stock revertido por eliminación de venta', [
+                Log::info('✅ Stock revertido por anulación de venta', [
                     'venta' => $this->numero,
                     'stock_producto_id' => $stockProducto->id,
                     'cantidad_devuelta' => $cantidadADevolver,
                     'cantidad_final' => $cantidadNueva,
+                    'movimiento_revercion_registrado' => $this->numero . '-REV',
                 ]);
             }
 
             DB::commit();
 
-            Log::info('Movimientos de venta revertidos exitosamente', [
+            Log::info('✅ Movimientos de venta revertidos exitosamente (incluye CONSUMO_RESERVA)', [
                 'venta' => $this->numero,
                 'movimientos_revertidos' => $movimientos->count(),
+                'tipos_revertidos' => $movimientos->pluck('tipo')->unique()->toArray(),
             ]);
 
         } catch (Exception $e) {
             DB::rollBack();
 
-            Log::error('Error al revertir movimientos de venta', [
+            Log::error('❌ Error al revertir movimientos de venta (CONSUMO_RESERVA + SALIDA_VENTA)', [
                 'venta' => $this->numero,
                 'error' => $e->getMessage(),
+                'movimientos_encontrados' => $movimientos->count() ?? 0,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;

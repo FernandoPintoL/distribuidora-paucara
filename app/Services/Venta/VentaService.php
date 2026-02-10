@@ -174,7 +174,8 @@ class VentaService
                 'observaciones'              => $dto->observaciones,
                 'almacen_id'                 => $dto->almacen_id,
                 'proforma_id'                => $dto->proforma_id,
-                'direccion_cliente_id'       => $dto->direccion_cliente_id,
+                // ✅ CORREGIDO (2026-02-10): direccion_cliente_id solo se requiere si requiere_envio=true
+                'direccion_cliente_id'       => ($dto->requiere_envio && $dto->direccion_cliente_id) ? $dto->direccion_cliente_id : null,
                 // Campos de logística
                 'requiere_envio'             => $dto->requiere_envio,
                 'canal_origen'               => $dto->canal_origen ?? 'WEB',
