@@ -94,6 +94,7 @@ class InventarioController extends Controller
         $productosVencidos       = Producto::where('activo', true)->vencidos()->count();
 
         // Stock por almacén - agrupado por producto+almacén con detalles de lotes
+        // Incluye productos con cantidad >= 0 (incluyendo 0) y todos los productos sin registros en stock_productos
         $stockPorAlmacen = StockProducto::with([
             'producto',
             'producto.codigoPrincipal',
@@ -102,8 +103,11 @@ class InventarioController extends Controller
             'producto.unidad',
             'producto.conversiones.unidadDestino',
         ])
+            ->whereHas('producto', function ($q) {
+                $q->where('activo', true); // Solo productos activos
+            })
             ->withoutTrashed() // Excluir registros soft deleted
-            ->where('cantidad', '>', 0)
+            ->where('cantidad', '>=', 0) // Incluye cantidad 0 para ver productos sin movimiento
             ->orderBy('almacen_id')
             ->orderBy('producto_id')
             ->get();
@@ -185,11 +189,13 @@ class InventarioController extends Controller
         // Convertir a Collection para las operaciones posteriores
         $stockPorAlmacenCollection = collect($stockAgrupado);
 
-        // Obtener productos sin registros de stock_productos
+        // ✅ IMPORTANTE: Obtener TODOS los productos activos que NO aparecen en $stockPorAlmacen
+        // Esto incluye productos sin NINGÚN registro en stock_productos
         $productosConStock = $stockPorAlmacenCollection->pluck('producto_id')->unique();
         $productossinStock = Producto::where('activo', true)
             ->whereNotIn('id', $productosConStock)
             ->with(['codigoPrincipal', 'precios', 'unidad', 'conversiones.unidadDestino'])
+            ->orderBy('nombre')
             ->get();
 
         // Mapear productos sin stock con cantidad 0
