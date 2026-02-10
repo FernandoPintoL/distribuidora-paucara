@@ -73,24 +73,22 @@ class CancelarEntregaService extends BaseLogisticaService
             // ═════════════════════════════════════════════════════════════
             // PASO 3: OBTENER VENTAS ASOCIADAS (ANTES DE DESVINCULARSE)
             // ═════════════════════════════════════════════════════════════
-            $ventasIds = DB::table('entrega_venta')
-                ->where('entrega_id', $entregaId)
-                ->pluck('venta_id')
+            $ventasIds = Venta::where('entrega_id', $entregaId)
+                ->pluck('id')
                 ->toArray();
 
-            Log::info('✅ Ventas obtendidas', [
+            Log::info('✅ Ventas obtendidas directamente de tabla ventas', [
                 'cantidad' => count($ventasIds),
                 'ventas_ids' => $ventasIds,
             ]);
 
             // ═════════════════════════════════════════════════════════════
-            // PASO 4: DESVINCULAR VENTAS (LIMPIAR TABLA PIVOT)
+            // PASO 4: LIMPIAR entrega_id EN LAS VENTAS
             // ═════════════════════════════════════════════════════════════
-            $desvinculadas = DB::table('entrega_venta')
-                ->where('entrega_id', $entregaId)
-                ->delete();
+            $desvinculadas = Venta::where('entrega_id', $entregaId)
+                ->update(['entrega_id' => null]);
 
-            Log::info('✅ Ventas desvinculadas de la entrega', [
+            Log::info('✅ Ventas desvinculadas de la entrega (entrega_id = null)', [
                 'cantidad' => $desvinculadas,
                 'entrega_id' => $entregaId,
             ]);
@@ -138,21 +136,45 @@ class CancelarEntregaService extends BaseLogisticaService
             // ═════════════════════════════════════════════════════════════
             // PASO 7: ACTUALIZAR ESTADO LOGÍSTICO DE LAS VENTAS
             // ═════════════════════════════════════════════════════════════
-            if ($reabrirVentas && count($ventasIds) > 0) {
-                // Volver ventas a PENDIENTE_ENVIO para que puedan asignarse a otra entrega
+            if (count($ventasIds) > 0) {
+                // Obtener el estado SIN_ENTREGA
+                $estadoSinEntrega = EstadoLogistica::where('codigo', 'SIN_ENTREGA')
+                    ->where('categoria', 'venta_logistica')
+                    ->first();
+
+                if (!$estadoSinEntrega) {
+                    Log::warning('⚠️ Estado SIN_ENTREGA no encontrado, usando id 9 directamente');
+                    $estadoSinEntregaId = 9;
+                } else {
+                    $estadoSinEntregaId = $estadoSinEntrega->id;
+                }
+
+                // Actualizar estado logístico a SIN_ENTREGA (entrega_id ya fue limpiado en PASO 4)
                 $actualizadas = Venta::whereIn('id', $ventasIds)
                     ->update([
-                        'estado_logistico' => 'PENDIENTE_ENVIO',
+                        'estado_logistico_id' => $estadoSinEntregaId,  // Actualizar a SIN_ENTREGA
                     ]);
 
-                Log::info('✅ Ventas reabiertos para reasignación', [
+                Log::info('✅ Estado logístico de ventas actualizado a SIN_ENTREGA', [
                     'cantidad' => $actualizadas,
                     'ventas_ids' => $ventasIds,
+                    'estado_logistica_id' => $estadoSinEntregaId,
                 ]);
+
+                // Si reabrirVentas=true, cambiar el estado a PENDIENTE_ENVIO
+                if ($reabrirVentas) {
+                    $reabiertos = Venta::whereIn('id', $ventasIds)
+                        ->update([
+                            'estado_logistico' => 'PENDIENTE_ENVIO',
+                        ]);
+
+                    Log::info('✅ Ventas reabiertos para reasignación', [
+                        'cantidad' => $reabiertos,
+                        'ventas_ids' => $ventasIds,
+                    ]);
+                }
             } else {
-                Log::info('ℹ️ Ventas no reabiertos (reabrirVentas=false)', [
-                    'cantidad' => count($ventasIds),
-                ]);
+                Log::info('ℹ️ Sin ventas asociadas a desasignar');
             }
 
             // ═════════════════════════════════════════════════════════════

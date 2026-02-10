@@ -2316,119 +2316,96 @@ class InventarioController extends Controller
 
             $stocks = [];
 
-            // Si hay búsqueda O si filtra por stock cero, comenzar desde Producto (incluye sin stock)
-            if ($busqueda || $rangoStock === 'cero') {
-                $productoQuery = Producto::with([
-                    'stock' => fn($q) => $q->withoutTrashed(), // Excluir soft deleted
-                    'stock.almacen',
-                    'codigoPrincipal',
-                    'precios',
-                    'unidad',
-                    'conversiones.unidadDestino',
-                ]);
+            // ✅ SIEMPRE comenzar desde Producto para incluir productos sin stock_productos
+            // Esta lógica incluye:
+            // - Productos con registros en stock_productos
+            // - Productos que NUNCA han tenido registros en stock_productos (sin stock)
+            $productoQuery = Producto::with([
+                'stock' => fn($q) => $q->withoutTrashed(), // Excluir soft deleted
+                'stock.almacen',
+                'codigoPrincipal',
+                'precios',
+                'unidad',
+                'conversiones.unidadDestino',
+            ])
+                ->where('activo', true); // Solo productos activos
 
-                // Aplicar filtro de búsqueda solo si hay término de búsqueda
-                if ($busqueda) {
-                    $productoQuery->where(function ($q) use ($busqueda) {
-                        // Prioridad 1: Búsqueda exacta por ID si es numérico
-                        if (is_numeric($busqueda)) {
-                            $q->where('id', (int) $busqueda);
-                        } else {
-                            // Prioridad 2: Búsqueda exacta por SKU (no parcial)
-                            $q->where('sku', strtolower($busqueda));
-                        }
-
-                        // Prioridad 3: Si no coincide exacto, buscar parcial en SKU
-                        $q->orWhereRaw('LOWER(sku) like ?', ["%{$busqueda}%"]);
-
-                        // Prioridad 4: Buscar parcial en nombre
-                        $q->orWhereRaw('LOWER(nombre) like ?', ["%{$busqueda}%"]);
-
-                        // Prioridad 5: Buscar en código de barras
-                        $q->orWhereHas('codigoPrincipal', function ($cq) use ($busqueda) {
-                            $cq->whereRaw('LOWER(codigo) like ?', ["%{$busqueda}%"]);
-                        });
-                    });
-                }
-
-                $productoQuery = $productoQuery->get();
-
-                // Procesar productos encontrados
-                foreach ($productoQuery as $producto) {
-                    if ($producto->stock && $producto->stock->count() > 0) {
-                        // Producto tiene stock registrado
-                        foreach ($producto->stock as $stock) {
-                            // Aplicar filtros
-                            if ($almacenId > 0 && $stock->almacen_id != $almacenId) {
-                                continue;
-                            }
-
-                            if ($rangoStock === 'cero' && $stock->cantidad != 0) {
-                                continue;
-                            } elseif ($rangoStock !== 'cero' && ! ($stock->cantidad >= $rango['min'] && $stock->cantidad <= $rango['max'])) {
-                                continue;
-                            }
-
-                            $stocks[] = $stock;
-                        }
+            // Aplicar filtro de búsqueda solo si hay término de búsqueda
+            if ($busqueda) {
+                $productoQuery->where(function ($q) use ($busqueda) {
+                    // Prioridad 1: Búsqueda exacta por ID si es numérico
+                    if (is_numeric($busqueda)) {
+                        $q->where('id', (int) $busqueda);
                     } else {
-                        // Producto sin stock: crear registros virtuales (stock = 0)
-                        if ($rangoStock === 'cero' || $rangoStock === 'todos') {
-                            // Mostrar en todos los almacenes o solo el seleccionado
-                            $almacenesParaMostrar = $almacenId > 0
-                                ? [$almacenes->find($almacenId)]
-                                : $almacenes;
+                        // Prioridad 2: Búsqueda exacta por SKU (no parcial)
+                        $q->where('sku', strtolower($busqueda));
+                    }
 
-                            foreach ($almacenesParaMostrar as $almacen) {
-                                if (! $almacen) {
-                                    continue;
-                                }
+                    // Prioridad 3: Si no coincide exacto, buscar parcial en SKU
+                    $q->orWhereRaw('LOWER(sku) like ?', ["%{$busqueda}%"]);
 
-                                // Crear objeto StockProducto virtual con todas las propiedades
-                                $stockVirtual                      = new \stdClass();
-                                $stockVirtual->id                  = null;
-                                $stockVirtual->producto_id         = $producto->id;
-                                $stockVirtual->almacen_id          = $almacen->id;
-                                $stockVirtual->cantidad            = 0;
-                                $stockVirtual->cantidad_disponible = 0;
-                                $stockVirtual->cantidad_reservada  = 0;
-                                $stockVirtual->lote                = null;
-                                $stockVirtual->ubicacion           = null;
-                                $stockVirtual->fecha_vencimiento   = null;
-                                $stockVirtual->fecha_registro      = now();
-                                $stockVirtual->producto            = $producto;
-                                $stockVirtual->almacen             = $almacen;
+                    // Prioridad 4: Buscar parcial en nombre
+                    $q->orWhereRaw('LOWER(nombre) like ?', ["%{$busqueda}%"]);
 
-                                $stocks[] = $stockVirtual;
+                    // Prioridad 5: Buscar en código de barras
+                    $q->orWhereHas('codigoPrincipal', function ($cq) use ($busqueda) {
+                        $cq->whereRaw('LOWER(codigo) like ?', ["%{$busqueda}%"]);
+                    });
+                });
+            }
+
+            $productoQuery = $productoQuery->get();
+
+            // Procesar productos encontrados
+            foreach ($productoQuery as $producto) {
+                if ($producto->stock && $producto->stock->count() > 0) {
+                    // Producto tiene stock registrado
+                    foreach ($producto->stock as $stock) {
+                        // Aplicar filtros
+                        if ($almacenId > 0 && $stock->almacen_id != $almacenId) {
+                            continue;
+                        }
+
+                        if ($rangoStock === 'cero' && $stock->cantidad != 0) {
+                            continue;
+                        } elseif ($rangoStock !== 'cero' && ! ($stock->cantidad >= $rango['min'] && $stock->cantidad <= $rango['max'])) {
+                            continue;
+                        }
+
+                        $stocks[] = $stock;
+                    }
+                } else {
+                    // Producto sin stock: crear registros virtuales (stock = 0)
+                    if ($rangoStock === 'cero' || $rangoStock === 'todos') {
+                        // Mostrar en todos los almacenes o solo el seleccionado
+                        $almacenesParaMostrar = $almacenId > 0
+                            ? [$almacenes->find($almacenId)]
+                            : $almacenes;
+
+                        foreach ($almacenesParaMostrar as $almacen) {
+                            if (! $almacen) {
+                                continue;
                             }
+
+                            // Crear objeto StockProducto virtual con todas las propiedades
+                            $stockVirtual                      = new \stdClass();
+                            $stockVirtual->id                  = null;
+                            $stockVirtual->producto_id         = $producto->id;
+                            $stockVirtual->almacen_id          = $almacen->id;
+                            $stockVirtual->cantidad            = 0;
+                            $stockVirtual->cantidad_disponible = 0;
+                            $stockVirtual->cantidad_reservada  = 0;
+                            $stockVirtual->lote                = null;
+                            $stockVirtual->ubicacion           = null;
+                            $stockVirtual->fecha_vencimiento   = null;
+                            $stockVirtual->fecha_registro      = now();
+                            $stockVirtual->producto            = $producto;
+                            $stockVirtual->almacen             = $almacen;
+
+                            $stocks[] = $stockVirtual;
                         }
                     }
                 }
-            } else {
-                // Sin búsqueda: usar la query original de stock_productos
-                $query = StockProducto::with([
-                    'producto',
-                    'producto.codigoPrincipal',
-                    'almacen',
-                    'producto.precios',
-                    'producto.unidad',
-                    'producto.conversiones.unidadDestino',
-                ])
-                    ->withoutTrashed(); // Excluir registros soft deleted
-
-                // Filtro por almacén
-                if ($almacenId > 0) {
-                    $query->where('almacen_id', $almacenId);
-                }
-
-                // Filtro por rango de stock
-                if ($rangoStock === 'cero') {
-                    $query->where('cantidad', '=', 0);
-                } else {
-                    $query->whereBetween('cantidad', [$rango['min'], $rango['max']]);
-                }
-
-                $stocks = $query->get();
             }
             $stockProductos = [];
 

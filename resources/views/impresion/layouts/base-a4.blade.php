@@ -13,9 +13,7 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
             color: #333;
-            line-height: 1.4;
             margin: 0;
             padding: 0;
         }
@@ -107,6 +105,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 15px 0;
+            font-size: 16px;
         }
 
         table.tabla-productos thead {
@@ -359,7 +358,7 @@
         </div>
 
         {{-- Contenido específico de cada documento --}}
-        <div style="padding-left: 25px; padding-right: 25px;">
+        <div>
             @yield('contenido')
         </div>
     </div>

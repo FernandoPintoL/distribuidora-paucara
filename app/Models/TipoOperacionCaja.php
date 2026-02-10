@@ -16,6 +16,7 @@ class TipoOperacionCaja extends Model
     protected $fillable = [
         'codigo',
         'nombre',
+        'direccion',  // ✅ NUEVO: ENTRADA, SALIDA, AJUSTE, ESPECIAL
     ];
 
     // Relaciones

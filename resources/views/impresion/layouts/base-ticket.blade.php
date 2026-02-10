@@ -7,13 +7,14 @@
     <style>
         * {
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         body {
-            
             color: #000;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         .ticket {

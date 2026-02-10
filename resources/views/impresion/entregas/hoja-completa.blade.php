@@ -149,9 +149,7 @@
     }
 
     /* Márgenes adicionales */
-    * {
-        margin-right: 0 !important;
-    }
+    
 </style>
 @endsection
 

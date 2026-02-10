@@ -292,8 +292,8 @@ class EntregaController extends Controller
                 ];
             });
 
-        // 3. Obtener vehículos disponibles
-        $vehiculos = Vehiculo::disponibles()
+        // 3. Obtener todos los vehículos activos (sin restricción de estado)
+        $vehiculos = Vehiculo::where('activo', true)
             ->with('choferAsignado') // 🔧 Cargar relación de chofer asignado (User)
             ->get()
             ->map(fn($v) => [
