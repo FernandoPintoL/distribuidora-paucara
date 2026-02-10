@@ -303,10 +303,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('compras.detalles', \App\Http\Controllers\DetalleCompraController::class)->shallow();
 
     // ==========================================
-    // RUTAS DE IMPRESIÓN - COMPRAS
+    // RUTAS DE IMPRESIÓN - COMPRAS (INDIVIDUAL)
     // ==========================================
     Route::prefix('compras')->name('compras.')->group(function () {
-        Route::get('{compra}/imprimir', [\App\Http\Controllers\CompraController::class, 'imprimirCompra'])->name('imprimir');
+        Route::get('{compra}/imprimir', [\App\Http\Controllers\CompraController::class, 'imprimirCompra'])->name('imprimir-compra');
         Route::get('{compra}/preview', [\App\Http\Controllers\CompraController::class, 'previewCompra'])->name('preview');
         Route::get('{compra}/exportar-excel', [\App\Http\Controllers\CompraController::class, 'exportarExcel'])->name('exportar-excel');
         Route::get('{compra}/exportar-pdf', [\App\Http\Controllers\CompraController::class, 'exportarPdf'])->name('exportar-pdf');
@@ -359,7 +359,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('{venta}/registrar-pago', [\App\Http\Controllers\VentaController::class, 'registrarPago'])->name('registrar-pago');
 
         // Rutas con parámetros dinámicos van al final
-        Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir');
+        Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir-venta');
         Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
         Route::get('{venta}/exportar-excel', [\App\Http\Controllers\VentaController::class, 'exportarExcel'])->name('exportar-excel');
         Route::get('{venta}/exportar-pdf', [\App\Http\Controllers\VentaController::class, 'exportarPdf'])->name('exportar-pdf');
