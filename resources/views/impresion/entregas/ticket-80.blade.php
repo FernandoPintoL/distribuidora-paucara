@@ -130,7 +130,7 @@
             @foreach($entrega->ventas as $venta)
             @php $subtotalVenta = $venta->detalles->sum('subtotal'); $totalGeneral += $subtotalVenta; @endphp
             <tr style="border-bottom: 1px dotted #000;">
-                <td style="padding: 2px 2px;">#{{ $venta->id }} {{ $venta->numero }}</td>
+                <td style="padding: 2px 2px;">F.:{{ $venta->id }} | {{ $venta->numero }}</td>
                 <td style="padding: 2px 2px; text-align: right; font-weight: bold;">{{ number_format($subtotalVenta, 2) }}</td>
             </tr>
             @endforeach

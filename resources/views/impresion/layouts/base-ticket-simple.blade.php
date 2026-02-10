@@ -6,20 +6,12 @@
     <title>@yield('titulo', 'Ticket')</title>
     <style>
         * {
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: {
-                    {
-                    isset($fuente_config) ? $fuente_config['stack']: "'Consolas', 'Courier New', 'Courier', monospace"
-                }
-            }
-
-            margin: 0 !important;
-            padding: 0 !important;
             color: #000;
         }
 

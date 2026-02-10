@@ -1057,26 +1057,26 @@ registrarPago.post = (args: { venta: string | number } | [venta: string | number
     
     registrarPago.form = registrarPagoForm
 /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-export const imprimir = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(args, options),
+export const imprimirVenta = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirVenta.url(args, options),
     method: 'get',
 })
 
-imprimir.definition = {
+imprimirVenta.definition = {
     methods: ["get","head"],
     url: '/ventas/{venta}/imprimir',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-imprimir.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+imprimirVenta.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -1099,56 +1099,56 @@ imprimir.url = (args: { venta: number | { id: number } } | [venta: number | { id
                 : args.venta,
                 }
 
-    return imprimir.definition.url
+    return imprimirVenta.definition.url
             .replace('{venta}', parsedArgs.venta.toString())
             .replace(/\/+$/, '') + queryParams(options)
 }
 
 /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-imprimir.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(args, options),
+imprimirVenta.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirVenta.url(args, options),
     method: 'get',
 })
 /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: imprimir.url(args, options),
+imprimirVenta.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimirVenta.url(args, options),
     method: 'head',
 })
 
     /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-    const imprimirForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimir.url(args, options),
+    const imprimirVentaForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimirVenta.url(args, options),
         method: 'get',
     })
 
             /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-        imprimirForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(args, options),
+        imprimirVentaForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirVenta.url(args, options),
             method: 'get',
         })
             /**
-* @see \App\Http\Controllers\VentaController::imprimir
+* @see \App\Http\Controllers\VentaController::imprimirVenta
  * @see app/Http/Controllers/VentaController.php:1059
  * @route '/ventas/{venta}/imprimir'
  */
-        imprimirForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(args, {
+        imprimirVentaForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirVenta.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
                             ...(options?.query ?? options?.mergeQuery ?? {}),
@@ -1157,85 +1157,7 @@ imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { i
             method: 'get',
         })
     
-    imprimir.form = imprimirForm
-/**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
-    method: 'get',
-})
-
-imprimir.definition = {
-    methods: ["get","head"],
-    url: '/ventas/imprimir',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-imprimir.url = (options?: RouteQueryOptions) => {
-    return imprimir.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: imprimir.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-    const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimir.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-        imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
- * @route '/ventas/imprimir'
- */
-        imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    imprimir.form = imprimirForm
+    imprimirVenta.form = imprimirVentaForm
 /**
 * @see \App\Http\Controllers\VentaController::preview
  * @see app/Http/Controllers/VentaController.php:1125
@@ -1639,6 +1561,84 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
         })
     
     show.form = showForm
+/**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir.url(options),
+    method: 'get',
+})
+
+imprimir.definition = {
+    methods: ["get","head"],
+    url: '/ventas/imprimir',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+imprimir.url = (options?: RouteQueryOptions) => {
+    return imprimir.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimir.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+    const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimir.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+        imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ImpresionVentasController::imprimir
+ * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @route '/ventas/imprimir'
+ */
+        imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imprimir.form = imprimirForm
 const ventas = {
     logistica,
 entregas,
@@ -1655,13 +1655,14 @@ anular,
 aprobar,
 rechazar,
 registrarPago,
-imprimir,
+imprimirVenta,
 preview,
 exportarExcel,
 exportarPdf,
 show,
 stock,
 detalles,
+imprimir,
 }
 
 export default ventas

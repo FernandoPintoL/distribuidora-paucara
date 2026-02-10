@@ -6,20 +6,13 @@
     <title>@yield('titulo', 'Ticket')</title>
     <style>
         * {
-            margin: 0 !important;
-            padding: 0 !important;
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            font-family: {
-                    {
-                    isset($fuente_config) ? $fuente_config['stack']: "'Consolas', 'Courier New', 'Courier', monospace"
-                }
-            }
-
-            margin: 0 !important;
-            padding: 0 !important;
+            
             color: #000;
         }
 
@@ -48,15 +41,15 @@
         .header {
             text-align: center;
             margin-bottom: 1px;
-            padding: 0;
+            /*padding: 0;*/
             /*border-bottom: 1px dashed #000;*/
         }
 
         .logo {
-            max-width: 120px;
+            /*max-width: 120px;
             max-height: 80px;
             margin: 0 auto 2px;
-            display: block;
+            display: block;*/
             object-fit: contain;
         }
 
@@ -67,6 +60,8 @@
 
         .empresa-info {
             margin: 0;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         /* Separadores */
@@ -242,35 +237,11 @@
     </style>
 </head>
 <body>
-    <!-- Selector de fuentes (solo en navegador) -->
-    {{-- @if(request()->query('accion') === 'stream')
-    <div class="font-selector">
-        <label for="font-select">Fuente de letra:</label>
-        <select id="font-select" onchange="cambiarFuente(this.value)">
-            @forelse($fuentes_disponibles ?? [] as $key => $fuente)
-            <option value="{{ $key }}" {{ ($fuente_config['nombre'] ?? '') === ($fuente['nombre'] ?? '') ? 'selected' : '' }}>
-    {{ $fuente['nombre'] }}
-    </option>
-    @empty
-    <option value="consolas" selected>Consolas (Por defecto)</option>
-    @endforelse
-    </select>
-    </div> --}}
-
-    {{-- <script>
-        function cambiarFuente(fuente) {
-            const url = new URL(window.location);
-            url.searchParams.set('fuente', fuente);
-            window.location.href = url.toString();
-        }
-    </script> 
-    @endif--}}
-
     <div class="ticket">
         {{-- Header compacto --}}
         <div class="header">
             @if(!empty($logo_principal_base64))
-            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 190px; max-height: 90px; object-fit: contain;">
+            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 390px; max-height: 130px; object-fit: contain;">
             @endif
             <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
             <div class="empresa-info">{{ $empresa->direccion }}</div>
