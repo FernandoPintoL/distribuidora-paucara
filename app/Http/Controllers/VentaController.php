@@ -1414,4 +1414,48 @@ class VentaController extends Controller
             return null;
         }
     }
+
+    /**
+     * API: Obtener todas las ventas sin paginación (para impresión/exportación)
+     */
+    public function ventasParaImpresion(Request $request): JsonResponse
+    {
+        $cliente_id   = $request->integer('cliente_id') ?: null;
+        $estado       = $request->filled('estado') ? $request->string('estado') : null;
+        $fechaInicio  = $request->date('fecha_inicio');
+        $fechaFin     = $request->date('fecha_fin');
+
+        \Log::info('📋 [ventasParaImpresion] Parámetros recibidos:', [
+            'cliente_id'   => $cliente_id,
+            'estado'       => $estado,
+            'fecha_inicio' => $fechaInicio?->format('Y-m-d'),
+            'fecha_fin'    => $fechaFin?->format('Y-m-d'),
+        ]);
+
+        $query = Venta::with([
+            'cliente:id,nombre,nit,telefono',
+            'cliente.localidad:id,nombre',
+            'usuario:id,name',
+            'detalles.producto:id,nombre,sku',
+            'detalles.producto.codigoPrincipal:id,codigo',
+        ])
+            ->when($cliente_id, fn($q) => $q->where('cliente_id', $cliente_id))
+            ->when($estado, fn($q) => $q->where('estado', $estado))
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->orderByDesc('fecha')
+            ->orderByDesc('id');
+
+        \Log::info('📋 [ventasParaImpresion] Query SQL:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+
+        $ventas = $query->get();
+
+        \Log::info('📋 [ventasParaImpresion] Resultados obtenidos:', ['cantidad' => $ventas->count()]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $ventas,
+            'message' => 'Ventas obtenidas',
+        ]);
+    }
 }

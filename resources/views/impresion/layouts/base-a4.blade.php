@@ -163,22 +163,6 @@
             border-top: 2px solid #4F81BD;
         }
 
-        /* Footer */
-        .footer {
-            position: fixed;
-            bottom: 10mm;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 8px;
-            color: #999;
-            border-top: 1px solid #ddd;
-            padding-top: 5px;
-        }
-
-        .footer p {
-            margin: 2px 0;
-        }
 
         /* Observaciones */
         .observaciones {
@@ -377,31 +361,6 @@
         {{-- Contenido específico de cada documento --}}
         <div style="padding-left: 25px; padding-right: 25px;">
             @yield('contenido')
-        </div>
-
-        {{-- Footer --}}
-        <div class="footer" style="padding-left: 25px; padding-right: 25px;">
-            @if($empresa->logo_footer)
-            <div style="margin-bottom: 10px;">
-                <img src="{{ $empresa->logo_footer }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
-            </div>
-            @elseif($empresa->logo_principal)
-            <div style="margin-bottom: 10px;">
-                <img src="{{ $empresa->logo_principal }}" alt="Logo Footer" style="max-width: 80px; max-height: 30px; object-fit: contain;">
-            </div>
-            @endif
-            @if($empresa->mensaje_footer)
-            <p>{{ $empresa->mensaje_footer }}</p>
-            @endif
-            @if($empresa->mensaje_legal)
-            <p style="font-size: 7px; margin-top: 5px;">{{ $empresa->mensaje_legal }}</p>
-            @endif
-            <p style="margin-top: 5px;">
-                Impreso: {{ $fecha_impresion->format('d/m/Y H:i:s') }}
-                @if($usuario)
-                | Usuario: {{ is_string($usuario) ? $usuario : (isset($usuario->name) ? $usuario->name : 'Sistema') }}
-                @endif
-            </p>
         </div>
     </div>
 </body>

@@ -14,9 +14,6 @@ class CreditosPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()['cache.store']->forget('spatie.permission.cache');
-
         // ============================================
         // CREAR CAPACIDAD DE CRÉDITOS
         // ============================================
@@ -58,6 +55,9 @@ class CreditosPermissionsSeeder extends Seeder
             $superAdminRole->givePermissionTo($permission);
             echo "✅ Permiso 'admin.creditos.importar' asignado al rol 'Super Admin'\n";
         }
+
+        // Reset cached roles and permissions AFTER creating/assigning
+        app('cache')->forget('spatie.permission.cache');
 
         echo "\n🟢 Seeder de Créditos completado exitosamente\n";
     }

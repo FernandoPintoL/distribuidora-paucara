@@ -100,6 +100,9 @@ class DatabaseSeeder extends Seeder
         // ✅ NUEVO: Actualizar permisos de logística para el Cajero
         $this->call(UpdateCajeroLogisticsPermissionsSeeder::class);
 
+        // ✅ NUEVO: Crear permiso para importación de créditos
+        $this->call(CreditosPermissionsSeeder::class);
+
         // ✅ NUEVO: Validar y crear datos críticos que puedan faltar
         $this->call(ValidateAndCreateRequiredDataSeeder::class);
 

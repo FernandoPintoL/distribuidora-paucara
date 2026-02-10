@@ -48,6 +48,7 @@ import CuentaPorPagarController from './CuentaPorPagarController'
 import PagoController from './PagoController'
 import LoteVencimientoController from './LoteVencimientoController'
 import ReporteComprasController from './ReporteComprasController'
+import ImpresionComprasController from './ImpresionComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
@@ -73,6 +74,8 @@ import ReporteVentasController from './ReporteVentasController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
 import ImpresionStockController from './ImpresionStockController'
+import ImpresionMovimientosController from './ImpresionMovimientosController'
+import ImpresionVentasController from './ImpresionVentasController'
 import Settings from './Settings'
 const Controllers = {
     Api,
@@ -125,6 +128,7 @@ CuentaPorPagarController,
 PagoController,
 LoteVencimientoController,
 ReporteComprasController,
+ImpresionComprasController,
 DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
@@ -150,6 +154,8 @@ ReporteVentasController,
 ConteoFisicoController,
 AnalisisAbcController,
 ImpresionStockController,
+ImpresionMovimientosController,
+ImpresionVentasController,
 Settings,
 }
 

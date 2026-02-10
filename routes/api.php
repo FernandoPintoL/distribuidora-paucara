@@ -340,6 +340,12 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 // RUTAS API EXISTENTES (Protegidas por autenticación)
 // ==========================================
 Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
+    // ⚠️ IMPORTANTE: Rutas customizadas ANTES de apiResource para evitar conflictos con {id}
+    Route::group(['prefix' => 'compras'], function () {
+        // 🖨️ Rutas de impresión - ANTES que apiResource
+        Route::get('para-impresion', [CompraController::class, 'comprasParaImpresion']);
+    });
+
     // Rutas API básicas con nombres únicos para evitar conflictos con rutas web
     Route::apiResource('compras', CompraController::class)->names('api.compras');
 
@@ -386,13 +392,15 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
             ->name('api.ventas.preview');
     });
 
-    Route::apiResource('ventas', VentaController::class)->names('api.ventas');
-
-    // Rutas adicionales para ventas
+    // ⚠️ IMPORTANTE: Rutas customizadas ANTES de apiResource para evitar conflictos con {id}
     Route::group(['prefix' => 'ventas'], function () {
+        // 🖨️ Rutas de impresión - ANTES que apiResource
+        Route::get('para-impresion', [VentaController::class, 'ventasParaImpresion']);
         Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
-        Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
         Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
+
+        // 🎯 Rutas con parámetro {venta} o {producto}
+        Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
         Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
         Route::post('{venta}/anular', [VentaController::class, 'anular']);
 
@@ -408,6 +416,8 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
             ->name('api.ventas.registrar-en-caja')
             ->middleware('permission:cajas.transacciones');
     });
+
+    Route::apiResource('ventas', VentaController::class)->names('api.ventas');
 });
 
 // Rutas API para contabilidad
@@ -423,6 +433,7 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::get('stock-filtrado', [InventarioController::class, 'apiStockFiltrado']);
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
+    Route::get('movimientos-para-impresion', [InventarioController::class, 'movimientosParaImpresion']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
     Route::get('estadisticas', [InventarioController::class, 'estadisticasApi']);
 
@@ -628,6 +639,9 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/entregas/{id}/reportar-novedad', [EntregaController::class, 'reportarNovedad']);
         Route::post('/entregas/{id}/ubicacion', [EntregaController::class, 'registrarUbicacion']);
         Route::get('/historial', [EntregaController::class, 'historialEntregas']);
+
+        // ✅ NUEVO: Resumen de pagos registrados en una entrega
+        Route::get('/entregas/{id}/resumen-pagos', [EntregaController::class, 'obtenerResumenPagos']);
 
         // ✅ NUEVO: Rutas para gestión de cajas del chofer
         Route::prefix('cajas')->middleware('can.open.caja')->group(function () {
@@ -1114,5 +1128,8 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
 // ==========================================
 Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
     Route::post('preparar-impresion', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresion']);
+    Route::post('preparar-impresion-movimientos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionMovimientos']);
+    Route::post('preparar-impresion-ventas', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionVentas']);
+    Route::post('preparar-impresion-compras', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionCompras']);
     Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
 });

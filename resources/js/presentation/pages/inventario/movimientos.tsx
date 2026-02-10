@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import MovimientosTable from '@/presentation/components/Inventario/MovimientosTable';
 import MovimientosFilters from '@/presentation/components/Inventario/MovimientosFilters';
 import MovimientosStats from '@/presentation/components/Inventario/MovimientosStats';
+import { ImprimirMovimientosButton } from '@/presentation/components/impresion/ImprimirMovimientosButton';
 import { Button } from '@/presentation/components/ui/button';
 import { Plus, BarChart3, List } from 'lucide-react';
 import type {
@@ -103,6 +104,11 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <ImprimirMovimientosButton
+                            movimientos={movimientos.data as any}
+                            filtros={filtros}
+                        />
+
                         <Button variant="outline" onClick={handleGoToReportes}>
                             <BarChart3 className="w-4 h-4 mr-2" />
                             Reportes

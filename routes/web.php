@@ -286,6 +286,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('reportes/export-pdf', [\App\Http\Controllers\ReporteComprasController::class, 'exportPdf'])->name('reportes.export-pdf');
     });
 
+    // ==========================================
+    // 📦 COMPRAS - IMPRESIÓN (ANTES del resource para evitar conflictos)
+    // ==========================================
+    Route::prefix('compras')->name('compras.')->group(function () {
+        Route::get('imprimir', [\App\Http\Controllers\ImpresionComprasController::class, 'imprimir'])->name('imprimir');
+    });
+
     // Rutas para gestión de compras (después de rutas específicas para evitar conflictos)
     // ✅ NUEVO: Ruta para anular compras
     Route::post('compras/{compra}/anular', [\App\Http\Controllers\CompraController::class, 'anular'])->name('compras.anular');
@@ -847,6 +854,21 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::prefix('stock')->name('stock.')->group(function () {
         Route::get('imprimir', [\App\Http\Controllers\ImpresionStockController::class, 'imprimir'])->name('imprimir');
         Route::get('preview', [\App\Http\Controllers\ImpresionStockController::class, 'preview'])->name('preview');
+    });
+
+    // ==========================================
+    // 📋 MOVIMIENTOS - IMPRESIÓN
+    // ==========================================
+    Route::prefix('movimientos')->name('movimientos.')->group(function () {
+        Route::get('imprimir', [\App\Http\Controllers\ImpresionMovimientosController::class, 'imprimir'])->name('imprimir');
+        Route::get('preview', [\App\Http\Controllers\ImpresionMovimientosController::class, 'preview'])->name('preview');
+    });
+
+    // ==========================================
+    // 💳 VENTAS - IMPRESIÓN
+    // ==========================================
+    Route::prefix('ventas')->name('ventas.')->group(function () {
+        Route::get('imprimir', [\App\Http\Controllers\ImpresionVentasController::class, 'imprimir'])->name('imprimir');
     });
 });
 

@@ -1,5 +1,83 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+export const comprasParaImpresion = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: comprasParaImpresion.url(options),
+    method: 'get',
+})
+
+comprasParaImpresion.definition = {
+    methods: ["get","head"],
+    url: '/api/compras/para-impresion',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+comprasParaImpresion.url = (options?: RouteQueryOptions) => {
+    return comprasParaImpresion.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+comprasParaImpresion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: comprasParaImpresion.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+comprasParaImpresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: comprasParaImpresion.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+    const comprasParaImpresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: comprasParaImpresion.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+        comprasParaImpresionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: comprasParaImpresion.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CompraController::comprasParaImpresion
+ * @see app/Http/Controllers/CompraController.php:1440
+ * @route '/api/compras/para-impresion'
+ */
+        comprasParaImpresionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: comprasParaImpresion.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    comprasParaImpresion.form = comprasParaImpresionForm
+/**
 * @see \App\Http\Controllers\CompraController::index
  * @see app/Http/Controllers/CompraController.php:44
  * @route '/api/compras'
@@ -1438,6 +1516,6 @@ exportarPdf.head = (args: { compra: number | { id: number } } | [compra: number 
         })
     
     exportarPdf.form = exportarPdfForm
-const CompraController = { index, store, show, update, destroy, anular, create, edit, imprimirCompra, previewCompra, exportarExcel, exportarPdf }
+const CompraController = { comprasParaImpresion, index, store, show, update, destroy, anular, create, edit, imprimirCompra, previewCompra, exportarExcel, exportarPdf }
 
 export default CompraController

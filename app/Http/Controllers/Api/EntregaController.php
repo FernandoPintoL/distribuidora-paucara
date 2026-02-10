@@ -28,10 +28,12 @@ use Illuminate\Support\Facades\Log;
 class EntregaController extends Controller
 {
     private $impresionService;
+    private $localidadesService;
 
-    public function __construct(ImpresionEntregaService $impresionService)
+    public function __construct(ImpresionEntregaService $impresionService, EntregaLocalidadesService $localidadesService)
     {
         $this->impresionService = $impresionService;
+        $this->localidadesService = $localidadesService;
     }
 
     /**
@@ -83,8 +85,48 @@ class EntregaController extends Controller
             ]);
 
             // Obtener entregas asignadas al chofer (user actual)
+            // Parámetro fecha_asignacion es opcional - si NO se proporciona, NO filtra por fecha
+            $fechaFiltro = $request->fecha_asignacion;
+            $search = $request->search;  // ✅ NUEVO: búsqueda case-insensitive
+            $localidadId = $request->localidad_id;  // ✅ NUEVO: filtro por localidad
+
             // Seleccionar solo campos necesarios para la lista
             $entregas = Entrega::where('chofer_id', $user->id)
+                ->when($fechaFiltro, function ($q) use ($fechaFiltro) {
+                    return $q->whereDate('fecha_asignacion', $fechaFiltro);  // ✅ FILTRA SOLO SI SE PROPORCIONA FECHA
+                })
+                ->when($estado, function ($q) use ($estado) {
+                    return $q->where('estado', $estado);
+                })
+                // ✅ NUEVO: Búsqueda case-insensitive por ID, número entrega, número venta, y cliente info
+                ->when($search, function ($q) use ($search) {
+                    $searchLower = strtolower($search);
+                    return $q->where(function ($query) use ($searchLower, $search) {
+                        // Buscar en el ID de la entrega
+                        $query->where('id', $search);
+
+                        // Buscar en número de entrega (case-insensitive)
+                        $query->orWhereRaw('LOWER(numero_entrega) LIKE ?', ["%{$searchLower}%"]);
+
+                        // Buscar en ventas relacionadas (número, cliente nombre, telefono)
+                        $query->orWhereHas('ventas', function ($q) use ($searchLower, $search) {
+                            // Número de venta
+                            $q->whereRaw('LOWER(numero) LIKE ?', ["%{$searchLower}%"])
+                              // Nombre del cliente (case-insensitive)
+                              ->orWhereHas('cliente', function ($cq) use ($searchLower, $search) {
+                                  $cq->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
+                                    ->orWhereRaw('LOWER(nit) LIKE ?', ["%{$searchLower}%"])
+                                    ->orWhereRaw('LOWER(telefono) LIKE ?', ["%{$searchLower}%"]);
+                              });
+                        });
+                    });
+                })
+                // ✅ NUEVO: Filtrar por localidad
+                ->when($localidadId, function ($q) use ($localidadId) {
+                    return $q->whereHas('ventas.cliente.localidad', function ($query) use ($localidadId) {
+                        $query->where('id', $localidadId);
+                    });
+                })
                 ->select([
                     'id', 'numero_entrega', 'estado', 'estado_entrega_id',
                     'fecha_asignacion', 'fecha_entrega', 'observaciones',
@@ -93,20 +135,21 @@ class EntregaController extends Controller
                 ->with([
                     'estadoEntrega:id,codigo,nombre,color,icono',  // Solo campos necesarios
                     'ventas:id,numero,subtotal,impuesto,total,estado_logistico_id,fecha_entrega_comprometida,cliente_id,direccion_cliente_id,entrega_id',
-                    'ventas.cliente:id,nombre,telefono',
+                    'ventas.cliente:id,nombre,nit,telefono,localidad_id',
+                    'ventas.cliente.localidad:id,nombre,codigo',
                     'ventas.direccionCliente:id,direccion,latitud,longitud',
                     'ventas.estadoLogistica:id,codigo,nombre,color,icono',
                     'vehiculo:id,placa,marca,modelo'
                 ])
-                ->when($estado, function ($q) use ($estado) {
-                    return $q->where('estado', $estado);
-                })
                 ->get();
 
             // DEBUG: Log cantidad de entregas encontradas CON filtro
             Log::info('📱 [misTrabjos] Entregas encontradas CON FILTRO', [
                 'user_id' => $user->id,
+                'fecha_filtro' => $fechaFiltro,
                 'estado_filtro' => $estado,
+                'search' => $search,  // ✅ NUEVO
+                'localidad_id' => $localidadId,  // ✅ NUEVO
                 'cantidad' => count($entregas),
                 'entregas' => $entregas->pluck('id')->toArray(),
             ]);
@@ -131,7 +174,13 @@ class EntregaController extends Controller
                         'cliente' => $venta->cliente ? [
                             'id' => $venta->cliente->id,
                             'nombre' => $venta->cliente->nombre,
+                            'nit' => $venta->cliente->nit,
                             'telefono' => $venta->cliente->telefono,
+                            'localidad' => $venta->cliente->localidad ? [
+                                'id' => $venta->cliente->localidad->id,
+                                'nombre' => $venta->cliente->localidad->nombre,
+                                'codigo' => $venta->cliente->localidad->codigo ?? null,
+                            ] : null,
                         ] : null,
                         'direccion_cliente' => $venta->direccionCliente ? [
                             'id' => $venta->direccionCliente->id,
@@ -148,6 +197,10 @@ class EntregaController extends Controller
                         ] : null,
                     ];
                 })->toArray();
+
+                // ✅ NUEVO: Obtener localidades de la entrega usando el service
+                $localidadesResumen = $this->localidadesService->obtenerLocalidadesResumen($entrega);
+                $localidades = $this->localidadesService->obtenerLocalidades($entrega);
 
                 return [
                     'id' => $entrega->id,
@@ -174,6 +227,13 @@ class EntregaController extends Controller
                     'subtotal_total' => (float) $subtotalTotal,
                     'impuesto_total' => (float) $impuestoTotal,
                     'total_general' => (float) $totalGeneral,
+                    'localidades' => $localidades->map(fn($loc) => [
+                        'id' => $loc->id,
+                        'nombre' => $loc->nombre,
+                        'codigo' => $loc->codigo ?? null,
+                    ])->toArray(),
+                    'localidades_resumen' => $localidadesResumen,
+                    'cantidad_localidades' => count($localidades),
                     'ventas' => $ventasLimpias,
                 ];
             });
@@ -798,6 +858,9 @@ class EntregaController extends Controller
                 'tienda_abierta' => 'nullable|boolean',
                 'cliente_presente' => 'nullable|boolean',
                 'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
+                // ✅ NUEVO: Registrar pago en el momento de la entrega
+                'monto_recibido' => 'nullable|numeric|min:0',  // Monto que el cliente pagó
+                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',  // ID del tipo de pago
             ]);
 
             $entrega = Entrega::with('estadoEntrega')->findOrFail($id);
@@ -886,6 +949,8 @@ class EntregaController extends Controller
                     'tienda_abierta' => $validated['tienda_abierta'] ?? null,
                     'cliente_presente' => $validated['cliente_presente'] ?? null,
                     'motivo_rechazo' => $validated['motivo_rechazo'] ?? null,
+                    'monto_recibido' => $validated['monto_recibido'] ?? null,  // ✅ NUEVO: Monto que pagó el cliente
+                    'tipo_pago_id' => $validated['tipo_pago_id'] ?? null,      // ✅ NUEVO: Tipo de pago usado
                     'confirmado_por' => Auth::id(),
                     'confirmado_en' => now(),
                 ]
@@ -2208,6 +2273,105 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error obteniendo progreso: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtener resumen de pagos registrados en una entrega
+     *
+     * GET /api/chofer/entregas/{id}/resumen-pagos
+     *
+     * Agrupa todas las confirmaciones de ventas por tipo de pago
+     * y calcula totales recibidos vs esperados
+     */
+    public function obtenerResumenPagos(int $id)
+    {
+        try {
+            $entrega = Entrega::with(['ventas' => function ($q) {
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id');
+            }])->findOrFail($id);
+
+            // Obtener todas las confirmaciones de las ventas de esta entrega
+            $ventasIds = $entrega->ventas->pluck('id')->toArray();
+
+            $confirmaciones = EntregaVentaConfirmacion::with('tipoPago')
+                ->whereIn('venta_id', $ventasIds)
+                ->get();
+
+            // Agrupar por tipo de pago
+            $porTipoPago = $confirmaciones->groupBy('tipo_pago_id');
+
+            // Construir resumen
+            $resumen = [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+                'total_esperado' => (float) $entrega->ventas->sum('total'),
+                'pagos' => [],
+                'sin_registrar' => [],
+                'total_recibido' => 0,
+            ];
+
+            // Procesar pagos registrados
+            foreach ($porTipoPago as $tipoPagoId => $confirmacionesGrupo) {
+                $tipoPago = $confirmacionesGrupo->first()->tipoPago;
+                $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
+                $cantidad = $confirmacionesGrupo->count();
+
+                $resumen['pagos'][] = [
+                    'tipo_pago_id' => $tipoPagoId,
+                    'tipo_pago' => $tipoPago?->nombre ?? 'Sin especificar',
+                    'tipo_pago_codigo' => $tipoPago?->codigo ?? 'N/A',
+                    'total' => $totalPago,
+                    'cantidad_ventas' => $cantidad,
+                    'ventas' => $confirmacionesGrupo->map(function ($c) {
+                        return [
+                            'venta_id' => $c->venta_id,
+                            'venta_numero' => $c->venta?->numero,
+                            'monto_recibido' => (float) $c->monto_recibido,
+                            'tipo_entrega' => $c->tipo_entrega,
+                            'tipo_novedad' => $c->tipo_novedad,
+                        ];
+                    })->toArray(),
+                ];
+
+                $resumen['total_recibido'] += $totalPago;
+            }
+
+            // Ventas sin confirmación de pago
+            $ventasConfirmadas = $confirmaciones->pluck('venta_id')->unique()->toArray();
+            $ventasSinPago = $entrega->ventas->whereNotIn('id', $ventasConfirmadas);
+
+            if ($ventasSinPago->isNotEmpty()) {
+                $resumen['sin_registrar'] = $ventasSinPago->map(function ($v) {
+                    return [
+                        'venta_id' => $v->id,
+                        'venta_numero' => $v->numero,
+                        'monto' => (float) $v->total,
+                    ];
+                })->toArray();
+            }
+
+            // Calcular diferencia
+            $resumen['diferencia'] = (float) ($resumen['total_esperado'] - $resumen['total_recibido']);
+            $resumen['porcentaje_recibido'] = $resumen['total_esperado'] > 0
+                ? round(($resumen['total_recibido'] / $resumen['total_esperado']) * 100, 2)
+                : 0;
+
+            return response()->json([
+                'success' => true,
+                'data' => $resumen,
+            ]);
+
+        } catch (\Throwable $e) {
+            \Log::error('Error en obtenerResumenPagos:', [
+                'entrega_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener resumen de pagos: ' . $e->getMessage(),
             ], 500);
         }
     }

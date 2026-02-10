@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar';
+export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock';
 
 interface FormatoConfig {
     formato: string;
@@ -81,6 +81,11 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    stock: [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
     ],
 };
 
@@ -178,6 +183,9 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'cuenta-por-pagar') {
             // Para cuentas por pagar
             rutaBase = `/cuentas-por-pagar/${documentoId}`;
+        } else if (tipoDocumento === 'stock') {
+            // Para stock - no requiere documentoId
+            rutaBase = '/stock';
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -187,6 +195,9 @@ export function OutputSelectionModal({
                 url = `${rutaBase}/exportar-excel`;
             } else if (tipoDocumento === 'cuenta-por-cobrar' || tipoDocumento === 'cuenta-por-pagar') {
                 // Para cuentas por cobrar/pagar no hay excel
+                url = `${rutaBase}/exportar-excel`;
+            } else if (tipoDocumento === 'stock') {
+                // Para stock - Excel no disponible
                 url = `${rutaBase}/exportar-excel`;
             } else {
                 url = `${rutaBase}/exportar-excel`;
@@ -200,6 +211,9 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'cuenta-por-pagar') {
                 // Para cuentas por pagar
                 url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+            } else if (tipoDocumento === 'stock') {
+                // Para stock
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -213,6 +227,9 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'cuenta-por-pagar') {
                 // Para cuentas por pagar - ruta específica para ticket-80
                 url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+            } else if (tipoDocumento === 'stock') {
+                // Para stock
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             }

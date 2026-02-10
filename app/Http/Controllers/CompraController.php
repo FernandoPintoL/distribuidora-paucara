@@ -1433,4 +1433,85 @@ class CompraController extends Controller
             return null;
         }
     }
+
+    /**
+     * Obtener todas las compras para impresión (sin paginación, respetando filtros)
+     */
+    public function comprasParaImpresion(Request $request)
+    {
+        $filtros = $request->validate([
+            'q'                   => ['nullable', 'string', 'max:255'],
+            'id'                  => ['nullable', 'integer'],
+            'proveedor_id'        => ['nullable', 'exists:proveedores,id'],
+            'estado_documento_id' => ['nullable', 'exists:estados_documento,id'],
+            'moneda_id'           => ['nullable', 'exists:monedas,id'],
+            'tipo_pago_id'        => ['nullable', 'exists:tipos_pago,id'],
+            'fecha_desde'         => ['nullable', 'date'],
+            'fecha_hasta'         => ['nullable', 'date'],
+        ]);
+
+        \Log::info('📦 [comprasParaImpresion] Parámetros recibidos:', $filtros);
+
+        $query = Compra::with([
+            'proveedor',
+            'usuario',
+            'estadoDocumento',
+            'moneda',
+            'tipoPago',
+            'detalles.producto:id,nombre,sku',
+            'detalles.producto.codigoPrincipal:id,codigo'
+        ]);
+
+        // Filtro por ID
+        if (!empty($filtros['id'])) {
+            $query->where('id', (int)$filtros['id']);
+        }
+
+        // Búsqueda general
+        if (!empty($filtros['q'])) {
+            $searchTerm = $filtros['q'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('numero', 'ilike', "%{$searchTerm}%")
+                    ->orWhere('numero_factura', 'ilike', "%{$searchTerm}%")
+                    ->orWhereHas('proveedor', function ($qq) use ($searchTerm) {
+                        $qq->where('nombre', 'ilike', "%{$searchTerm}%");
+                    });
+            });
+        }
+
+        // Filtros específicos
+        if (!empty($filtros['proveedor_id'])) {
+            $query->where('proveedor_id', (int)$filtros['proveedor_id']);
+        }
+
+        if (!empty($filtros['estado_documento_id'])) {
+            $query->where('estado_documento_id', (int)$filtros['estado_documento_id']);
+        }
+
+        if (!empty($filtros['moneda_id'])) {
+            $query->where('moneda_id', (int)$filtros['moneda_id']);
+        }
+
+        if (!empty($filtros['tipo_pago_id'])) {
+            $query->where('tipo_pago_id', (int)$filtros['tipo_pago_id']);
+        }
+
+        // Filtros de fecha
+        if (!empty($filtros['fecha_desde'])) {
+            $query->whereDate('fecha', '>=', $filtros['fecha_desde']);
+        }
+
+        if (!empty($filtros['fecha_hasta'])) {
+            $query->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+        }
+
+        // Ordenar por fecha descendente
+        $compras = $query->orderBy('fecha', 'desc')->get();
+
+        \Log::info('📦 [comprasParaImpresion] Resultados obtenidos:', ['cantidad' => $compras->count()]);
+
+        return response()->json([
+            'data' => $compras,
+        ]);
+    }
 }

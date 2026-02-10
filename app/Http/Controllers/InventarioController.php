@@ -816,14 +816,16 @@ class InventarioController extends Controller
     public function movimientosApi(Request $request): JsonResponse
     {
         $perPage     = $request->integer('per_page', 15);
-        $almacenId   = $request->integer('almacen_id');
-        $productoId  = $request->integer('producto_id');
-        $tipo        = $request->string('tipo');
+        $almacenId   = $request->integer('almacen_id') ?: null;
+        $productoId  = $request->integer('producto_id') ?: null;
+        $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
         $fechaInicio = $request->date('fecha_inicio');
         $fechaFin    = $request->date('fecha_fin');
 
         $movimientos = MovimientoInventario::with([
-            'stockProducto.producto:id,nombre,codigo',
+            'stockProducto.producto:id,nombre,sku',
+            'stockProducto.producto.codigoPrincipal:id,codigo',
+            'stockProducto.almacen:id,nombre',
             'user:id,name',
         ])
             ->when($almacenId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId)))
@@ -836,6 +838,49 @@ class InventarioController extends Controller
             ->paginate($perPage);
 
         return ApiResponse::success($movimientos);
+    }
+
+    /**
+     * API: Obtener todos los movimientos sin paginación (para impresión/exportación)
+     */
+    public function movimientosParaImpresion(Request $request): JsonResponse
+    {
+        $almacenId   = $request->integer('almacen_id') ?: null;
+        $productoId  = $request->integer('producto_id') ?: null;
+        $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
+        $fechaInicio = $request->date('fecha_inicio');
+        $fechaFin    = $request->date('fecha_fin');
+
+        \Log::info('📋 [movimientosParaImpresion] Parámetros recibidos:', [
+            'almacen_id'   => $almacenId,
+            'producto_id'  => $productoId,
+            'tipo'         => $tipo,
+            'fecha_inicio' => $fechaInicio?->format('Y-m-d'),
+            'fecha_fin'    => $fechaFin?->format('Y-m-d'),
+        ]);
+
+        $query = MovimientoInventario::with([
+            'stockProducto.producto:id,nombre,sku',
+            'stockProducto.producto.codigoPrincipal:id,codigo',
+            'stockProducto.almacen:id,nombre',
+            'user:id,name',
+        ])
+            ->when($almacenId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('almacen_id', $almacenId)))
+            ->when($productoId, fn($q) => $q->whereHas('stockProducto', fn($sq) => $sq->where('producto_id', $productoId)))
+            ->when($tipo, fn($q) => $q->where('tipo', $tipo))
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
+            ->orderByDesc('fecha')
+            ->orderByDesc('id');
+
+        // Log de query sin ejecutar
+        \Log::info('📋 [movimientosParaImpresion] Query SQL:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+
+        $movimientos = $query->get();
+
+        \Log::info('📋 [movimientosParaImpresion] Resultados obtenidos:', ['cantidad' => $movimientos->count()]);
+
+        return ApiResponse::success($movimientos, 'Movimientos obtenidos');
     }
 
     /**

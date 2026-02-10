@@ -1,69 +1,125 @@
 /**
- * Componente: Botón de Impresión para Listado de Stock
+ * Componente: Botón de Impresión para Listado de Ventas
  *
- * Reemplaza FormatoSelector con OutputSelectionModal para seleccionar formato de impresión.
+ * Reemplaza FormatoSelector con Modal Dialog para seleccionar formato de impresión.
  * Soporta formatos: A4 (Carta), TICKET_80, TICKET_58
  */
 
 import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Button } from '@/presentation/components/ui/button';
-import { Printer, Download, FileText, ChevronLeft, X } from 'lucide-react';
+import { Printer, Download, ChevronLeft, X } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-interface StockItem {
+interface Venta {
     id: number;
-    producto_id: number;
-    almacen_id: number;
-    cantidad: number;
-    producto_nombre: string;
-    producto_codigo: string;
-    producto_sku: string;
-    almacen_nombre: string;
+    numero: string;
+    fecha: string;
+    [key: string]: any;
 }
 
-interface ImprimirStockButtonProps {
-    stock: StockItem[];
-    almacenFiltro?: string;
-    busquedaFiltro?: string;
+interface FiltrosVentas {
+    cliente_id?: string | number;
+    estado?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    [key: string]: any;
+}
+
+interface ImprimirVentasButtonProps {
+    ventas: Venta[];
+    filtros?: FiltrosVentas;
     className?: string;
     iconOnly?: boolean;
 }
 
-const FORMATOS_STOCK = [
+const FORMATOS_VENTAS = [
     { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar carta' },
     { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
     { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
 ];
 
-export function ImprimirStockButton({
-    stock,
-    almacenFiltro,
-    busquedaFiltro,
+export function ImprimirVentasButton({
+    ventas,
+    filtros = {},
     className = '',
     iconOnly = false,
-}: ImprimirStockButtonProps) {
+}: ImprimirVentasButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [accion, setAccion] = useState<'imprimir' | 'pdf' | null>(null);
     const [formatoSeleccionado, setFormatoSeleccionado] = useState<string>('A4');
 
     const prepararImpresion = async (formato: string, accionURL: 'download' | 'stream' = 'stream') => {
-        console.log('Preparando impresión de stock:', { formato, cantidad: stock.length, accion: accionURL });
+        console.log('Preparando impresión de ventas:', { formato, filtros, accion: accionURL });
         setLoading(true);
 
         try {
+            // Primero, obtener las ventas filtradas del API
+            const params = new URLSearchParams();
+
+            // Agregar filtros como parámetros de query
+            if (filtros) {
+                if (filtros.cliente_id) params.append('cliente_id', String(filtros.cliente_id));
+                if (filtros.estado) params.append('estado', filtros.estado);
+                if (filtros.fecha_inicio) params.append('fecha_inicio', filtros.fecha_inicio);
+                if (filtros.fecha_fin) params.append('fecha_fin', filtros.fecha_fin);
+            }
+
+            console.log('Obteniendo ventas con parámetros:', params.toString());
+
+            // Usar endpoint específico para impresión que retorna TODOS los registros sin paginación
+            const apiResponse = await fetch(`/api/ventas/para-impresion?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            if (!apiResponse.ok) {
+                throw new Error('Error al obtener ventas filtradas');
+            }
+
+            const apiData = await apiResponse.json();
+
+            console.log('📊 Respuesta API completa:', JSON.stringify(apiData, null, 2));
+            console.log('📊 apiData.data tipo:', typeof apiData.data, 'isArray:', Array.isArray(apiData.data), 'keys:', apiData.data ? Object.keys(apiData.data).slice(0, 10) : 'null');
+
+            // Extraer el array de datos
+            let ventasFiltradas: any[] = [];
+
+            if (!apiData.data) {
+                console.warn('⚠️ apiData.data es null o undefined');
+                ventasFiltradas = ventas;
+            } else if (Array.isArray(apiData.data)) {
+                console.log('✅ apiData.data es un array');
+                ventasFiltradas = apiData.data;
+            } else if (typeof apiData.data === 'object' && apiData.data.data && Array.isArray(apiData.data.data)) {
+                // Caso: respuesta paginada { data: [...], ...pagination }
+                console.log('✅ apiData.data es un objeto paginado, extrayendo .data');
+                ventasFiltradas = apiData.data.data;
+            } else if (typeof apiData.data === 'object' && Object.keys(apiData.data).length > 0) {
+                // Caso: objeto con propiedades numéricas (Collection convertida)
+                console.log('✅ apiData.data es un objeto, convirtiendo a array');
+                ventasFiltradas = Object.values(apiData.data);
+            } else {
+                console.warn('⚠️ No se pudo extraer array, usando ventas fallback');
+                ventasFiltradas = ventas;
+            }
+
+            console.log('✅ Ventas filtradas obtenidas:', { cantidad: ventasFiltradas.length, tipo: typeof ventasFiltradas, es_array: Array.isArray(ventasFiltradas) });
+
             // Realizar petición POST para guardar datos en sesión
-            const response = await fetch('/api/stock/preparar-impresion', {
+            const response = await fetch('/api/stock/preparar-impresion-ventas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
-                    stock,
-                    almacen_filtro: almacenFiltro || null,
-                    busqueda_filtro: busquedaFiltro || null,
+                    ventas: ventasFiltradas,
+                    filtros: filtros || {},
                 }),
             });
 
@@ -72,7 +128,7 @@ export function ImprimirStockButton({
             }
 
             // Construir URL de impresión
-            const url = `/stock/imprimir?formato=${formato}&accion=${accionURL}`;
+            const url = `/ventas/imprimir?formato=${formato}&accion=${accionURL}`;
 
             console.log('URL de impresión generada:', url);
 
@@ -83,7 +139,7 @@ export function ImprimirStockButton({
                 window.location.href = url;
             }
 
-            NotificationService.success('Reporte de stock enviado');
+            NotificationService.success('Reporte de ventas enviado');
             handleClose();
         } catch (error) {
             console.error('Error al imprimir:', error);
@@ -113,8 +169,8 @@ export function ImprimirStockButton({
         setAccion(null);
     };
 
-    // No mostrar si no hay stock
-    if (stock.length === 0) {
+    // No mostrar si no hay ventas
+    if (ventas.length === 0) {
         return null;
     }
 
@@ -124,7 +180,7 @@ export function ImprimirStockButton({
                 <button
                     onClick={() => setIsModalOpen(true)}
                     disabled={loading}
-                    className={`inline-flex items-center p-2 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+                    className={`inline-flex items-center p-2 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
                     title="Imprimir"
                 >
                     <Printer className="h-4 w-4" />
@@ -141,7 +197,7 @@ export function ImprimirStockButton({
                 </Button>
             )}
 
-            {/* Modal de Selección de Formato (Reemplaza FormatoSelector) */}
+            {/* Modal de Selección de Formato */}
             <Transition appear show={isModalOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-50" onClose={handleClose}>
                     <Transition.Child
@@ -180,7 +236,7 @@ export function ImprimirStockButton({
                                                 </button>
                                             )}
                                             <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
-                                                {accion ? 'Seleccionar formato' : 'Reporte de Stock'}
+                                                {accion ? 'Seleccionar formato' : 'Reporte de Ventas'}
                                             </Dialog.Title>
                                         </div>
                                         <button
@@ -194,9 +250,7 @@ export function ImprimirStockButton({
                                     {/* Información */}
                                     <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                         <p className="text-sm text-blue-900 dark:text-blue-300">
-                                            Registros: <span className="font-semibold">{stock.length}</span>
-                                            {almacenFiltro && <span> • Almacén: {almacenFiltro}</span>}
-                                            {busquedaFiltro && <span> • Búsqueda: {busquedaFiltro}</span>}
+                                            Registros: <span className="font-semibold">{ventas.length}</span>
                                         </p>
                                     </div>
 
@@ -246,7 +300,7 @@ export function ImprimirStockButton({
                                                     Formato de impresión
                                                 </label>
                                                 <div className="space-y-2">
-                                                    {FORMATOS_STOCK.map((formato) => (
+                                                    {FORMATOS_VENTAS.map((formato) => (
                                                         <button
                                                             key={formato.formato}
                                                             onClick={() => setFormatoSeleccionado(formato.formato)}
@@ -266,27 +320,30 @@ export function ImprimirStockButton({
                                                 </div>
                                             </div>
 
-                                            {/* Footer con botones */}
-                                            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                                                <Button
-                                                    variant="outline"
+                                            {/* Botones de acción */}
+                                            <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700">
+                                                <button
                                                     onClick={handleVolver}
-                                                    disabled={loading}
-                                                    className="flex-1"
+                                                    className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition font-medium"
                                                 >
                                                     Atrás
-                                                </Button>
-                                                <Button
-                                                    onClick={accion === 'imprimir' ? handleImprimir : handleDescargar}
+                                                </button>
+                                                <button
+                                                    onClick={handleImprimir}
                                                     disabled={loading}
-                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white"
+                                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium flex items-center justify-center gap-2"
                                                 >
-                                                    {loading
-                                                        ? 'Procesando...'
-                                                        : accion === 'imprimir'
-                                                            ? 'Imprimir'
-                                                            : 'Descargar'}
-                                                </Button>
+                                                    <Printer className="h-4 w-4" />
+                                                    {loading ? 'Preparando...' : 'Imprimir'}
+                                                </button>
+                                                <button
+                                                    onClick={handleDescargar}
+                                                    disabled={loading}
+                                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium flex items-center justify-center gap-2"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                    {loading ? 'Preparando...' : 'Descargar'}
+                                                </button>
                                             </div>
                                         </div>
                                     )}
