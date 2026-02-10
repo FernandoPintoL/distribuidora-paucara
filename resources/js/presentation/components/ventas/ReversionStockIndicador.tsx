@@ -20,7 +20,7 @@ export default function ReversionStockIndicador({
     const [datos, setDatos] = useState<any>(null);
 
     // Solo mostrar para ventas anuladas
-    if (estadoVenta !== 'Anulado') {
+    if (estadoVenta?.toUpperCase() !== 'ANULADO') {
         return null;
     }
 

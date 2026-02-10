@@ -1,15 +1,18 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
-import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, XCircle, Loader2, RefreshCw } from 'lucide-react';
 import { Badge } from '@/presentation/components/ui/badge';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 
 interface DetalleReversionModalProps {
     isOpen: boolean;
     onClose: () => void;
     data?: {
+        venta_id?: number;
         venta_numero: string;
         venta_estado: string;
         reversión_completa: boolean;
-        estado: 'completa' | 'incompleta' | 'sin-reversiones' | 'sin-movimientos';
+        estado: 'completa' | 'incompleta' | 'sin_reversiones' | 'sin_movimientos';
         movimientos_original: Record<string, number>;
         movimientos_revercion: Record<string, number>;
         detalles: Array<{
@@ -21,10 +24,30 @@ interface DetalleReversionModalProps {
             estado: string;
         }>;
     };
+    onReversionExecuted?: () => void;
 }
 
-export default function DetalleReversionModal({ isOpen, onClose, data }: DetalleReversionModalProps) {
+export default function DetalleReversionModal({ isOpen, onClose, data, onReversionExecuted }: DetalleReversionModalProps) {
+    const [isEjecutando, setIsEjecutando] = useState(false);
+
     if (!data) return null;
+
+    // 🔍 DEBUG: Log estado del modal
+    console.log('📊 [DetalleReversionModal] Datos recibidos:', {
+        venta_id: data.venta_id,
+        venta_numero: data.venta_numero,
+        estado: data.estado,
+        reversión_completa: data.reversión_completa,
+        movimientos_original: data.movimientos_original,
+        movimientos_revercion: data.movimientos_revercion,
+        detalles_count: data.detalles?.length,
+    });
+    console.log('✅ Estado para botón:', {
+        mostrar_boton: data.estado === 'incompleta' || data.estado === 'sin-reversiones',
+        estado: data.estado,
+        es_incompleta: data.estado === 'incompleta',
+        es_sin_reversiones: data.estado === 'sin-reversiones',
+    });
 
     const getEstadoIcon = () => {
         switch (data.estado) {
@@ -32,7 +55,7 @@ export default function DetalleReversionModal({ isOpen, onClose, data }: Detalle
                 return <CheckCircle2 className="w-5 h-5 text-green-600" />;
             case 'incompleta':
                 return <AlertCircle className="w-5 h-5 text-yellow-600" />;
-            case 'sin-reversiones':
+            case 'sin_reversiones':
                 return <XCircle className="w-5 h-5 text-red-600" />;
             default:
                 return <AlertCircle className="w-5 h-5 text-gray-600" />;
@@ -45,10 +68,85 @@ export default function DetalleReversionModal({ isOpen, onClose, data }: Detalle
                 return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
             case 'incompleta':
                 return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
-            case 'sin-reversiones':
+            case 'sin_reversiones':
                 return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
             default:
                 return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200';
+        }
+    };
+
+    // ✅ NUEVO (2026-02-10): Función para ejecutar reversión manualmente
+    const handleEjecutarReversion = async () => {
+        if (!data?.venta_id) {
+            toast.error('No se puede ejecutar reversión: ID de venta no disponible');
+            return;
+        }
+
+        if (!window.confirm('¿Ejecutar reversión de stock para esta venta?\n\nEsto registrará los movimientos faltantes.')) {
+            return;
+        }
+
+        setIsEjecutando(true);
+        try {
+            // PASO 1: Ejecutar reversión
+            const response = await fetch(`/api/ventas/${data.venta_id}/ejecutar-reversion-stock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                toast.error(result.message || 'Error al ejecutar reversión');
+                return;
+            }
+
+            toast.success(result.message || 'Reversión ejecutada exitosamente');
+
+            // PASO 2: Re-verificar reversión para obtener datos actualizados
+            try {
+                const verifyResponse = await fetch(`/api/ventas/${data.venta_id}/verificar-reversion-stock`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                });
+
+                if (verifyResponse.ok) {
+                    const verifyData = await verifyResponse.json();
+                    // Actualizar datos del modal con la verificación nueva
+                    if (verifyData.success) {
+                        console.log('✅ Reversión verificada. Estado actualizado:', verifyData.estado);
+                        // El componente se volverá a renderizar con los datos nuevos si se actualizan en el padre
+                    }
+                }
+            } catch (verifyError) {
+                console.warn('Advertencia al re-verificar reversión:', verifyError);
+                // No es crítico si falla la verificación, la reversión se ejecutó
+            }
+
+            // PASO 3: Notificar al componente padre para recargar datos
+            if (onReversionExecuted) {
+                // Esperar un poco para que el usuario vea el mensaje de éxito
+                setTimeout(() => {
+                    onReversionExecuted();
+                }, 1500);
+            } else {
+                // Si no hay callback, cerrar el modal
+                setTimeout(() => {
+                    onClose();
+                }, 1500);
+            }
+
+        } catch (error) {
+            console.error('Error ejecutando reversión:', error);
+            toast.error('Error al ejecutar reversión de stock');
+        } finally {
+            setIsEjecutando(false);
         }
     };
 
@@ -72,9 +170,36 @@ export default function DetalleReversionModal({ isOpen, onClose, data }: Detalle
                                     {data.reversión_completa ? '✅ Reversión Completa y Correcta' : '⚠️ Reversión Incompleta o Faltante'}
                                 </p>
                             </div>
-                            <Badge variant="outline" className="text-lg">
-                                {data.estado === 'completa' ? '✅' : data.estado === 'incompleta' ? '⚠️' : '❌'}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-lg">
+                                    {data.estado === 'completa' ? '✅' : data.estado === 'incompleta' ? '⚠️' : '❌'}
+                                </Badge>
+                                {/* ✅ NUEVO (2026-02-10): Botón para ejecutar reversión si es necesario */}
+                                {(data.estado === 'incompleta' || data.estado === 'sin_reversiones') && (
+                                    <button
+                                        onClick={handleEjecutarReversion}
+                                        disabled={isEjecutando}
+                                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                                            isEjecutando
+                                                ? 'bg-blue-300 text-white cursor-not-allowed opacity-50'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                                        }`}
+                                        title="Ejecutar reversión de stock manualmente"
+                                    >
+                                        {isEjecutando ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Ejecutando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw className="w-4 h-4" />
+                                                Ejecutar Reversión
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
 

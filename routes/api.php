@@ -407,6 +407,9 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         // ✅ NUEVO: Verificar reversión de stock en ventas anuladas (auditoría)
         Route::get('{venta}/verificar-reversion-stock', [VentaController::class, 'verificarReversionStock']);
 
+        // ✅ NUEVO (2026-02-10): Ejecutar reversión de stock manualmente
+        Route::post('{venta}/ejecutar-reversion-stock', [VentaController::class, 'ejecutarReversionStock']);
+
         // ✅ NUEVO: Endpoints para confirmación de pickup
         Route::post('{venta}/confirmar-pickup-cliente', [ApiVentaController::class, 'confirmarPickupCliente'])
             ->name('api.ventas.confirmar-pickup-cliente');

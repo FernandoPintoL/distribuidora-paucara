@@ -327,7 +327,7 @@ class ImpresionService
         $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
         $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
 
-        return [
+        $datos = [
             'documento' => $documento,
             'empresa' => $empresa,
             'plantilla' => $plantilla,
@@ -337,6 +337,39 @@ class ImpresionService
             'logo_principal_base64' => $logoPrincipalBase64,
             'logo_footer_base64' => $logoFooterBase64,
         ];
+
+        // ✅ NUEVO: Transformar datos específicos para Pago
+        if ($documento instanceof \App\Models\Pago) {
+            $datos = array_merge($datos, [
+                'pago' => [
+                    'monto' => $documento->monto,
+                    'tipo_pago' => $documento->tipoPago?->nombre ?? 'Sin especificar',
+                    'numero_recibo' => $documento->numero_recibo,
+                    'numero_transferencia' => $documento->numero_transferencia,
+                    'numero_cheque' => $documento->numero_cheque,
+                    'observaciones' => $documento->observaciones,
+                    'moneda' => [
+                        'simbolo' => $documento->moneda?->simbolo ?? 'BOB',
+                    ],
+                ],
+                'cliente' => $documento->cuentaPorCobrar?->cliente ? [
+                    'nombre' => $documento->cuentaPorCobrar->cliente->nombre,
+                    'nit' => $documento->cuentaPorCobrar->cliente->nit,
+                    'codigo_cliente' => $documento->cuentaPorCobrar->cliente->codigo_cliente,
+                ] : [],
+                'cuenta' => $documento->cuentaPorCobrar ? [
+                    'saldo_anterior' => $documento->cuentaPorCobrar->saldo_pendiente + $documento->monto,
+                    'saldo_pendiente' => $documento->cuentaPorCobrar->saldo_pendiente,
+                    'monto_original' => $documento->cuentaPorCobrar->monto_original,
+                ] : null,
+                'venta' => $documento->cuentaPorCobrar?->venta ? [
+                    'numero' => $documento->cuentaPorCobrar->venta->numero,
+                    'fecha' => $documento->cuentaPorCobrar->venta->created_at,
+                ] : null,
+            ]);
+        }
+
+        return $datos;
     }
 
     /**
@@ -574,6 +607,59 @@ class ImpresionService
         } catch (\Exception $e) {
             \Log::error('❌ [ImpresionService::imprimirCuentaPorPagar] ERROR', [
                 'cuenta_id' => $cuentaPorPagar->id,
+                'formato' => $formato,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Imprimir Pago (Recibo de Pago)
+     *
+     * Imprime un comprobante de pago en formato TICKET_80 (por defecto) o A4
+     *
+     * @param \App\Models\Pago $pago
+     * @param string|null $formato Formato de impresión (TICKET_80, A4, etc.) - default: TICKET_80
+     * @param array $opciones Opciones adicionales
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function imprimirPago($pago, ?string $formato = 'TICKET_80', array $opciones = [])
+    {
+        \Log::info('📝 [ImpresionService::imprimirPago] INICIANDO', [
+            'pago_id' => $pago->id,
+            'formato' => $formato,
+            'opciones' => $opciones,
+        ]);
+
+        try {
+            // Cargar relaciones necesarias
+            \Log::info('📝 [ImpresionService::imprimirPago] Cargando relaciones', [
+                'pago_id' => $pago->id,
+            ]);
+
+            $pago->load([
+                'usuario',
+                'moneda',
+                'tipoPago',
+                'cuentaPorCobrar.cliente',
+                'cuentaPorPagar.proveedor',
+                'venta.cliente',
+            ]);
+
+            \Log::info('✅ [ImpresionService::imprimirPago] Relaciones cargadas exitosamente', [
+                'pago_id' => $pago->id,
+                'tiene_cuenta_por_cobrar' => !!$pago->cuentaPorCobrar,
+                'tiene_cuenta_por_pagar' => !!$pago->cuentaPorPagar,
+                'tiene_venta' => !!$pago->venta,
+                'tiene_moneda' => !!$pago->moneda,
+            ]);
+
+            return $this->generarPDF('pago', $pago, $formato, $opciones);
+        } catch (\Exception $e) {
+            \Log::error('❌ [ImpresionService::imprimirPago] ERROR', [
+                'pago_id' => $pago->id,
                 'formato' => $formato,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

@@ -271,6 +271,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('pagos/create', [\App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
         Route::post('pagos', [\App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
         Route::get('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'show'])->name('pagos.show');
+        Route::get('pagos/{pago}/imprimir', [\App\Http\Controllers\PagoController::class, 'imprimir'])->name('pagos.imprimir');
         Route::delete('pagos/{pago}', [\App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
         Route::get('pagos/export', [\App\Http\Controllers\PagoController::class, 'export'])->name('pagos.export');
 

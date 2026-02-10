@@ -21,6 +21,7 @@ use App\Services\Venta\VentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -1570,6 +1571,140 @@ class VentaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al verificar reversión: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO (2026-02-10): Ejecutar reversión de stock manualmente para venta anulada
+     *
+     * Endpoint: POST /api/ventas/{id}/ejecutar-reversion-stock
+     *
+     * Registra los movimientos de reversión faltantes para una venta anulada
+     * Útil cuando la reversión no se ejecutó correctamente o fue incompleta
+     *
+     * Respuesta:
+     * {
+     *     "success": true,
+     *     "message": "Reversión de stock ejecutada exitosamente",
+     *     "movimientos_creados": 2,
+     *     "detalles": [...]
+     * }
+     */
+    public function ejecutarReversionStock(int $id): JsonResponse
+    {
+        try {
+            $venta = Venta::with(['detalles.producto'])->findOrFail($id);
+
+            // Obtener ID del estado ANULADO
+            $estadoAnuladoId = EstadoDocumento::where('codigo', 'ANULADO')->value('id');
+
+            // Validar que la venta esté anulada
+            if ($venta->estado_documento_id !== $estadoAnuladoId) {
+                Log::warning('❌ Intento de ejecutar reversión en venta no anulada', [
+                    'venta_id' => $id,
+                    'estado_documento_id' => $venta->estado_documento_id,
+                    'estado_esperado_id' => $estadoAnuladoId,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se puede ejecutar reversión en ventas anuladas',
+                ], 400);
+            }
+
+            // Obtener movimientos originales
+            $movimientosOriginales = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero)
+                ->whereIn('tipo', ['SALIDA_VENTA', 'CONSUMO_RESERVA'])
+                ->get();
+
+            if ($movimientosOriginales->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay movimientos originales para revertir',
+                ], 400);
+            }
+
+            // Obtener reversiones existentes
+            $reversionesExistentes = \App\Models\MovimientoInventario::where('numero_documento', $venta->numero . '-REV')
+                ->where('tipo', 'ENTRADA_AJUSTE')
+                ->get();
+
+            $movimientosCreados = 0;
+            $detalles = [];
+
+            // Para cada movimiento original, crear reversión si no existe
+            foreach ($movimientosOriginales as $original) {
+                // Verificar si ya existe reversión para este producto
+                $reversioExistente = $reversionesExistentes
+                    ->where('stock_producto_id', $original->stock_producto_id)
+                    ->first();
+
+                if (!$reversioExistente || abs($original->cantidad) !== $reversioExistente->cantidad) {
+                    // Crear movimiento de reversión
+                    $cantidadRevercion = abs($original->cantidad);
+
+                    \App\Models\MovimientoInventario::create([
+                        'stock_producto_id' => $original->stock_producto_id,
+                        'tipo' => 'ENTRADA_AJUSTE',
+                        'cantidad' => $cantidadRevercion,
+                        'cantidad_anterior' => $original->stockProducto?->cantidad ?? 0,
+                        'cantidad_posterior' => ($original->stockProducto?->cantidad ?? 0) + $cantidadRevercion,
+                        'numero_documento' => $venta->numero . '-REV',
+                        'motivo_anulacion' => 'ANULACION',
+                        'user_id' => Auth::id() ?? 1,
+                        'observacion' => json_encode([
+                            'evento' => 'Reversión manual de stock',
+                            'venta_id' => $venta->id,
+                            'venta_numero' => $venta->numero,
+                            'cantidad_original' => $original->cantidad,
+                            'cantidad_revercion' => $cantidadRevercion,
+                            'ejecutada_por' => Auth::user()?->name ?? 'Sistema',
+                            'fecha_ejecucion' => now()->toIso8601String(),
+                        ]),
+                    ]);
+
+                    // Actualizar stock del producto
+                    if ($original->stockProducto) {
+                        $original->stockProducto->increment('cantidad', $cantidadRevercion);
+                    }
+
+                    $movimientosCreados++;
+
+                    $detalles[] = [
+                        'stock_producto_id' => $original->stock_producto_id,
+                        'producto_nombre' => $original->stockProducto?->producto?->nombre ?? 'N/A',
+                        'cantidad_revertida' => $cantidadRevercion,
+                        'estado' => '✅ Reversión ejecutada',
+                    ];
+                }
+            }
+
+            Log::info('✅ Reversión de stock ejecutada manualmente', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'movimientos_creados' => $movimientosCreados,
+                'usuario' => Auth::user()?->name ?? 'Sistema',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $movimientosCreados > 0
+                    ? "Reversión de stock ejecutada exitosamente. {$movimientosCreados} movimiento(s) creado(s)"
+                    : 'No hay reversiones pendientes para esta venta',
+                'movimientos_creados' => $movimientosCreados,
+                'detalles' => $detalles,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error ejecutando reversión de stock', [
+                'venta_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al ejecutar reversión: ' . $e->getMessage(),
             ], 500);
         }
     }

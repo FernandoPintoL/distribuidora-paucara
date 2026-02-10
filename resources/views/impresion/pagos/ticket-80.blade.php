@@ -29,7 +29,7 @@
 {{-- Monto destacado --}}
 <div style="text-align: center; margin: 8px 0; padding: 8px 0;">
     <p style="font-size: 7px; margin: 0;">MONTO PAGADO</p>
-    <p style="font-size: 20px; margin: 3px 0; font-weight: bold; color: #27ae60;">{{ $pago['moneda']['simbolo'] }} {{ number_format($pago['monto'], 2) }}</p>
+    <p style="font-size: 20px; margin: 3px 0; font-weight: bold;">{{ $pago['moneda']['simbolo'] }} {{ number_format($pago['monto'], 2) }}</p>
 </div>
 
 <div class="separador"></div>
@@ -70,11 +70,11 @@
         <tr>
             <td colspan="2" style="text-align: center; padding-top: 3px;">
                 @if($cuenta['saldo_pendiente'] == 0)
-                    <span style="font-size: 6px; background: #d4edda; color: #155724; padding: 2px 4px; border-radius: 2px;">PAGADO</span>
+                    <span style="font-size: 6px; background: #d4edda; padding: 2px 4px; border-radius: 2px;">PAGADO</span>
                 @elseif($cuenta['saldo_pendiente'] < $cuenta['monto_original'])
-                    <span style="font-size: 6px; background: #fff3cd; color: #856404; padding: 2px 4px; border-radius: 2px;">PARCIAL</span>
+                    <span style="font-size: 6px; background: #fff3cd; padding: 2px 4px; border-radius: 2px;">PARCIAL</span>
                 @else
-                    <span style="font-size: 6px; background: #f8d7da; color: #721c24; padding: 2px 4px; border-radius: 2px;">PENDIENTE</span>
+                    <span style="font-size: 6px; background: #f8d7da; padding: 2px 4px; border-radius: 2px;">PENDIENTE</span>
                 @endif
             </td>
         </tr>

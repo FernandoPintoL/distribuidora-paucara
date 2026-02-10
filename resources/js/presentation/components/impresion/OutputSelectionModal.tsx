@@ -177,6 +177,9 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'entrega') {
             // Para entregas, usar la ruta API específica
             rutaBase = `/api/entregas/${documentoId}`;
+        } else if (tipoDocumento === 'pago') {
+            // Para pagos
+            rutaBase = `/compras/pagos/${documentoId}`;
         } else if (tipoDocumento === 'cuenta-por-cobrar') {
             // Para cuentas por cobrar
             rutaBase = `/cuentas-por-cobrar/${documentoId}`;
@@ -193,6 +196,9 @@ export function OutputSelectionModal({
         if (tipo === 'excel') {
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/exportar-excel`;
+            } else if (tipoDocumento === 'pago') {
+                // Para pagos no hay excel
+                url = `${rutaBase}/exportar-excel`;
             } else if (tipoDocumento === 'cuenta-por-cobrar' || tipoDocumento === 'cuenta-por-pagar') {
                 // Para cuentas por cobrar/pagar no hay excel
                 url = `${rutaBase}/exportar-excel`;
@@ -205,6 +211,9 @@ export function OutputSelectionModal({
         } else if (tipo === 'pdf') {
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/descargar?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'pago') {
+                // Para pagos
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'cuenta-por-cobrar') {
                 // Para cuentas por cobrar
                 url = `/ventas${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
@@ -221,6 +230,9 @@ export function OutputSelectionModal({
             // Para imprimir
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/descargar?formato=${formato}&accion=stream`;
+            } else if (tipoDocumento === 'pago') {
+                // Para pagos
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'cuenta-por-cobrar') {
                 // Para cuentas por cobrar - ruta específica para ticket-80
                 url = `/ventas${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;

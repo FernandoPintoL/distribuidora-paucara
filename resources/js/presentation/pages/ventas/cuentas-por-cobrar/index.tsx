@@ -138,6 +138,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     const [modalImpresionOpen, setModalImpresionOpen] = useState(false);
     const [cuentaAImprimir, setCuentaAImprimir] = useState<CuentaPorCobrar | null>(null);
 
+    // Estados para modal de impresión de pago individual
+    const [modalImpresionPagoOpen, setModalImpresionPagoOpen] = useState(false);
+    const [pagoAImprimir, setPagoAImprimir] = useState<Pago | null>(null);
+
     // Validación defensiva para evitar errores si cuentasPorCobrar es undefined
     if (!cuentasPorCobrar || !cuentasPorCobrar.filtros) {
         return (
@@ -586,6 +590,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                                 >
                                                                     <div className="flex-1">
                                                                         <div className="flex items-center gap-2 mb-1">
+                                                                            <p>Folio: {pago.id} | </p>
                                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                                                 {formatCurrency(pago.monto)}
                                                                             </p>
@@ -606,6 +611,18 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                                                 {pago.observaciones}
                                                                             </p>
                                                                         )}
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            onClick={() => {
+                                                                                setPagoAImprimir(pago);
+                                                                                setModalImpresionPagoOpen(true);
+                                                                            }}
+                                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                                            title="Imprimir pago"
+                                                                        >
+                                                                            <Printer className="w-4 h-4" />
+                                                                        </Button>
                                                                         <Button
                                                                             size="sm"
                                                                             variant="ghost"
@@ -832,7 +849,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                     </Dialog>
                 )}
 
-                {/* Modal de Impresión */}
+                {/* Modal de Impresión - Cuenta por Cobrar */}
                 {cuentaAImprimir && (
                     <OutputSelectionModal
                         isOpen={modalImpresionOpen}
@@ -846,6 +863,24 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             numero: `Cuenta #${cuentaAImprimir.id}`,
                             fecha: formatDate(cuentaAImprimir.fecha_vencimiento),
                             monto: cuentaAImprimir.saldo_pendiente,
+                        }}
+                    />
+                )}
+
+                {/* Modal de Impresión - Pago Individual */}
+                {pagoAImprimir && (
+                    <OutputSelectionModal
+                        isOpen={modalImpresionPagoOpen}
+                        onClose={() => {
+                            setModalImpresionPagoOpen(false);
+                            setPagoAImprimir(null);
+                        }}
+                        documentoId={pagoAImprimir.id}
+                        tipoDocumento="pago"
+                        documentoInfo={{
+                            numero: `Pago #${pagoAImprimir.id}`,
+                            fecha: formatDate(pagoAImprimir.fecha_pago),
+                            monto: pagoAImprimir.monto,
                         }}
                     />
                 )}

@@ -8,6 +8,8 @@ import ventasService from '@/infrastructure/services/ventas.service';
 import AnularVentaModal from './AnularVentaModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import EstadoVentaBadge from './EstadoVentaBadge';
+import ReversionStockIndicador from './ReversionStockIndicador';
+import DetalleReversionModal from './DetalleReversionModal';
 import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
@@ -23,6 +25,9 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     const [isAnulando, setIsAnulando] = useState(false);
     const [outputModal, setOutputModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
     const [registrandoEnCaja, setRegistrandoEnCaja] = useState<number | null>(null);
+    // ✅ NUEVO (2026-02-10): Estado para modal de verificación de reversión de stock
+    const [detalleReversionData, setDetalleReversionData] = useState<any>(null);
+    const [isDetalleReversionOpen, setIsDetalleReversionOpen] = useState(false);
 
     // ✅ DEBUG: Verificar datos de dirección en consola
     React.useEffect(() => {
@@ -199,6 +204,17 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
         return styleMap[estado] || { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', label: estado || 'Desconocido' };
     };
 
+    const getPoliticaPagoBadgeStyles = (politica: string): { bg: string; text: string; label: string } => {
+        // ✅ NUEVO: Estilos para política de pago
+        const styleMap: { [key: string]: { bg: string; text: string; label: string } } = {
+            'CONTRA_ENTREGA': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-300', label: 'Contra Entrega' },
+            'ANTICIPADO_100': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-800 dark:text-purple-300', label: 'Anticipado 100%' },
+            'MEDIO_MEDIO': { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-800 dark:text-indigo-300', label: 'Medio - Medio' },
+            'CREDITO': { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-800 dark:text-cyan-300', label: 'Crédito' },
+        };
+        return styleMap[politica] || { bg: 'bg-gray-100 dark:bg-gray-900/30', text: 'text-gray-800 dark:text-gray-300', label: politica || 'Desconocida' };
+    };
+
     const handleSort = (field: string) => {
         const currentSortDir = filtros?.sort_by === field && filtros?.sort_dir === 'asc' ? 'desc' : 'asc';
         ventasService.sort(field, currentSortDir);
@@ -341,6 +357,24 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             conIcono={true}
                                             mostrarLabel={true}
                                         />
+                                        <p>
+                                            creador: <div className="text-sm text-gray-900 dark:text-white">
+                                            {venta.usuario?.name || 'Sin usuario'}
+                                        </div>
+                                        </p>
+                                        <p>
+                                            {venta.proforma?.numero ? (
+                                            <Link
+                                                href={`/proformas/${venta.proforma.id}`}
+                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                                                title="Ver proforma"
+                                            >
+                                                Folio Proforma: {venta.proforma.numero}
+                                            </Link>
+                                        ) : (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                                        )}
+                                        </p>
                                     </td>
 
                                     <td className="px-6 py-4">
@@ -369,13 +403,24 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                     </td>
 
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {venta.estado_pago ? (
-                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoPagoBadgeStyles(venta.estado_pago).bg} ${getEstadoPagoBadgeStyles(venta.estado_pago).text}`}>
-                                                {getEstadoPagoBadgeStyles(venta.estado_pago).label}
+                                        <div className="space-y-2">
+                                            {venta.estado_pago ? (
+                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoPagoBadgeStyles(venta.estado_pago).bg} ${getEstadoPagoBadgeStyles(venta.estado_pago).text}`}>
+                                                    {getEstadoPagoBadgeStyles(venta.estado_pago).label}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
+                                            )}
+                                        </div>
+                                        <p>
+                                            {venta.politica_pago ? (
+                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPoliticaPagoBadgeStyles(venta.politica_pago).bg} ${getPoliticaPagoBadgeStyles(venta.politica_pago).text}`}>
+                                                {getPoliticaPagoBadgeStyles(venta.politica_pago).label}
                                             </span>
                                         ) : (
                                             <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
                                         )}
+                                        </p>
                                     </td>
 
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -408,7 +453,6 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             )}
                                         </div>
                                     </td>
-
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex items-center justify-end space-x-2">
                                             {/* Ver */}
@@ -439,6 +483,17 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             )}
+
+                                            {/* ✅ NUEVO (2026-02-10): Indicador de reversión de stock para ventas anuladas */}
+                                            <ReversionStockIndicador
+                                                    ventaId={venta.id}
+                                                    ventaNumero={venta.numero}
+                                                    estadoVenta={venta.estado_documento?.codigo || 'ANULADO'}
+                                                    onVerDetalles={(data) => {
+                                                        setDetalleReversionData(data);
+                                                        setIsDetalleReversionOpen(true);
+                                                    }}
+                                                />
 
                                             {/* ✅ Descargar en formato - Usar OutputSelectionModal */}
                                             <button
@@ -475,7 +530,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 {/* Fila expandible para detalles de delivery */}
                                 {venta.requiere_envio && expandedRows.has(Number(venta.id)) && (
                                     <tr className="bg-blue-50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
-                                        <td colSpan={9} className="px-6 py-4">
+                                        <td colSpan={12} className="px-6 py-4">
                                             <div className="space-y-4">
                                                 {/* Dirección de entrega */}
                                                 <div className="flex items-start space-x-3">
@@ -666,6 +721,19 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                     numero: outputModal.venta?.numero,
                     fecha: outputModal.venta?.fecha ? new Date(outputModal.venta.fecha).toLocaleDateString('es-ES') : undefined,
                     monto: outputModal.venta?.total,
+                }}
+            />
+
+            {/* ✅ NUEVO (2026-02-10): Modal de detalles de reversión de stock */}
+            <DetalleReversionModal
+                isOpen={isDetalleReversionOpen}
+                onClose={() => setIsDetalleReversionOpen(false)}
+                data={detalleReversionData}
+                onReversionExecuted={() => {
+                    // Cerrar modal y el usuario verá el indicador actualizado en el siguiente click
+                    setIsDetalleReversionOpen(false);
+                    // Limpiar datos del modal
+                    setDetalleReversionData(null);
                 }}
             />
         </div>

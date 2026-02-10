@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\CuentaPorPagar;
 use App\Models\Pago;
 use App\Models\TipoPago;
+use App\Services\ImpresionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,9 @@ use Inertia\Inertia;
 
 class PagoController extends Controller
 {
+    public function __construct(
+        private ImpresionService $impresionService,
+    ) {}
     public function index(Request $request)
     {
         $query = Pago::with(['cuentaPorPagar.compra.proveedor', 'tipoPago', 'usuario'])
@@ -199,5 +203,49 @@ class PagoController extends Controller
         // Aquí implementarías la exportación a Excel
         // Por ahora retornamos los datos como JSON para testing
         return response()->json($pagos);
+    }
+
+    /**
+     * Imprime un pago en los formatos especificados (TICKET_80, TICKET_58, A4)
+     *
+     * @param Pago $pago
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function imprimir(Pago $pago, Request $request)
+    {
+        Log::info('🖨️ [PagoController::imprimir] Método llamado', [
+            'pago_id' => $pago->id,
+            'user_id' => auth()->id(),
+            'formato' => $request->input('formato'),
+        ]);
+
+        $formato = $request->input('formato', 'TICKET_80'); // TICKET_80, TICKET_58, A4
+        $accion  = $request->input('accion', 'stream');    // download | stream
+
+        Log::info('📋 [PagoController::imprimir] Datos de pago para descargar/stream', [
+            'pago_id'              => $pago->id,
+            'numero_pago'          => $pago->numero_pago,
+            'monto'                => $pago->monto,
+            'fecha_pago'           => $pago->fecha_pago,
+            'formato'              => $formato,
+            'accion'               => $accion,
+        ]);
+
+        try {
+            $pdf = $this->impresionService->imprimirPago($pago, $formato);
+
+            $nombreArchivo = "pago_{$pago->numero_pago}_{$formato}.pdf";
+
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('❌ [PagoController::imprimir] Error al generar PDF', [
+                'pago_id' => $pago->id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
     }
 }
