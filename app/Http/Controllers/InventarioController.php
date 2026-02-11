@@ -534,8 +534,8 @@ class InventarioController extends Controller
                     'estado_merma_id'   => $movimiento->estado_merma_id,
                     'motivo'            => $this->obtenerMotivoMovimiento($movimiento->tipo),
                     'cantidad'          => $movimiento->cantidad,
-                    'stock_anterior'    => $movimiento->cantidad_anterior,
-                    'stock_nuevo'       => $movimiento->cantidad_posterior,
+                    'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
+                    'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
                     'fecha'             => $movimiento->fecha->toISOString(),
                     'usuario'           => [
                         'id'   => $movimiento->user_id,
@@ -574,8 +574,8 @@ class InventarioController extends Controller
                 'estado_merma_id'   => $movimiento->estado_merma_id,
                 'motivo'            => $this->obtenerMotivoMovimiento($movimiento->tipo),
                 'cantidad'          => $movimiento->cantidad,
-                'stock_anterior'    => $movimiento->cantidad_anterior,
-                'stock_nuevo'       => $movimiento->cantidad_posterior,
+                'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
+                'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
                 'fecha'             => $movimiento->fecha->toISOString(),
                 'usuario'           => [
                     'id'   => $movimiento->user_id,

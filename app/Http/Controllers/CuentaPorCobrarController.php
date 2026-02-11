@@ -249,6 +249,7 @@ class CuentaPorCobrarController extends Controller
                 $pago = Pago::create([
                     'numero_pago'          => Pago::generarNumeroPago(),
                     'cuenta_por_cobrar_id' => $cuentaPorCobrar->id,
+                    'caja_id'              => $apertura->caja_id, // ✅ NUEVO (2026-02-11): Guardar caja_id del pago
                     'monto'                => $validated['monto'],
                     'tipo_pago_id'         => $validated['tipo_pago_id'],
                     'fecha'                => now(),
@@ -271,7 +272,7 @@ class CuentaPorCobrarController extends Controller
                     'numero_documento'  => $cuentaPorCobrar->venta?->numero ?? "CuentaPorCobrar#{$cuentaPorCobrar->id}",
                     'observaciones' => $validated['observaciones'] ?? "Pago de cuenta por cobrar #{$cuentaPorCobrar->id}", // ✅ CORREGIDO: Usar observaciones del usuario
                     'monto'        => $validated['monto'], // POSITIVO para ingresos
-                    'fecha'        => $validated['fecha_pago'],
+                    'fecha'        => now(),  // ✅ CORREGIDO (2026-02-11): Usar NOW() para que se registre en el momento actual, no en la fecha_pago
                     'user_id'      => Auth::id(),
                     'tipo_pago_id' => $validated['tipo_pago_id'],
                     'pago_id'      => $pago->id, // ✅ Registrar el ID del pago

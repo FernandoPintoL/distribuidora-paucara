@@ -648,13 +648,14 @@ class Venta extends Model
                     'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                 ]);
 
-                // Actualizar stock usando UPDATE atómico
+                // ✅ CORREGIDO: Actualizar stock usando UPDATE atómico
+                // Usar parámetros vinculados para evitar inyección SQL y asegurar que cantidad_disponible se actualiza
                 $affected = DB::table('stock_productos')
                     ->where('id', $stockProducto->id)
                     ->update([
-                        'cantidad' => DB::raw("cantidad + {$cantidadADevolver}"),
-                        'cantidad_disponible' => DB::raw("cantidad_disponible + {$cantidadADevolver}"),
-                        'fecha_actualizacion' => now(),
+                        'cantidad' => DB::raw("cantidad + " . (int)$cantidadADevolver),
+                        'cantidad_disponible' => DB::raw("cantidad_disponible + " . (int)$cantidadADevolver),
+                        'fecha_actualizacion' => DB::raw('CURRENT_TIMESTAMP'),
                     ]);
 
                 if ($affected === 0) {

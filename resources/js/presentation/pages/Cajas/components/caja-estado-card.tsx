@@ -59,6 +59,15 @@ export function CajaEstadoCard({
 }: Props) {
     console.log('Renderizando CajaEstadoCard - cajaAbiertaHoy:', cajaAbiertaHoy);
     console.log('Efectivo esperado:', efectivoEsperado);
+
+    // ✅ DEBUG: Log de sumatorias de ventas
+    console.log('📊 SUMATORIAS DE VENTAS:', {
+        sumatoria_ventas_total: datosActualizados?.sumatoria_ventas_total,
+        sumatoria_ventas_efectivo: datosActualizados?.sumatoria_ventas_efectivo,
+        sumatoria_ventas_credito: datosActualizados?.sumatoria_ventas_credito,
+        suma_manual: (datosActualizados?.sumatoria_ventas_efectivo ?? 0) + (datosActualizados?.sumatoria_ventas_credito ?? 0),
+    });
+
     // ✅ NUEVO: Detectar si la caja es del día anterior o anterior
     const esDiaAnterior = () => {
         if (!cajaAbiertaHoy) return false;
@@ -232,18 +241,17 @@ export function CajaEstadoCard({
                             </p>
                         </div>
 
-                        {/* ✅ NUEVO: Referencial - Sumatoria de TODAS las ventas aprobadas */}
+                        {/* ✅ NUEVO: Referencial - Sumatoria total de TODAS las ventas aprobadas */}
                         {datosActualizados?.sumatoria_ventas_total && (
                             <div className="pt-3 border-t border-gray-300 dark:border-gray-600">
                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
                                     📊 REFERENCIAL: Total Ventas Aprobadas
-                                    <span className="ml-1 text-gray-500 dark:text-gray-500">(todos los tipos de pago)</span>
                                 </label>
                                 <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                    {formatCurrency(datosActualizados.sumatoria_ventas_total)}
+                                    {formatCurrency(datosActualizados.sumatoria_ventas_total + datosActualizados.sumatoria_ventas_credito)}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Efectivo + Transferencia + Cheque + Crédito (aprobadas)
+                                    Efectivo + Transferencia + Crédito (aprobadas)
                                 </p>
                             </div>
                         )}

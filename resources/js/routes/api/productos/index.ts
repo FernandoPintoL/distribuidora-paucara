@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 import stock from './stock'
 /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
 export const combos = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -17,7 +17,7 @@ combos.definition = {
 
 /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
 combos.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -50,7 +50,7 @@ combos.url = (args: { producto: number | { id: number } } | [producto: number | 
 
 /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
 combos.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -59,7 +59,7 @@ combos.get = (args: { producto: number | { id: number } } | [producto: number | 
 })
 /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
 combos.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -69,7 +69,7 @@ combos.head = (args: { producto: number | { id: number } } | [producto: number |
 
     /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
     const combosForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ combos.head = (args: { producto: number | { id: number } } | [producto: number |
 
             /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
         combosForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -88,7 +88,7 @@ combos.head = (args: { producto: number | { id: number } } | [producto: number |
         })
             /**
 * @see \App\Http\Controllers\ComboController::combos
- * @see app/Http/Controllers/ComboController.php:474
+ * @see app/Http/Controllers/ComboController.php:483
  * @route '/api/productos/{producto}/combos'
  */
         combosForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -104,7 +104,7 @@ combos.head = (args: { producto: number | { id: number } } | [producto: number |
     combos.form = combosForm
 /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
 export const stock = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -119,7 +119,7 @@ stock.definition = {
 
 /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
 stock.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -152,7 +152,7 @@ stock.url = (args: { producto: number | { id: number } } | [producto: number | {
 
 /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
 stock.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -161,7 +161,7 @@ stock.get = (args: { producto: number | { id: number } } | [producto: number | {
 })
 /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
 stock.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -171,7 +171,7 @@ stock.head = (args: { producto: number | { id: number } } | [producto: number | 
 
     /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
     const stockForm = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -181,7 +181,7 @@ stock.head = (args: { producto: number | { id: number } } | [producto: number | 
 
             /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
         stockForm.get = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -190,7 +190,7 @@ stock.head = (args: { producto: number | { id: number } } | [producto: number | 
         })
             /**
 * @see \App\Http\Controllers\ProductoController::stock
- * @see app/Http/Controllers/ProductoController.php:3016
+ * @see app/Http/Controllers/ProductoController.php:3029
  * @route '/api/productos/{producto}/stock'
  */
         stockForm.head = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

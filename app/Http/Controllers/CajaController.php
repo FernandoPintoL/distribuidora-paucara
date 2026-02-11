@@ -179,6 +179,21 @@ class CajaController extends Controller
                 ];
             }
 
+            // ✅ NUEVO: Construir listado de pagos a crédito por tipo de pago
+            $pagosCreditoPorTipoPago = $datosCalculados['pagosCreditoPorTipoPago'] ?? [];
+
+            // ✅ NUEVO: Calcular sumatoria de pagos a crédito por tipo de pago
+            $sumatoriaPagosCreditoPorTipo = [];
+            $totalPagosCreditoPorTipos = 0;
+            foreach ($pagosCreditoPorTipoPago as $pago) {
+                $sumatoriaPagosCreditoPorTipo[] = [
+                    'tipo'  => $pago['tipo'] ?? 'Sin tipo',
+                    'total' => (float) ($pago['total'] ?? 0),
+                    'cantidad' => (int) ($pago['cantidad'] ?? 0),
+                ];
+                $totalPagosCreditoPorTipos += (float) ($pago['total'] ?? 0);
+            }
+
             // ✅ Obtener anulaciones del servicio (referencial)
             $sumatorialAnulaciones = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
 
@@ -191,7 +206,9 @@ class CajaController extends Controller
                 'totalIngresos'         => $totalIngresos,         // Ventas + Pagos CxC
                 'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO
                 'efectivoEsperado'      => $efectivoEsperado,      // Apertura + Ingresos - Egresos
-                'ventasPorTipoPago'     => $ventasPorTipoPago,     // Desglose por tipo de pago
+                'ventasPorTipoPago'     => $ventasPorTipoPago,     // Desglose de ventas por tipo de pago
+                'pagosCreditoPorTipoPago' => $sumatoriaPagosCreditoPorTipo,  // Desglose de pagos de crédito por tipo de pago
+                'totalPagosCreditoPorTipos' => (float) $totalPagosCreditoPorTipos,  // ✅ NUEVO: Sumatoria total de pagos por tipos
                 // ✅ NUEVO: Desglose de salidas
                 'sumatorialGastos'      => $sumatorialGastos,
                 'sumatorialPagosSueldo' => $sumatorialPagosSueldo,
@@ -219,6 +236,11 @@ class CajaController extends Controller
             'tiposPago'                 => $tiposPago,
             'usuarioDestino'            => $usuarioDestino,
             'datosResumen'              => $datosResumen,  // ✅ Datos simplificados de caja
+            // ✅ NUEVO: Propiedades desanidadas de datosResumen para compatibilidad con frontend
+            'ventasPorTipoPago'         => $datosResumen ? $datosResumen['ventasPorTipoPago'] ?? [] : [],
+            'ventasTotales'             => $datosResumen ? $datosResumen['totalVentas'] ?? 0 : 0,
+            'ventasAnuladas'            => $datosResumen ? $datosResumen['ventasAnuladas'] ?? 0 : 0,
+            'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
         ]);
     }
 

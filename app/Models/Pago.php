@@ -13,6 +13,7 @@ class Pago extends Model
         'cuenta_por_pagar_id',
         'cuenta_por_cobrar_id',
         'venta_id', // Mantener para compatibilidad con ventas
+        'caja_id', // ✅ NUEVO (2026-02-11): Caja en la que se registró el pago
         'tipo_pago_id',
         'monto',
         'fecha',
@@ -36,6 +37,11 @@ class Pago extends Model
     }
 
     // Relaciones
+    public function caja()
+    {
+        return $this->belongsTo(Caja::class);
+    }
+
     public function cuentaPorPagar()
     {
         return $this->belongsTo(CuentaPorPagar::class);
@@ -64,6 +70,17 @@ class Pago extends Model
     public function moneda()
     {
         return $this->belongsTo(Moneda::class);
+    }
+
+    public function movimientosCaja()  // ✅ NUEVO: Relación con movimientos de caja
+    {
+        return $this->hasMany(MovimientoCaja::class, 'pago_id');
+    }
+
+    // Alias para compatibilidad con código existente (singular)
+    public function movimientoCaja()
+    {
+        return $this->hasOne(MovimientoCaja::class, 'pago_id');
     }
 
     // Scopes

@@ -180,12 +180,22 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
     };
 
     // Totales de ingresos y egresos (desde servidor)
-    const ingresos = datosCierre?.total_ingresos || 0;
-    const egresos = datosCierre?.total_egresos || 0;
-    const ventasEnEfectivo = datosCierre?.sumatoria_ventas_efectivo || 0;
+    const ventasEnEfectivo = datosCierre?.sumatoria_ventas_total || 0;
     const ventasCredito = datosCierre?.sumatoria_ventas_credito || 0;
     const pagosDeCredito = datosCierre?.monto_pagos_creditos || 0;
     const gastosTotales = datosCierre?.sumatoria_gastos || 0;
+
+    // ✅ CORREGIDO: Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
+    const ingresos = ventasEnEfectivo + pagosDeCredito;
+    const egresos = datosCierre?.total_egresos || 0;
+
+    // ✅ DEBUG: Log de cómo se calcula Total Ingresos
+    console.log('💰 [CierreCajaModal] TOTAL INGRESOS CALCULADO:', {
+        ventas_efectivo: ventasEnEfectivo,
+        pagos_credito: pagosDeCredito,
+        total_ingresos: ingresos,
+        formula: 'ventas_efectivo + pagos_credito',
+    });
     const efectivoReal = ventasEnEfectivo + pagosDeCredito - gastosTotales;
     const totalEsperadoMejorado = efectivoEsperado.total;
     const ventasAnuladas = datosCierre?.sumatoria_ventas_anuladas || 0;

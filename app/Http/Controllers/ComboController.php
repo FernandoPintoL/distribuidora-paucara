@@ -376,8 +376,13 @@ class ComboController extends Controller
         ];
     }
 
-    private function serializarCombo(Producto $combo): array
+    private function serializarCombo(Producto $combo, ?int $almacenId = null): array
     {
+        // ✅ CORREGIDO: Si no se proporciona almacen_id, usar el almacén principal
+        if (!$almacenId) {
+            $almacenId = auth()->user()?->empresa?->almacen_id_principal ?? config('inventario.almacen_principal_id', 1);
+        }
+
         return [
             'id'           => $combo->id,
             'sku'          => $combo->sku,
@@ -385,10 +390,14 @@ class ComboController extends Controller
             'descripcion'  => $combo->descripcion,
             'precio_venta' => (float) $combo->precio_venta,
             'activo'       => $combo->activo,
-            'items'        => $combo->comboItems->map(function(ComboItem $item) {
-                // Obtener stock del producto (consolidado de todos los almacenes)
-                $stockTotal = $item->producto?->stock()->sum('cantidad') ?? 0;
-                $stockDisponible = $item->producto?->stock()->sum('cantidad_disponible') ?? 0;
+            'items'        => $combo->comboItems->map(function(ComboItem $item) use ($almacenId) {
+                // ✅ CORREGIDO: Obtener stock del almacén específico, no suma de todos
+                $stockAlmacen = $item->producto?->stock()
+                    ->where('almacen_id', $almacenId)
+                    ->first();
+
+                $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
+                $stockTotal = $stockAlmacen?->cantidad ?? 0;
 
                 return [
                     'producto_id'        => $item->producto_id,

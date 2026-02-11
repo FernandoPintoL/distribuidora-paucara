@@ -21,6 +21,13 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install zip pdo_mysql mbstring pdo_pgsql gd
 
+# Configure PHP settings for production
+RUN echo "max_execution_time = 120" >> /usr/local/etc/php/php.ini && \
+    echo "max_input_time = 120" >> /usr/local/etc/php/php.ini && \
+    echo "memory_limit = 512M" >> /usr/local/etc/php/php.ini && \
+    echo "post_max_size = 100M" >> /usr/local/etc/php/php.ini && \
+    echo "upload_max_filesize = 100M" >> /usr/local/etc/php/php.ini
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

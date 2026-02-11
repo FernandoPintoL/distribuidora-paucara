@@ -678,11 +678,13 @@ class CierreCajaService
             )
             ->sum('monto');
 
-        // Pagos de crédito en efectivo
-        $pagosCreditoEfectivo = $movimientos
+        // Pagos de crédito (TODOS los tipos de pago: efectivo, transferencia, tarjeta, etc.)
+        // ✅ CORREGIDO (2026-02-11): Incluye TODOS los tipos de pago, no solo Efectivo
+        $pagosCreditoTotal = $movimientos
             ->filter(fn($m) =>
-                $m->tipoOperacion?->codigo === 'PAGO' &&
-                $m->tipoPago?->nombre === 'Efectivo'
+                $m->tipoOperacion?->codigo === 'PAGO'
+                // Removida restricción de tipoPago.nombre === 'Efectivo'
+                // para incluir TRANSFERENCIA, TARJETA, etc.
             )
             ->sum('monto');
 
@@ -710,14 +712,14 @@ class CierreCajaService
             'apertura' => $montoApertura,
             'ventas_efectivo' => $ventasEfectivo,
             'ventas_anuladas' => $ventasAnuladas,
-            'pagos_credito' => $pagosCreditoEfectivo,
-            'pagos_credito_all' => $pagosCreditoEfectivo,
+            'pagos_credito' => $pagosCreditoTotal,
+            'pagos_credito_all' => $pagosCreditoTotal,
             'gastos' => $gastos,
             'pagos_sueldo' => $pagosSueldo,
             'anticipos' => $anticipos,
             'anulaciones' => $anulaciones,
             'total_egresos' => $totalEgresos,
-            'total' => $montoApertura + $ventasEfectivo + $pagosCreditoEfectivo - $totalEgresos,
+            'total' => $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos,
         ];
     }
 

@@ -1800,11 +1800,22 @@ class ProductoController extends Controller
                 // ✅ NUEVO: Preparar items del combo si es_combo = true
                 $comboItems = [];
                 if ($producto->es_combo && $producto->comboItems->count() > 0) {
+                    // ✅ CORREGIDO: Usar ComboStockService para obtener stock correcto del almacén
+                    $capacidadInfo = \App\Services\ComboStockService::calcularCapacidadConDetalles($producto->id, $almacenId);
+
                     $comboItems = $producto->comboItems
-                        ->map(function($item) {
-                            // Obtener stock del producto (consolidado de todos los almacenes)
-                            $stockTotal = $item->producto?->stock()->sum('cantidad') ?? 0;
-                            $stockDisponible = $item->producto?->stock()->sum('cantidad_disponible') ?? 0;
+                        ->map(function($item) use ($capacidadInfo, $almacenId) {
+                            // ✅ Obtener stock del almacén específico usando StockProducto
+                            $stockAlmacen = $item->producto?->stock()
+                                ->where('almacen_id', $almacenId)
+                                ->first();
+
+                            $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
+                            $stockTotal = $stockAlmacen?->cantidad ?? 0;
+
+                            // Obtener información del detalle de capacidad (incluye cuello de botella)
+                            $detalle = collect($capacidadInfo['detalles'])
+                                ->firstWhere('producto_id', $item->producto_id);
 
                             return [
                                 'id'                    => $item->id,
@@ -1821,7 +1832,9 @@ class ProductoController extends Controller
                                 'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
                                 'stock_disponible'      => (int) $stockDisponible,
                                 'stock_total'           => (int) $stockTotal,
-                                'es_obligatorio'        => (bool) $item->es_obligatorio, // ✅ NUEVO: Indica si el producto es obligatorio en el combo
+                                'es_obligatorio'        => (bool) $item->es_obligatorio,
+                                'es_cuello_botella'     => $detalle['es_cuello_botella'] ?? false, // ✅ NUEVO: Indica si limita la capacidad
+                                'combos_posibles'       => $detalle['combos_posibles'] ?? 0, // ✅ NUEVO: Cuántos combos se pueden hacer
                             ];
                         })
                         ->values()

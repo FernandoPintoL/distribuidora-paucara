@@ -158,7 +158,7 @@ registrarPago.post = (args: { cuentaPorCobrar: number | { id: number } } | [cuen
     registrarPago.form = registrarPagoForm
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::anularPago
- * @see app/Http/Controllers/CuentaPorCobrarController.php:324
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:325
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}'
  */
 export const anularPago = (args: { cuentaPorCobrar: number | { id: number }, pago: number | { id: number } } | [cuentaPorCobrar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -173,7 +173,7 @@ anularPago.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::anularPago
- * @see app/Http/Controllers/CuentaPorCobrarController.php:324
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:325
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}'
  */
 anularPago.url = (args: { cuentaPorCobrar: number | { id: number }, pago: number | { id: number } } | [cuentaPorCobrar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -203,7 +203,7 @@ anularPago.url = (args: { cuentaPorCobrar: number | { id: number }, pago: number
 
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::anularPago
- * @see app/Http/Controllers/CuentaPorCobrarController.php:324
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:325
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}'
  */
 anularPago.post = (args: { cuentaPorCobrar: number | { id: number }, pago: number | { id: number } } | [cuentaPorCobrar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -213,7 +213,7 @@ anularPago.post = (args: { cuentaPorCobrar: number | { id: number }, pago: numbe
 
     /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::anularPago
- * @see app/Http/Controllers/CuentaPorCobrarController.php:324
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:325
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}'
  */
     const anularPagoForm = (args: { cuentaPorCobrar: number | { id: number }, pago: number | { id: number } } | [cuentaPorCobrar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -223,7 +223,7 @@ anularPago.post = (args: { cuentaPorCobrar: number | { id: number }, pago: numbe
 
             /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::anularPago
- * @see app/Http/Controllers/CuentaPorCobrarController.php:324
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:325
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular-pago/{pago}'
  */
         anularPagoForm.post = (args: { cuentaPorCobrar: number | { id: number }, pago: number | { id: number } } | [cuentaPorCobrar: number | { id: number }, pago: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

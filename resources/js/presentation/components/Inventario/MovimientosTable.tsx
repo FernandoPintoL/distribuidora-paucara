@@ -25,10 +25,12 @@ interface MovimientoInventario {
         nombre: string;
     };
     cantidad: number;
+    cantidad_anterior: number;  // ✅ NUEVO: Cantidad antes del movimiento
+    cantidad_posterior: number;  // ✅ NUEVO: Cantidad después del movimiento
     motivo: string;
     usuario: {
         name: string;
-        rol?: string;  // ✅ NUEVO: Agregar rol del usuario
+        rol?: string;
     };
 }
 
@@ -85,19 +87,22 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                     <TableHeader>
                         <TableRow>
                             <TableHead>Número</TableHead>
-                            <TableHead>Fecha</TableHead>
+                            <TableHead className="min-w-fit">Fecha</TableHead>
+                            <TableHead className="min-w-fit">Hora</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Producto</TableHead>
                             <TableHead>Almacén</TableHead>
+                            <TableHead className="text-center">Cant. Anterior</TableHead>
+                            <TableHead className="text-center">Cambio</TableHead>
+                            <TableHead className="text-center">Cant. Posterior</TableHead>
                             <TableHead>Motivo</TableHead>
                             <TableHead>Usuario</TableHead>
-                            {/* <TableHead>Rol</TableHead>  {/* ✅ NUEVO: Columna de rol */}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {movimientos.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                                     No hay movimientos para mostrar
                                 </TableCell>
                             </TableRow>
@@ -107,21 +112,22 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                     <TableCell className="font-medium">
                                         #{ movimiento.id } | {movimiento.referencia || movimiento.numero}
                                     </TableCell>
-                                    <TableCell>
-                                        {new Date(movimiento.fecha).toLocaleDateString()}
+                                    <TableCell className="text-sm">
+                                        {new Date(movimiento.fecha).toLocaleDateString('es-ES')}
+                                    </TableCell>
+                                    <TableCell className="text-sm font-medium">
+                                        <span className="text-blue-600 dark:text-blue-400">
+                                            {new Date(movimiento.fecha).toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                second: '2-digit'
+                                            })}
+                                        </span>
                                     </TableCell>
                                     <TableCell>
-                                        <p><Badge className={getTipoColor(movimiento.tipo)}>
-                                            {movimiento.tipo} 
-                                        </Badge></p>
-                                        <p className='mt-2'>Cantidad:  <span className={
-                                            movimiento.cantidad > 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                        }>
-                                            {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
-                                        </span></p>
-                                         
+                                        <Badge className={getTipoColor(movimiento.tipo)}>
+                                            {movimiento.tipo}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         <div>
@@ -132,7 +138,29 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                         </div>
                                     </TableCell>
                                     <TableCell>{movimiento.almacen.nombre}</TableCell>
-                                    <TableCell>{movimiento.motivo}</TableCell>
+                                    {/* ✅ NUEVO: Cantidad Anterior */}
+                                    <TableCell className="text-center font-medium">
+                                        <span className="text-gray-700 dark:text-gray-300">
+                                            {movimiento.cantidad_anterior}
+                                        </span>
+                                    </TableCell>
+                                    {/* ✅ NUEVO: Cambio (Cantidad) */}
+                                    <TableCell className="text-center font-bold">
+                                        <span className={
+                                            movimiento.cantidad > 0
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : 'text-red-600 dark:text-red-400'
+                                        }>
+                                            {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
+                                        </span>
+                                    </TableCell>
+                                    {/* ✅ NUEVO: Cantidad Posterior */}
+                                    <TableCell className="text-center font-bold">
+                                        <span className="text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                                            {movimiento.cantidad_posterior}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-sm">{movimiento.motivo}</TableCell>
                                     <TableCell>
                                         <p>{movimiento.usuario.name}</p>
                                         {/* <p>
