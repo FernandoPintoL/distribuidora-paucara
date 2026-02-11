@@ -11,6 +11,7 @@ use App\Models\Almacen;
 use App\Models\Cliente;
 use App\Models\Producto;
 use App\Models\Proforma;
+use App\Models\TipoPrecio;
 use App\Services\Venta\ProformaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -157,9 +158,15 @@ class ProformaController extends Controller
         try {
             $proformaDTO = $this->proformaService->obtener((int) $id);
 
+            // ✅ NUEVO: Devolver tipos de precios disponibles
+            $tiposPrecio = TipoPrecio::getOptions();
+
             return $this->respondShow(
                 data: $proformaDTO,
                 inertiaComponent: 'proformas/Show',
+                inertiaProps: [
+                    'tiposPrecio' => $tiposPrecio,
+                ]
             );
 
         } catch (\Exception $e) {

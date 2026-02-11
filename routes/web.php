@@ -392,6 +392,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // RUTAS DE IMPRESIÓN - PROFORMAS (SIN PARÁMETROS DINÁMICOS)
         // ==========================================
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
+        Route::get('create', [\App\Http\Controllers\ProformaController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ProformaController::class, 'store'])->name('store');
         Route::get('formatos-disponibles', [\App\Http\Controllers\ProformaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
 
         // Rutas con parámetros dinámicos van al final

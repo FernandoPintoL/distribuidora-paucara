@@ -111,6 +111,7 @@ export interface ProformaDetalle extends BaseEntity {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
+    tipo_precio_id?: number | null; // ✅ NUEVO: ID del tipo de precio seleccionado
     producto?: Producto; // Relación opcional - puede no venir desde el backend
     // Campos directos cuando no viene la relación
     producto_nombre?: string;
@@ -142,6 +143,7 @@ export interface ProformaDetalleFormData extends BaseFormData {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
+    tipo_precio_id?: number | null; // ✅ NUEVO: ID del tipo de precio seleccionado
 }
 
 // ============================================

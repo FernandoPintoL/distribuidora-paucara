@@ -25,6 +25,13 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/presentation/components/ui/select'
 import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { FormatoSelector } from '@/presentation/components/impresion'
@@ -48,8 +55,21 @@ import { ApprovalPaymentForm } from './components/ApprovalPaymentForm'
 import { LoadingOverlay } from '@/presentation/components/ui/LoadingOverlay'
 import { ProformaCard } from '@/presentation/components/ui/ProformaCard'
 
+interface TipoPrecioOption {
+    value: number
+    code: string
+    label: string
+    description?: string
+    color?: string
+    es_ganancia?: boolean
+    es_precio_base?: boolean
+    icono?: string
+    tooltip?: string
+}
+
 interface Props {
     item: Proforma
+    tiposPrecio?: TipoPrecioOption[]
 }
 
 // Interfaz para detalle que devuelve el diálogo de selección
@@ -67,6 +87,8 @@ interface ProformaDetalleDialogo {
     peso?: number
     categoria?: string | null
     limite_venta?: number | null
+    // ✅ NUEVO: Tipo de precio
+    tipo_precio_id?: number | null
 }
 
 // Interfaz para detalle de proforma completo
@@ -329,9 +351,10 @@ function ProductSelectionDialog({
     )
 }
 
-export default function ProformasShow({ item: proforma }: Props) {
+export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Props) {
     // APPLICATION LAYER: Lógica de negocio desde hook
     console.log('📦 Proforma recibida en Show.tsx:', proforma);
+    console.log('💰 Tipos de Precio disponibles:', tiposPrecio);
     const {
         isSubmitting,
         isConverting,
@@ -624,6 +647,30 @@ export default function ProformasShow({ item: proforma }: Props) {
             producto_id: d.producto_id,
             cantidad: d.cantidad,
             tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
+    }
+
+    // ✅ NUEVO: Handler para editar precio manualmente
+    const handleEditarPrecio = (index: number, precioNuevo: number) => {
+        const nuevosDetalles = [...editableDetalles]
+        const precioValido = Math.max(0.01, isNaN(precioNuevo) ? nuevosDetalles[index].precio_unitario : precioNuevo)
+        nuevosDetalles[index].precio_unitario = precioValido
+        nuevosDetalles[index].subtotal = nuevosDetalles[index].cantidad * precioValido
+        setEditableDetalles(nuevosDetalles)
+    }
+
+    // ✅ NUEVO: Handler para cambiar tipo de precio
+    const handleCambiarTipoPrecio = (index: number, tipoPrecioId: number | null) => {
+        const nuevosDetalles = [...editableDetalles]
+        nuevosDetalles[index].tipo_precio_id = tipoPrecioId
+        setEditableDetalles(nuevosDetalles)
+
+        // Recalcular rangos con el nuevo tipo de precio
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad,
+            tipo_precio_id: d.tipo_precio_id
         }))
         calcularCarritoDebounced(itemsParaCalcular)
     }
@@ -1589,6 +1636,7 @@ export default function ProformasShow({ item: proforma }: Props) {
                                             <TableHead className="font-semibold">Producto</TableHead>
                                             <TableHead className="font-semibold">Cantidad</TableHead>
                                             {/* <TableHead className="font-semibold text-center">Rango</TableHead> */}
+                                            <TableHead className="font-semibold">Tipo Precio</TableHead>
                                             <TableHead className="font-semibold">Precio Unit.</TableHead>
                                             <TableHead className="font-semibold">Subtotal</TableHead>
                                             {proforma.estado === 'PENDIENTE' && <TableHead className="text-center font-semibold">Acciones</TableHead>}
@@ -1704,25 +1752,65 @@ export default function ProformasShow({ item: proforma }: Props) {
                                                     )}
                                                 </TableCell>
 
+                                                {/* ✅ NUEVO: Selector de Tipo de Precio (desde Backend) */}
+                                                <TableCell>
+                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                        <Select
+                                                            value={detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : '0'}
+                                                            onValueChange={(value) => handleCambiarTipoPrecio(index, value === '0' ? null : parseInt(value, 10))}
+                                                        >
+                                                            <SelectTrigger className="w-40 text-sm">
+                                                                <SelectValue placeholder="Seleccionar..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="0">📌 Base</SelectItem>
+                                                                {tiposPrecio.map((tipo) => (
+                                                                    <SelectItem key={tipo.value} value={String(tipo.value)}>
+                                                                        {tipo.icono} {tipo.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="text-sm">
+                                                            {detalle.tipo_precio_id
+                                                                ? tiposPrecio.find(t => t.value === detalle.tipo_precio_id)?.label || 'Base'
+                                                                : '📌 Base'}
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+
                                                 {/* Precio actualizado según rango */}
                                                 <TableCell className="font-medium">
-                                                    {(() => {
-                                                        const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
-                                                        const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
+                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0.01"
+                                                            value={detalle.precio_unitario || ''}
+                                                            onChange={(e) => handleEditarPrecio(index, parseFloat(e.target.value))}
+                                                            placeholder="Precio"
+                                                            className="w-28 text-right text-sm"
+                                                        />
+                                                    ) : (
+                                                        (() => {
+                                                            const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
+                                                            const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
 
-                                                        return (
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <span>
-                                                                    Bs. {precio.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                </span>
-                                                                {precioActualizado && precioActualizado !== detalle.precio_unitario && (
-                                                                    <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
-                                                                        {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                            return (
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <span>
+                                                                        Bs. {precio.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                                     </span>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })()}
+                                                                    {precioActualizado && precioActualizado !== detalle.precio_unitario && (
+                                                                        <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
+                                                                            {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })()
+                                                    )}
                                                 </TableCell>
                                                 {/* Subtotal actualizado */}
                                                 <TableCell className="font-semibold">
