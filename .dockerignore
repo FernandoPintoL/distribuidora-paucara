@@ -16,10 +16,11 @@ vendor
 .env.*.local
 bootstrap/cache/*
 storage/logs/*
-storage/app/*
+storage/app/private/*
 storage/framework/sessions/*
 storage/framework/views/*
 storage/framework/cache/*
+# ✅ MANTENER: storage/app/public/ (imágenes de productos, empresas, clientes)
 
 # IDE
 .vscode
