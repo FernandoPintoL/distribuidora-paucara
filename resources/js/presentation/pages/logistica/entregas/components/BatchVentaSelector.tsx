@@ -10,6 +10,7 @@ import type { Id } from '@/domain/entities/shared';
 interface BatchVentaSelectorProps {
     ventas: VentaConDetalles[];
     selectedIds: Id[];
+    ventasAsignadas?: Id[]; // 🔧 NUEVO: IDs de ventas ya asignadas (para modo edición)
     onToggleVenta: (ventaId: Id) => void;
     onSelectAll: (ventaIds: Id[]) => void;
     onClearSelection: () => void;
@@ -18,6 +19,7 @@ interface BatchVentaSelectorProps {
 export default function BatchVentaSelector({
     ventas,
     selectedIds,
+    ventasAsignadas = [],
     onToggleVenta,
     onSelectAll,
     onClearSelection,
@@ -365,6 +367,8 @@ export default function BatchVentaSelector({
                                     <div className={`space-y-2 pl-4 border-l-2 border-blue-300 dark:border-blue-700`}>
                                         {grupo.ventas.map((venta) => {
                                             const isSelected = selectedIds.includes(venta.id);
+                                            const isAsignada = ventasAsignadas.includes(venta.id);
+                                            const isNueva = isSelected && !isAsignada;
 
                                             if (viewMode === 'compact') {
                                                 // Vista Compacta
@@ -373,13 +377,15 @@ export default function BatchVentaSelector({
                                                         key={venta.id}
                                                         onClick={() => onToggleVenta(venta.id)}
                                                         className={`cursor-pointer transition-all p-2 ${isSelected
-                                                            ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                                            ? isNueva
+                                                                ? 'ring-2 ring-green-500 dark:ring-green-400 bg-green-50 dark:bg-green-900/20'
+                                                                : 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
                                                             : 'hover:shadow-md dark:hover:bg-slate-800'
                                                             } dark:bg-slate-900 dark:border-slate-700`}
                                                     >
                                                         <div className="flex items-center gap-2 text-xs">
                                                             {isSelected ? (
-                                                                <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                                                <CheckCircle2 className={`h-4 w-4 flex-shrink-0 ${isNueva ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`} />
                                                             ) : (
                                                                 <div className="h-4 w-4 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0" />
                                                             )}
@@ -389,6 +395,8 @@ export default function BatchVentaSelector({
                                                             <span className="text-gray-600 dark:text-gray-400 truncate">
                                                                 {venta.cliente.nombre}
                                                             </span>
+                                                            {isNueva && <Badge variant="default" className="ml-auto text-xs bg-green-600">✨ Nueva</Badge>}
+                                                            {isAsignada && isSelected && <Badge variant="secondary" className="ml-auto text-xs">✓ Asignada</Badge>}
                                                             <span className="text-gray-600 dark:text-gray-400 font-semibold ml-auto">
                                                                 Bs {(venta.subtotal).toFixed(0)}
                                                             </span>
@@ -397,13 +405,15 @@ export default function BatchVentaSelector({
                                                 );
                                             }
 
-                                            // Vista Detallada (original)
+                                            // Vista Detallada
                                             return (
                                                 <Card
                                                     key={venta.id}
                                                     onClick={() => onToggleVenta(venta.id)}
                                                     className={`cursor-pointer transition-all p-3 ${isSelected
-                                                        ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                                        ? isNueva
+                                                            ? 'ring-2 ring-green-500 dark:ring-green-400 bg-green-50 dark:bg-green-900/20'
+                                                            : 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
                                                         : 'hover:shadow-md dark:hover:bg-slate-800'
                                                         } dark:bg-slate-900 dark:border-slate-700`}
                                                 >
@@ -411,7 +421,7 @@ export default function BatchVentaSelector({
                                                         {/* Checkbox visual */}
                                                         <div className="mt-0.5">
                                                             {isSelected ? (
-                                                                <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                                                <CheckCircle2 className={`h-5 w-5 ${isNueva ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`} />
                                                             ) : (
                                                                 <div className="h-5 w-5 rounded border-2 border-gray-300 dark:border-gray-600" />
                                                             )}
@@ -420,9 +430,15 @@ export default function BatchVentaSelector({
                                                         {/* Información */}
                                                         <div className="flex-1 min-w-0">
                                                             <div className="grid grid-cols-1 gap-1.5 mb-2">
-                                                                <h4 className="font-semibold text-gray-900 dark:text-white break-words">
-                                                                    {venta.numero_venta}
-                                                                </h4>
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <h4 className="font-semibold text-gray-900 dark:text-white break-words flex-1">
+                                                                        {venta.numero_venta}
+                                                                    </h4>
+                                                                    <div className="flex gap-1 flex-shrink-0">
+                                                                        {isNueva && <Badge className="text-xs bg-green-600 whitespace-nowrap">✨ Nueva</Badge>}
+                                                                        {isAsignada && isSelected && <Badge variant="secondary" className="text-xs whitespace-nowrap">✓ Asignada</Badge>}
+                                                                    </div>
+                                                                </div>
                                                                 <Badge variant="secondary" className="text-xs w-fit break-words">
                                                                     {venta.cliente.nombre}
                                                                 </Badge>

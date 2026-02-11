@@ -51,7 +51,10 @@
     {{-- ✅ NUEVO: ENTREGADOR --}}
     @if($entrega->entregador)
     <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px; background-color: #f9f9f9;">
-        <p style="margin: 2px 0;"><strong>Entregador:</strong> {{ $entrega->entregador }}</p>
+        <p style="margin: 2px 0;"><strong>Entregador:</strong> {{ $entrega->entregador->name ?? $entrega->entregador->nombre ?? 'S/N' }}</p>
+        @if($entrega->entregador->phone ?? false)
+        <p style="margin: 2px 0;"><strong>Teléfono:</strong> {{ $entrega->entregador->phone }}</p>
+        @endif
     </div>
     @endif
 

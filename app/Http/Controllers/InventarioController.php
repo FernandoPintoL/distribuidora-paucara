@@ -516,7 +516,8 @@ class InventarioController extends Controller
         $totalSalidas     = (clone $query)->where('tipo', 'like', 'SALIDA%')->count();
 
         // ✅ Paginar resultados - Laravel obtiene automáticamente la página del request
-        $movimientosPaginados = $query->orderByDesc('id')
+        // ✅ ORDENAMIENTO (2026-02-11): Ordenar por created_at DESC (más recientes primero)
+        $movimientosPaginados = $query->orderByDesc('created_at')
             ->paginate($perPage);
 
         // Mapear datos de movimientos
@@ -537,6 +538,7 @@ class InventarioController extends Controller
                     'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
                     'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
                     'fecha'             => $movimiento->fecha->toISOString(),
+                    'created_at'        => $movimiento->created_at->toISOString(),  // ✅ NUEVO (2026-02-11): Fecha de creación
                     'usuario'           => [
                         'id'   => $movimiento->user_id,
                         'name' => $movimiento->user?->name ?? 'Sistema',
@@ -577,6 +579,7 @@ class InventarioController extends Controller
                 'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
                 'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
                 'fecha'             => $movimiento->fecha->toISOString(),
+                'created_at'        => $movimiento->created_at->toISOString(),  // ✅ NUEVO (2026-02-11): Fecha de creación
                 'usuario'           => [
                     'id'   => $movimiento->user_id,
                     'name' => $movimiento->user?->name ?? 'Sistema',
@@ -839,8 +842,8 @@ class InventarioController extends Controller
             ->when($tipo, fn($q) => $q->where('tipo', $tipo))
             ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
             ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
-            ->orderByDesc('fecha')
-            ->orderByDesc('id')
+            // ✅ ORDENAMIENTO (2026-02-11): Ordenar por created_at DESC (más recientes primero)
+            ->orderByDesc('created_at')
             ->paginate($perPage);
 
         return ApiResponse::success($movimientos);
@@ -876,8 +879,8 @@ class InventarioController extends Controller
             ->when($tipo, fn($q) => $q->where('tipo', $tipo))
             ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
             ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
-            ->orderByDesc('fecha')
-            ->orderByDesc('id');
+            // ✅ ORDENAMIENTO (2026-02-11): Ordenar por created_at DESC (más recientes primero)
+            ->orderByDesc('created_at');
 
         // Log de query sin ejecutar
         \Log::info('📋 [movimientosParaImpresion] Query SQL:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);

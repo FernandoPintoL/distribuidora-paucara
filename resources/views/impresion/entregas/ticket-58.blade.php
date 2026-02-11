@@ -64,7 +64,11 @@
 
     <div style="border-top: 2px solid #000; margin-top: 2px; padding: 1px 0; text-align: right;">
         <p style="font-size: 6px; font-weight: bold; margin: 1px 0;">TOTAL: {{ number_format($totalGeneral, 2) }}</p>
-        <p style="font-size: 5px; margin: 0.5px 0;">{{ $entrega->chofer?->nombre ?? 'S/A' }} | {{ $entrega->vehiculo?->placa ?? 'S/A' }}</p>
+        <p style="font-size: 5px; margin: 0.5px 0;">
+            {{ $entrega->chofer?->name ?? $entrega->chofer?->nombre ?? 'S/A' }}
+            {{ $entrega->entregador ? '| ' . ($entrega->entregador->name ?? 'S/A') : '' }}
+            | {{ $entrega->vehiculo?->placa ?? 'S/A' }}
+        </p>
     </div>
 </div>
 

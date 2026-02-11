@@ -1743,6 +1743,7 @@ class EntregaController extends Controller
      *   "venta_ids": [1001, 1002, 1003],
      *   "vehiculo_id": 10,
      *   "chofer_id": 5,
+     *   "entregador_id": 7,
      *   "zona_id": 3,
      *   "observaciones": "Entrega zona centro"
      * }
@@ -1761,13 +1762,12 @@ class EntregaController extends Controller
                 'vehiculo_id' => 'required|integer|exists:vehiculos,id',
                 // ✅ CORREGIDO: chofer_id apunta a users.id, no empleados.id
                 'chofer_id' => 'required|integer|exists:users,id',
+                'entregador_id' => 'nullable|integer|exists:users,id',
                 'zona_id' => 'nullable|integer|exists:localidades,id',
                 'observaciones' => 'nullable|string|max:500',
                 // ✅ NUEVO: Campos opcionales para caso single (1 venta)
                 'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
                 'direccion_entrega' => 'nullable|string|max:255',
-                // ✅ NUEVO: Campo entregador (nombre de quién realiza la entrega)
-                'entregador' => 'nullable|string|max:255',
             ]);
 
             Log::info('✅ Validation passed', ['validated' => $validated]);
@@ -1792,8 +1792,8 @@ class EntregaController extends Controller
                     // ✅ NUEVO: Parámetros opcionales para caso single (1 venta)
                     'fecha_programada' => $validated['fecha_programada'] ?? null,
                     'usuario_id' => Auth::id(),
-                    // ✅ NUEVO: Campo entregador (nombre de quién realiza la entrega)
-                    'entregador' => $validated['entregador'] ?? null,
+                    // ✅ NUEVO: Campo entregador_id (relación a users)
+                    'entregador_id' => $validated['entregador_id'] ?? null,
                 ]
             );
 
@@ -2372,6 +2372,138 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener resumen de pagos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 🔧 NUEVO: Actualizar entrega consolidada (modo edición)
+     * PATCH /api/entregas/{entrega_id}
+     *
+     * Reemplaza:
+     * - Vehículo asignado
+     * - Chofer asignado
+     * - Lista de ventas asociadas
+     */
+    public function actualizarEntregaConsolidada(Request $request, Entrega $entrega)
+    {
+        try {
+            Log::info('🔧 [Actualizar Entrega Consolidada] Request recibida', [
+                'entrega_id' => $entrega->id,
+                'venta_ids' => $request->input('venta_ids'),
+                'vehiculo_id' => $request->input('vehiculo_id'),
+                'chofer_id' => $request->input('chofer_id'),
+            ]);
+
+            // Validar datos
+            $validated = $request->validate([
+                'venta_ids' => 'required|array|min:1',
+                'venta_ids.*' => 'integer|exists:ventas,id',
+                'vehiculo_id' => 'required|integer|exists:vehiculos,id',
+                'chofer_id' => 'required|integer|exists:users,id',
+                'entregador_id' => 'nullable|integer|exists:users,id',
+                'zona_id' => 'nullable|integer',
+                'observaciones' => 'nullable|string|max:1000',
+                'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
+                'direccion_entrega' => 'nullable|string|max:500',
+            ]);
+
+            // Validar que el vehículo existe
+            $vehiculo = \App\Models\Vehiculo::findOrFail($validated['vehiculo_id']);
+
+            // Iniciar transacción
+            DB::beginTransaction();
+
+            try {
+                // Actualizar datos principales de la entrega
+                $entrega->update([
+                    'vehiculo_id' => $validated['vehiculo_id'],
+                    'chofer_id' => $validated['chofer_id'],
+                    'entregador_id' => $validated['entregador_id'] ?? $entrega->entregador_id,
+                    'zona_id' => $validated['zona_id'] ?? $entrega->zona_id,
+                    'observaciones' => $validated['observaciones'] ?? $entrega->observaciones,
+                    'fecha_programada' => $validated['fecha_programada'] ?? $entrega->fecha_programada,
+                    'direccion_entrega' => $validated['direccion_entrega'] ?? $entrega->direccion_entrega,
+                ]);
+
+                // Reemplazar ventas asociadas
+                // Primero, obtener las ventas actuales
+                $ventasActuales = $entrega->ventas()->pluck('venta_id')->toArray();
+                $ventasNuevas = $validated['venta_ids'];
+
+                // Desasociar ventas que fueron removidas
+                $ventasARemover = array_diff($ventasActuales, $ventasNuevas);
+                if (!empty($ventasARemover)) {
+                    Venta::whereIn('id', $ventasARemover)->update(['entrega_id' => null]);
+                }
+
+                // Asociar nuevas ventas
+                $ventasAAgregar = array_diff($ventasNuevas, $ventasActuales);
+                if (!empty($ventasAAgregar)) {
+                    Venta::whereIn('id', $ventasAAgregar)->update(['entrega_id' => $entrega->id]);
+                }
+
+                DB::commit();
+
+                Log::info('✅ [Actualizar Entrega] Exitoso', [
+                    'entrega_id' => $entrega->id,
+                    'numero_entrega' => $entrega->numero_entrega,
+                    'ventas_count' => count($ventasNuevas),
+                ]);
+
+                // Disparar evento de actualización
+                event(new EntregaAsignada($entrega));
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Entrega actualizada correctamente',
+                    'data' => [
+                        'id' => $entrega->id,
+                        'numero_entrega' => $entrega->numero_entrega,
+                        'estado' => $entrega->estado,
+                        'vehiculo' => [
+                            'id' => $vehiculo->id,
+                            'placa' => $vehiculo->placa,
+                        ],
+                        'chofer' => [
+                            'id' => $entrega->chofer_id,
+                            'nombre' => $entrega->chofer?->name ?? 'N/A',
+                        ],
+                        'entregador' => $entrega->entregador ? [
+                            'id' => $entrega->entregador?->id,
+                            'name' => $entrega->entregador?->name,
+                        ] : null,
+                        'ventas_count' => count($ventasNuevas),
+                    ],
+                ], 200);
+
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('❌ [Actualizar Entrega] Validación fallida', [
+                'entrega_id' => $entrega->id,
+                'errors' => $e->errors(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errors' => $e->errors(),
+            ], 422);
+
+        } catch (\Throwable $e) {
+            Log::error('❌ [Actualizar Entrega] Error', [
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar entrega: ' . $e->getMessage(),
             ], 500);
         }
     }

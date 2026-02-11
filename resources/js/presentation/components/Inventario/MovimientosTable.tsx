@@ -16,6 +16,7 @@ interface MovimientoInventario {
     id: number;
     numero: string;
     fecha: string;
+    created_at: string;  // ✅ NUEVO (2026-02-11): Fecha de creación del registro
     tipo: string;
     producto: {
         nombre: string;
@@ -87,8 +88,9 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                     <TableHeader>
                         <TableRow>
                             <TableHead>Número</TableHead>
-                            <TableHead className="min-w-fit">Fecha</TableHead>
-                            <TableHead className="min-w-fit">Hora</TableHead>
+                            {/* <TableHead className="min-w-fit">Fecha</TableHead>
+                            <TableHead className="min-w-fit">Hora</TableHead> */}
+                            <TableHead className="min-w-fit">📝 Creado</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Producto</TableHead>
                             <TableHead>Almacén</TableHead>
@@ -112,7 +114,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                     <TableCell className="font-medium">
                                         #{ movimiento.id } | {movimiento.referencia || movimiento.numero}
                                     </TableCell>
-                                    <TableCell className="text-sm">
+                                    {/* <TableCell className="text-sm">
                                         {new Date(movimiento.fecha).toLocaleDateString('es-ES')}
                                     </TableCell>
                                     <TableCell className="text-sm font-medium">
@@ -123,6 +125,19 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                                 second: '2-digit'
                                             })}
                                         </span>
+                                    </TableCell> */}
+                                    {/* ✅ NUEVO (2026-02-11): Columna de created_at */}
+                                    <TableCell className="text-sm">
+                                        <div className="text-xs text-muted-foreground">
+                                            <div>{new Date(movimiento.created_at).toLocaleDateString('es-ES')}</div>
+                                            <div className="text-gray-500 dark:text-gray-400">
+                                                {new Date(movimiento.created_at).toLocaleTimeString('es-ES', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    second: '2-digit'
+                                                })}
+                                            </div>
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <Badge className={getTipoColor(movimiento.tipo)}>

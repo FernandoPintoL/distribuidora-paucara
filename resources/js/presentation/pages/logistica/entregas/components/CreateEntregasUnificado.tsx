@@ -109,7 +109,7 @@ export default function CreateEntregasUnificado({
         successMessage,
         updateFormData,
         handleSubmit: handleSubmitBatch,
-    } = useEntregaBatch();
+    } = useEntregaBatch(modo, entrega?.id);
 
     // Memoized callbacks para vehicle recommendation
     // Estos callbacks deben ser estables para que el useEffect en VehicleRecommendationCard funcione correctamente
@@ -121,6 +121,11 @@ export default function CreateEntregasUnificado({
     const handleSelectChofer = useCallback((choferId: Id) => {
         console.log('👤 Actualizando chofer_id:', choferId);
         updateFormData({ chofer_id: choferId });
+    }, [updateFormData]);
+
+    const handleSelectEntregador = useCallback((entregadorId: Id) => {
+        console.log('📦 Actualizando entregador_id:', entregadorId);
+        updateFormData({ entregador_id: entregadorId });
     }, [updateFormData]);
 
     // Hook para recomendación de vehículo (batch mode)
@@ -202,9 +207,10 @@ export default function CreateEntregasUnificado({
                 const ventasAsignadasIds = ventasAsignadas.map((v) => v.id);
                 setSelectedVentaIds(ventasAsignadasIds);
                 console.log('✅ Ventas asignadas precargadas:', ventasAsignadasIds);
+                console.log('📊 Peso de entrega (backend):', entrega.peso_kg);
             }
         }
-    }, [isEditMode, entrega?.id]); // Solo se ejecuta una vez al montar
+    }, [isEditMode, entrega?.id, ventasAsignadas]); // Incluir ventasAsignadas para re-ejecución si cambia
 
     // Pre-llenar datos para caso single (1 venta)
     useEffect(() => {
@@ -234,15 +240,27 @@ export default function CreateEntregasUnificado({
         }
     }, [selectedCount, selectedVentaIds, ventas, isEditMode]);
 
-    // Totales seleccionados - DEBE IR ANTES del useEffect que lo usa
+    // Totales seleccionados - En edit mode, usar peso_kg del backend
     const totals = useMemo(() => {
+        // En edit mode, usar el peso_kg de la entrega (viene del backend)
+        if (isEditMode && entrega?.peso_kg) {
+            const pesoFromBackend = parseFloat(String(entrega.peso_kg));
+            console.log('📊 [Edit Mode] Usando peso_kg del backend:', pesoFromBackend);
+            return {
+                count: selectedVentaIds.length,
+                pesoTotal: pesoFromBackend,
+                montoTotal: 0, // No calculamos monto en edit mode
+            };
+        }
+
+        // En create mode, calcular desde ventas seleccionadas
         const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
         return {
             count: selectedVentaIds.length,
             pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0),
             montoTotal: selectedVentas.reduce((sum, v) => sum + (v.subtotal ?? 0), 0),
         };
-    }, [ventas, selectedVentaIds]);
+    }, [ventas, selectedVentaIds, isEditMode, entrega?.peso_kg]);
 
     // Validaciones para batch - DEBE IR ANTES del useEffect que lo usa
     const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
@@ -411,20 +429,24 @@ export default function CreateEntregasUnificado({
                         Asignación de Recursos
                     </h2>
 
-                    {/* Recomendación Inteligente de Vehículo */}
-                    {(recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion) && (
+                    {/* Recomendación Inteligente de Vehículo O Datos de Edición */}
+                    {(recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion || (isEditMode && formData.vehiculo_id)) && (
                         <VehicleRecommendationCard
                             recomendado={recomendado}
                             disponibles={disponibles}
-                            pesoTotal={pesoRecomendacion}
+                            todosVehiculos={vehiculos}
+                            pesoTotal={isEditMode ? totals.pesoTotal : pesoRecomendacion}
                             isLoading={loadingRecomendacion}
                             error={errorRecomendacion}
                             alerta={alertaRecomendacion}
                             selectedVehiculoId={formData.vehiculo_id ?? undefined}
                             selectedChoferId={formData.chofer_id ?? null}
+                            selectedEntregadorId={formData.entregador_id ?? null}
                             choferes={choferes}
+                            entregadores={choferes}
                             onSelectVehiculo={handleSelectVehiculo}
                             onSelectChofer={handleSelectChofer}
+                            onSelectEntregador={handleSelectEntregador}
                         />
                     )}
 
@@ -445,39 +467,6 @@ export default function CreateEntregasUnificado({
                                 ? '📦 Se aplicará a esta entrega'
                                 : `📦 Se aplicará a las ${selectedCount} entregas consolidadas`
                             }
-                        </p>
-                    </Card>
-
-                    {/* Dirección de Entrega (Solo Single) */}
-                    {selectedCount === 1 && (
-                        <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-purple-500">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-                                Dirección de Entrega
-                            </h3>
-                            <input
-                                type="text"
-                                value={formData.direccion_entrega || ''}
-                                onChange={(e) => updateFormData({ direccion_entrega: e.target.value })}
-                                placeholder="Ej: Calle Principal 123, Zona Sur"
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
-                            />
-                        </Card>
-                    )}
-
-                    {/* Entregador - Para cualquier cantidad de ventas */}
-                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-cyan-500">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-                            Entregador
-                        </h3>
-                        <input
-                            type="text"
-                            value={formData.entregador || ''}
-                            onChange={(e) => updateFormData({ entregador: e.target.value })}
-                            placeholder="Nombre de la persona que realiza la entrega"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-white transition-colors text-sm"
-                        />
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                            📝 Persona responsable de entregar la carga
                         </p>
                     </Card>
                 </div>
@@ -575,6 +564,7 @@ export default function CreateEntregasUnificado({
                         <BatchVentaSelector
                             ventas={ventas}
                             selectedIds={selectedVentaIds}
+                            ventasAsignadas={ventasAsignadas?.map((v) => v.id) ?? []}
                             onToggleVenta={handleToggleVenta}
                             onSelectAll={handleSelectAll}
                             onClearSelection={handleClearSelection}

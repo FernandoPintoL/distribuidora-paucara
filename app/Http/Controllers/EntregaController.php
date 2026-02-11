@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\Venta\EstadoInvalidoException;
 use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Empleado;
+use App\Models\Entrega;
 use App\Models\Vehiculo;
 use App\Services\ImpresionEntregaService;
 use App\Services\Logistica\EntregaService;
@@ -81,7 +82,7 @@ class EntregaController extends Controller
         ];
 
         $entregas = \App\Models\Entrega::query()
-            ->with(['ventas.cliente', 'vehiculo', 'chofer', 'localidad'])
+            ->with(['ventas.cliente', 'vehiculo', 'chofer', 'entregador', 'localidad'])
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
             ->when($filtros['fecha_desde'], fn($q, $fecha) => $q->whereDate('fecha_programada', '>=', $fecha))
             ->when($filtros['fecha_hasta'], fn($q, $fecha) => $q->whereDate('fecha_programada', '<=', $fecha))
@@ -292,9 +293,10 @@ class EntregaController extends Controller
                 ];
             });
 
-        // 3. Obtener todos los vehículos activos (sin restricción de estado)
-        $vehiculos = Vehiculo::where('activo', true)
+        // 3. Obtener todos los vehículos SIN restricción de estado (usuario puede seleccionar cualquiera)
+        $vehiculos = Vehiculo::query()
             ->with('choferAsignado') // 🔧 Cargar relación de chofer asignado (User)
+            ->orderBy('placa')
             ->get()
             ->map(fn($v) => [
                 'id'                 => $v->id,
@@ -496,9 +498,10 @@ class EntregaController extends Controller
                 ];
             });
 
-        // 3. Obtener todos los vehículos activos
-        $vehiculos = Vehiculo::where('activo', true)
+        // 3. Obtener todos los vehículos SIN restricción de estado (usuario puede seleccionar cualquiera)
+        $vehiculos = Vehiculo::query()
             ->with('choferAsignado')
+            ->orderBy('placa')
             ->get()
             ->map(fn($v) => [
                 'id'                 => $v->id,
@@ -741,10 +744,10 @@ class EntregaController extends Controller
                 [
                     'venta_id'          => 'required|exists:ventas,id',
                     'vehiculo_id'       => 'required|exists:vehiculos,id',
-                    'chofer_id'         => 'required|exists:empleados,id',
+                    'chofer_id'         => 'required|exists:users,id',
+                    'entregador_id'     => 'nullable|integer|exists:users,id',
                     'fecha_programada'  => 'required|date_format:Y-m-d\TH:i|fecha_entrega_valida',
                     'direccion_entrega' => 'nullable|string|max:500',
-                    'entregador'        => 'nullable|string|max:255',
                     'peso_kg'           => 'nullable|numeric|min:0.01|max:50000',
                     'observaciones'     => 'nullable|string|max:1000',
                 ],
@@ -784,12 +787,12 @@ class EntregaController extends Controller
                 'venta_id'             => $validated['venta_id'],
                 'vehiculo_id'          => $validated['vehiculo_id'],
                 'chofer_id'            => $validated['chofer_id'],
+                'entregador_id'        => $validated['entregador_id'] ?? null, // ✅ FK a users con rol chofer
                 'fecha_programada'     => $validated['fecha_programada'],
                 'direccion_entrega'    => $validated['direccion_entrega'] ?? $venta->direccionCliente?->direccion ?? null,
                 'direccion_cliente_id' => $venta->direccion_cliente_id, // ✅ Asignar dirección del cliente
                 'peso_kg'              => $validated['peso_kg'],
                 'observaciones'        => $validated['observaciones'] ?? null,
-                'entregador'           => $validated['entregador'] ?? null, // ✅ NUEVO: Nombre del entregador
                 'estado'               => $estadoInicial->codigo, // ✅ Enum (legacy compatibility)
                 'estado_entrega_id'    => $estadoInicial->id,     // ✅✅ FK a estados_logistica (CRITICAL)
             ]);
@@ -1416,6 +1419,7 @@ class EntregaController extends Controller
             $entregas = \App\Models\Entrega::with([
                 'ventas.cliente',
                 'chofer', // chofer es directamente User, no tiene relación .user
+                'entregador', // entregador es directamente User
                 'vehiculo',
                 'localidad',
             ])->get();

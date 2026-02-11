@@ -203,26 +203,21 @@ class VehiculoController extends Controller
                 'venta_ids'         => $ventaIds,
             ]);
 
-            // Obtener vehículos disponibles ordenados por capacidad (menor primero)
-            // Filtrar considerando peso ya cargado
+            // Obtener vehículos activos ordenados por capacidad (menor primero)
+            // 🔧 MODIFICADO: Listar TODOS los vehículos activos (sin filtro de estado)
             $vehiculosDisponibles = Vehiculo::where('activo', true)
-                ->whereRaw('LOWER(estado) = ?', ['disponible'])
                 ->with('choferAsignado', 'entregas')
                 ->orderBy('capacidad_kg', 'asc')
                 ->get()
-                ->filter(function ($vehiculo) use ($pesoTotal) {
-                    // Usar el método mejorado que considera peso cargado
-                    return $vehiculo->tieneCapacidadPara($pesoTotal);
-                })
-                ->values()
                 ->map(function ($vehiculo) use ($pesoTotal) {
                     $pesoCargado                 = $vehiculo->obtenerPesoCargado();
                     $capacidadDisponible         = $vehiculo->obtenerCapacidadDisponible();
                     $porcentajeUsoActual         = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
                     $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
+                    $tieneCapacidad              = $vehiculo->tieneCapacidadPara($pesoTotal);
 
                     // Debug logging
-                    Log::info('Mapeando vehículo (con peso actual):', [
+                    Log::info('Mapeando vehículo (TODOS):', [
                         'vehiculo_id'                      => $vehiculo->id,
                         'placa'                            => $vehiculo->placa,
                         'capacidad_total_kg'               => $vehiculo->capacidad_kg,
@@ -231,6 +226,7 @@ class VehiculoController extends Controller
                         'peso_nuevas_cargas'               => $pesoTotal,
                         'porcentaje_uso_actual'            => $porcentajeUsoActual,
                         'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
+                        'tiene_capacidad'                  => $tieneCapacidad,
                     ]);
 
                     return [
@@ -244,7 +240,9 @@ class VehiculoController extends Controller
                         'capacidad_disponible'             => $capacidadDisponible,
                         'porcentaje_uso_actual'            => $porcentajeUsoActual,
                         'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
-                        'estado'                           => 'recomendado',
+                        'estado'                           => $vehiculo->estado,
+                        'activo'                           => $vehiculo->activo,
+                        'tiene_capacidad'                  => $tieneCapacidad,
                         'choferAsignado'                   => $vehiculo->choferAsignado ? [
                             'id'       => $vehiculo->choferAsignado->id,
                             'name'     => $vehiculo->choferAsignado->name,
@@ -254,63 +252,20 @@ class VehiculoController extends Controller
                     ];
                 });
 
-            // El primero es el recomendado (menor capacidad que cabe el peso)
-            $recomendado = $vehiculosDisponibles->first();
+            // El primero con capacidad es el recomendado (menor capacidad que cabe el peso)
+            $recomendado = $vehiculosDisponibles->firstWhere('tiene_capacidad', true);
 
             if (! $recomendado) {
-                // Si no hay vehículos con capacidad suficiente, mostrar todos disponibles
-                $todosDisponibles = Vehiculo::where('activo', true)
-                    ->whereRaw('LOWER(estado) = ?', ['disponible'])
-                    ->with('choferAsignado', 'entregas')
-                    ->orderBy('capacidad_kg', 'asc')
-                    ->get()
-                    ->map(function ($vehiculo) use ($pesoTotal) {
-                        $pesoCargado                 = $vehiculo->obtenerPesoCargado();
-                        $capacidadDisponible         = $vehiculo->obtenerCapacidadDisponible();
-                        $porcentajeUsoActual         = round(($pesoCargado / $vehiculo->capacidad_kg) * 100, 1);
-                        $porcentajeUsoConNuevasCarga = round((($pesoCargado + $pesoTotal) / $vehiculo->capacidad_kg) * 100, 1);
-                        $excesoCarga                 = ($pesoCargado + $pesoTotal) > $vehiculo->capacidad_kg;
-
-                        // Debug logging
-                        \Log::info('Mapeando vehículo (capacidad insuficiente):', [
-                            'vehiculo_id'          => $vehiculo->id,
-                            'placa'                => $vehiculo->placa,
-                            'capacidad_total_kg'   => $vehiculo->capacidad_kg,
-                            'peso_cargado_actual'  => $pesoCargado,
-                            'capacidad_disponible' => $capacidadDisponible,
-                            'peso_nuevas_cargas'   => $pesoTotal,
-                            'exceso_carga'         => $excesoCarga,
-                        ]);
-
-                        return [
-                            'id'                               => $vehiculo->id,
-                            'placa'                            => $vehiculo->placa,
-                            'marca'                            => $vehiculo->marca,
-                            'modelo'                           => $vehiculo->modelo,
-                            'anho'                             => $vehiculo->anho,
-                            'capacidad_kg'                     => $vehiculo->capacidad_kg,
-                            'peso_cargado_actual'              => $pesoCargado,
-                            'capacidad_disponible'             => $capacidadDisponible,
-                            'porcentaje_uso_actual'            => $porcentajeUsoActual,
-                            'porcentaje_uso_con_nuevas_cargas' => $porcentajeUsoConNuevasCarga,
-                            'estado'                           => $excesoCarga ? 'excede_capacidad' : 'capacidad_insuficiente',
-                            'choferAsignado'                   => $vehiculo->choferAsignado ? [
-                                'id'       => $vehiculo->choferAsignado->id,
-                                'name'     => $vehiculo->choferAsignado->name,
-                                'nombre'   => $vehiculo->choferAsignado->name,
-                                'telefono' => $vehiculo->choferAsignado->phone ?? null,
-                            ] : null,
-                        ];
-                    });
-
+                // Si no hay vehículos con capacidad suficiente, retornar TODOS con alerta
                 return response()->json([
                     'success' => true,
                     'message' => 'No hay vehículos con capacidad suficiente',
                     'data'    => [
-                        'recomendado' => null,
-                        'peso_total'  => $pesoTotal,
-                        'disponibles' => $todosDisponibles,
-                        'alerta'      => 'CARGA EXCEDE CAPACIDAD',
+                        'recomendado'       => null,
+                        'peso_total'        => $pesoTotal,
+                        'disponibles_count' => $vehiculosDisponibles->count(),
+                        'disponibles'       => $vehiculosDisponibles->toArray(),
+                        'alerta'            => 'CARGA EXCEDE CAPACIDAD',
                     ],
                 ], 200);
             }
@@ -322,20 +277,7 @@ class VehiculoController extends Controller
                     'recomendado'       => $recomendado,
                     'peso_total'        => $pesoTotal,
                     'disponibles_count' => $vehiculosDisponibles->count(),
-                    'disponibles'       => $vehiculosDisponibles->map(fn($v) => [
-                        'id'                               => $v['id'],
-                        'placa'                            => $v['placa'],
-                        'marca'                            => $v['marca'],
-                        'modelo'                           => $v['modelo'],
-                        'anho'                             => $v['anho'],
-                        'capacidad_kg'                     => $v['capacidad_kg'],
-                        'peso_cargado_actual'              => $v['peso_cargado_actual'],
-                        'capacidad_disponible'             => $v['capacidad_disponible'],
-                        'porcentaje_uso_actual'            => $v['porcentaje_uso_actual'],
-                        'porcentaje_uso_con_nuevas_cargas' => $v['porcentaje_uso_con_nuevas_cargas'],
-                        'estado'                           => 'disponible',
-                        'choferAsignado'                   => $v['choferAsignado'],
-                    ])->toArray(),
+                    'disponibles'       => $vehiculosDisponibles->toArray(),
                 ],
             ]);
         } catch (\Exception $e) {

@@ -827,6 +827,12 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
             ->middleware('permission:entregas.create')
             ->name('entregas.crear-consolidada');
 
+        // 🔧 NUEVO: Actualizar entrega consolidada (modo edición)
+        // PATCH /api/entregas/{entrega_id}
+        Route::patch('/{entrega}', [EntregaController::class, 'actualizarEntregaConsolidada'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.actualizar-consolidada');
+
         // Cancelar entrega consolidada sin afectar ventas
         Route::post('/{id}/cancelar', [EntregaController::class, 'cancelarEntrega'])
             ->middleware('permission:entregas.delete')

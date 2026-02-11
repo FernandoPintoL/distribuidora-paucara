@@ -2065,7 +2065,7 @@ consolidarAutomatico.post = (options?: RouteQueryOptions): RouteDefinition<'post
     consolidarAutomatico.form = consolidarAutomaticoForm
 /**
 * @see \App\Http\Controllers\Api\EntregaController::crearEntregaConsolidada
- * @see app/Http/Controllers/Api/EntregaController.php:1750
+ * @see app/Http/Controllers/Api/EntregaController.php:1751
  * @route '/api/entregas/crear-consolidada'
  */
 export const crearEntregaConsolidada = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -2080,7 +2080,7 @@ crearEntregaConsolidada.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaController::crearEntregaConsolidada
- * @see app/Http/Controllers/Api/EntregaController.php:1750
+ * @see app/Http/Controllers/Api/EntregaController.php:1751
  * @route '/api/entregas/crear-consolidada'
  */
 crearEntregaConsolidada.url = (options?: RouteQueryOptions) => {
@@ -2089,7 +2089,7 @@ crearEntregaConsolidada.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\EntregaController::crearEntregaConsolidada
- * @see app/Http/Controllers/Api/EntregaController.php:1750
+ * @see app/Http/Controllers/Api/EntregaController.php:1751
  * @route '/api/entregas/crear-consolidada'
  */
 crearEntregaConsolidada.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -2099,7 +2099,7 @@ crearEntregaConsolidada.post = (options?: RouteQueryOptions): RouteDefinition<'p
 
     /**
 * @see \App\Http\Controllers\Api\EntregaController::crearEntregaConsolidada
- * @see app/Http/Controllers/Api/EntregaController.php:1750
+ * @see app/Http/Controllers/Api/EntregaController.php:1751
  * @route '/api/entregas/crear-consolidada'
  */
     const crearEntregaConsolidadaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -2109,7 +2109,7 @@ crearEntregaConsolidada.post = (options?: RouteQueryOptions): RouteDefinition<'p
 
             /**
 * @see \App\Http\Controllers\Api\EntregaController::crearEntregaConsolidada
- * @see app/Http/Controllers/Api/EntregaController.php:1750
+ * @see app/Http/Controllers/Api/EntregaController.php:1751
  * @route '/api/entregas/crear-consolidada'
  */
         crearEntregaConsolidadaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -2118,6 +2118,95 @@ crearEntregaConsolidada.post = (options?: RouteQueryOptions): RouteDefinition<'p
         })
     
     crearEntregaConsolidada.form = crearEntregaConsolidadaForm
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarEntregaConsolidada
+ * @see app/Http/Controllers/Api/EntregaController.php:2388
+ * @route '/api/entregas/{entrega}'
+ */
+export const actualizarEntregaConsolidada = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: actualizarEntregaConsolidada.url(args, options),
+    method: 'patch',
+})
+
+actualizarEntregaConsolidada.definition = {
+    methods: ["patch"],
+    url: '/api/entregas/{entrega}',
+} satisfies RouteDefinition<["patch"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarEntregaConsolidada
+ * @see app/Http/Controllers/Api/EntregaController.php:2388
+ * @route '/api/entregas/{entrega}'
+ */
+actualizarEntregaConsolidada.url = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { entrega: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { entrega: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    entrega: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        entrega: typeof args.entrega === 'object'
+                ? args.entrega.id
+                : args.entrega,
+                }
+
+    return actualizarEntregaConsolidada.definition.url
+            .replace('{entrega}', parsedArgs.entrega.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarEntregaConsolidada
+ * @see app/Http/Controllers/Api/EntregaController.php:2388
+ * @route '/api/entregas/{entrega}'
+ */
+actualizarEntregaConsolidada.patch = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+    url: actualizarEntregaConsolidada.url(args, options),
+    method: 'patch',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarEntregaConsolidada
+ * @see app/Http/Controllers/Api/EntregaController.php:2388
+ * @route '/api/entregas/{entrega}'
+ */
+    const actualizarEntregaConsolidadaForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: actualizarEntregaConsolidada.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PATCH',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::actualizarEntregaConsolidada
+ * @see app/Http/Controllers/Api/EntregaController.php:2388
+ * @route '/api/entregas/{entrega}'
+ */
+        actualizarEntregaConsolidadaForm.patch = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: actualizarEntregaConsolidada.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PATCH',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    actualizarEntregaConsolidada.form = actualizarEntregaConsolidadaForm
 /**
 * @see \App\Http\Controllers\Api\EntregaController::cancelarEntrega
  * @see app/Http/Controllers/Api/EntregaController.php:1945
@@ -2642,6 +2731,6 @@ obtenerLocalidades.head = (args: { entrega: number | { id: number } } | [entrega
         })
     
     obtenerLocalidades.form = obtenerLocalidadesForm
-const EntregaController = { estadisticasChofer, misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarVentaEntregada, finalizarEntrega, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerResumenPagos, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones, confirmarCarga, marcarListoParaEntrega, iniciarTransito, actualizarUbicacionGPS, consolidarAutomatico, crearEntregaConsolidada, cancelarEntrega, confirmarVentaCargada, desmarcarVentaCargada, obtenerDetalles, obtenerProgreso, obtenerLocalidades }
+const EntregaController = { estadisticasChofer, misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarVentaEntregada, finalizarEntrega, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerResumenPagos, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones, confirmarCarga, marcarListoParaEntrega, iniciarTransito, actualizarUbicacionGPS, consolidarAutomatico, crearEntregaConsolidada, actualizarEntregaConsolidada, cancelarEntrega, confirmarVentaCargada, desmarcarVentaCargada, obtenerDetalles, obtenerProgreso, obtenerLocalidades }
 
 export default EntregaController

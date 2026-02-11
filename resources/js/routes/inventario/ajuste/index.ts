@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
 export const form = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ form.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
 form.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ form.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
 form.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ form.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
 form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
     const formForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
         formForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\InventarioController::form
- * @see app/Http/Controllers/InventarioController.php:707
+ * @see app/Http/Controllers/InventarioController.php:710
  * @route '/inventario/ajuste'
  */
         formForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ form.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     form.form = formForm
 /**
 * @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:732
+ * @see app/Http/Controllers/InventarioController.php:735
  * @route '/inventario/ajuste'
  */
 export const procesar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -94,7 +94,7 @@ procesar.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:732
+ * @see app/Http/Controllers/InventarioController.php:735
  * @route '/inventario/ajuste'
  */
 procesar.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ procesar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:732
+ * @see app/Http/Controllers/InventarioController.php:735
  * @route '/inventario/ajuste'
  */
 procesar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -113,7 +113,7 @@ procesar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:732
+ * @see app/Http/Controllers/InventarioController.php:735
  * @route '/inventario/ajuste'
  */
     const procesarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -123,7 +123,7 @@ procesar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\InventarioController::procesar
- * @see app/Http/Controllers/InventarioController.php:732
+ * @see app/Http/Controllers/InventarioController.php:735
  * @route '/inventario/ajuste'
  */
         procesarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

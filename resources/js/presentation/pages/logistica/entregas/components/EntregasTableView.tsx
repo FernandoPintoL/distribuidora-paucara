@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
-import { Eye, Truck, User, Plus, Route, XCircle, FileText } from 'lucide-react';
+import { Eye, Truck, User, Plus, Route, XCircle, FileText, Pencil } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
 import type { Pagination } from '@/domain/entities/shared';
 import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/entregas.utils';
@@ -381,6 +381,16 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                         <Eye className="h-4 w-4 mr-1" />
                                                         Ver
                                                     </Button>
+                                                    <Link href={`/logistica/entregas/${entrega.id}/edit`}>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            title="Editar entrega"
+                                                        >
+                                                            <Pencil className="h-4 w-4 mr-1" />
+                                                            Editar
+                                                        </Button>
+                                                    </Link>
                                                     <Button
                                                         size="sm"
                                                         variant="outline"

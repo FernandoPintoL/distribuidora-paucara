@@ -10,12 +10,14 @@ export interface BatchFormData {
     venta_ids: Id[];
     vehiculo_id: Id | null;
     chofer_id: Id | null;
+    entregador_id?: Id | null;
     zona_id?: Id | null;
     observaciones?: string;
     // Campos opcionales para caso single (1 venta)
     fecha_programada?: string;
     direccion_entrega?: string;
-    entregador?: string;
+    // Campos para modo edición
+    entrega_id?: Id | null;
 }
 
 interface UseBatchState {
@@ -25,7 +27,7 @@ interface UseBatchState {
     successMessage: string | null;
 }
 
-export function useEntregaBatch() {
+export function useEntregaBatch(modo: 'crear' | 'editar' = 'crear', entregaId?: Id) {
     // Helper para obtener fecha actual en formato datetime-local (YYYY-MM-DDTHH:MM)
     const getTodayDateTimeLocal = () => {
         const now = new Date();
@@ -42,11 +44,12 @@ export function useEntregaBatch() {
             venta_ids: [],
             vehiculo_id: null,
             chofer_id: null,
+            entregador_id: null,
             zona_id: null,
             observaciones: '',
             fecha_programada: getTodayDateTimeLocal(),
             direccion_entrega: undefined,
-            entregador: undefined,
+            entrega_id: entregaId || null,
         },
         isSubmitting: false,
         submitError: null,
@@ -111,7 +114,7 @@ export function useEntregaBatch() {
     };
 
     /**
-     * Crear entregas en lote
+     * Crear o actualizar entregas
      */
     const handleSubmit = async (onSuccess?: (entrega: any) => void) => {
         // Validar datos
@@ -143,14 +146,18 @@ export function useEntregaBatch() {
                 venta_ids: state.formData.venta_ids,
                 vehiculo_id: state.formData.vehiculo_id,
                 chofer_id: state.formData.chofer_id,
+                entregador_id: state.formData.entregador_id,
                 zona_id: state.formData.zona_id,
                 observaciones: state.formData.observaciones,
                 fecha_programada: state.formData.fecha_programada,
                 direccion_entrega: state.formData.direccion_entrega,
-                entregador: state.formData.entregador,  // ✅ NUEVO: Nombre de quién realiza la entrega
             };
 
-            const resultado = await optimizacionEntregasService.crearLote(request);
+            // 🔧 NUEVO: Detectar si es crear o actualizar
+            const isEditMode = modo === 'editar' && entregaId;
+            const resultado = isEditMode
+                ? await optimizacionEntregasService.actualizarEntrega(entregaId, request)
+                : await optimizacionEntregasService.crearLote(request);
 
             if (resultado.success) {
                 setState((prev) => ({
@@ -176,7 +183,7 @@ export function useEntregaBatch() {
                 }));
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Error al crear entregas';
+            const message = error instanceof Error ? error.message : `Error al ${modo === 'editar' ? 'actualizar' : 'crear'} entregas`;
             setState((prev) => ({
                 ...prev,
                 submitError: message,

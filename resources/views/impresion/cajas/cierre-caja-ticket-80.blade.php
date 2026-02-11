@@ -7,7 +7,7 @@
 
 {{-- ✅ TÍTULO PRINCIPAL --}}
 <div class="bold center">CIERRE DE CAJA</div>
-<div class="center">Caja #{{ $apertura->id }}</div>
+<div class="center">Cierre Caja Folio #{{ $cierre->id }}</div>
 <div class="center" style="margin-top: 1px;">
     {{ now()->format('d/m/Y H:i') }}
 </div>
@@ -20,6 +20,10 @@
         <tr>
             <td style="text-align: left; padding: 1px 0; font-weight: bold;">Caja:</td>
             <td style="text-align: right; padding: 1px 0;">{{ $apertura->caja->nombre }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: left; padding: 1px 0; font-weight: bold;">Apertura:</td>
+            <td style="text-align: right; padding: 1px 0;">#{{ $apertura->id }}</td>
         </tr>
         <tr>
             <td style="text-align: left; padding: 1px 0; font-weight: bold;">Responsable:</td>
@@ -71,6 +75,21 @@
             <td style="text-align: right; padding: 1px 0;">{{ number_format($resumen['total'], 2) }}</td>
         </tr>
         @endforeach
+        @php
+        // Agregar ventas a crédito al total
+        $cantidadCreditos = $cantidadVentasCredito ?? 0;
+        if($sumatorialVentasCredito && $sumatorialVentasCredito > 0) {
+            $totalVentasDesglose += $sumatorialVentasCredito;
+            $totalCantidadDesglose += $cantidadCreditos;
+        }
+        @endphp
+        @if($sumatorialVentasCredito && $sumatorialVentasCredito > 0)
+        <tr style="border-bottom: 1px dotted #ccc;">
+            <td style="text-align: left; padding: 1px 0;">Crédito</td>
+            <td style="text-align: center; padding: 1px 0;">{{ $cantidadCreditos }}</td>
+            <td style="text-align: right; padding: 1px 0;">{{ number_format($sumatorialVentasCredito, 2) }}</td>
+        </tr>
+        @endif
         <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background: #f0f0f0;">
             <td style="text-align: left; padding: 1px 0;">TOTAL VENTAS</td>
             <td style="text-align: center; padding: 1px 0;">{{ $totalCantidadDesglose }}</td>
@@ -81,6 +100,7 @@
 
 <div class="separador"></div>
 @endif
+
 
 {{-- ✅ TOTAL PAGOS DE CRÉDITO RECIBIDOS (SIMPLIFICADO) --}}
 
@@ -188,7 +208,7 @@
         <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background: #f0f0f0;">
 
             <td style="text-align: left; padding: 1px 0;">Ventas Totales:</td>
-            <td style="text-align: right; padding: 1px 0;">{{ number_format($sumatorialVentas, 2) }}</td>
+            <td style="text-align: right; padding: 1px 0;">{{ number_format(($sumatorialVentas ?? 0) + ($sumatorialVentasCredito ?? 0), 2) }}</td>
         </tr>
 
     </tbody>

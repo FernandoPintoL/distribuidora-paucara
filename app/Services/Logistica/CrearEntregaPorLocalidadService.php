@@ -304,15 +304,15 @@ class CrearEntregaPorLocalidadService
      * Validar chofer
      *
      * @param int $choferId ID del User (no Empleado)
-     * @return Empleado El empleado asociado al user
+     * @return User El usuario con rol chofer
      */
-    private function validarChofer(int $choferId): Empleado
+    private function validarChofer(int $choferId): \App\Models\User
     {
-        // chofer_id apunta a users.id
+        // chofer_id apunta a users.id (puede tener empleado o no)
         $choferUser = \App\Models\User::with('empleado')->lockForUpdate()->find($choferId);
 
-        if (!$choferUser || !$choferUser->empleado) {
-            throw new Exception("Chofer (Usuario) #$choferId no existe o no tiene datos de empleado");
+        if (!$choferUser) {
+            throw new Exception("Chofer (Usuario) #$choferId no existe");
         }
 
         // ✅ VALIDACIÓN CRÍTICA: Verificar que el usuario tenga rol 'chofer'/'Chofer'
@@ -323,32 +323,33 @@ class CrearEntregaPorLocalidadService
             );
         }
 
-        $chofer = $choferUser->empleado;
-
-        // Validar estado
-        if ($chofer->estado !== 'activo') {
-            throw new Exception(
-                "Chofer {$chofer->nombre} no está activo. " .
-                "Estado: {$chofer->estado}"
-            );
+        // ✅ VALIDACIÓN OPCIONAL: Si tiene empleado, verificar que esté activo
+        if ($choferUser->empleado) {
+            if ($choferUser->empleado->estado !== 'activo') {
+                throw new Exception(
+                    "Chofer {$choferUser->empleado->nombre} no está activo. " .
+                    "Estado: {$choferUser->empleado->estado}"
+                );
+            }
         }
 
-        // Validar licencia si existe
-        if ($chofer->licencia && $chofer->fecha_vencimiento_licencia) {
-            if ($chofer->fecha_vencimiento_licencia < now()) {
+        // ✅ VALIDACIÓN OPCIONAL: Validar licencia si el chofer es un empleado
+        if ($choferUser->empleado && $choferUser->empleado->licencia && $choferUser->empleado->fecha_vencimiento_licencia) {
+            if ($choferUser->empleado->fecha_vencimiento_licencia < now()) {
                 throw new Exception(
-                    "Chofer {$chofer->nombre} tiene licencia vencida " .
-                    "desde {$chofer->fecha_vencimiento_licencia->format('Y-m-d')}"
+                    "Chofer {$choferUser->empleado->nombre} tiene licencia vencida " .
+                    "desde {$choferUser->empleado->fecha_vencimiento_licencia->format('Y-m-d')}"
                 );
             }
         }
 
         Log::info('Chofer validado', [
             'chofer_user_id' => $choferId,
-            'nombre' => $chofer->nombre,
+            'nombre' => $choferUser->name,
+            'tiene_empleado' => $choferUser->empleado ? true : false,
         ]);
 
-        return $chofer;
+        return $choferUser;
     }
 
     /**
@@ -533,6 +534,7 @@ class CrearEntregaPorLocalidadService
             'numero_entrega' => '',  // Temporal, se actualizará después
             'vehiculo_id' => $vehiculoId,
             'chofer_id' => $choferId,
+            'entregador_id' => $datos['entregador_id'] ?? null,  // ✅ FK a users con rol chofer
             'zona_id' => $localidadId,  // Usar localidadId (puede ser null)
             'peso_kg' => $metricas['peso_total'],
             'volumen_m3' => $metricas['volumen_total'],
@@ -542,7 +544,6 @@ class CrearEntregaPorLocalidadService
             'fecha_programada' => $fechaProgramada,
             'descripcion' => $datos['descripcion'] ?? null,
             'observaciones' => $datos['observaciones'] ?? null,
-            'entregador' => $datos['entregador'] ?? null,  // ✅ NUEVO: Nombre de quién realiza la entrega
         ]);
 
         Log::info('✅ Entrega creada (con estado_entrega_id)', [

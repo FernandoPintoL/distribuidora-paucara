@@ -38,7 +38,7 @@ class Entrega extends Model
         // Información de entrega
         'peso_kg',                  // Suma de pesos de ventas
         'observaciones',
-        'entregador',               // NUEVO: Nombre de quién realiza la entrega
+        'entregador_id',            // FK a users (quién realiza la entrega)
         'motivo_novedad',
         'motivo_cancelacion',       // NUEVO: Razón de cancelación
         'cancelada_en',             // NUEVO: Fecha de cancelación
@@ -170,6 +170,18 @@ class Entrega extends Model
     public function chofer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'chofer_id');
+    }
+
+    /**
+     * Entregador (User) que realiza la entrega
+     * FK a users.id (user con rol 'Chofer')
+     *
+     * ✅ NUEVO: Relación con el usuario que realiza la entrega
+     * Puede ser el mismo chofer u otro usuario del sistema
+     */
+    public function entregador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'entregador_id');
     }
 
     /**

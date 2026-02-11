@@ -119,6 +119,7 @@ class CierreCajaService
             'ventasTotalAprobadas'      => $totalVentas,
             'sumatorialVentasEfectivo'  => $ventasEfectivoTransferencia,
             'sumatorialVentasCredito'   => $ventasCredito,
+            'cantidadVentasCredito'     => $this->calcularCantidadVentasCredito($aperturaCaja),
             'sumatorialGastos'          => $this->calcularSumaPorCodigo($movimientos, 'GASTOS'),
             'sumatorialPagosSueldo'     => $this->calcularSumaPorCodigo($movimientos, 'PAGO_SUELDO'),
             'sumatorialAnticipos'       => $this->calcularSumaPorCodigo($movimientos, 'ANTICIPO'),
@@ -982,6 +983,39 @@ class CierreCajaService
         } catch (\Exception $e) {
             Log::error('❌ [calcularSumatoriasVentasPorTipoPago]:', ['error' => $e->getMessage()]);
             return collect();
+        }
+    }
+
+    /**
+     * ✅ Calcular CANTIDAD de ventas a crédito
+     * Cuenta cuántas operaciones de tipo CREDITO hay aprobadas
+     */
+    private function calcularCantidadVentasCredito(AperturaCaja $aperturaCaja): int
+    {
+        try {
+            $cantidad = DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'CREDITO')
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->distinct('ventas.id')
+                ->count();
+
+            Log::info('📊 [calcularCantidadVentasCredito]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'cantidad' => $cantidad,
+            ]);
+
+            return (int) $cantidad;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularCantidadVentasCredito]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
         }
     }
 }

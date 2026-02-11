@@ -67,6 +67,7 @@ class EntregaPdfController extends Controller
                 'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidades de clientes
                 'ventas.detalles.producto.unidad',
                 'chofer',
+                'entregador',  // ✅ NUEVO: Cargar entregador
                 'vehiculo',
                 'localidad',
                 'reportes',
@@ -91,6 +92,14 @@ class EntregaPdfController extends Controller
                     'email' => $entrega->chofer->email,
                     'phone' => $entrega->chofer->phone ?? null,
                 ] : 'SIN CHOFER',
+                'entregador_id'         => $entrega->entregador_id,
+                'entregador_nombre'     => $entrega->entregador?->name ?? 'SIN ENTREGADOR',
+                'entregador_full_data'  => $entrega->entregador ? [
+                    'id' => $entrega->entregador->id,
+                    'name' => $entrega->entregador->name,
+                    'email' => $entrega->entregador->email,
+                    'phone' => $entrega->entregador->phone ?? null,
+                ] : 'SIN ENTREGADOR',
                 'vehiculo_id'           => $entrega->vehiculo_id,
                 'vehiculo_placa'        => $entrega->vehiculo?->placa ?? 'NULL',
                 'vehiculo_marca'        => $entrega->vehiculo?->marca ?? 'NULL',
