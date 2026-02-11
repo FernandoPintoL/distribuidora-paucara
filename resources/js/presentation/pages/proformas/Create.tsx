@@ -474,7 +474,7 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
         <>
             <Head title="Nueva Proforma" />
             <AppLayout>
-                <div className="space-y-6">
+                <div className="space-y-6 p-6">
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <a href="/proformas" className="hover:text-foreground flex items-center gap-1">
