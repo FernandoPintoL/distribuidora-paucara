@@ -86,6 +86,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const [montoMax, setMontoMax] = useState<string>('');
     const [filtroUsuario, setFiltroUsuario] = useState<string>('');
     const [filtroDocumento, setFiltroDocumento] = useState<string>('');
+    const [filtroEstadoVenta, setFiltroEstadoVenta] = useState<'todos' | 'APROBADO' | 'ANULADO'>('todos'); // ✅ NUEVO: Filtro estado venta
     const [ordenarPor, setOrdenarPor] = useState<'fecha' | 'monto' | 'tipo'>('fecha');
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
     const [expandirVentasEstado, setExpandirVentasEstado] = useState(false);
@@ -128,9 +129,17 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const esHoy = fechaApertura.toDateString() === hoy.toDateString();
     const etiquetaPeriodo = esHoy ? 'del Día' : `desde ${fechaApertura.toLocaleDateString('es-BO', { month: 'short', day: 'numeric' })}`;
 
-    // ✅ NUEVO: Agrupar movimientos por tipo
+    // ✅ MEJORADO: Agrupar movimientos por tipo, EXCLUYENDO ventas anuladas del tipo VENTA
     const movimientosAgrupados = movimientosHoy.reduce((acc: Record<string, MovimientoCaja[]>, mov) => {
         const tipo = mov.tipo_operacion.nombre;
+
+        // 🔴 IMPORTANTE: Si es VENTA, solo contar si está APROBADA (excluir ANULADAS)
+        if (tipo === 'Venta' || tipo === 'VENTA') {
+            if (mov.venta?.estado_documento?.codigo !== 'APROBADO') {
+                return acc; // Saltar ventas no aprobadas
+            }
+        }
+
         if (!acc[tipo]) {
             acc[tipo] = [];
         }
@@ -254,6 +263,13 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
             }
         }
 
+        // 8️⃣ Filtro por estado de venta (APROBADO/ANULADO) - ✅ NUEVO
+        if (filtroEstadoVenta !== 'todos' && mov.venta?.estado_documento) {
+            if (mov.venta.estado_documento.codigo !== filtroEstadoVenta) {
+                return false;
+            }
+        }
+
         return true;
     });
 
@@ -343,9 +359,14 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        Movimientos {etiquetaPeriodo} ({movimientosAMostrar.length})
-                    </h3>
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                            Movimientos {etiquetaPeriodo}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            📋 Mostrando <strong className="text-gray-900 dark:text-white">{movimientosAMostrar.length}</strong> de <strong className="text-gray-900 dark:text-white">{movimientosHoy.length}</strong> movimientos
+                        </p>
+                    </div>
                     <br />
                     {/* ✅ NUEVO: Rango de IDs de Venta */}
                     <div className="display-block text-right">
@@ -374,7 +395,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                     </div>
                 </div>
                 {/* ✅ MEJORADO: Efectivo Esperado en Caja - Ahora con datos frescos del servidor */}
-                {efectivoActual && (
+                {/* {efectivoActual && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
@@ -445,43 +466,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                         -{formatCurrency(efectivoActual.total_egresos || efectivoActual.gastos || 0)}
                                     </td>
                                 </tr>
-                                {/* ✅ NUEVO: Desglose de egresos */}
-                                {/* {(efectivoActual.gastos || efectivoActual.pagos_sueldo || efectivoActual.anticipos || efectivoActual.anulaciones) && (
-                                    <>
-                                        {efectivoActual.gastos > 0 && (
-                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
-                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Gastos</td>
-                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
-                                                    -{formatCurrency(efectivoActual.gastos)}
-                                                </td>
-                                            </tr>
-                                        )}
-                                        {(efectivoActual.pagos_sueldo || 0) > 0 && (
-                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
-                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Pagos de Sueldo</td>
-                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
-                                                    -{formatCurrency(efectivoActual.pagos_sueldo || 0)}
-                                                </td>
-                                            </tr>
-                                        )}
-                                        {(efectivoActual.anticipos || 0) > 0 && (
-                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
-                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Anticipos</td>
-                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
-                                                    -{formatCurrency(efectivoActual.anticipos || 0)}
-                                                </td>
-                                            </tr>
-                                        )}
-                                        {(efectivoActual.anulaciones || 0) > 0 && (
-                                            <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20">
-                                                <td className="py-1 px-4 text-sm text-gray-600 dark:text-gray-400">  • Anulaciones</td>
-                                                <td className="text-right py-1 px-2 text-sm text-red-600 dark:text-red-400">
-                                                    -{formatCurrency(efectivoActual.anulaciones || 0)}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </>
-                                )} */}
                                 <tr className="bg-yellow-100 dark:bg-yellow-900/30">
                                     <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200">=  Efectivo Esperado Caja</td>
                                     <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
@@ -497,7 +481,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </tbody>
                         </table>
                     </div>
-                )}
+                )} */}
 
                 {/* ✅ NUEVO: Filtros por tipo */}
                 <div className="mb-6 flex flex-wrap gap-2 mt-4">
@@ -730,6 +714,42 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </div>
                         </div>
 
+                        {/* Filtro por Estado de Venta (APROBADO/ANULADO) - ✅ NUEVO */}
+                        <div>
+                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Estado de Venta
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                                <button
+                                    onClick={() => setFiltroEstadoVenta('todos')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroEstadoVenta === 'todos'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => setFiltroEstadoVenta('APROBADO')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroEstadoVenta === 'APROBADO'
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    ✅ Aprobadas
+                                </button>
+                                <button
+                                    onClick={() => setFiltroEstadoVenta('ANULADO')}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroEstadoVenta === 'ANULADO'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    ❌ Anuladas
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Ordenamiento */}
                         <div>
                             <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -767,36 +787,85 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         </div>
 
                         {/* Resumen de Filtros Activos */}
-                        {(filtroFechaDesde || filtroFechaHasta || filtroSigno !== 'todos' || busquedaDescripcion || montoMin || montoMax || filtroUsuario || filtroDocumento) && (
-                            <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-gray-600">
-                                ✅ Mostrando <strong>{movimientosAMostrar.length}</strong> de <strong>{movimientosHoy.length}</strong> movimientos
+                        {(filtroFechaDesde || filtroFechaHasta || filtroSigno !== 'todos' || busquedaDescripcion || montoMin || montoMax || filtroUsuario || filtroDocumento || filtroEstadoVenta !== 'todos') && (
+                            <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                        ✅ <strong className="text-gray-900 dark:text-white">{movimientosAMostrar.length}</strong> resultado{movimientosAMostrar.length !== 1 ? 's' : ''} de <strong className="text-gray-900 dark:text-white">{movimientosHoy.length}</strong> movimientos
+                                    </div>
+                                    {movimientosAMostrar.length === 0 && (
+                                        <div className="text-sm text-red-600 dark:text-red-400">
+                                            ⚠️ Sin resultados
+                                        </div>
+                                    )}
+                                </div>
+                                {movimientosAMostrar.length > 0 && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                        {movimientosAMostrar.length === movimientosHoy.length ? 'Mostrando todos los movimientos' : `Filtrado: ${((movimientosAMostrar.length / movimientosHoy.length) * 100).toFixed(0)}% de los movimientos`}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* ✅ NUEVO: Resumen por tipo */}
-                {/* {totalesPorTipo.length > 1 && !filtroTipo && (
-                    <div className="mb-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {totalesPorTipo.map(({ tipo, total, count }) => (
-                            <div
-                                key={tipo}
-                                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                                onClick={() => setFiltroTipo(tipo)}
-                            >
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                    {tipo}
-                                </p>
-                                <p className={`text-lg font-bold ${getMovimientoColor(total)}`}>
-                                    {formatCurrency(Math.abs(total))}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {count} movimiento{count !== 1 ? 's' : ''}
-                                </p>
-                            </div>
-                        ))}
+                {/* ✅ NUEVO: Resumen por tipo de operación */}
+                {totalesPorTipo.length > 1 && (
+                    <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                            📊 Sumatoria por Tipo de Operación
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            {totalesPorTipo.map(({ tipo, total, count }) => {
+                                // Obtener el código del tipo operación para usar los colores
+                                const tipoOperacionMatch = movimientosHoy.find(m => m.tipo_operacion.nombre === tipo);
+                                const codigo = tipoOperacionMatch?.tipo_operacion.codigo || tipo.toUpperCase();
+                                const esIngreso = total > 0;
+
+                                return (
+                                    <div
+                                        key={tipo}
+                                        className={`rounded-lg p-4 cursor-pointer transition hover:shadow-md border-l-4 ${
+                                            getTipoOperacionColor(codigo).includes('bg-green')
+                                                ? 'bg-green-50 dark:bg-green-900/20 border-green-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-red')
+                                                ? 'bg-red-50 dark:bg-red-900/20 border-red-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-blue')
+                                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-yellow')
+                                                ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-orange')
+                                                ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-purple')
+                                                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-400'
+                                                : getTipoOperacionColor(codigo).includes('bg-indigo')
+                                                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400'
+                                                : 'bg-gray-50 dark:bg-gray-900/20 border-gray-400'
+                                        }`}
+                                        onClick={() => setFiltroTipo(filtroTipo === tipo ? null : tipo)}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                                                    {tipo}
+                                                </p>
+                                                <p className={`text-lg font-bold mt-2 ${getMovimientoColor(total)}`}>
+                                                    {formatCurrency(Math.abs(total))}
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                    <span className="inline-block bg-white dark:bg-gray-800 px-2 py-1 rounded">
+                                                        {count} mov.
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div className={`text-2xl ${esIngreso ? '📈' : '📉'}`}></div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                )} */}
+                )}
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -807,6 +876,15 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Descripcion
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Estado
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Tipo Pago
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Tipo Entrega
                                 </th>
                                 {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Comprobantes
@@ -844,6 +922,60 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                         {movimiento.observaciones}
+                                    </td>
+                                    {/* ✅ NUEVA: Estado de la Venta */}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        {movimiento.venta?.estado_documento ? (
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                movimiento.venta.estado_documento.codigo === 'APROBADO'
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                                    : movimiento.venta.estado_documento.codigo === 'ANULADO'
+                                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                                    : movimiento.venta.estado_documento.codigo === 'PENDIENTE'
+                                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                            }`}>
+                                                {movimiento.venta.estado_documento.nombre}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                                        )}
+                                    </td>
+                                    {/* ✅ NUEVA: Tipo de Pago */}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        {movimiento.tipo_pago?.nombre ? (
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                movimiento.tipo_pago.nombre === 'EFECTIVO'
+                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300'
+                                                    : movimiento.tipo_pago.nombre === 'TRANSFERENCIA'
+                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                                    : movimiento.tipo_pago.nombre === 'CHEQUE'
+                                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+                                                    : movimiento.tipo_pago.nombre === 'CREDITO'
+                                                    ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                            }`}>
+                                                {movimiento.tipo_pago.nombre}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                                        )}
+                                    </td>
+                                    {/* ✅ NUEVA: Tipo de Entrega */}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        {movimiento.venta?.tipo_entrega ? (
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                movimiento.venta.tipo_entrega === 'DELIVERY'
+                                                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                                                    : movimiento.venta.tipo_entrega === 'PICKUP'
+                                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                            }`}>
+                                                {movimiento.venta.tipo_entrega === 'DELIVERY' ? '🚚 Envío' : movimiento.venta.tipo_entrega === 'PICKUP' ? '🏪 Retiro' : movimiento.venta.tipo_entrega}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                                        )}
                                     </td>
                                     {/*  <td className="px-6 py-4 text-sm">
                                         <ComprobantesMovimiento comprobantes={movimiento.comprobantes} />

@@ -64,12 +64,19 @@ export default function VentasIndex() {
                 <div className="flex items-center justify-between py-4">
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Ventas</h1>
-                        <p className="text-gray-600 dark:text-gray-400">
-                            {ventas.total > 0
-                                ? `${ventas.from}-${ventas.to} de ${ventas.total} ventas`
-                                : 'No se encontraron ventas'
-                            }
-                        </p>
+                        <div className="mt-2 space-y-1">
+                            <p className="text-gray-600 dark:text-gray-400">
+                                {ventas.total > 0
+                                    ? `${ventas.from}-${ventas.to} de ${ventas.total} ventas`
+                                    : 'No se encontraron ventas'
+                                }
+                            </p>
+                            {ventas.total > 0 && (
+                                <p className="text-sm text-gray-500 dark:text-gray-500">
+                                    📄 Página {ventas.current_page} de {ventas.last_page} ({ventas.per_page} por página)
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">

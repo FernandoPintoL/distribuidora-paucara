@@ -447,16 +447,40 @@ class VentaService
                     $q->where('estado_documento_id', $estadoId)
                 )
                 ->when($filtros['cliente_id'] ?? null, fn($q, $clienteId) =>
-                    $q->where('cliente_id', $clienteId)
+                    // ✅ PRIORIDAD 1: Si es numérico, buscar por ID exacto
+                    is_numeric($clienteId) && (int)$clienteId > 0
+                        ? $q->where('cliente_id', (int)$clienteId)
+                        // ✅ PRIORIDAD 2: Si no es numérico, buscar por campos textuales (evitar error de tipo bigint)
+                        : $q->whereHas('cliente', fn($qCli) =>
+                            $qCli->where('codigo_cliente', 'like', '%' . $clienteId . '%')
+                                ->orWhere('nombre', 'like', '%' . $clienteId . '%')
+                                ->orWhere('nit', 'like', '%' . $clienteId . '%')
+                                ->orWhere('telefono', 'like', '%' . $clienteId . '%')
+                        )
+                )
+                ->when($filtros['busqueda_cliente'] ?? null, fn($q, $busqueda) =>
+                    // ✅ PRIORIDAD 1: Si es numérico, buscar por ID exacto
+                    is_numeric($busqueda) && (int)$busqueda > 0
+                        ? $q->where('cliente_id', (int)$busqueda)
+                        // ✅ PRIORIDAD 2: Si no es numérico, buscar por campos textuales
+                        : $q->whereHas('cliente', fn($qCli) =>
+                            $qCli->where('codigo_cliente', 'like', '%' . $busqueda . '%')
+                                ->orWhere('nombre', 'like', '%' . $busqueda . '%')
+                                ->orWhere('nit', 'like', '%' . $busqueda . '%')
+                                ->orWhere('telefono', 'like', '%' . $busqueda . '%')
+                        )
                 )
                 ->when($filtros['usuario_id'] ?? null, fn($q, $usuarioId) =>
                     $q->where('usuario_id', $usuarioId)
                 )
+                ->when($filtros['tipo_pago_id'] ?? null, fn($q, $tipoPagoId) =>
+                    $q->where('tipo_pago_id', $tipoPagoId)  // ✅ NUEVO: Filtro por tipo de pago
+                )
                 ->when($filtros['fecha_desde'] ?? null, fn($q, $fecha) =>
-                    $q->where('fecha', '>=', $fecha)
+                    $q->where('created_at', '>=', $fecha . ' 00:00:00')
                 )
                 ->when($filtros['fecha_hasta'] ?? null, fn($q, $fecha) =>
-                    $q->where('fecha', '<=', $fecha)
+                    $q->where('created_at', '<=', $fecha . ' 23:59:59')
                 )
                 ->when($filtros['numero'] ?? null, fn($q, $numero) =>
                     $q->where('numero', 'like', '%' . $numero . '%')
@@ -503,7 +527,7 @@ class VentaService
                 );
 
             $resultado = $query
-                ->orderByDesc('id')
+                ->orderByDesc('created_at')
                 ->paginate($perPage);
 
             // ✅ DEBUG: Verificar que las relaciones se cargaron correctamente

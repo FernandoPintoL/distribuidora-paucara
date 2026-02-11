@@ -67,7 +67,7 @@
 <div class="separador-doble"></div>
 
 {{-- ==================== SALDO PENDIENTE ==================== --}}
-<div class="center bold" style="font-size: 14px;">
+<div class="center bold">
     <p style="margin: 5px 0; color: #000;">SALDO PENDIENTE</p>
     <p style="margin: 5px 0; font-size: 16px;">Bs {{ number_format($documento->saldo_pendiente, 2) }}</p>
 </div>

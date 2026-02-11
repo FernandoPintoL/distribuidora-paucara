@@ -11,7 +11,7 @@
 {{-- ==================== INFO DEL DOCUMENTO ==================== --}}
 <div class="documento-titulo">COMPRA</div>
 <div class="documento-numero"># {{ $documento->id }} | {{ $documento->numero }}</div>
-<div class="center" style="margin-top: 3px; font-size: 12px;">
+<div class="center" style="margin-top: 3px;">
     @php
         $fecha = null;
         if (is_object($documento) && isset($documento->fecha)) {
@@ -74,7 +74,7 @@
 <div class="separador"></div>
 
 {{-- ==================== ITEMS (tabla compacta) ==================== --}}
-<table class="items" style="font-size: 10px; width: 100%;">
+<table class="items" style="width: 100%;">
     <thead>
         <tr>
             <th style="width: 40%; text-align: left;">Producto</th>
@@ -109,7 +109,7 @@
                     }
                 @endphp
                 <strong>{{ $nombre }}</strong>
-                @if($sku)<br><span style="font-size: 8px;">{{ $sku }}</span>@endif
+                @if($sku)<br><span>{{ $sku }}</span>@endif
             </td>
             <td style="text-align: right;">
                 @php
@@ -152,13 +152,13 @@
             $simbolo = is_array($moneda) ? ($moneda['simbolo'] ?? 'Bs') : (is_object($moneda) ? ($moneda->simbolo ?? 'Bs') : 'Bs');
         }
     @endphp
-    <div style="font-size: 12px; color: #080808; font-weight: bold;">
+    <div style= color: #080808; font-weight: bold;">
         TOTAL: {{ $simbolo }} {{ number_format($total, 2) }}
     </div>
 </div>
 
 {{-- ==================== INFORMACIÓN DE PAGO ==================== --}}
-<div style="font-size: 11px;">
+<div>
     @php
         $tipoPago = '-';
         if (is_object($documento) && isset($documento->tipoPago)) {

@@ -333,7 +333,10 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
                                 onClick={() => handleSort('requiere_envio')}
                             >
-                                Tipo {getSortIcon('requiere_envio')}
+                                🚚 Tipo Entrega {getSortIcon('requiere_envio')}
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                💰 Caja
                             </th>
                             <th scope="col" className="px-6 py-3">
                                 <span className="sr-only">Acciones</span>
@@ -428,9 +431,16 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             {venta.requiere_envio ? (
                                                 <>
                                                     <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                                        Delivery
-                                                    </span>
+                                                    <div>
+                                                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                                            🚚 Delivery
+                                                        </span>
+                                                        {venta.estado_logistico && (
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                {venta.estado_logistico}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <button
                                                         onClick={() => toggleRowExpanded(Number(venta.id))}
                                                         className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
@@ -447,12 +457,34 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <>
                                                     <Store className="w-4 h-4 text-green-600 dark:text-green-400" />
                                                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                                        Presencial
+                                                        🏪 Presencial
                                                     </span>
                                                 </>
                                             )}
                                         </div>
                                     </td>
+
+                                    {/* ✅ NUEVO: Indicador de Caja */}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            {venta.caja_id ? (
+                                                <span
+                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                                    title={`Registrada en Caja ID: ${venta.caja_id}`}
+                                                >
+                                                    ✓ En Caja
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                                    title="No registrada en caja"
+                                                >
+                                                    ⚠ Sin Caja
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex items-center justify-end space-x-2">
                                             {/* Ver */}

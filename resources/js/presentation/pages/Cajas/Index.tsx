@@ -23,6 +23,7 @@ import CierreCajaModal from '@/presentation/components/CierreCajaModal';
 import RegistrarMovimientoModal from '@/presentation/components/RegistrarGastoModal';
 import { OutputSelectionModal, type TipoDocumento } from '@/presentation/components/impresion/OutputSelectionModal';
 import { CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable } from './components';
+import { ResumenCajaCard } from './components/resumen-caja-card';
 import { useCajas } from '@/application/hooks/use-cajas';
 import { toNumber } from '@/lib/cajas.utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/presentation/components/ui/tabs';
@@ -38,13 +39,7 @@ import type { CajasIndexProps } from '@/domain/entities/cajas';
 
 export default function Index(props: CajasIndexProps) {
     // ✅ DEBUG: Ver todos los props que llegan del backend
-    console.log('🔍 [Cajas/Index] Props recibidos del backend:', {
-        efectivoEsperado: props.efectivoEsperado,
-        ventasPorTipoPago: props.ventasPorTipoPago,
-        resumenEfectivo: props.resumenEfectivo,
-        movimientosHoy: props.movimientosHoy?.length,
-        cajaAbiertaHoy: props.cajaAbiertaHoy?.id,
-    });
+    console.log('🔍 [Cajas/Index] Props recibidos del backend:', props);
 
     const {
         showAperturaModal,
@@ -237,6 +232,14 @@ export default function Index(props: CajasIndexProps) {
                         cierresPendientes={cierresPendientes}
                         isConsolidating={isConsolidating}
                     />
+
+                    {/* ✅ NUEVO: Resumen de Caja con datos refactorizados */}
+                    {cajaAbiertaHoy && (
+                        <ResumenCajaCard
+                            datosResumen={props.datosResumen}
+                            cargando={cargandoDatos}
+                        />
+                    )}
 
                     {/* Tabs: Movimientos del Día vs Historial de Cajas */}
                     <Tabs defaultValue="movimientos" className="space-y-6">

@@ -64,6 +64,17 @@ export interface MovimientoCaja {
     pago_id?: number;    // ✅ NUEVO: ID de pago para análisis de rango
     comprobantes?: ComprobanteMovimiento[];
     usuario?: Usuario;   // ✅ NUEVO: Usuario que realizó el movimiento
+    venta?: {           // ✅ NUEVO (2026-02-11): Venta asociada con su estado y tipo entrega
+        id: number;
+        numero: string;
+        tipo_entrega?: string; // ✅ NUEVO: DELIVERY o PICKUP
+        estado_documento?: {
+            id: number;
+            codigo: string;
+            nombre: string;
+        };
+        estado_documento_id?: number;
+    };
 }
 
 export interface AperturaHistorico {
@@ -106,6 +117,32 @@ export interface ResumenEfectivo {
 }
 
 /**
+ * ✅ NUEVO: Datos de cierre de caja refactorizado
+ */
+export interface VentaPorTipoPago {
+    tipo: string;
+    total: number;
+    cantidad: number;
+}
+
+export interface DatosResumen {
+    apertura: number;
+    totalVentas: number;
+    ventasAnuladas: number;
+    pagosCredito: number;
+    totalSalidas: number;
+    totalIngresos: number;
+    totalEgresos: number;
+    efectivoEsperado: number;
+    ventasPorTipoPago: VentaPorTipoPago[];
+    // ✅ NUEVO (2026-02-11): Desglose de salidas
+    sumatorialGastos?: number;
+    sumatorialPagosSueldo?: number;
+    sumatorialAnticipos?: number;
+    sumatorialAnulaciones?: number;
+}
+
+/**
  * Props para el componente Index de Cajas
  */
 export interface CajasIndexProps {
@@ -125,4 +162,5 @@ export interface CajasIndexProps {
     ventasPorEstado?: any; // ✅ NUEVO: Ventas agrupadas por estado
     pagosPorTipoPago?: any; // ✅ NUEVO: Pagos agrupados por tipo de pago
     gastosPorTipoPago?: any; // ✅ NUEVO: Gastos agrupados por tipo de pago
+    datosResumen?: DatosResumen | null; // ✅ NUEVO (2026-02-11): Datos refactorizados de cierre de caja
 }

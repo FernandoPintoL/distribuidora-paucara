@@ -102,7 +102,9 @@ class CajaController extends Controller
             $movimientosHoy = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
-                ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
+                ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario', 'venta' => function($q) {
+                    $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
+                }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
                 ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
                 ->get();
         }
@@ -143,111 +145,80 @@ class CajaController extends Controller
         // ✅ NUEVO: Obtener tipos de pago disponibles
         $tiposPago = \App\Models\TipoPago::all(['id', 'codigo', 'nombre']);
 
-        // ✅ MEJORADO: Usar CierreCajaService como única fuente de verdad
-        $efectivoEsperado  = null;
-        $resumenEfectivo   = null;
-        $ventasPorTipoPago = [];
-        $ventasPorEstadoFormato = [];
-        $pagosFormato = [];
-        $gastosFormato = [];
+        // ✅ REFACTORIZADO: Simplificado - Solo enviar datos esenciales al frontend
+        $datosResumen = null;
 
-        if ($cajaAbiertaHoy && $movimientosHoy) {
-            // ✅ MEJORADO: Usar CierreCajaService para todos los cálculos
+        // ✅ CORREGIDO (2026-02-11): Calcular SIEMPRE si hay caja (incluso sin movimientos)
+        if ($cajaAbiertaHoy) {
             $datosCalculados = $this->cierreCajaService->calcularDatos($cajaAbiertaHoy);
 
-            // Extraer datos calculados del servicio
+            // Extraer sumatorias principales
             $montoApertura = (float) $cajaAbiertaHoy->monto_apertura;
-            $ventasEnEfectivo = (float) $datosCalculados['sumatorialVentasEfectivo'];
-            $pagosCredito = (float) $datosCalculados['montoPagosCreditos'];
-            $totalGastos = (float) $datosCalculados['sumatorialGastos'];
+            $totalVentas = (float) $datosCalculados['totalVentas'];  // Todas las ventas APROBADAS
+            $ventasAnuladas = (float) $datosCalculados['datosReferenciales']['anulaciones'];
+            $pagosCredito = (float) $datosCalculados['detalleEfectivo']['pagos_credito'];
 
-            // Construir efectivoEsperado usando datos del servicio
-            $efectivoEsperado = [
-                'apertura'        => $montoApertura,
-                'ventas_efectivo' => $ventasEnEfectivo,
-                'pagos_credito'   => $pagosCredito,
-                'gastos'          => $totalGastos,
-                'total'           => $montoApertura + $ventasEnEfectivo + $pagosCredito - $totalGastos,
+            // ✅ CORREGIDO (2026-02-11): Usar sumatorias individuales en lugar de salidas_reales
+            // Calcular ingresos y egresos (sin contar créditos, compras, anuladas)
+            $sumatorialGastos = (float) ($datosCalculados['sumatorialGastos'] ?? 0);
+            $sumatorialPagosSueldo = (float) ($datosCalculados['sumatorialPagosSueldo'] ?? 0);
+            $sumatorialAnticipos = (float) ($datosCalculados['sumatorialAnticipos'] ?? 0);
+
+            $totalIngresos = $totalVentas + $pagosCredito;  // Ventas APROBADAS + Pagos CxC
+            $totalEgresos = $sumatorialGastos + $sumatorialPagosSueldo + $sumatorialAnticipos;  // GASTOS + PAGO_SUELDO + ANTICIPO
+            $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
+
+            // Construir listado de ventas por tipo de pago (solo aprobadas)
+            $ventasPorTipoPago = [];
+            $movimientosPorTipo = $datosCalculados['movimientosPorTipoPago'] ?? [];
+            foreach ($movimientosPorTipo as $tipo => $datos) {
+                $ventasPorTipoPago[] = [
+                    'tipo'  => $tipo,
+                    'total' => (float) ($datos['total'] ?? 0),
+                    'cantidad' => (int) ($datos['cantidad'] ?? 0),
+                ];
+            }
+
+            // ✅ Obtener anulaciones del servicio (referencial)
+            $sumatorialAnulaciones = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
+
+            $datosResumen = [
+                'apertura'              => $montoApertura,
+                'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
+                'ventasAnuladas'        => $ventasAnuladas,        // Suma separada de anuladas (referencial)
+                'pagosCredito'          => $pagosCredito,          // Suma de pagos de CxC
+                'totalSalidas'          => $totalEgresos,          // Suma TODAS las salidas (GASTOS + SUELDOS + ANTICIPOS)
+                'totalIngresos'         => $totalIngresos,         // Ventas + Pagos CxC
+                'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO
+                'efectivoEsperado'      => $efectivoEsperado,      // Apertura + Ingresos - Egresos
+                'ventasPorTipoPago'     => $ventasPorTipoPago,     // Desglose por tipo de pago
+                // ✅ NUEVO: Desglose de salidas
+                'sumatorialGastos'      => $sumatorialGastos,
+                'sumatorialPagosSueldo' => $sumatorialPagosSueldo,
+                'sumatorialAnticipos'   => $sumatorialAnticipos,
+                'sumatorialAnulaciones' => $sumatorialAnulaciones,
             ];
 
-            // ✅ Usar datos ya calculados del servicio
-            $resumenEfectivo = $this->movimientoCajaService->obtenerResumenEfectivo(collect($movimientosHoy));
-
-            // ✅ Convertir movimientosPorTipoPago del servicio a formato frontend
-            $todosTiposPago = \App\Models\TipoPago::where('activo', true)->orderBy('nombre')->get();
-
-            $ventasPorTipoPago = [];
-            foreach ($todosTiposPago as $tipo) {
-                $datosMovimiento = $datosCalculados['movimientosPorTipoPago'][$tipo->nombre] ?? null;
-                $ventasPorTipoPago[] = [
-                    'tipo'  => $tipo->nombre,
-                    'total' => $datosMovimiento ? (float) $datosMovimiento['total'] : 0.0,
-                    'count' => $datosMovimiento ? (int) $datosMovimiento['cantidad'] : 0,
-                ];
-            }
-
-            // ✅ Usar ventasPorEstado del servicio
-            $todosEstados = \App\Models\EstadoDocumento::where('activo', true)->orderBy('nombre')->get();
-            $ventasPorEstadoData = $datosCalculados['ventasPorEstado'] ?? [];
-
-            $ventasPorEstadoFormato = [];
-            foreach ($todosEstados as $estado) {
-                $ventasPorEstadoFormato[] = [
-                    'estado' => $estado->nombre,
-                    'total'  => $ventasPorEstadoData[$estado->nombre]['total'] ?? 0.0,
-                    'count'  => $ventasPorEstadoData[$estado->nombre]['count'] ?? 0,
-                ];
-            }
-
-            // ✅ Usar pagosCreditoPorTipoPago del servicio
-            $pagosFormato = [];
-            foreach ($todosTiposPago as $tipo) {
-                $datosMovimiento = $datosCalculados['pagosCreditoPorTipoPago'][$tipo->nombre] ?? null;
-                $pagosFormato[] = [
-                    'tipo'  => $tipo->nombre,
-                    'total' => $datosMovimiento ? (float) $datosMovimiento['total'] : 0.0,
-                    'count' => $datosMovimiento ? (int) $datosMovimiento['cantidad'] : 0,
-                ];
-            }
-
-            // ✅ Usar gastosPorTipoPago del servicio
-            $gastosFormato = [];
-            foreach ($todosTiposPago as $tipo) {
-                $datosMovimiento = $datosCalculados['gastosPorTipoPago'][$tipo->nombre] ?? null;
-                $gastosFormato[] = [
-                    'tipo'  => $tipo->nombre,
-                    'total' => $datosMovimiento ? (float) $datosMovimiento['total'] : 0.0,
-                    'count' => $datosMovimiento ? (int) $datosMovimiento['cantidad'] : 0,
-                ];
-            }
-
-            Log::info('📊 [CajaController] Datos calculados desde CierreCajaService', [
-                'apertura_id' => $cajaAbiertaHoy->id,
-                'total_ingresos' => $datosCalculados['totalIngresos'],
-                'total_egresos' => $datosCalculados['totalEgresos'],
+            Log::info('💰 [CajaController] Resumen de caja calculado', [
+                'apertura_id'       => $cajaAbiertaHoy->id,
+                'totalVentas'       => $totalVentas,
+                'ventasAnuladas'    => $ventasAnuladas,
+                'pagosCredito'      => $pagosCredito,
+                'totalEgresos'      => $totalEgresos,
+                'efectivoEsperado'  => $efectivoEsperado,
             ]);
         }
 
         return Inertia::render('Cajas/Index', [
-            'cajas'              => $cajas,
-            'cajaAbiertaHoy'     => $cajaAbiertaHoy,
-            'movimientosHoy'     => $movimientosHoy,
-            'totalMovimientos'   => $movimientosHoy ? $movimientosHoy->sum('monto') : 0,
-            'historicoAperturas' => $historicoAperturas,
-            'tiposOperacion'     => $tiposOperacion,
-            'tiposOperacionClasificados' => $tiposOperacionClasificados, // ✅ NUEVO: Tipos clasificados por ENTRADA/SALIDA/AJUSTE
-            'tiposPago'          => $tiposPago, // ✅ NUEVO: Tipos de pago
-            'esVistaAdmin'       => ($aperturaCaja !== null || $userId !== null),
-            'usuarioDestino'     => $usuarioDestino,
-            'efectivoEsperado'   => $efectivoEsperado,             // ✅ Efectivo esperado en caja
-            'resumenEfectivo'    => $resumenEfectivo,              // ✅ Resumen de efectivo
-            'ventasPorTipoPago'  => $ventasPorTipoPago,            // ✅ Ventas por tipo de pago
-            'ventasPorEstado'    => $ventasPorEstadoFormato ?? [], // ✅ Ventas por estado de documento
-            'pagosPorTipoPago'   => $pagosFormato ?? [],           // ✅ Pagos por tipo de pago
-            'gastosPorTipoPago'  => $gastosFormato ?? [],          // ✅ Gastos por tipo de pago
-            'ventasTotales'      => $datosCalculados['ventasTotales'] ?? 0, // ✅ NUEVO: Ventas totales de CierreCajaService
-            'ventasAnuladas'     => $datosCalculados['sumatorialVentasAnuladas'] ?? 0, // ✅ NUEVO: Ventas anuladas de CierreCajaService
-            'ventasCredito'      => $datosCalculados['sumatorialVentasCredito'] ?? 0, // ✅ NUEVO: Ventas a crédito de CierreCajaService
+            'cajas'                     => $cajas,
+            'cajaAbiertaHoy'            => $cajaAbiertaHoy,
+            'movimientosHoy'            => $movimientosHoy,
+            'historicoAperturas'        => $historicoAperturas,
+            'tiposOperacion'            => $tiposOperacion,
+            'tiposOperacionClasificados' => $tiposOperacionClasificados,
+            'tiposPago'                 => $tiposPago,
+            'usuarioDestino'            => $usuarioDestino,
+            'datosResumen'              => $datosResumen,  // ✅ Datos simplificados de caja
         ]);
     }
 
@@ -845,7 +816,9 @@ class CajaController extends Controller
         // Obtener movimientos hoy del usuario
         $movimientosHoy = MovimientoCaja::where('user_id', $usuarioDestino->id)
             ->whereDate('fecha', today())
-            ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario']) // ✅ NUEVO: Agregar tipoPago y usuario
+            ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario', 'venta' => function($q) {
+                $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
+            }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
             ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
             ->get();
 

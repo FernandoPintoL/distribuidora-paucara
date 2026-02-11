@@ -114,6 +114,7 @@ export interface Venta extends BaseEntity {
     usuario_id: Id;
     estado_documento_id: Id;
     moneda_id: Id;
+    caja_id?: Id | null;  // ✅ NUEVO: ID de caja para indicador
     proforma_id?: Id;
     tipo_pago_id?: Id;
     tipo_documento_id?: Id;
@@ -192,10 +193,12 @@ export interface FiltrosVentas {
     search?: string;
     id?: number;
     numero?: string;
-    cliente_id?: Id | null;
+    cliente_id?: Id | string | null;  // ✅ ACTUALIZADO: Acepta ID, string de búsqueda, código_cliente, nombre, NIT, teléfono
+    busqueda_cliente?: string | null;  // ✅ NUEVO: Búsqueda alternativa de cliente
     estado_documento_id?: Id | null;
     moneda_id?: Id | null;
     usuario_id?: Id | null;
+    tipo_pago_id?: Id | null;  // ✅ NUEVO: Filtro por tipo de pago
     estado_pago?: string | null;  // ✅ NUEVO: Filtro por estado de pago
     estado_logistico?: string | null;  // ✅ NUEVO: Filtro por estado logístico
     fecha_desde?: string;
@@ -249,6 +252,7 @@ export interface DatosParaFiltrosVentas {
     estados_documento: EstadoDocumento[];
     monedas: Moneda[];
     usuarios: Usuario[];
+    tipos_pago?: TipoPago[];  // ✅ NUEVO: Tipos de pago para filtrado
 }
 
 // =============== DATOS PARA FORMULARIOS ===============

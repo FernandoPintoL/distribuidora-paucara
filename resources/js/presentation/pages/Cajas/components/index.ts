@@ -9,3 +9,4 @@ export { CajaHeader } from './caja-header';
 export { CajaEstadoCard } from './caja-estado-card';
 export { MovimientosDelDiaTable } from './movimientos-del-dia-table';
 export { HistorialAperturasTable } from './historial-aperturas-table';
+export { ResumenCajaCard } from './resumen-caja-card';

@@ -80,6 +80,8 @@ export function CajaEstadoCard({
     // ✅ MEJORADO: Usar datos frescos del servidor si están disponibles
     const efectivoActual = datosActualizados?.efectivo_esperado || efectivoEsperado;
 
+    console.log('Efectivo actual (usando datos actualizados si están disponibles):', efectivoActual);
+
     if (!cajaAbiertaHoy) {
         return (
             <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
@@ -229,6 +231,22 @@ export function CajaEstadoCard({
                                 {efectivoActual ? formatCurrency(efectivoActual.total) : formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos)}
                             </p>
                         </div>
+
+                        {/* ✅ NUEVO: Referencial - Sumatoria de TODAS las ventas aprobadas */}
+                        {datosActualizados?.sumatoria_ventas_total && (
+                            <div className="pt-3 border-t border-gray-300 dark:border-gray-600">
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                                    📊 REFERENCIAL: Total Ventas Aprobadas
+                                    <span className="ml-1 text-gray-500 dark:text-gray-500">(todos los tipos de pago)</span>
+                                </label>
+                                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                    {formatCurrency(datosActualizados.sumatoria_ventas_total)}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Efectivo + Transferencia + Cheque + Crédito (aprobadas)
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Acciones - Usuario Normal */}

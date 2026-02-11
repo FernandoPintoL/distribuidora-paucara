@@ -24,7 +24,8 @@ export default function FiltrosVentasComponent({
         clientes: datosParaFiltros?.clientes || [],
         estados_documento: datosParaFiltros?.estados_documento || [],
         monedas: datosParaFiltros?.monedas || [],
-        usuarios: datosParaFiltros?.usuarios || []
+        usuarios: datosParaFiltros?.usuarios || [],
+        tipos_pago: datosParaFiltros?.tipos_pago || []  // ✅ NUEVO: Tipos de pago
     };
 
     // Detectar si hay filtros activos
@@ -38,7 +39,8 @@ export default function FiltrosVentasComponent({
         filtros.fecha_hasta ||
         filtros.monto_min ||
         filtros.monto_max ||
-        filtros.usuario_id
+        filtros.usuario_id ||
+        filtros.tipo_pago_id  // ✅ NUEVO: Incluir tipo_pago_id
     );
 
     useEffect(() => {
@@ -133,19 +135,24 @@ export default function FiltrosVentasComponent({
                 </div>
 
 
-                {/* Cliente */}
-                <div>
-                    <SearchSelect
-                        placeholder="Seleccionar cliente..."
+                {/* Cliente - Búsqueda por múltiples campos */}
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Cliente (ID, código, nombre, NIT, teléfono)"
+                        title="Buscar por ID, código cliente, nombre, NIT o teléfono"
                         value={filtros.cliente_id || ''}
-                        options={datosSeguros.clientes.map((cliente) => ({
-                            value: cliente.id,
-                            label: cliente.nombre,
-                            description: cliente.nit ? `NIT: ${cliente.nit}` : undefined
-                        }))}
-                        onChange={(value) => handleFiltroChange('cliente_id', value ? Number(value) : null)}
-                        allowClear={true}
-                        className="w-full"
+                        onChange={(e) => handleFiltroChange('cliente_id', e.target.value || null)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                aplicarFiltros();
+                            }
+                        }}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                     />
                 </div>
 
@@ -236,6 +243,25 @@ export default function FiltrosVentasComponent({
                             />
                         </div>
 
+                        {/* Tipo de Pago */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Tipo de Pago
+                            </label>
+                            <select
+                                value={filtros.tipo_pago_id || ''}
+                                onChange={(e) => handleFiltroChange('tipo_pago_id', e.target.value ? Number(e.target.value) : null)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                            >
+                                <option value="">Todos los tipos</option>
+                                {datosSeguros.tipos_pago.map((tipo) => (
+                                    <option key={tipo.id} value={tipo.id}>
+                                        {tipo.nombre}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* Rango de montos */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -298,6 +324,46 @@ export default function FiltrosVentasComponent({
                     </div>
                 </div>
             )}
+
+            {/* ✅ NUEVO: Filtros rápidos por Estado */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Estados rápidos:
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => handleFiltroChange('estado_documento_id', 3)} // ID de APROBADO
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                            filtros.estado_documento_id === 3
+                                ? 'bg-green-600 text-white'
+                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                        }`}
+                    >
+                        ✓ Aprobadas
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleFiltroChange('estado_documento_id', 5)} // ID de ANULADO
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                            filtros.estado_documento_id === 5
+                                ? 'bg-red-600 text-white'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                        }`}
+                    >
+                        ✗ Anuladas
+                    </button>
+                    {filtros.estado_documento_id && (
+                        <button
+                            type="button"
+                            onClick={() => handleFiltroChange('estado_documento_id', null)}
+                            className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-700"
+                        >
+                            ↻ Limpiar
+                        </button>
+                    )}
+                </div>
+            </div>
 
             {/* Botones de acción */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">

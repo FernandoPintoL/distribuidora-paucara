@@ -16,20 +16,37 @@ use Illuminate\Support\Facades\Log;
  * - Cálculos más simples y mantenibles
  * - SQL más eficiente
  *
+ * ✅ REFACTORIZADO (2026-02-11):
+ * - Eliminada duplicación de código en cálculos de ventas
+ * - Uso consistente de estados_documento.codigo (no nombres)
+ * - Métodos auxiliares para validación de estados
+ * - Mejor mantenibilidad y seguridad
+ *
  * Direcciones:
  * - ENTRADA: Ingresos (VENTA, PAGO)
  * - SALIDA: Egresos (COMPRA, GASTOS, PAGO_SUELDO, ANTICIPO, ANULACION)
  * - AJUSTE: Especiales (AJUSTE, CREDITO)
  * - ESPECIAL: Sistema (APERTURA, CIERRE)
+ *
+ * Códigos de Estado (SIEMPRE usar .codigo, no .nombre):
+ * - APROBADO: Venta confirmada
+ * - ANULADO: Venta cancelada
  */
 class CierreCajaService
 {
     protected $fechaFin;
 
+    // Códigos de estado estándar
+    const ESTADO_APROBADO = 'APROBADO';
+    const ESTADO_ANULADO = 'ANULADO';
+
     /**
+     * ✅ REFACTORIZADO (2026-02-11): Cálculos Simplificados
      * Calcular TODOS los datos necesarios para cierre de caja
      *
-     * ✅ REFACTORIZADO: Usa columna 'direccion' en lugar de lógica hardcodeada
+     * Cálculos Principales (NUEVOS):
+     * - totalVentas = Sumatoria de TODAS las ventas por todos sus tipos de pago
+     * - totalEfectivo = (Efectivo + Transferencias) - Crédito + Pagos CxC - Salidas
      *
      * @param AperturaCaja $aperturaCaja
      * @return array Datos con todos los cálculos
@@ -40,15 +57,45 @@ class CierreCajaService
         $movimientos = $this->obtenerMovimientos($aperturaCaja);
         $movimientosVenta = $this->obtenerMovimientosVenta($aperturaCaja);
 
-        // Totales básicos usando DIRECCION
-        $totalIngresos = $this->calcularTotalIngresos($movimientos);
-        $totalEgresos = $this->calcularTotalEgresos($movimientos);
+        // ✅ NUEVOS CÁLCULOS PRINCIPALES SIMPLIFICADOS
+        $totalVentas = $this->calcularTotalVentas($aperturaCaja);
+        $efectivoEnCaja = $this->calcularEfectivoEnCaja($aperturaCaja, $movimientos);
+
+        // Detalles para breakdown
+        $ventasEfectivoTransferencia = $this->calcularVentasPorTipoPagoEspecifico($aperturaCaja, ['EFECTIVO', 'TRANSFERENCIA/QR']);
+        $ventasCredito = $this->calcularVentasAprobadasCredito($aperturaCaja);
+        $pagosCredito = $this->calcularPagosCredito($movimientos);
+        $salidasReales = $this->calcularSalidasReales($movimientos);
+        $compras = $this->calcularCompras($movimientos);  // Referencial (promesa de pago)
+        $anulaciones = $this->calcularAnulaciones($movimientos);  // Referencial (transacción cancelada)
+        $totalSalidas = $this->calcularTotalSalidas($movimientos);
 
         return [
             'apertura'                  => $aperturaCaja,
             'cierre'                    => $aperturaCaja->cierre,
             'movimientos'               => $movimientos,
             'movimientosAgrupados'      => $this->agruparPorTipoOperacion($movimientos),
+
+            // ✅ CÁLCULOS PRINCIPALES (NUEVOS)
+            'totalVentas'               => (float) $totalVentas,  // Todas las ventas
+            'totalEfectivo'             => (float) $efectivoEnCaja, // Todo efectivo en caja
+
+            // Breakdown del Efectivo en Caja (para detalles y auditoría)
+            'detalleEfectivo' => [
+                'ventas_efectivo_transferencia' => (float) $ventasEfectivoTransferencia,
+                'pagos_credito'                 => (float) $pagosCredito,
+                'total_entradas_efectivo'       => (float) ($ventasEfectivoTransferencia + $pagosCredito),
+                'salidas_reales'                => (float) $salidasReales,
+            ],
+
+            // Datos Referenciales (NO afectan totalEfectivo, solo informativos)
+            'datosReferenciales' => [
+                'ventas_credito'   => (float) $ventasCredito,       // Promesa de pago del cliente
+                'compras'          => (float) $compras,             // Promesa de pago a proveedor
+                'anulaciones'      => (float) $anulaciones,         // Transacciones canceladas (nunca pasaron)
+            ],
+
+            // Datos para reportes detallados (compatibilidad)
             'ventasPorTipoPago'         => $this->calcularVentasPorTipoPago($movimientos),
             'ventasPorTipoPagoCompleto' => $this->calcularVentasPorTipoPagoConTodos($this->calcularVentasPorTipoPago($movimientos)),
             'sumatoriasVentasPorTipoPago' => $this->calcularSumatoriasVentasPorTipoPago($movimientos),
@@ -57,8 +104,8 @@ class CierreCajaService
             'gastosPorTipoPago'         => $this->calcularGastosPorTipoPago($movimientos),
             'ventasPorEstado'           => $this->calcularVentasPorEstado($aperturaCaja),
             'efectivoEsperado'          => $this->calcularEfectivoEsperado($aperturaCaja, $movimientos),
-            'totalIngresos'             => (float) $totalIngresos,
-            'totalEgresos'              => (float) $totalEgresos,
+            'totalIngresos'             => $this->calcularTotalIngresos($movimientos),
+            'totalEgresos'              => $this->calcularTotalEgresos($movimientos),
             'primeraVenta'              => $this->calcularRangoFechas($movimientos, $movimientosVenta)['primeraVenta'],
             'ultimaVenta'               => $this->calcularRangoFechas($movimientos, $movimientosVenta)['ultimaVenta'],
             'primerMovimiento'          => $this->calcularRangoFechas($movimientos, $movimientosVenta)['primerMovimiento'],
@@ -68,36 +115,318 @@ class CierreCajaService
             'pagosCreditos'             => $this->calcularRangoPagos($movimientos)['totalPagos'] ?? 0,
             'montoPagosCreditos'        => $this->calcularRangoPagos($movimientos)['montoPagos'] ?? 0,
             'rangoPagos'                => $this->calcularRangoPagos($movimientos),
-            'sumatorialVentas'          => $this->calcularVentasAprobadasTotal($aperturaCaja),
-            'ventasTotalAprobadas'      => $this->calcularVentasAprobadasTotal($aperturaCaja),
-            'sumatorialVentasEfectivo'  => $this->calcularVentasAprobadasEfectivo($aperturaCaja),
-            'sumatorialVentasCredito'   => $this->calcularVentasAprobadasCredito($aperturaCaja),
+            'sumatorialVentas'          => $totalVentas,
+            'ventasTotalAprobadas'      => $totalVentas,
+            'sumatorialVentasEfectivo'  => $ventasEfectivoTransferencia,
+            'sumatorialVentasCredito'   => $ventasCredito,
             'sumatorialGastos'          => $this->calcularSumaPorCodigo($movimientos, 'GASTOS'),
             'sumatorialPagosSueldo'     => $this->calcularSumaPorCodigo($movimientos, 'PAGO_SUELDO'),
             'sumatorialAnticipos'       => $this->calcularSumaPorCodigo($movimientos, 'ANTICIPO'),
-            'sumatorialAnulaciones'     => $this->calcularSumaPorCodigo($movimientos, 'ANULACION'),
-            'sumatorialVentasAnuladas'  => $this->calcularVentasAnuladas($aperturaCaja),
-            'ventasTotales'             => $this->calcularVentasAprobadasEfectivo($aperturaCaja) + $this->calcularVentasAprobadasCredito($aperturaCaja),
+            'sumatorialAnulaciones'     => (float) $anulaciones,  // Referencial (no afecta totalEfectivo)
+            'sumatorialVentasAnuladas'  => $this->calcularVentasAnuladas($aperturaCaja),  // Referencial
+            'sumatorialCompras'         => (float) $compras,  // Referencial
+            'sumatorialSalidasReales'   => (float) $salidasReales,
+            'ventasTotales'             => $totalVentas,
         ];
     }
 
     /**
-     * ✅ NUEVO: Calcular total de ingresos usando DIRECCION (ENTRADA)
+     * ✅ NUEVO: Calcular TOTAL DE VENTAS
+     * Suma todas las ventas aprobadas de TODOS los tipos de pago
+     *
+     * Fórmula: VENTA.total + CREDITO.total (ambas en estado APROBADO)
+     */
+    private function calcularTotalVentas(AperturaCaja $aperturaCaja): float
+    {
+        try {
+            // ✅ CORREGIDO (2026-02-11): SOLO VENTA (sin CREDITO)
+            // VENTA = Operaciones completadas / CREDITO = Cuentas por cobrar
+            $totalVentas = DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VENTA')  // ✅ SOLO VENTA (no CREDITO)
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->sum('ventas.total');
+
+            Log::info('💰 [calcularTotalVentas]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'total' => $totalVentas,
+            ]);
+
+            return (float) $totalVentas;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularTotalVentas]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Calcular EFECTIVO EN CAJA
+     * (Efectivo + Transferencias) + Pagos de CxC - Salidas REALES
+     *
+     * ✅ NOTA IMPORTANTE:
+     * - CREDITO (Ventas al crédito) = Promesa de pago, NO afecta efectivo
+     * - COMPRA (Deuda a proveedores) = Promesa de pago, NO afecta efectivo (solo referencial)
+     * - Solo resta dinero que REALMENTE sale: GASTOS, PAGO_SUELDO, ANTICIPO, ANULACION
+     *
+     * Fórmula:
+     * = Apertura
+     * + Ventas Efectivo/Transferencia
+     * + Pagos de Crédito (dinero que entra al cobrar deudas)
+     * - Dinero que sale (Gastos, Sueldos, Anticipos, Anulaciones)
+     *
+     * Datos Referenciales (no afectan totalEfectivo):
+     * - Ventas al Crédito (promesa de pago)
+     * - Compras (deuda a proveedores)
+     */
+    private function calcularEfectivoEnCaja(AperturaCaja $aperturaCaja, $movimientos): float
+    {
+        $montoApertura = $aperturaCaja->monto_apertura ?? 0;
+
+        // Entrada 1: Ventas en Efectivo + Transferencias
+        $ventasEfectivoTransferencia = $this->calcularVentasPorTipoPagoEspecifico($aperturaCaja, ['EFECTIVO', 'TRANSFERENCIA/QR']);
+
+        // Entrada 2: Pagos de Cuentas por Cobrar (Crédito pagado en efectivo)
+        $pagosCredito = $this->calcularPagosCredito($movimientos);
+
+        // Salida: Dinero que REALMENTE sale (excluye COMPRA y CREDITO, que son promesas)
+        $dineroQueRealmnteSale = $this->calcularSalidasReales($movimientos);
+
+        // Referencial (no afecta cálculo):
+        $ventasCredito = $this->calcularVentasAprobadasCredito($aperturaCaja);
+        $compras = $this->calcularCompras($movimientos);
+
+        $efectivoTotal = $montoApertura + $ventasEfectivoTransferencia + $pagosCredito - $dineroQueRealmnteSale;
+
+        Log::info('💵 [calcularEfectivoEnCaja]:', [
+            'apertura_id' => $aperturaCaja->id,
+            'apertura' => $montoApertura,
+            'ventas_efectivo_transferencia' => $ventasEfectivoTransferencia,
+            'pagos_credito' => $pagosCredito,
+            'dinero_que_realmente_sale' => $dineroQueRealmnteSale,
+            'total_efectivo' => $efectivoTotal,
+            'referencial_ventas_credito' => $ventasCredito,
+            'referencial_compras' => $compras,
+        ]);
+
+        return (float) $efectivoTotal;
+    }
+
+    /**
+     * Calcular ventas por tipos de pago específicos
+     * (ej: EFECTIVO + TRANSFERENCIA)
+     */
+    /**
+     * ✅ Calcular ventas aprobadas filtrando por código de tipo de pago
+     * @param array $tiposPago Array de CÓDIGOS (ej: ['EFECTIVO', 'TRANSFERENCIA/QR'])
+     */
+    private function calcularVentasPorTipoPagoEspecifico(AperturaCaja $aperturaCaja, array $tiposPago): float
+    {
+        try {
+            return (float) DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VENTA')
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)
+                ->whereIn('tipos_pago.codigo', $tiposPago)
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->sum('ventas.total');
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasPorTipoPagoEspecifico]:', [
+                'tipos_pago' => $tiposPago,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
+    }
+
+    /**
+     * Calcular pagos de crédito (cuentas por cobrar pagadas)
+     */
+    private function calcularPagosCredito($movimientos): float
+    {
+        try {
+            $pagos = $movimientos
+                ->filter(fn($m) => $m->tipoOperacion?->codigo === 'PAGO' && $m->pago?->estado === 'REGISTRADO')
+                ->sum('monto');
+
+            Log::info('📥 [calcularPagosCredito]:', [
+                'total' => $pagos,
+            ]);
+
+            return (float) $pagos;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularPagosCredito]:', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ Calcular SALIDAS REALES (dinero que realmente sale)
+     * Incluye SOLO los tipos con dirección='SALIDA' que son dinero real:
+     * - GASTOS: Gastos operacionales ✓
+     * - PAGO_SUELDO: Pago de nómina ✓
+     * - ANTICIPO: Anticipos a empleados ✓
+     *
+     * Excluye:
+     * - ANULACION: Ventas anuladas (transacción que nunca pasó) ❌
+     * - COMPRA: Deuda a proveedores (promesa de pago) ❌
+     *
+     * ✅ NOTA: Este es el dinero que REALMENTE afecta el efectivo en caja
+     */
+    private function calcularSalidasReales($movimientos): float
+    {
+        try {
+            // Restar solo los tipos que son dinero real que sale
+            // EXCLUYE ANULACION (transacción cancelada, nunca pasó)
+            $salidas = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']))
+                ->sum('monto'));
+
+            // Desglose por tipo para logging
+            $desglose = $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']))
+                ->groupBy(fn($m) => $m->tipoOperacion?->codigo)
+                ->map(fn($grupo) => abs((float) $grupo->sum('monto')))
+                ->toArray();
+
+            Log::info('💸 [calcularSalidasReales]:', [
+                'total' => $salidas,
+                'desglose' => $desglose,
+            ]);
+
+            return $salidas;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularSalidasReales]:', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ Calcular ANULACIONES (referencial, no afecta totalEfectivo)
+     * Dinero que sale por devoluciones/cancelaciones
+     * Se muestra como referencial para auditoría
+     *
+     * ⚠️ NOTA IMPORTANTE:
+     * - Venta anulada = transacción que nunca pasó
+     * - No debe restar del totalEfectivo
+     * - Solo referencial para análisis
+     */
+    private function calcularAnulaciones($movimientos): float
+    {
+        try {
+            $anulaciones = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m) && $m->tipoOperacion?->codigo === 'ANULACION')
+                ->sum('monto'));
+
+            Log::info('🗑️ [calcularAnulaciones] (referencial, no afecta totalEfectivo):', [
+                'total' => $anulaciones,
+            ]);
+
+            return $anulaciones;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularAnulaciones]:', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ Calcular COMPRAS (referencial, promesa de pago)
+     * Dinero que NO está saliendo ahora, es deuda a proveedores
+     * Solo se afecta el efectivo cuando realmente se paga
+     *
+     * Usado para: Reportes, análisis de deuda, auditoría
+     */
+    private function calcularCompras($movimientos): float
+    {
+        try {
+            $compras = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m) && $m->tipoOperacion?->codigo === 'COMPRA')
+                ->sum('monto'));
+
+            Log::info('📦 [calcularCompras] (referencial):', [
+                'total' => $compras,
+            ]);
+
+            return $compras;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularCompras]:', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ Calcular TOTAL DE TODAS LAS SALIDAS (incluyendo promesas)
+     * Incluye dinero real + promesas de pago, para reportes generales
+     * Usa dirección para ser automático (no hardcodeado)
+     */
+    private function calcularTotalSalidas($movimientos): float
+    {
+        try {
+            // Sumar TODAS las operaciones con dirección='SALIDA'
+            $salidas = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m))
+                ->sum('monto'));
+
+            // Desglose por tipo para logging
+            $desglose = $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+                ->filter(fn($m) => $this->esPagoValido($m))
+                ->groupBy(fn($m) => $m->tipoOperacion?->codigo)
+                ->map(fn($grupo) => abs((float) $grupo->sum('monto')))
+                ->toArray();
+
+            Log::info('📤 [calcularTotalSalidas] (todo incl. promesas):', [
+                'total' => $salidas,
+                'desglose' => $desglose,
+            ]);
+
+            return $salidas;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularTotalSalidas]:', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * ✅ Calcular total de ingresos usando DIRECCION (ENTRADA)
+     * ✅ Filtra movimientos con pagos válidos (no anulados)
      */
     private function calcularTotalIngresos($movimientos): float
     {
         return (float) $movimientos
-            ->filter(fn($m) => $m->tipoOperacion?->direccion === 'ENTRADA' && $m->pago?->estado !== 'ANULADO')
+            ->filter(fn($m) =>
+                $m->tipoOperacion?->direccion === 'ENTRADA' && $this->esPagoValido($m)
+            )
             ->sum('monto');
     }
 
     /**
-     * ✅ NUEVO: Calcular total de egresos usando DIRECCION (SALIDA)
+     * ✅ Calcular total de egresos (dinero que realmente sale)
+     * ✅ Excluye ANULACION (transacción cancelada)
+     * ✅ Excluye COMPRA (promesa de pago)
+     *
+     * Incluye SOLO dinero real que sale:
+     * - GASTOS
+     * - PAGO_SUELDO
+     * - ANTICIPO
      */
     private function calcularTotalEgresos($movimientos): float
     {
         return abs((float) $movimientos
-            ->filter(fn($m) => $m->tipoOperacion?->direccion === 'SALIDA' && $m->pago?->estado !== 'ANULADO')
+            ->filter(fn($m) =>
+                $m->tipoOperacion?->direccion === 'SALIDA' &&
+                $this->esPagoValido($m) &&
+                !in_array($m->tipoOperacion?->codigo, ['ANULACION', 'COMPRA'])
+            )
             ->sum('monto'));
     }
 
@@ -114,9 +443,20 @@ class CierreCajaService
      */
     private function calcularSumaPorCodigo($movimientos, string $codigo): float
     {
-        return abs((float) $movimientos
-            ->where('tipoOperacion.codigo', $codigo)
+        $resultado = abs((float) $movimientos
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === $codigo)
             ->sum('monto'));
+
+        // ✅ DEBUG: Logging para diagnosticar
+        Log::info('🔍 [calcularSumaPorCodigo]', [
+            'codigo' => $codigo,
+            'total_movimientos' => $movimientos->count(),
+            'movimientos_filtrados' => $movimientos->filter(fn($m) => $m->tipoOperacion?->codigo === $codigo)->count(),
+            'resultado' => $resultado,
+            'primeros_3_tipos' => $movimientos->take(3)->map(fn($m) => $m->tipoOperacion?->codigo)->toArray(),
+        ]);
+
+        return $resultado;
     }
 
     /**
@@ -133,12 +473,16 @@ class CierreCajaService
 
     /**
      * Obtener solo movimientos de venta APROBADAS
+     * ✅ Usa estados_documento.codigo para validación segura
      */
     private function obtenerMovimientosVenta(AperturaCaja $aperturaCaja)
     {
         $tipoOperacionVentaId = TipoOperacionCaja::where('codigo', 'VENTA')->first()?->id;
 
         if (!$tipoOperacionVentaId) {
+            Log::warning('⚠️ Tipo operación VENTA no encontrado en BD', [
+                'apertura_id' => $aperturaCaja->id,
+            ]);
             return collect();
         }
 
@@ -147,7 +491,7 @@ class CierreCajaService
             ->where('tipo_operacion_id', $tipoOperacionVentaId)
             ->with(['tipoPago', 'venta.estadoDocumento'])
             ->get()
-            ->filter(fn($m) => $m->venta?->estadoDocumento?->nombre === 'Aprobado');
+            ->filter(fn($m) => $this->esVentaAprobada($m)); // ✅ Usa validación por código
     }
 
     /**
@@ -159,22 +503,50 @@ class CierreCajaService
     }
 
     /**
+     * Validar si un movimiento tiene venta en estado aprobado
+     * ✅ Siempre usa estados_documento.codigo para mayor seguridad
+     */
+    private function esVentaAprobada($movimiento): bool
+    {
+        return $movimiento->venta?->estadoDocumento?->codigo === self::ESTADO_APROBADO;
+    }
+
+    /**
+     * Validar si un movimiento tiene venta en estado anulado
+     */
+    private function esVentaAnulada($movimiento): bool
+    {
+        return $movimiento->venta?->estadoDocumento?->codigo === self::ESTADO_ANULADO;
+    }
+
+    /**
+     * Validar si un pago es válido (no anulado)
+     */
+    private function esPagoValido($movimiento): bool
+    {
+        return $movimiento->pago?->estado !== 'ANULADO';
+    }
+
+    /**
      * Calcular ventas por tipo de pago (VENTA + CREDITO aprobadas)
      */
     private function calcularVentasPorTipoPago($movimientos)
     {
+        // ✅ CORREGIDO (2026-02-11): SOLO VENTA (sin CREDITO)
         $resultado = $movimientos
             ->filter(function ($mov) {
-                $estado = $mov->venta?->estadoDocumento?->nombre;
-                if ($estado !== 'Aprobado') return false;
+                // ✅ Usa estado código en lugar de nombre
+                if (!$this->esVentaAprobada($mov)) return false;
 
                 $tipoOp = $mov->tipoOperacion?->codigo;
-                return in_array($tipoOp, ['VENTA', 'CREDITO']);
+                // ✅ SOLO VENTA (sin CREDITO que son cuentas por cobrar)
+                return $tipoOp === 'VENTA';
             })
             ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
             ->map(fn($grupo) => [
                 'cantidad' => $grupo->count(),
-                'total' => $grupo->sum('monto'),
+                // ✅ CORREGIDO (2026-02-11): Usa ventas.total (no movimientos_caja.monto)
+                'total' => (float) $grupo->sum(fn($m) => $m->venta?->total ?? 0),
             ]);
 
         Log::info('📊 [calcularVentasPorTipoPago]:', $resultado->toArray());
@@ -183,31 +555,31 @@ class CierreCajaService
 
     /**
      * Calcular movimientos por tipo de pago (filtrando por dirección y estado de pago)
+     * ✅ Usa estados_documento.codigo para validación de ventas
+     */
+    /**
+     * ✅ REFACTORIZADO (2026-02-11): Ventas por tipo de pago
+     * - Solo VENTAS aprobadas (NO creditos)
+     * - Usa ventas.total (no movimientos_caja.monto)
+     * - Agrupa por tipo de pago
      */
     private function calcularMovimientosPorTipoPago($movimientos)
     {
         return $movimientos
             ->filter(function ($m) {
-                // Excluir pagos anulados
-                if ($m->pago?->estado === 'ANULADO') return false;
-
-                // Ventas: solo aprobadas
+                // Solo VENTAS aprobadas (excluyendo CREDITO)
                 if ($m->tipoOperacion->codigo === 'VENTA') {
-                    return $m->venta?->estadoDocumento?->nombre === 'Aprobado';
+                    return $this->esVentaAprobada($m);
                 }
 
-                // Pagos: solo registrados
-                if ($m->tipoOperacion->codigo === 'PAGO') {
-                    return $m->pago?->estado === 'REGISTRADO';
-                }
-
-                // Otros: incluir todos
-                return true;
+                // Excluir todo lo demás (CREDITO, PAGO, GASTOS, etc.)
+                return false;
             })
             ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
             ->map(fn($grupo) => [
                 'cantidad' => $grupo->count(),
-                'total' => $grupo->sum('monto'),
+                // Usar ventas.total (no movimientos_caja.monto) para consistencia con calcularTotalVentas()
+                'total' => (float) $grupo->sum(fn($m) => $m->venta?->total ?? 0),
             ]);
     }
 
@@ -217,8 +589,7 @@ class CierreCajaService
     private function calcularPagosCreditoPorTipoPago($movimientos)
     {
         return $movimientos
-            ->where('tipoOperacion.codigo', 'PAGO')
-            ->filter(fn($m) => $m->pago?->estado === 'REGISTRADO')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'PAGO' && $m->pago?->estado === 'REGISTRADO')
             ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
             ->map(fn($grupo) => [
                 'tipo' => $grupo->first()?->tipoPago?->nombre ?? 'Sin tipo',
@@ -234,7 +605,7 @@ class CierreCajaService
     private function calcularGastosPorTipoPago($movimientos)
     {
         return $movimientos
-            ->where('tipoOperacion.codigo', 'GASTOS')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'GASTOS')
             ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
             ->map(fn($grupo) => [
                 'tipo' => $grupo->first()?->tipoPago?->nombre ?? 'Sin tipo',
@@ -246,72 +617,94 @@ class CierreCajaService
 
     /**
      * Calcular ventas agrupadas por estado de documento
+     * ✅ Usa estados_documento.codigo en lugar de nombre para mayor seguridad
      */
     private function calcularVentasPorEstado(AperturaCaja $aperturaCaja)
     {
-        return DB::table('movimientos_caja')
-            ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
-            ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
-            ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-            ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-            ->where('tipo_operacion_caja.codigo', 'VENTA')
-            ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
-            ->groupBy('estados_documento.id', 'estados_documento.nombre')
-            ->select(
-                'estados_documento.nombre as estado',
-                DB::raw('COUNT(DISTINCT ventas.id) as cantidad'),
-                DB::raw('SUM(ventas.total) as total')
-            )
-            ->get()
-            ->map(fn($g) => [
-                'estado' => $g->estado ?? 'Sin estado',
-                'total' => (float) ($g->total ?? 0),
-                'count' => (int) ($g->cantidad ?? 0),
+        try {
+            return DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VENTA')
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->groupBy('estados_documento.codigo', 'estados_documento.nombre')
+                ->select(
+                    'estados_documento.codigo as codigo',
+                    'estados_documento.nombre as estado',
+                    DB::raw('COUNT(DISTINCT ventas.id) as cantidad'),
+                    DB::raw('SUM(ventas.total) as total')
+                )
+                ->get()
+                ->map(fn($g) => [
+                    'codigo' => $g->codigo ?? 'SIN_ESTADO', // ✅ Agregado código
+                    'estado' => $g->estado ?? 'Sin estado',
+                    'total' => (float) ($g->total ?? 0),
+                    'count' => (int) ($g->cantidad ?? 0),
+                ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasPorEstado]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
             ]);
+            return collect();
+        }
     }
 
     /**
      * Calcular efectivo esperado en caja
+     * ✅ Usa estados_documento.codigo en lugar de nombres
      */
     private function calcularEfectivoEsperado(AperturaCaja $aperturaCaja, $movimientos)
     {
         $montoApertura = $aperturaCaja->monto_apertura ?? 0;
 
+        // Ventas en efectivo aprobadas
         $ventasEfectivo = $movimientos
-            ->where('tipoOperacion.codigo', 'VENTA')
-            ->where('tipoPago.nombre', 'Efectivo')
-            ->filter(fn($m) => $m->venta?->estadoDocumento?->nombre === 'Aprobado')
+            ->filter(fn($m) =>
+                $m->tipoOperacion?->codigo === 'VENTA' &&
+                $m->tipoPago?->nombre === 'Efectivo' &&
+                $this->esVentaAprobada($m)
+            )
             ->sum('monto');
 
+        // Ventas anuladas en efectivo
         $ventasAnuladas = $movimientos
-            ->where('tipoOperacion.codigo', 'VENTA')
-            ->where('tipoPago.nombre', 'Efectivo')
-            ->filter(fn($m) => $m->venta?->estadoDocumento?->nombre === 'Anulado')
+            ->filter(fn($m) =>
+                $m->tipoOperacion?->codigo === 'VENTA' &&
+                $m->tipoPago?->nombre === 'Efectivo' &&
+                $this->esVentaAnulada($m)
+            )
             ->sum('monto');
 
+        // Pagos de crédito en efectivo
         $pagosCreditoEfectivo = $movimientos
-            ->where('tipoOperacion.codigo', 'PAGO')
-            ->where('tipoPago.nombre', 'Efectivo')
+            ->filter(fn($m) =>
+                $m->tipoOperacion?->codigo === 'PAGO' &&
+                $m->tipoPago?->nombre === 'Efectivo'
+            )
             ->sum('monto');
 
         // Egresos por dirección SALIDA
         $gastos = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-            ->where('tipoOperacion.codigo', 'GASTOS')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'GASTOS')
             ->sum('monto'));
 
         $pagosSueldo = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-            ->where('tipoOperacion.codigo', 'PAGO_SUELDO')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'PAGO_SUELDO')
             ->sum('monto'));
 
         $anticipos = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-            ->where('tipoOperacion.codigo', 'ANTICIPO')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANTICIPO')
             ->sum('monto'));
 
         $anulaciones = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-            ->where('tipoOperacion.codigo', 'ANULACION')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')
             ->sum('monto'));
 
-        $totalEgresos = $gastos + $pagosSueldo + $anticipos + $anulaciones;
+        // ✅ EXCLUYE ANULACIONES y COMPRA (solo dinero real que sale)
+        $totalEgresos = $gastos + $pagosSueldo + $anticipos;
 
         return [
             'apertura' => $montoApertura,
@@ -365,7 +758,7 @@ class CierreCajaService
     private function calcularRangoCreditos($movimientosVenta)
     {
         $creditosIds = $movimientosVenta
-            ->where('tipoPago.nombre', 'Crédito')
+            ->filter(fn($m) => $m->tipoPago?->nombre === 'Crédito')
             ->pluck('venta_id')
             ->filter(fn($id) => !empty($id) && $id > 0)
             ->unique()
@@ -376,7 +769,7 @@ class CierreCajaService
             'maxId' => $creditosIds->isNotEmpty() ? $creditosIds->last() : null,
             'totalCreditos' => $creditosIds->count(),
             'montoCreditos' => $movimientosVenta
-                ->where('tipoPago.nombre', 'Crédito')
+                ->filter(fn($m) => $m->tipoPago?->nombre === 'Crédito')
                 ->sum('monto'),
         ];
     }
@@ -404,64 +797,51 @@ class CierreCajaService
     }
 
     /**
-     * Calcular sumatoria TOTAL de ventas APROBADAS (todos los tipos de pago)
+     * ✅ REFACTORIZADO: Calcular sumatoria de ventas aprobadas
+     * ✅ Método unificado que reemplaza 3 métodos casi idénticos
+     * ✅ Usa siempre estados_documento.codigo (APROBADO)
+     *
+     * @param AperturaCaja $aperturaCaja
+     * @param array $tiposOperacion ['VENTA', 'CREDITO'] para obtener todos; ['VENTA'] para solo ventas
+     * @param string|null $tipoPagoCodigo null para todos; 'EFECTIVO' para efectivo; 'CREDITO' para crédito
+     * @return float
      */
-    private function calcularVentasAprobadasTotal(AperturaCaja $aperturaCaja)
-    {
-        return DB::table('movimientos_caja')
-            ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
-            ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
-            ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-            ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-            ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
-            ->where('estados_documento.codigo', 'APROBADO')
-            ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
-            ->sum('ventas.total');
-    }
-
-    /**
-     * Calcular sumatoria de ventas APROBADAS en EFECTIVO
-     */
-    private function calcularVentasAprobadasEfectivo(AperturaCaja $aperturaCaja)
-    {
-        return DB::table('movimientos_caja')
-            ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
-            ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
-            ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-            ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
-            ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-            ->where('tipo_operacion_caja.codigo', 'VENTA')
-            ->where('estados_documento.codigo', 'APROBADO')
-            ->where('tipos_pago.codigo', 'EFECTIVO')
-            ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
-            ->sum('ventas.total');
-    }
-
-    /**
-     * Calcular sumatoria de ventas APROBADAS a CRÉDITO
-     */
-    private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja)
-    {
+    private function calcularVentasAprobadas(
+        AperturaCaja $aperturaCaja,
+        array $tiposOperacion = ['VENTA', 'CREDITO'],
+        ?string $tipoPagoCodigo = null
+    ): float {
         try {
-            $resultado = DB::table('movimientos_caja')
+            $query = DB::table('movimientos_caja')
                 ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
                 ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-                ->where('tipo_operacion_caja.codigo', 'CREDITO')
-                ->where('estados_documento.nombre', 'Aprobado')
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
-                ->sum('ventas.total');
+                ->whereIn('tipo_operacion_caja.codigo', $tiposOperacion)
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO) // ✅ Usa código, no nombre
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin]);
 
-            Log::info('💳 [calcularVentasAprobadasCredito]:', [
+            // Filtro opcional por tipo de pago
+            if ($tipoPagoCodigo) {
+                $query->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
+                      ->where('tipos_pago.codigo', $tipoPagoCodigo);
+            }
+
+            $resultado = $query->sum('ventas.total');
+
+            Log::info('💰 [calcularVentasAprobadas]:', [
                 'apertura_id' => $aperturaCaja->id,
-                'total_credito' => $resultado,
+                'tipos_operacion' => $tiposOperacion,
+                'tipo_pago' => $tipoPagoCodigo ?? 'TODOS',
+                'total' => $resultado,
             ]);
 
-            return $resultado;
+            return (float) $resultado;
         } catch (\Exception $e) {
-            Log::error('❌ [calcularVentasAprobadasCredito]:', [
+            Log::error('❌ [calcularVentasAprobadas]:', [
                 'apertura_id' => $aperturaCaja->id,
+                'tipos_operacion' => $tiposOperacion,
+                'tipo_pago' => $tipoPagoCodigo ?? 'TODOS',
                 'error' => $e->getMessage(),
             ]);
             return 0;
@@ -469,19 +849,59 @@ class CierreCajaService
     }
 
     /**
+     * Calcular sumatoria TOTAL de ventas APROBADAS (todos los tipos de pago)
+     */
+    private function calcularVentasAprobadasTotal(AperturaCaja $aperturaCaja)
+    {
+        return $this->calcularVentasAprobadas($aperturaCaja, ['VENTA', 'CREDITO']);
+    }
+
+    /**
+     * Calcular sumatoria de ventas APROBADAS en EFECTIVO
+     */
+    private function calcularVentasAprobadasEfectivo(AperturaCaja $aperturaCaja)
+    {
+        return $this->calcularVentasAprobadas($aperturaCaja, ['VENTA'], 'EFECTIVO');
+    }
+
+    /**
+     * Calcular sumatoria de ventas APROBADAS a CRÉDITO
+     */
+    private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja)
+    {
+        return $this->calcularVentasAprobadas($aperturaCaja, ['CREDITO']);
+    }
+
+    /**
      * Calcular sumatoria de ventas anuladas
+     * ✅ Usa estados_documento.codigo para mayor seguridad
      */
     private function calcularVentasAnuladas(AperturaCaja $aperturaCaja)
     {
-        return DB::table('movimientos_caja')
-            ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
-            ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
-            ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-            ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-            ->where('tipo_operacion_caja.codigo', 'VENTA')
-            ->where('estados_documento.codigo', 'ANULADO')
-            ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
-            ->sum('ventas.total');
+        try {
+            $resultado = DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VENTA')
+                ->where('estados_documento.codigo', self::ESTADO_ANULADO) // ✅ Usa constante
+                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->sum('ventas.total');
+
+            Log::info('📋 [calcularVentasAnuladas]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'total_anulado' => $resultado,
+            ]);
+
+            return (float) $resultado;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasAnuladas]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
     }
 
     /**
@@ -518,7 +938,8 @@ class CierreCajaService
     }
 
     /**
-     * ✅ NUEVO: Calcular sumatorias de ventas registradas en movimientos_caja por tipos de pago
+     * Calcular sumatorias de ventas registradas en movimientos_caja por tipos de pago
+     * ✅ Usa estados_documento.codigo para validación segura
      *
      * Agrupa las ventas APROBADAS por tipo de pago y retorna:
      * - cantidad: número de ventas
@@ -530,10 +951,9 @@ class CierreCajaService
         try {
             $resultado = $movimientos
                 ->filter(function ($mov) {
-                    // Solo ventas aprobadas
-                    $estado = $mov->venta?->estadoDocumento?->nombre;
+                    // Solo ventas aprobadas (usando código de estado)
                     $tipoOp = $mov->tipoOperacion?->codigo;
-                    return $estado === 'Aprobado' && $tipoOp === 'VENTA';
+                    return $this->esVentaAprobada($mov) && $tipoOp === 'VENTA';
                 })
                 ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
                 ->map(function ($grupo) {

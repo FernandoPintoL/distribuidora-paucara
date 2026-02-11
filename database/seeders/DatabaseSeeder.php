@@ -57,6 +57,8 @@ class DatabaseSeeder extends Seeder
         $this->call(TipoDocumentoSeeder::class);
         $this->call(TipoMermaSeeder::class);
         $this->call(TipoOperacionCajaSeeder::class);
+        // ✅ NUEVO: Asignar direcciones (ENTRADA/SALIDA/AJUSTE) a tipos de operación
+        $this->call(TipoOperacionCajaDireccionSeeder::class);
         $this->call(TiposPrecioSeeder::class);
         // $this->call(ProductosEjemploSeeder::class);
         $this->call(CategoriaClienteSeeder::class);
@@ -105,6 +107,9 @@ class DatabaseSeeder extends Seeder
 
         // ✅ NUEVO: Validar y crear datos críticos que puedan faltar
         $this->call(ValidateAndCreateRequiredDataSeeder::class);
+
+        // ✅ NUEVO: Crear plantillas de impresión para pagos
+        $this->call(PagosPlantillaImpresionSeeder::class);
 
         // Precalentar caché de códigos de barra (después de que los datos estén listos)
         $this->call(CodigosBarraCachePrecalentarSeeder::class);

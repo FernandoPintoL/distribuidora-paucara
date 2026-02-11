@@ -90,8 +90,10 @@ class VentaController extends Controller
                 'id'                  => $request->input('id'),
                 'estado'              => $request->input('estado'),
                 'estado_documento_id' => $request->input('estado_documento_id'),
-                'cliente_id'          => $request->input('cliente_id'),
+                'cliente_id'          => $request->input('cliente_id'),  // ✅ ACTUALIZADO: Acepta ID, código_cliente, nombre, NIT, teléfono
+                'busqueda_cliente'    => $request->input('busqueda_cliente'),  // ✅ NUEVO: Búsqueda alternativa de cliente
                 'usuario_id'          => $request->input('usuario_id'),
+                'tipo_pago_id'        => $request->input('tipo_pago_id'),      // ✅ NUEVO: Filtro por tipo de pago
                 'fecha_desde'         => $request->input('fecha_desde'),
                 'fecha_hasta'         => $request->input('fecha_hasta'),
                 'numero'              => $request->input('numero'),
@@ -181,6 +183,7 @@ class VentaController extends Controller
                     'usuario_id'                 => $venta->usuario_id,
                     'estado_documento_id'        => $venta->estado_documento_id,
                     'moneda_id'                  => $venta->moneda_id,
+                    'caja_id'                    => $venta->caja_id,  // ✅ NUEVO: ID de caja para indicador
                     'direccion_cliente_id'       => $venta->direccion_cliente_id,
                     'proforma_id'                => $venta->proforma_id,
                     'created_at'                 => $venta->created_at,
@@ -252,7 +255,7 @@ class VentaController extends Controller
             }
 
             // Web Response - Inertia para navegador
-            return Inertia::render('ventas/index', [
+            return Inertia::render('ventas/Index', [
                 'ventas'           => $ventasPaginadas,
                 'filtros'          => $filtros,
                 'estadisticas'     => null, // TODO: Implementar estadísticas completas cuando sea necesario
@@ -261,6 +264,7 @@ class VentaController extends Controller
                     'estados_documento' => EstadoDocumento::select('id', 'nombre', 'codigo')->get(),
                     'usuarios'          => User::select('id', 'name')->orderBy('name')->get(),
                     'monedas'           => Moneda::activos()->select('id', 'codigo', 'nombre')->get(),
+                    'tipos_pago'        => TipoPago::activos()->select('id', 'nombre')->get(),  // ✅ NUEVO: Tipos de pago
                 ],
             ]);
 
