@@ -437,6 +437,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
 
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
+    const [preciosEditadosManualmente, setPreciosEditadosManualmente] = useState<Set<number>>(new Set())
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
 
     // Estados para búsqueda rápida de productos
@@ -532,11 +533,18 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
 
             setEditableDetalles(prevDetalles => {
                 const detallesActualizados = prevDetalles.map(detalle => {
+                    // ✅ NO sobrescribir precios editados manualmente por el usuario
+                    if (preciosEditadosManualmente.has(detalle.id)) {
+                        console.log(`⏸️ Precio manual detectado para detalle ${detalle.id}, NO sobrescribir`)
+                        return detalle
+                    }
+
                     // Obtener el detalle calculado del hook
                     const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
 
                     if (precioActualizado) {
                         // Si hay precio actualizado, recalcular subtotal
+                        console.log(`📊 Actualizando precio para producto ${detalle.producto_id}: ${precioActualizado}`)
                         return {
                             ...detalle,
                             precio_unitario: precioActualizado,
@@ -551,7 +559,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                 return detallesActualizados
             })
         }
-    }, [isCalculandoRangos, errorRangos, getPrecioActualizado])
+    }, [isCalculandoRangos, errorRangos, getPrecioActualizado, preciosEditadosManualmente])
 
     // Sincronizar datos de coordinación cuando la proforma cambia
     // ✅ CRÍTICO: No actualizar si estamos en el flujo de aprobación + conversión
@@ -638,9 +646,13 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         const nuevosDetalles = [...editableDetalles]
         // Validar que sea un número válido y positivo
         const cantidadValida = Math.max(0.01, isNaN(cantidad) ? 0.01 : cantidad)
+        const cantidadAnterior = nuevosDetalles[index].cantidad
         nuevosDetalles[index].cantidad = cantidadValida
         nuevosDetalles[index].subtotal = cantidadValida * nuevosDetalles[index].precio_unitario
         setEditableDetalles(nuevosDetalles)
+
+        // ✅ Log para verificar que se actualiza el subtotal
+        console.log('📦 Cantidad editada - Detalle:', index, 'De:', cantidadAnterior, 'A:', cantidadValida, 'Nuevo subtotal:', nuevosDetalles[index].subtotal)
 
         // Recalcular rangos de precio
         const itemsParaCalcular = nuevosDetalles.map(d => ({
@@ -658,13 +670,35 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         nuevosDetalles[index].precio_unitario = precioValido
         nuevosDetalles[index].subtotal = nuevosDetalles[index].cantidad * precioValido
         setEditableDetalles(nuevosDetalles)
+
+        // ✅ Marcar este detalle como editado manualmente para que el API no lo sobrescriba
+        const detalleId = nuevosDetalles[index].id
+        if (detalleId) {
+            setPreciosEditadosManualmente(prev => new Set(prev).add(detalleId))
+        }
+
+        // ✅ Recalcular totales (se hace automáticamente en el siguiente render,
+        // pero aquí lo registramos en logs para feedback visual)
+        console.log('💰 Precio editado - Detalle:', index, 'Nuevo precio:', precioValido, 'Nuevo subtotal:', nuevosDetalles[index].subtotal)
     }
 
     // ✅ NUEVO: Handler para cambiar tipo de precio
     const handleCambiarTipoPrecio = (index: number, tipoPrecioId: number | null) => {
         const nuevosDetalles = [...editableDetalles]
+        const tipoAnterior = nuevosDetalles[index].tipo_precio_id
         nuevosDetalles[index].tipo_precio_id = tipoPrecioId
         setEditableDetalles(nuevosDetalles)
+
+        // ✅ Limpiar marca de "editado manualmente" para este detalle
+        // Así el nuevo precio del API carrito se aplicará automáticamente
+        const detalleId = nuevosDetalles[index].id
+        if (detalleId) {
+            setPreciosEditadosManualmente(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(detalleId)
+                return newSet
+            })
+        }
 
         // Recalcular rangos con el nuevo tipo de precio
         const itemsParaCalcular = nuevosDetalles.map(d => ({
@@ -672,26 +706,59 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
             cantidad: d.cantidad,
             tipo_precio_id: d.tipo_precio_id
         }))
+        console.log('🏷️ Tipo de precio cambiado - Detalle:', index, 'De:', tipoAnterior, 'A:', tipoPrecioId, '- Recalculando...')
         calcularCarritoDebounced(itemsParaCalcular)
     }
 
     // Calcular total en tiempo real (usando precios actualizados por rango)
     const calcularTotales = () => {
         const subtotal = editableDetalles.reduce((sum, d) => {
-            // Obtener precio actualizado del hook, o usar el actual
-            const precioActualizado = getPrecioActualizado(d.producto_id as number)
-            const precio = precioActualizado ?? (d.precio_unitario ?? 0)
-            return sum + (d.cantidad * precio)
+            let precio: number
+
+            // ✅ PRIORIDAD 1: Si el precio fue editado manualmente, usar ese
+            if (preciosEditadosManualmente.has(d.id)) {
+                precio = d.precio_unitario ?? 0
+                console.log(`  ✏️ Precio MANUAL para Prod ${d.producto_id}: ${precio.toFixed(2)}`)
+            } else {
+                // ✅ PRIORIDAD 2: Si el API carrito tiene precio, usar ese
+                const precioActualizado = getPrecioActualizado(d.producto_id as number)
+                if (precioActualizado) {
+                    precio = precioActualizado
+                    console.log(`  📊 Precio API para Prod ${d.producto_id}: ${precio.toFixed(2)}`)
+                } else {
+                    // ✅ FALLBACK: Usar precio actual del detalle
+                    precio = d.precio_unitario ?? 0
+                }
+            }
+
+            const lineTotal = d.cantidad * precio
+            return sum + lineTotal
         }, 0)
         const total = subtotal
+
+        // ✅ Log del total calculado
+        if (editableDetalles.length > 0) {
+            console.log(`💹 TOTALES RECALCULADOS - Subtotal: ${subtotal.toFixed(2)}, Total: ${total.toFixed(2)}`)
+        }
+
         return { subtotal, total }
     }
 
     const totales = calcularTotales()
 
     const handleEliminarProducto = (index: number) => {
+        const detalleEliminado = editableDetalles[index]
         const nuevosDetalles = editableDetalles.filter((_, i) => i !== index)
         setEditableDetalles(nuevosDetalles)
+
+        // ✅ Limpiar marca de "editado manualmente" si existe
+        if (detalleEliminado.id) {
+            setPreciosEditadosManualmente(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(detalleEliminado.id)
+                return newSet
+            })
+        }
     }
 
     const handleAgregarProducto = (detalle: ProformaDetalleDialogo | Producto) => {
@@ -1783,15 +1850,28 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                                 {/* Precio actualizado según rango */}
                                                 <TableCell className="font-medium">
                                                     {proforma.estado === 'PENDIENTE' ? (
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0.01"
-                                                            value={detalle.precio_unitario || ''}
-                                                            onChange={(e) => handleEditarPrecio(index, parseFloat(e.target.value))}
-                                                            placeholder="Precio"
-                                                            className="w-28 text-right text-sm"
-                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                            <Input
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0.01"
+                                                                value={detalle.precio_unitario || ''}
+                                                                onChange={(e) => handleEditarPrecio(index, parseFloat(e.target.value))}
+                                                                placeholder="Precio"
+                                                                className={`w-28 text-right text-sm ${
+                                                                    preciosEditadosManualmente.has(detalle.id)
+                                                                        ? 'border-orange-500 border-2 bg-orange-50 dark:bg-orange-950'
+                                                                        : ''
+                                                                }`}
+                                                                title={preciosEditadosManualmente.has(detalle.id) ? '✏️ Editado manualmente - No se actualizará al cambiar tipo de precio' : '📊 Precio automático - Se actualizará según tipo de precio y cantidad'}
+                                                            />
+                                                            {/* ✅ Indicador visual si fue editado manualmente */}
+                                                            {preciosEditadosManualmente.has(detalle.id) && (
+                                                                <span className="text-orange-600 dark:text-orange-400 text-xs font-bold" title="Editado manualmente">
+                                                                    ✏️
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     ) : (
                                                         (() => {
                                                             const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
@@ -1815,16 +1895,27 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                                 {/* Subtotal actualizado */}
                                                 <TableCell className="font-semibold">
                                                     {(() => {
-                                                        const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
-                                                        const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
+                                                        let precio: number
+
+                                                        // ✅ PRIORIDAD 1: Si el precio fue editado manualmente, usar ese
+                                                        if (preciosEditadosManualmente.has(detalle.id)) {
+                                                            precio = detalle.precio_unitario ?? 0
+                                                        } else {
+                                                            // ✅ PRIORIDAD 2: Si el API carrito tiene precio, usar ese
+                                                            const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
+                                                            precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
+                                                        }
+
                                                         const subtotalActualizado = detalle.cantidad * precio
 
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
-                                                                <span>
+                                                                <span className={preciosEditadosManualmente.has(detalle.id) ? 'text-orange-600 dark:text-orange-400 font-bold' : ''}>
                                                                     Bs. {subtotalActualizado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                                 </span>
-                                                                {precioActualizado && subtotalActualizado !== detalle.subtotal && (
+                                                                {/* Mostrar precio anterior si fue actualizado por carrito */}
+                                                                {!preciosEditadosManualmente.has(detalle.id) && getPrecioActualizado(detalle.producto_id as number) &&
+                                                                    subtotalActualizado !== detalle.subtotal && (
                                                                     <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
                                                                         {detalle.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                                                     </span>
@@ -1861,7 +1952,16 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end gap-8">
+                                    <div className="flex justify-end gap-12">
+                                        {/* Subtotal */}
+                                        <div className="space-y-2 text-right">
+                                            <p className="text-sm font-medium text-foreground">Subtotal:</p>
+                                            <p className="text-xl font-semibold text-muted-foreground">
+                                                Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+
+                                        {/* Total */}
                                         <div className="space-y-2 text-right">
                                             <p className="text-sm font-medium text-foreground">Total:</p>
                                             <p className="text-2xl font-bold text-[var(--brand-primary)]">
