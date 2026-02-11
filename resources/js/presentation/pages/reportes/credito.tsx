@@ -7,8 +7,6 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
 import { AlertTriangle, TrendingDown, Clock, AlertCircle } from 'lucide-react';
 import DataTable from '@/presentation/components/DataTable';
-import { dashboard } from '@/routes';
-import reportes from '@/routes/reportes';
 
 interface Cliente {
     id: number;

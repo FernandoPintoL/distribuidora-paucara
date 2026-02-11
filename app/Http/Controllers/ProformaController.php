@@ -77,7 +77,7 @@ class ProformaController extends Controller
      */
     public function create(): InertiaResponse
     {
-        return Inertia::render('proformas/create', [
+        return Inertia::render('proformas/Create', [
             'clientes'  => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
             'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
             'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),

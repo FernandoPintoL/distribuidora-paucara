@@ -635,6 +635,18 @@ class Venta extends Model
                 $stockProducto = $movimiento->stockProducto;
                 $cantidadADevolver = abs($movimiento->cantidad);
                 $cantidadAnterior = $stockProducto->cantidad;
+                $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
+
+                // ✅ DEBUG: Log ANTES de actualizar
+                Log::debug('🔄 [ANULAR VENTA - STOCK REVERT] ANTES DE ACTUALIZAR', [
+                    'venta' => $this->numero,
+                    'stock_producto_id' => $stockProducto->id,
+                    'producto_id' => $stockProducto->producto_id,
+                    'lote' => $stockProducto->lote,
+                    'cantidad_a_devolver' => $cantidadADevolver,
+                    'cantidad_anterior' => $cantidadAnterior,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                ]);
 
                 // Actualizar stock usando UPDATE atómico
                 $affected = DB::table('stock_productos')
@@ -649,8 +661,22 @@ class Venta extends Model
                     throw new Exception("Error al revertir stock para stock_producto_id {$stockProducto->id}");
                 }
 
-                // Obtener la cantidad actualizada
-                $cantidadNueva = $cantidadAnterior + $cantidadADevolver;
+                // ✅ CORREGIDO: Obtener los valores REALES de BD después de actualizar
+                $stockActualizado = \App\Models\StockProducto::find($stockProducto->id);
+                $cantidadNueva = $stockActualizado->cantidad;
+                $cantidadDisponibleNueva = $stockActualizado->cantidad_disponible;
+
+                // ✅ DEBUG: Log DESPUÉS de actualizar
+                Log::debug('✅ [ANULAR VENTA - STOCK REVERT] DESPUÉS DE ACTUALIZAR', [
+                    'venta' => $this->numero,
+                    'stock_producto_id' => $stockProducto->id,
+                    'cantidad_anterior' => $cantidadAnterior,
+                    'cantidad_nueva' => $cantidadNueva,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_disponible_nueva' => $cantidadDisponibleNueva,
+                    'diferencia_cantidad' => $cantidadNueva - $cantidadAnterior,
+                    'diferencia_disponible' => $cantidadDisponibleNueva - $cantidadDisponibleAnterior,
+                ]);
 
                 // Crear movimiento de reversión
                 MovimientoInventario::create([
@@ -660,7 +686,7 @@ class Venta extends Model
                     'observacion'       => "Reversión de venta #{$this->numero}",
                     'numero_documento'  => $this->numero . '-REV',
                     'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_posterior' => $cantidadNueva,
+                    'cantidad_posterior' => $cantidadNueva,  // ✅ Ahora con valor real de BD
                     'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
                     'user_id'           => Auth::id() ?? 1,  // ✅ CORREGIDO: Fallback a usuario 1 si no hay autenticación
                 ]);
@@ -687,8 +713,13 @@ class Venta extends Model
                 Log::info('✅ Stock revertido por anulación de venta', [
                     'venta' => $this->numero,
                     'stock_producto_id' => $stockProducto->id,
+                    'producto_id' => $stockProducto->producto_id,
+                    'lote' => $stockProducto->lote,
                     'cantidad_devuelta' => $cantidadADevolver,
+                    'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_final' => $cantidadNueva,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_disponible_final' => $cantidadDisponibleNueva,
                     'movimiento_revercion_registrado' => $this->numero . '-REV',
                 ]);
             }
