@@ -29,7 +29,8 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
     const [filterInputs, setFilterInputs] = useState({
         proforma_numero: '',
         estado: '',
-        producto_id: '',  // ✅ NUEVO: Filtro por producto
+        producto_id: '',  // ✅ NUEVO: Filtro por producto (ID exacto)
+        producto_busqueda: '',  // ✅ NUEVO (2026-02-12): Búsqueda flexible por ID, SKU o nombre
         vencimiento: '',
         fecha_creacion_desde: today,
         fecha_creacion_hasta: '',
@@ -84,6 +85,10 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
         if (filterInputs.producto_id) {
             nuevosFiltros.producto_id = parseInt(filterInputs.producto_id);
         }
+        // ✅ NUEVO (2026-02-12): Agregar búsqueda flexible por producto
+        if (filterInputs.producto_busqueda) {
+            nuevosFiltros.producto_busqueda = filterInputs.producto_busqueda;
+        }
         if (filterInputs.vencimiento) {
             nuevosFiltros.vencimiento = filterInputs.vencimiento;
         }
@@ -110,6 +115,7 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
             proforma_numero: '',
             estado: '',
             producto_id: '',  // ✅ NUEVO: Limpiar filtro de producto
+            producto_busqueda: '',  // ✅ NUEVO (2026-02-12): Limpiar búsqueda de producto
             vencimiento: '',
             fecha_creacion_desde: today,
             fecha_creacion_hasta: '',
@@ -283,25 +289,24 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                     </select>
                                 </div>
 
-                                {/* ✅ NUEVO: Filtro por Producto */}
+                                {/* ✅ NUEVO (2026-02-12): Filtro por Producto - Búsqueda flexible */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        📦 Producto
+                                        📦 Producto (ID, SKU o Nombre)
                                     </label>
-                                    <select
-                                        value={filterInputs.producto_id}
-                                        onChange={(e) => handleFilterChange('producto_id', e.target.value)}
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 123 o LAC-001 o Lactose"
+                                        value={filterInputs.producto_busqueda}
+                                        onChange={(e) => handleFilterChange('producto_busqueda', e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                                                  bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                                                 placeholder-gray-500 dark:placeholder-gray-400
                                                  focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="">Todos los productos</option>
-                                        {summary?.productos_con_reservas?.map((p: any) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.nombre} ({p.cantidad_reservada} unidades)
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Busca por ID (prioridad), SKU o nombre (case insensitive)
+                                    </p>
                                 </div>
 
                                 {/* Vencimiento */}

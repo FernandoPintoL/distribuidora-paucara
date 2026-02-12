@@ -48,8 +48,24 @@ class ReservaProformaController extends Controller
 
             // Filtro por producto
             if ($request->filled('producto_id')) {
-                $query->whereHas('stockProducto', function ($q) {
-                    $q->where('producto_id', request()->producto_id);
+                // Filtro exacto por ID si es numérico
+                if (is_numeric($request->producto_id)) {
+                    $query->whereHas('stockProducto', function ($q) {
+                        $q->where('producto_id', (int) request()->producto_id);
+                    });
+                }
+            }
+
+            // ✅ NUEVO (2026-02-12): Filtro por búsqueda flexible de producto (ID, SKU o nombre)
+            if ($request->filled('producto_busqueda')) {
+                $busqueda = $request->producto_busqueda;
+                $query->whereHas('stockProducto', function ($q) use ($busqueda) {
+                    $q->whereHas('producto', function ($p) use ($busqueda) {
+                        // Prioridad: ID → SKU → Nombre (case insensitive)
+                        $p->where('id', (int) $busqueda) // Si es número, buscar por ID
+                            ->orWhere('sku', 'ILIKE', '%' . $busqueda . '%') // SKU case-insensitive
+                            ->orWhere('nombre', 'ILIKE', '%' . $busqueda . '%'); // Nombre case-insensitive
+                    });
                 });
             }
 
