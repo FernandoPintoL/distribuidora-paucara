@@ -12,7 +12,7 @@ class ImpresionVentasController extends Controller
     /**
      * Renderizar reporte de ventas
      */
-    public function imprimir(Request $request): View | Response
+    public function imprimir(Request $request)
     {
         try {
             $ventas = collect(session('ventas_impresion', []));
