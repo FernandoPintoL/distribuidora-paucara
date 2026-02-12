@@ -279,8 +279,11 @@ export default function CreateEntregasUnificado({
         const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
         return {
             count: selectedVentaIds.length,
-            pesoTotal: selectedVentas.reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0),
-            montoTotal: selectedVentas.reduce((sum, v) => sum + (v.subtotal ?? 0), 0),
+            pesoTotal: selectedVentas.reduce((sum, v) => {
+                const peso = parseFloat(v.peso_total_estimado as any) || parseFloat(v.peso_estimado as any) || 0;
+                return sum + peso;
+            }, 0),
+            montoTotal: selectedVentas.reduce((sum, v) => sum + (parseFloat(v.subtotal as any) ?? 0), 0),
         };
     }, [ventas, selectedVentaIds, isEditMode, entrega?.peso_kg]);
 
