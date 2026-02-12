@@ -33,7 +33,7 @@ class ImpresionVentasController extends Controller
                 $estructura = [
                     'es_array' => is_array($primeraVenta),
                     'es_objeto' => is_object($primeraVenta),
-                    'tipo' => get_class($primeraVenta),
+                    'tipo' => is_object($primeraVenta) ? get_class($primeraVenta) : 'array',
                 ];
 
                 // Si es array, mostrar keys
