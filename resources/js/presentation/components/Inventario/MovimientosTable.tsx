@@ -27,6 +27,8 @@ interface MovimientoInventario {
     almacen: {
         nombre: string;
     };
+    stock_producto_id?: number;  // ✅ NUEVO (2026-02-12): ID del stock
+    lote?: string;  // ✅ NUEVO (2026-02-12): Número de lote
     cantidad: number;
     cantidad_anterior: number;  // ✅ NUEVO: Cantidad antes del movimiento
     cantidad_posterior: number;  // ✅ NUEVO: Cantidad después del movimiento
@@ -110,6 +112,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead>Tipo</TableHead>
                             <TableHead>Producto</TableHead>
                             <TableHead>Almacén</TableHead>
+                            {/* ✅ NUEVO (2026-02-12): Columna de Stock ID y Lote */}
+                            <TableHead>📦 Stock / Lote</TableHead>
                             <TableHead className="text-center">Cant. Anterior</TableHead>
                             <TableHead className="text-center">Cambio</TableHead>
                             <TableHead className="text-center">Cant. Posterior</TableHead>
@@ -124,7 +128,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                     <TableBody>
                         {movimientos.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
                                     No hay movimientos para mostrar
                                 </TableCell>
                             </TableRow>
@@ -173,6 +177,23 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                         </div>
                                     </TableCell>
                                     <TableCell>{movimiento.almacen.nombre}</TableCell>
+                                    {/* ✅ NUEVO (2026-02-12): Stock ID y Lote */}
+                                    <TableCell>
+                                        <div className="text-sm">
+                                            <div className="font-medium">
+                                                {movimiento.stock_producto_id ? (
+                                                    <span className="text-blue-600 dark:text-blue-400">
+                                                        #{movimiento.stock_producto_id}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {movimiento.lote || '-'}
+                                            </div>
+                                        </div>
+                                    </TableCell>
                                     {/* ✅ NUEVO: Cantidad Anterior */}
                                     <TableCell className="text-center font-medium">
                                         <span className="text-gray-700 dark:text-gray-300">

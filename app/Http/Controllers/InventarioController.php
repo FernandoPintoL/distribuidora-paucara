@@ -557,6 +557,8 @@ class InventarioController extends Controller
                         'id'     => null,
                         'nombre' => '[Almacén No Disponible]',
                     ],
+                    'stock_producto_id' => null,  // ✅ NUEVO (2026-02-12): ID del stock no disponible
+                    'lote'              => '-',  // ✅ NUEVO (2026-02-12): Número de lote no disponible
                     'numero_documento'  => $movimiento->numero_documento,  // ✅ NUEVO: Identificador de venta/proforma
                     'referencia'        => $movimiento->numero_documento,
                     'referencia_tipo'   => $movimiento->referencia_tipo,
@@ -599,6 +601,8 @@ class InventarioController extends Controller
                     'id'     => $stockProducto->almacen->id,
                     'nombre' => $stockProducto->almacen->nombre,
                 ],
+                'stock_producto_id' => $stockProducto->id,  // ✅ NUEVO (2026-02-12): ID del stock
+                'lote'              => $stockProducto->lote ?? '-',  // ✅ NUEVO (2026-02-12): Número de lote
                 'numero_documento'  => $movimiento->numero_documento,  // ✅ NUEVO: Identificador de venta/proforma
                 'referencia'        => $movimiento->numero_documento,
                 'referencia_tipo'   => $movimiento->referencia_tipo,
