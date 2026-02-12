@@ -29,7 +29,16 @@ export const reservasProformaApi = {
                 if (filters.ordenamiento) params.append('ordenamiento', filters.ordenamiento);
                 if (filters.per_page) params.append('per_page', filters.per_page.toString());
                 if (filters.page) params.append('page', filters.page.toString());
+                // ✅ NUEVO (2026-02-12): Agregar búsqueda flexible de producto
+                if (filters.producto_busqueda) params.append('producto_busqueda', filters.producto_busqueda);
             }
+
+            // ✅ NUEVO (2026-02-12): Logging en consola de parámetros enviados
+            console.group('🔍 [ReservasAPI] obtenerLista()');
+            console.log('📦 Filtros aplicados:', filters);
+            console.log('🌐 URL de solicitud:', `/api/reservas-proforma?${params.toString()}`);
+            console.log('📋 Parámetros query:', Object.fromEntries(params));
+            console.groupEnd();
 
             const response = await fetch(`/api/reservas-proforma?${params.toString()}`);
 

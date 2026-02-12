@@ -56,12 +56,27 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                 page: currentPage,
             });
 
+            // ✅ NUEVO (2026-02-12): Logging en consola de respuesta
+            console.group('✅ [ReservasTable] Datos Cargados');
+            console.log('📊 Total de reservas:', response.pagination.total);
+            console.log('📄 Página actual:', response.pagination.current_page);
+            console.log('📋 Registros en esta página:', response.data.length);
+            console.table(response.data.map((r: any) => ({
+                id: r.id,
+                proforma: r.proforma_numero,
+                producto: r.producto_nombre,
+                cantidad: r.cantidad_reservada,
+                estado: r.estado,
+                vencimiento: r.fecha_expiracion
+            })));
+            console.groupEnd();
+
             setReservas(response.data);
             setTotalPages(response.pagination.last_page);
             setTotalReservas(response.pagination.total);
             setSummary(response.summary);
         } catch (error) {
-            console.error('Error cargando reservas:', error);
+            console.error('❌ Error cargando reservas:', error);
         } finally {
             setLoading(false);
         }
@@ -105,6 +120,19 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
         if (filterInputs.fecha_vencimiento_hasta) {
             nuevosFiltros.fecha_vencimiento_hasta = filterInputs.fecha_vencimiento_hasta;
         }
+
+        // ✅ NUEVO (2026-02-12): Logging en consola de filtros aplicados
+        console.group('🎯 [ReservasTable] Aplicar Filtros');
+        console.log('📝 Inputs del usuario:', filterInputs);
+        console.log('✨ Filtros a enviar:', nuevosFiltros);
+        if (nuevosFiltros.producto_busqueda) {
+            console.warn('🔍 ¡BÚSQUEDA DE PRODUCTO ACTIVA!', {
+                busqueda: nuevosFiltros.producto_busqueda,
+                tipo: 'ID/SKU/Nombre (case insensitive)',
+                prioridad: 'ID → SKU → Nombre'
+            });
+        }
+        console.groupEnd();
 
         setFilters(nuevosFiltros);
         setCurrentPage(1);
