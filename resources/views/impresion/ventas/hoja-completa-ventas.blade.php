@@ -25,14 +25,12 @@
     <thead>
         <tr>
             <th style="width: 4%;">#</th>
-            <th style="width: 9%;">Fecha</th>
-            <th style="width: 13%;">Cliente</th>
-            <th style="width: 18%;">Producto</th>
-            <th style="width: 7%;">Cant</th>
-            <th style="width: 9%;">P. Unit.</th>
-            <th style="width: 9%;">Subtotal</th>
-            <th style="width: 11%;">Estado</th>
-            <th style="width: 12%;">Tipo de Pago</th>
+            <th style="width: 10%;">Fecha</th>
+            <th style="width: 18%;">Cliente</th>
+            <th style="width: 28%;">Producto</th>
+            <th style="width: 12%;">Total</th>
+            <th style="width: 14%;">Estado</th>
+            <th style="width: 14%;">Tipo de Pago</th>
         </tr>
     </thead>
     <tbody>
@@ -107,51 +105,16 @@
                 @endphp
                 {!! $detallesHtml ?: '-' !!}
             </td>
-            <td>
-                @php
-                    $cantidadTotal = 0;
-                    if (is_array($item) && isset($item['detalles'])) {
-                        $detalles = $item['detalles'];
-                        if (is_array($detalles)) {
-                            foreach ($detalles as $detalle) {
-                                $cant = is_array($detalle) ? ($detalle['cantidad'] ?? 0) : (is_object($detalle) ? ($detalle->cantidad ?? 0) : 0);
-                                $cantidadTotal += (float)$cant;
-                            }
-                        }
-                    } elseif (is_object($item) && isset($item->detalles)) {
-                        foreach ($item->detalles as $detalle) {
-                            $cantidadTotal += $detalle->cantidad ?? 0;
-                        }
-                    }
-                @endphp
-                <strong>{{ number_format($cantidadTotal, 2) }}</strong>
-            </td>
             <td class="text-right">
                 @php
-                    $precioUnit = 0;
-                    if (is_array($item) && isset($item['detalles'])) {
-                        $detalles = $item['detalles'];
-                        if (is_array($detalles) && count($detalles) > 0) {
-                            $precioUnit = is_array($detalles[0]) ? ($detalles[0]['precio_unitario'] ?? 0) : (is_object($detalles[0]) ? ($detalles[0]->precio_unitario ?? 0) : 0);
-                        }
-                    } elseif (is_object($item) && isset($item->detalles)) {
-                        if ($item->detalles->count() > 0) {
-                            $precioUnit = $item->detalles->first()->precio_unitario ?? 0;
-                        }
+                    $total = 0;
+                    if (is_array($item) && isset($item['total'])) {
+                        $total = (float)$item['total'];
+                    } elseif (is_object($item) && isset($item->total)) {
+                        $total = (float)$item->total;
                     }
                 @endphp
-                {{ number_format($precioUnit, 2) }}
-            </td>
-            <td class="text-right">
-                @php
-                    $subtotal = 0;
-                    if (is_array($item) && isset($item['subtotal'])) {
-                        $subtotal = (float)$item['subtotal'];
-                    } elseif (is_object($item) && isset($item->subtotal)) {
-                        $subtotal = (float)$item->subtotal;
-                    }
-                @endphp
-                <strong>{{ number_format($subtotal, 2) }}</strong>
+                <strong>{{ number_format($total, 2) }}</strong>
             </td>
             {{-- Estado desde estadoDocumento --}}
             <td style="font-size: 10px;">
@@ -210,7 +173,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="9" style="text-align: center; padding: 20px;">
+            <td colspan="7" style="text-align: center; padding: 20px;">
                 No hay ventas para mostrar
             </td>
         </tr>
