@@ -144,6 +144,7 @@ export interface Entrega extends BaseEntity {
     proforma_id?: Id;
     vehiculo_id?: Id;
     chofer_id?: Id;
+    entregador_id?: Id;            // FK a users (usuario responsable de la entrega)
     zona_id?: Id;                  // FK a localidades (agrupación por localidad de entrega)
 
     // Información de entrega
@@ -183,6 +184,7 @@ export interface Entrega extends BaseEntity {
     proforma?: ProformaEntrega;
     vehiculo?: VehiculoEntrega;
     chofer?: ChoferEntrega;
+    entregador?: ChoferEntrega;    // ✅ NUEVO: Usuario responsable de entregar
     seguimientos?: SeguimientoEntrega[];
 
     // ✅ NUEVO: Reportes Many-to-Many

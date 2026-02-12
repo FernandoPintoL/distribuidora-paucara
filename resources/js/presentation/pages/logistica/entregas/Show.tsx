@@ -11,7 +11,7 @@ import ProductosAgrupados from './components/ProductosAgrupados';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
 import EntregaHistorialCambios from '@/presentation/components/logistica/EntregaHistorialCambios';
-import { FormatoSelector } from '@/presentation/components/impresion/FormatoSelector';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { useState, useEffect } from 'react';
 import { useEntregaNotifications } from '@/application/hooks/use-entrega-notifications';
 import { useToastNotifications } from '@/application/hooks/use-toast-notifications';
@@ -36,6 +36,7 @@ interface ShowProps {
 export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     const [entrega, setEntrega] = useState<Entrega>(initialEntrega);
     const [isLive, setIsLive] = useState(false);
+    const [isOutputModalOpen, setIsOutputModalOpen] = useState(false);
 
     // ✅ DEBUG: Ver qué datos llegan del backend
     useEffect(() => {
@@ -287,7 +288,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
         <AppLayout>
             <Head title={`Entrega ${numero}`} />
 
-            <div className="space-y-6 p-6 max-w-4xl mx-auto bg-white dark:bg-slate-950 min-h-screen">
+            <div className="space-y-6 p-6 mx-auto bg-white dark:bg-slate-950">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -304,7 +305,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                     </div>
 
                     {/* Live Status Indicator */}
-                    <div className="flex items-center gap-2">
+                    {/* <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-800">
                             {isLive ? (
                                 <>
@@ -322,14 +323,30 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                                 </>
                             )}
                         </div>
-                    </div>
+                    </div> */}
 
                     <EstadoBadge entrega={entrega} />
-                    {/* Selector de Formato de Impresión - Imprimir entrega en diferentes formatos */}
-                    <FormatoSelector
-                        documentoId={entrega.id as number | string}
-                        tipoDocumento="entregas"
+
+                    {/* Botón para abrir modal de impresión/descarga */}
+                    <Button
+                        onClick={() => setIsOutputModalOpen(true)}
+                        variant="outline"
                         className="w-full sm:w-auto"
+                    >
+                        <Package className="w-4 h-4 mr-2" />
+                        Imprimir / Descargar
+                    </Button>
+
+                    {/* Modal de selección de formato de impresión/descarga */}
+                    <OutputSelectionModal
+                        isOpen={isOutputModalOpen}
+                        onClose={() => setIsOutputModalOpen(false)}
+                        documentoId={entrega.id as number | string}
+                        tipoDocumento="entrega"
+                        documentoInfo={{
+                            numero: entrega.numero_entrega,
+                            fecha: entrega.fecha_asignacion,
+                        }}
                     />
                 </div>
 
@@ -386,6 +403,13 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                                         {entrega.peso_kg ? `${entrega.peso_kg} kg` : 'N/A'}
                                     </p>
                                 </div>
+                                {/* ✅ NUEVO (2026-02-12): Mostrar entregador */}
+                                {entrega.entregador && (
+                                    <div>
+                                        <p className="text-sm text-purple-700 dark:text-purple-300">Entregador</p>
+                                        <p className="font-medium text-purple-900 dark:text-purple-100">{entrega.entregador.name}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -410,7 +434,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
 
 
                 {/* Flujo de Carga - Mostrar si está en ese estado */}
-                {isInCargoFlow && (
+                {/* {isInCargoFlow && (
                     <div className="pt-4">
                         <EntregaFlujoCarga
                             entrega={entrega}
@@ -437,7 +461,7 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                             }}
                         />
                     </div>
-                )}
+                )} */}
 
                 {/* Historial de Cambios de Estado */}
                 {/* <EntregaHistorialCambios entrega={entrega} /> */}

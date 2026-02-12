@@ -52,8 +52,8 @@
         </div>
     </div>
 
-    {{-- Segunda fila: Información del chofer y vehículo --}}
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; width: 100%; box-sizing: border-box; overflow: visible;">
+    {{-- Segunda fila: Información del chofer, entregador y vehículo --}}
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; width: 100%; box-sizing: border-box; overflow: visible;">
 
         <!-- Chofer -->
         <div style="font-size: 12px; box-sizing: border-box; width: 100%;">
@@ -65,6 +65,22 @@
                 @endif
                 @if($entrega->chofer->phone ?? false)
                     <p style="margin: 4px 0; box-sizing: border-box; font-size: 11px; color: #666;">{{ $entrega->chofer->phone }}</p>
+                @endif
+            @else
+                <p style="margin: 4px 0; box-sizing: border-box; font-size: 13px; color: #999;">Sin asignar</p>
+            @endif
+        </div>
+
+        {{-- ✅ NUEVO: Entregador --}}
+        <div style="font-size: 12px; box-sizing: border-box; width: 100%;">
+            <p style="margin: 4px 0; box-sizing: border-box;"><strong style="font-size: 13px;">Entregador:</strong></p>
+            @if($entrega->entregador)
+                <p style="margin: 4px 0; box-sizing: border-box; font-size: 13px; font-weight: bold;">{{ $entrega->entregador->name ?? $entrega->entregador->nombre ?? 'S/N' }}</p>
+                @if($entrega->entregador->email)
+                    <p style="margin: 4px 0; box-sizing: border-box; font-size: 11px; color: #666;">{{ $entrega->entregador->email }}</p>
+                @endif
+                @if($entrega->entregador->phone ?? false)
+                    <p style="margin: 4px 0; box-sizing: border-box; font-size: 11px; color: #666;">{{ $entrega->entregador->phone }}</p>
                 @endif
             @else
                 <p style="margin: 4px 0; box-sizing: border-box; font-size: 13px; color: #999;">Sin asignar</p>
@@ -86,7 +102,7 @@
 
         <!-- Capacidad del Vehículo -->
         <div style="font-size: 12px; box-sizing: border-box; width: 100%;">
-            <p style="margin: 4px 0; box-sizing: border-box;"><strong style="font-size: 13px;">Capacidad Vehículo:</strong></p>
+            <p style="margin: 4px 0; box-sizing: border-box;"><strong style="font-size: 13px;">Capacidad:</strong></p>
             @if($entrega->vehiculo && $entrega->vehiculo->capacidad_kg)
                 <p style="margin: 4px 0; box-sizing: border-box; font-size: 14px;">{{ number_format($entrega->vehiculo->capacidad_kg, 1) }} kg</p>
             @else
@@ -96,7 +112,7 @@
 
         <!-- Uso de Capacidad -->
         <div style="font-size: 12px; box-sizing: border-box; width: 100%;">
-            <p style="margin: 4px 0; box-sizing: border-box;"><strong style="font-size: 13px;">Uso Capacidad:</strong></p>
+            <p style="margin: 4px 0; box-sizing: border-box;"><strong style="font-size: 13px;">Uso:</strong></p>
             @if($entrega->vehiculo && $entrega->vehiculo->capacidad_kg)
                 @php
                     $pesoTotal = $entrega->peso_kg ?? 0;

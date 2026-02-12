@@ -37,6 +37,17 @@
                 <p style="margin: 3px 0; box-sizing: border-box;"><strong>Chofer:</strong> Sin asignar</p>
             @endif
 
+            {{-- ✅ NUEVO: ENTREGADOR --}}
+            @if($entrega->entregador)
+                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Entregador:</strong> {{ $entrega->entregador->name ?? $entrega->entregador->nombre ?? 'S/N' }}</p>
+                @if($entrega->entregador->email)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Email:</strong> {{ $entrega->entregador->email }}</p>
+                @endif
+                @if($entrega->entregador->phone ?? false)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Teléfono:</strong> {{ $entrega->entregador->phone }}</p>
+                @endif
+            @endif
+
             @if($entrega->vehiculo)
                 <p style="margin: 3px 0; box-sizing: border-box;"><strong>Vehículo:</strong> {{ $entrega->vehiculo->placa }}</p>
                 @if($entrega->vehiculo->marca)

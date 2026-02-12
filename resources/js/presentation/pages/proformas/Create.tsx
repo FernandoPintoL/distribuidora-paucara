@@ -35,6 +35,10 @@ import { Package, Plus, Trash2, ArrowLeft, Check, Search, AlertCircle, Loader2 }
 import { LoadingOverlay } from '@/presentation/components/ui/LoadingOverlay'
 import InputSearch from '@/presentation/components/ui/input-search'
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente'
+import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable'
+import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select'
+import { useClienteSearch } from '@/infrastructure/hooks/use-api-search'
+import { usePrecioRangoCarrito } from '@/application/hooks/use-precio-rango-carrito'
 
 // DOMAIN LAYER
 import type { Id } from '@/domain/entities/shared'
@@ -62,239 +66,6 @@ interface ProformaDetalleLocal {
     limite_venta?: number | null
 }
 
-interface ProductSelectionDialogProps {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-    productos: Producto[]
-    searchTerm: string
-    onSearchChange: (term: string) => void
-    onSelectProducto: (detalle: ProformaDetalleLocal) => void
-    isLoading?: boolean
-    error?: string | null
-}
-
-function ProductSelectionDialog({
-    open,
-    onOpenChange,
-    productos,
-    searchTerm,
-    onSearchChange,
-    onSelectProducto,
-    isLoading = false,
-    error = null
-}: ProductSelectionDialogProps) {
-    const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null)
-    const [cantidad, setCantidad] = useState(1)
-
-    const productosFiltrados = productos
-
-    const handleAgregarProductoSeleccionado = () => {
-        if (!selectedProducto) return
-
-        const precioUnitario = (selectedProducto.precio_base as number) || 0
-
-        const nuevoDetalle = {
-            id: Math.random(),
-            producto: selectedProducto,
-            producto_id: selectedProducto.id,
-            producto_nombre: selectedProducto.nombre,
-            sku: selectedProducto.sku,
-            cantidad: Math.max(0.01, cantidad),
-            precio_unitario: precioUnitario,
-            subtotal: (Math.max(0.01, cantidad)) * precioUnitario,
-            stock_disponible: (selectedProducto as any).stock_disponible || 0,
-            peso: (selectedProducto as any).peso || 0,
-            categoria: (selectedProducto as any).categoria || undefined,
-            limite_venta: (selectedProducto as any).limite_venta || null,
-            esNuevo: true
-        }
-
-        onSelectProducto(nuevoDetalle)
-
-        setSelectedProducto(null)
-        setCantidad(1)
-        onSearchChange('')
-    }
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] flex flex-col">
-                <DialogHeader className="shrink-0">
-                    <DialogTitle>Agregar Producto</DialogTitle>
-                    <DialogDescription className="text-xs">
-                        Busca y selecciona un producto para agregarlo a la proforma
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="flex-1 overflow-y-auto space-y-3 px-1">
-                    {/* Búsqueda */}
-                    <div className="relative sticky top-0 bg-background pb-2">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Buscar por nombre, SKU, código de barra, marca..."
-                            value={searchTerm}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            className="pl-10 h-9 text-sm"
-                            disabled={isLoading}
-                        />
-                        {isLoading && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Error */}
-                    {error && (
-                        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Lista de productos */}
-                    {isLoading ? (
-                        <div className="border rounded-lg p-8 text-center bg-muted/30">
-                            <div className="flex flex-col items-center gap-3">
-                                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-                                <p className="text-sm text-muted-foreground">Buscando productos...</p>
-                            </div>
-                        </div>
-                    ) : productosFiltrados.length > 0 ? (
-                        <div className="border rounded-lg divide-y bg-background">
-                            {productosFiltrados.map((producto) => (
-                                <div
-                                    key={producto.id}
-                                    className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors text-sm ${selectedProducto?.id === producto.id ? 'bg-accent' : ''}`}
-                                    onClick={() => setSelectedProducto(producto)}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-semibold text-sm truncate flex-1">{producto.nombre}</p>
-                                                {selectedProducto?.id === producto.id && (
-                                                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                                                )}
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                                                {(producto.sku || producto.codigo) && (
-                                                    <div className="col-span-2">
-                                                        <span className="text-muted-foreground">SKU: </span>
-                                                        <span className="font-mono text-foreground">{producto.sku || producto.codigo}</span>
-                                                    </div>
-                                                )}
-
-                                                {(producto.codigo_barras || (Array.isArray(producto.codigos_barra) && producto.codigos_barra?.length > 0)) && (
-                                                    <div className="col-span-2">
-                                                        <span className="text-muted-foreground">Código: </span>
-                                                        <span className="font-mono text-foreground">
-                                                            {producto.codigo_barras || (Array.isArray(producto.codigos_barra) ? producto.codigos_barra[0]?.codigo : '')}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                {producto.marca?.nombre && (
-                                                    <div>
-                                                        <span className="text-muted-foreground">Marca: </span>
-                                                        <span className="text-foreground">{producto.marca.nombre}</span>
-                                                    </div>
-                                                )}
-
-                                                {producto.unidad?.nombre && (
-                                                    <div>
-                                                        <span className="text-muted-foreground">Unidad: </span>
-                                                        <span className="text-foreground">{producto.unidad.nombre}</span>
-                                                    </div>
-                                                )}
-
-                                                <div className="col-span-2">
-                                                    <span className="text-muted-foreground">Stock: </span>
-                                                    <span className={(producto.cantidad_disponible as number) || (producto.stock_disponible as number) ? 'text-green-600 font-medium' : 'text-red-600'}>
-                                                        {((producto.cantidad_disponible as number) || (producto.stock_disponible as number) || 0)}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <p className="text-sm font-semibold text-foreground mt-2">
-                                                Bs. {((producto.precio_base as number) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : searchTerm ? (
-                        <div className="border rounded-lg p-4 text-center bg-muted/30 text-sm">
-                            <p className="text-muted-foreground">No se encontraron productos para "{searchTerm}"</p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Intenta con otro término: nombre, SKU, código de barra, marca, etc.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="border rounded-lg p-4 text-center bg-muted/30 text-sm">
-                            <p className="text-muted-foreground">Comienza a escribir para buscar productos</p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Puedes buscar por: nombre, SKU, código de barra, marca, etc.
-                            </p>
-                        </div>
-                    )}
-
-                    {selectedProducto && (
-                        <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
-                            <Label htmlFor="cantidad-input" className="text-sm">Cantidad</Label>
-                            <Input
-                                id="cantidad-input"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={cantidad || ''}
-                                onChange={(e) => {
-                                    const valor = parseFloat(e.target.value)
-                                    if (!isNaN(valor) && valor > 0) {
-                                        setCantidad(valor)
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    const valor = parseFloat(e.target.value)
-                                    if (isNaN(valor) || valor <= 0) {
-                                        setCantidad(1)
-                                    }
-                                }}
-                                placeholder="1.00"
-                                className="h-9 text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Subtotal: Bs. {(cantidad * ((selectedProducto.precio_base as number) || 0)).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                <DialogFooter className="shrink-0 gap-2 pt-2 flex">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            onOpenChange(false)
-                            setSelectedProducto(null)
-                            setCantidad(1)
-                            onSearchChange('')
-                        }}
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleAgregarProductoSeleccionado}
-                        disabled={!selectedProducto}
-                    >
-                        Agregar
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
 
 interface Props {
     clientes: Cliente[]
@@ -305,10 +76,14 @@ interface Props {
 export default function ProformasCreate({ clientes, productos: productosIniciales, almacenes }: Props) {
     // Estados principales
     const [detalles, setDetalles] = useState<ProformaDetalleLocal[]>([])
-    const [clienteId, setClienteId] = useState<number | null>(null)
-    const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
     const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Estados para cliente con búsqueda mejorada
+    const [clienteValue, setClienteValue] = useState<string | number | null>(null)
+    const [clienteDisplay, setClienteDisplay] = useState<string>('')
+    const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
+    const [clienteSearchQuery, setClienteSearchQuery] = useState('')
 
     // Fechas
     const hoy = new Date()
@@ -327,7 +102,7 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
     const [fechaEntregaSolicitada, setFechaEntregaSolicitada] = useState('')
     const [tipoEntrega, setTipoEntrega] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
     const [observaciones, setObservaciones] = useState('')
-    const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
+    const [politicaPago, setPoliticaPago] = useState<'CONTRA_ENTREGA' | 'ANTICIPADO_100'>('CONTRA_ENTREGA')
 
     // Búsqueda de productos
     const {
@@ -338,7 +113,7 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
         error: errorProductos
     } = useBuscarProductos({ debounceMs: 400 })
 
-    // Búsqueda de cliente
+    // Búsqueda de cliente mejorada
     const {
         results: clientesSearchResults,
         search: buscarClientes,
@@ -366,11 +141,26 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
 
     const totales = calcularTotales()
 
-    // Handlers
-    const handleAgregarProducto = (detalle: ProformaDetalleLocal) => {
-        const nuevosDetalles = [...detalles, detalle]
+    // Handlers para ProductosTable
+    const handleAgregarProducto = (producto: Producto) => {
+        const precioUnitario = (producto.precio_base as number) || 0
+        const nuevoDetalle: ProformaDetalleLocal = {
+            id: Math.random(),
+            producto,
+            producto_id: producto.id,
+            producto_nombre: producto.nombre,
+            sku: producto.sku,
+            cantidad: 1,
+            precio_unitario: precioUnitario,
+            subtotal: precioUnitario,
+            stock_disponible: (producto as any).stock_disponible || 0,
+            peso: (producto as any).peso || 0,
+            categoria: (producto as any).categoria || undefined,
+            limite_venta: (producto as any).limite_venta || null,
+        }
+
+        const nuevosDetalles = [...detalles, nuevoDetalle]
         setDetalles(nuevosDetalles)
-        setShowAgregarProductoDialog(false)
 
         const itemsParaCalcular = nuevosDetalles.map(d => ({
             producto_id: d.producto_id,
@@ -380,36 +170,57 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
         calcularCarritoDebounced(itemsParaCalcular)
     }
 
-    const handleEliminarProducto = (index: number) => {
+    const handleUpdateDetalle = (index: number, field: keyof ProformaDetalleLocal, value: number | string) => {
+        const nuevosDetalles = [...detalles]
+        const detalle = nuevosDetalles[index]
+
+        if (field === 'cantidad') {
+            const cantidadValida = Math.max(0.01, isNaN(value as any) ? 0.01 : (value as number))
+            detalle.cantidad = cantidadValida
+            detalle.subtotal = cantidadValida * detalle.precio_unitario
+        } else if (field === 'precio_unitario') {
+            detalle.precio_unitario = value as number
+            detalle.subtotal = detalle.cantidad * (value as number)
+        } else {
+            (detalle as any)[field] = value
+        }
+
+        setDetalles(nuevosDetalles)
+
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad,
+            tipo_precio_id: undefined
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
+    }
+
+    const handleRemoveDetalle = (index: number) => {
         const nuevosDetalles = detalles.filter((_, i) => i !== index)
         setDetalles(nuevosDetalles)
     }
 
-    const handleEditarCantidad = (index: number, cantidad: number) => {
-        const nuevosDetalles = [...detalles]
-        const cantidadValida = Math.max(0.01, isNaN(cantidad) ? 0.01 : cantidad)
-        nuevosDetalles[index].cantidad = cantidadValida
-        nuevosDetalles[index].subtotal = cantidadValida * nuevosDetalles[index].precio_unitario
-        setDetalles(nuevosDetalles)
-
-        const itemsParaCalcular = nuevosDetalles.map(d => ({
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            tipo_precio_id: undefined
-        }))
-        calcularCarritoDebounced(itemsParaCalcular)
+    const handleTotalsChange = (detalles: ProformaDetalleLocal[]) => {
+        // Este handler se llamará desde ProductosTable cuando cambien los totales
+        // Por ahora solo actualizamos el estado de detalles si es necesario
+        setDetalles(detalles as any)
     }
 
     const handleSeleccionarCliente = (cliente: Cliente) => {
-        setClienteId(cliente.id)
+        setClienteValue(cliente.id)
+        setClienteDisplay(cliente.nombre)
         setClienteSeleccionado(cliente)
         limpiarBusquedaClientes()
+    }
+
+    const handleCreateCliente = () => {
+        setMostrarModalCliente(true)
     }
 
     const handleCrearProforma = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!clienteId) {
+        if (!clienteValue) {
             toast.error('Selecciona un cliente')
             return
         }
@@ -423,10 +234,14 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
 
         try {
             const payload = {
-                cliente_id: clienteId,
+                cliente_id: clienteValue,
                 fecha,
                 fecha_vencimiento: fechaVencimiento,
                 canal,
+                requiere_envio: requiereEnvio,
+                fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
+                tipo_entrega: tipoEntrega,
+                politica_pago: politicaPago,
                 observaciones,
                 detalles: detalles.map(d => ({
                     producto_id: d.producto_id,
@@ -472,118 +287,182 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
 
     return (
         <>
-            <Head title="Nueva Proforma" />
-            <AppLayout>
-                <div className="space-y-6 p-6">
-                    {/* Breadcrumbs */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <a href="/proformas" className="hover:text-foreground flex items-center gap-1">
-                            <ArrowLeft className="h-4 w-4" />
-                            Proformas
-                        </a>
-                        <span>/</span>
-                        <span>Nueva Proforma</span>
+        <AppLayout breadcrumbs={[
+            { title: 'Proformas', href: '/proformas' },
+            { title: 'Nueva proforma', href: '#' }
+        ]}>
+            <Head title="Nueva proforma" />
+
+            <form onSubmit={handleCrearProforma} className="space-y-6 p-4">
+                {/* Información básica */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                        <div>
+                            <InputSearch
+                                id="cliente_search"
+                                label="Cliente"
+                                value={clienteValue}
+                                displayValue={clienteDisplay}
+                                onSearch={buscarClientes}
+                                onChange={(value, option) => {
+                                    setClienteValue(value)
+                                    if (option) {
+                                        setClienteDisplay(option.label)
+                                    } else {
+                                        setClienteDisplay('')
+                                    }
+                                }}
+                                placeholder="Buscar cliente por nombre, NIT/CI o teléfono..."
+                                emptyText="No se encontraron clientes"
+                                required={true}
+                                allowScanner={false}
+                                showCreateButton={true}
+                                onCreateClick={handleCreateCliente}
+                                createButtonText="Crear Cliente"
+                                showCreateIconButton={true}
+                                createIconButtonTitle="Crear nuevo cliente"
+                                className="w-full"
+                            />
+                            {clienteSeleccionado && (
+                                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                    {clienteSeleccionado.telefono && <span>📱 {clienteSeleccionado.telefono}</span>}
+                                    {clienteSeleccionado.nit && <span>{clienteSeleccionado.telefono ? ' • ' : ''}NIT: {clienteSeleccionado.nit}</span>}
+                                    {clienteSeleccionado.email && <span>{clienteSeleccionado.telefono || clienteSeleccionado.nit ? ' • ' : ''}Email: {clienteSeleccionado.email}</span>}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <Label htmlFor="fecha" className="text-sm">Fecha</Label>
+                            <Input
+                                id="fecha"
+                                type="date"
+                                value={fecha}
+                                onChange={(e) => setFecha(e.target.value)}
+                                required
+                            />
+                        </div>
                     </div>
 
-                    {/* Encabezado */}
-                    <div>
-                        <h1 className="text-3xl font-bold">Nueva Proforma</h1>
-                        <p className="text-muted-foreground mt-2">Crea una nueva cotización para tu cliente</p>
-                    </div>
+                    {/* Sección de Envío - SIEMPRE VISIBLE */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white">
+                                🚚 Información de Envío
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setRequiereEnvio(!requiereEnvio)}
+                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${requiereEnvio
+                                    ? 'bg-green-600 dark:bg-green-700'
+                                    : 'bg-gray-300 dark:bg-gray-600'
+                                    } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
+                            >
+                                <span
+                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${requiereEnvio ? 'translate-x-7' : 'translate-x-1'
+                                        }`}
+                                />
+                                <span className="ml-2 text-sm font-medium text-white">
+                                    {requiereEnvio ? 'Sí' : 'No'}
+                                </span>
+                            </button>
+                        </div>
 
-                    <form onSubmit={handleCrearProforma} className="space-y-6">
-                        {/* Card Cliente */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    👤 Cliente
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {clienteSeleccionado ? (
-                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-accent/5">
-                                        <div>
-                                            <p className="font-semibold">{clienteSeleccionado.nombre}</p>
-                                            <p className="text-sm text-muted-foreground">{clienteSeleccionado.nit}</p>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                setClienteId(null)
-                                                setClienteSeleccionado(null)
-                                                limpiarBusquedaClientes()
-                                            }}
-                                        >
-                                            Cambiar
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <InputSearch
-                                            placeholder="Busca un cliente por nombre, NIT..."
-                                            onSearch={buscarClientes}
-                                            loading={cargandoClientesSearch}
-                                            results={clientesSearchResults}
-                                            onSelect={(cliente) => handleSeleccionarCliente(cliente)}
-                                            renderResult={(cliente) => (
-                                                <div>
-                                                    <p className="font-semibold">{cliente.nombre}</p>
-                                                    <p className="text-sm text-muted-foreground">{cliente.nit}</p>
-                                                </div>
-                                            )}
-                                        />
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex-1"
-                                                onClick={() => setMostrarModalCliente(true)}
-                                            >
-                                                + Crear Cliente
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Card Información */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">📋 Información de Proforma</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="fecha" className="text-sm">Fecha</Label>
-                                        <Input
-                                            id="fecha"
-                                            type="date"
-                                            value={fecha}
-                                            onChange={(e) => setFecha(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="fecha-vencimiento" className="text-sm">Fecha Vencimiento</Label>
-                                        <Input
-                                            id="fecha-vencimiento"
-                                            type="date"
-                                            value={fechaVencimiento}
-                                            onChange={(e) => setFechaVencimiento(e.target.value)}
-                                            required
-                                        />
+                        {/* Campos de envío - mostrar solo si requiere_envio es true */}
+                        {requiereEnvio && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                                {/* Política de Pago */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        💳 Política de Pago
+                                    </label>
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                            <input
+                                                type="radio"
+                                                name="politica_pago"
+                                                value="CONTRA_ENTREGA"
+                                                checked={politicaPago === 'CONTRA_ENTREGA'}
+                                                onChange={(e) => setPoliticaPago(e.target.value as any)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Contra Entrega
+                                                </p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    El cliente paga al recibir el pedido
+                                                </p>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                            <input
+                                                type="radio"
+                                                name="politica_pago"
+                                                value="ANTICIPADO_100"
+                                                checked={politicaPago === 'ANTICIPADO_100'}
+                                                onChange={(e) => setPoliticaPago(e.target.value as any)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Anticipado 100%
+                                                </p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    El cliente paga antes de enviar
+                                                </p>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <Label htmlFor="canal" className="text-sm">Canal</Label>
-                                    <Select value={canal} onValueChange={(v) => setCanal(v as any)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="fecha-entrega" className="text-sm">Fecha Entrega Solicitada</Label>
+                                        <Input
+                                            id="fecha-entrega"
+                                            type="date"
+                                            value={fechaEntregaSolicitada}
+                                            onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
+                                            required={requiereEnvio}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="tipo-entrega" className="text-sm">Tipo Entrega</Label>
+                                        <Select value={tipoEntrega} onValueChange={(v) => setTipoEntrega(v as any)}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="DELIVERY">Delivery</SelectItem>
+                                                <SelectItem value="PICKUP">Pickup</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Información adicional */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4">
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <Label htmlFor="fecha-vencimiento" className="text-sm">Fecha Vencimiento</Label>
+                                <Input
+                                    id="fecha-vencimiento"
+                                    type="date"
+                                    value={fechaVencimiento}
+                                    onChange={(e) => setFechaVencimiento(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="canal" className="text-sm">Canal</Label>
+                                <Select value={canal} onValueChange={(v) => setCanal(v as any)}>
+                                    <SelectTrigger>
+                                        <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="PRESENCIAL">Presencial</SelectItem>
@@ -592,190 +471,85 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div>
-                                    <Label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={requiereEnvio}
-                                            onChange={(e) => setRequiereEnvio(e.target.checked)}
-                                            className="rounded"
-                                        />
-                                        <span className="text-sm">Requiere Envío</span>
-                                    </Label>
-                                </div>
-
-                                {requiereEnvio && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label htmlFor="fecha-entrega" className="text-sm">Fecha Entrega Solicitada</Label>
-                                                <Input
-                                                    id="fecha-entrega"
-                                                    type="date"
-                                                    value={fechaEntregaSolicitada}
-                                                    onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
-                                                    required={requiereEnvio}
-                                                />
-                                            </div>
-                                            <div>
-                                                <Label htmlFor="tipo-entrega" className="text-sm">Tipo Entrega</Label>
-                                                <Select value={tipoEntrega} onValueChange={(v) => setTipoEntrega(v as any)}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="DELIVERY">Delivery</SelectItem>
-                                                        <SelectItem value="PICKUP">Pickup</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <Label htmlFor="observaciones" className="text-sm">Observaciones</Label>
-                                    <Textarea
-                                        id="observaciones"
-                                        placeholder="Notas adicionales..."
-                                        value={observaciones}
-                                        onChange={(e) => setObservaciones(e.target.value)}
-                                        rows={3}
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Card Productos */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle className="text-lg">🛒 Productos</CardTitle>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => setShowAgregarProductoDialog(true)}
-                                    disabled={!clienteId}
-                                >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Agregar Producto
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                {detalles.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Producto</TableHead>
-                                                    <TableHead className="w-20">SKU</TableHead>
-                                                    <TableHead className="text-right w-24">Cantidad</TableHead>
-                                                    <TableHead className="text-right w-24">Precio</TableHead>
-                                                    <TableHead className="text-right w-24">Subtotal</TableHead>
-                                                    <TableHead className="text-center w-12">Acción</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {detalles.map((detalle, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="font-medium">{detalle.producto_nombre}</TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground">{detalle.sku}</TableCell>
-                                                        <TableCell>
-                                                            <Input
-                                                                type="number"
-                                                                min="0.01"
-                                                                step="0.01"
-                                                                value={detalle.cantidad}
-                                                                onChange={(e) => handleEditarCantidad(index, parseFloat(e.target.value))}
-                                                                className="w-20 text-right text-sm"
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            Bs. {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                        </TableCell>
-                                                        <TableCell className="text-right font-semibold">
-                                                            Bs. {detalle.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleEliminarProducto(index)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                        <p>No hay productos agregados. Haz click en "Agregar Producto" para comenzar.</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Card Resumen */}
-                        {detalles.length > 0 && (
-                            <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">📊 Resumen</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Subtotal:</span>
-                                        <span className="font-semibold">Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                    <Separator />
-                                    <div className="flex justify-between text-lg font-bold">
-                                        <span>Total:</span>
-                                        <span>Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Botones de acción */}
-                        <div className="flex gap-3">
-                            <a href="/proformas" className="flex-1">
-                                <Button type="button" variant="outline" className="w-full">
-                                    Cancelar
-                                </Button>
-                            </a>
-                            <Button
-                                type="submit"
-                                className="flex-1"
-                                disabled={!clienteId || detalles.length === 0 || isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Creando...
-                                    </>
-                                ) : (
-                                    'Crear Proforma'
-                                )}
-                            </Button>
                         </div>
-                    </form>
-                </div>
 
-                {/* Dialog seleccionar producto */}
-                <ProductSelectionDialog
-                    open={showAgregarProductoDialog}
-                    onOpenChange={setShowAgregarProductoDialog}
-                    productos={productosDisponibles}
-                    searchTerm={searchProducto}
-                    onSearchChange={setSearchProducto}
-                    onSelectProducto={handleAgregarProducto}
-                    isLoading={isLoadingProductos}
-                    error={errorProductos}
-                />
+                        <div>
+                            <Label htmlFor="observaciones" className="text-sm">Observaciones</Label>
+                            <Textarea
+                                id="observaciones"
+                                placeholder="Notas adicionales..."
+                                value={observaciones}
+                                onChange={(e) => setObservaciones(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Card Productos - ProductosTable */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">🛒 Productos</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ProductosTable
+                                productos={productosDisponibles}
+                                detalles={detalles as DetalleProducto[]}
+                                onAddProduct={handleAgregarProducto}
+                                onUpdateDetail={handleUpdateDetalle}
+                                onRemoveDetail={handleRemoveDetalle}
+                                onTotalsChange={handleTotalsChange}
+                                tipo="venta"
+                                almacen_id={undefined}
+                                isCalculatingPrices={isCalculandoRangos}
+                                errors={undefined}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Card Resumen */}
+                    {detalles.length > 0 && (
+                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+                            <CardHeader>
+                                <CardTitle className="text-lg">📊 Resumen</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Subtotal:</span>
+                                    <span className="font-semibold">Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex justify-between text-lg font-bold">
+                                    <span>Total:</span>
+                                    <span>Bs. {totales.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Botones de acción */}
+                    <div className="flex gap-3">
+                        <a href="/proformas" className="flex-1">
+                            <Button type="button" variant="outline" className="w-full">
+                                Cancelar
+                            </Button>
+                        </a>
+                        <Button
+                            type="submit"
+                            className="flex-1"
+                            disabled={!clienteValue || detalles.length === 0 || isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Creando...
+                                </>
+                            ) : (
+                                'Crear Proforma'
+                            )}
+                        </Button>
+                    </div>
+                    </div>
+                </form>
 
                 {/* Modal crear cliente */}
                 {mostrarModalCliente && (

@@ -875,6 +875,7 @@ class EntregaController extends Controller
             'ventas.estadoLogistica',          // ✅ NUEVO: Estado logístico de cada venta
             'ventas.detalles.producto.unidad', // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
             'chofer',
+            'entregador',      // ✅ NUEVO (2026-02-12): Mostrar entregador en show
             'vehiculo',
             'localidad',
             'reportes',        // Reportes asociados (Many-to-Many)

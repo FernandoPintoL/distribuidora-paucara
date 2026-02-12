@@ -128,6 +128,9 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                             <td className="px-6 py-4">
                                                 <div>
                                                     <p className="font-medium text-gray-900 dark:text-white">
+                                                        Folio: {venta.id}
+                                                    </p>
+                                                    <p className="font-medium text-gray-900 dark:text-white">
                                                         {venta.numero}
                                                     </p>
                                                 </div>

@@ -62,16 +62,24 @@ class EntregaPdfController extends Controller
             $formato = $request->query('formato', 'A4');
             $accion = $request->query('accion', 'download');
 
-            // Cargar relaciones necesarias
+            // Cargar relaciones necesarias (SIN entregador - lo haremos después)
             $entrega->load([
                 'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidades de clientes
                 'ventas.detalles.producto.unidad',
                 'chofer',
-                'entregador',  // ✅ NUEVO: Cargar entregador
                 'vehiculo',
                 'localidad',
                 'reportes',
             ]);
+
+            // ✅ IMPORTANTE: Cargar entregador manualmente usando query builder
+            // Debido a un comportamiento de Eloquent, las formas estándar (load/with) no funcionan
+            // El problema es que load() anterior CACHE una relación entregador vacía
+            // Por eso usamos setAttribute() que funciona correctamente
+            $entregador = $entrega->entregador()->first();
+            if ($entregador) {
+                $entrega->setAttribute('entregador', $entregador);
+            }
 
             // 🔍 DEBUG: Loguear información de la entrega para inspección
             \Log::info('📦 [EntregaPdfController::descargar] Datos de entrega para imprimir', [
@@ -179,14 +187,33 @@ class EntregaPdfController extends Controller
         try {
             $formato = $request->query('formato', 'A4');
 
-            // Cargar relaciones necesarias
-            $entrega->load([
-                'ventas.cliente',
+            // ✅ Cargar relaciones (SIN entregador - lo haremos después)
+            $entrega = Entrega::with([
+                'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidades de clientes
                 'ventas.detalles.producto.unidad',
                 'chofer',
                 'vehiculo',
                 'localidad',
                 'reportes',
+            ])->find($entrega->id);
+
+            // ✅ IMPORTANTE: Cargar entregador manualmente usando query builder
+            // Debido a un comportamiento de Eloquent, las formas estándar (with/load) no funcionan
+            // El problema es que with() anterior CACHE una relación entregador vacía
+            // Por eso usamos setAttribute() que funciona correctamente
+            $entregador = $entrega->entregador()->first();
+            if ($entregador) {
+                $entrega->setAttribute('entregador', $entregador);
+            }
+
+            // 🔍 DEBUG: Loguear información de la entrega para inspección
+            \Log::info('📦 [EntregaPdfController::preview] Datos de entrega para previsualizar', [
+                'entrega_id'            => $entrega->id,
+                'entrega_numero'        => $entrega->numero_entrega,
+                'estado'                => $entrega->estado,
+                'entregador_id'         => $entrega->entregador_id,
+                'entregador_nombre'     => $entrega->entregador?->name ?? 'SIN ENTREGADOR',
+                'formato'               => $formato,
             ]);
 
             // Obtener empresa principal
@@ -199,6 +226,11 @@ class EntregaPdfController extends Controller
             $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
             $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
 
+            // ✅ NUEVO: Obtener localidades e información del entregador
+            $localidadesService = app(\App\Services\EntregaLocalidadesService::class);
+            $localidades = $localidadesService->obtenerLocalidades($entrega);
+            $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
+
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
@@ -208,6 +240,8 @@ class EntregaPdfController extends Controller
                 'formato' => $formato,
                 'logo_principal_base64' => $logoPrincipalBase64,
                 'logo_footer_base64' => $logoFooterBase64,
+                'localidades' => $localidades,              // ✅ NUEVO
+                'localidades_resumen' => $localidadesResumen,  // ✅ NUEVO
             ];
 
             // Crear PDF
