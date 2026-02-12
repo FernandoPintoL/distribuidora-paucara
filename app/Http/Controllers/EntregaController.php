@@ -500,8 +500,10 @@ class EntregaController extends Controller
                 ];
             });
 
-        // 3. Obtener todos los vehículos SIN restricción de estado (usuario puede seleccionar cualquiera)
+        // 3. Obtener solo vehículos ACTIVOS en modo edición
+        // ✅ NUEVO (2026-02-12): En edit mode, mostrar SOLO vehículos activos
         $vehiculos = Vehiculo::query()
+            ->where('activo', true)  // ✅ Solo vehículos activos
             ->with('choferAsignado')
             ->orderBy('placa')
             ->get()
