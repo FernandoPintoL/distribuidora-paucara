@@ -24,7 +24,8 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
 
     const [filters, setFilters] = useState<ReservaProformaFilters>({
         ordenamiento: 'fecha_expiracion-asc',
-        fecha_creacion_desde: today, // Filtro por defecto: solo hoy
+        fecha_creacion_desde: today,  // Filtro por defecto: solo hoy
+        fecha_creacion_hasta: today,  // ✅ NUEVO (2026-02-12): Limitar a solo hoy
     });
     const [filterInputs, setFilterInputs] = useState({
         proforma_numero: '',
@@ -124,12 +125,14 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
         });
         setFilters({
             ordenamiento: 'fecha_expiracion-asc',
-            fecha_creacion_desde: today, // Mantener filtro por defecto
+            fecha_creacion_desde: today,  // Mantener filtro por defecto: solo hoy
+            fecha_creacion_hasta: today,  // ✅ NUEVO (2026-02-12): Mantener límite de hoy
         });
         setCurrentPage(1);
         onFiltersChange?.({
             ordenamiento: 'fecha_expiracion-asc',
             fecha_creacion_desde: today,
+            fecha_creacion_hasta: today,
         });
     };
 
