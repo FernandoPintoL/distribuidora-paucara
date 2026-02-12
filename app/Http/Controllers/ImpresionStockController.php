@@ -81,20 +81,12 @@ class ImpresionStockController extends Controller
             $nombreArchivo = 'reporte-stock-' . now()->format('YmdHis') . '.pdf';
 
             if ($accion === 'stream') {
-                $response = $pdf->stream($nombreArchivo);
+                return $pdf->stream($nombreArchivo);
             } else {
-                $response = $pdf->download($nombreArchivo);
+                return $pdf->download($nombreArchivo);
             }
 
-            // Restaurar límite de memoria original
-            ini_set('memory_limit', $originalMemoryLimit);
-
-            return $response;
-
         } catch (\Exception $e) {
-            // Restaurar límite de memoria en caso de error
-            ini_set('memory_limit', $originalMemoryLimit ?? '512M');
-
             \Log::error('❌ Error al imprimir reporte de stock', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

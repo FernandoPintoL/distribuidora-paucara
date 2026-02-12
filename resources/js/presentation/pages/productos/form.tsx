@@ -220,7 +220,7 @@ export default function ProductoForm({
       activo: data.activo ? 1 : 0,
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
-      limite_venta: data.limite_venta ?? '', // ✨ NUEVO - Vacío = sin límite
+      limite_venta: data.limite_venta ? String(data.limite_venta) : '', // ✨ NUEVO - Enviar solo si tiene valor
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
     // Imágenes (desde estado separado)

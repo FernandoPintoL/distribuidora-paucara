@@ -470,10 +470,13 @@ export default function Step1DatosProducto({
             <Input
               id="limite_venta"
               type="number"
-              min="0"
+              min="1"
               step="1"
               value={data.limite_venta ?? ''}
-              onChange={e => setData('limite_venta', e.target.value ? Number(e.target.value) : null)}
+              onChange={e => {
+                const valor = e.target.value.trim();
+                setData('limite_venta', valor === '' ? null : parseInt(valor, 10));
+              }}
               className={getInputClassName('limite_venta')}
               placeholder="Ej: 50 (dejar vacío para sin límite)"
             />

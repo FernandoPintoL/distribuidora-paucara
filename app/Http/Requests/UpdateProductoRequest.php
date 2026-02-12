@@ -23,6 +23,15 @@ class UpdateProductoRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // ✨ NUEVO: Convertir limite_venta vacío a null para permitir guardarlo sin límite
+        if ($this->has('limite_venta')) {
+            $limitVenta = $this->input('limite_venta');
+            // Si es cadena vacía o "0", convertir a null (sin límite)
+            if ($limitVenta === '' || $limitVenta === '0' || $limitVenta === 0) {
+                $this->merge(['limite_venta' => null]);
+            }
+        }
+
         // Manejo simplificado y robusto de códigos
         if ($this->has('codigos')) {
             $codigosLimpios = [];
