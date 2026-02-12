@@ -5,6 +5,8 @@ use App\Exceptions\Venta\EstadoInvalidoException;
 use App\Http\Traits\ApiInertiaUnifiedResponse;
 use App\Models\Empleado;
 use App\Models\Entrega;
+use App\Models\EstadoLogistica;
+use App\Models\Venta;
 use App\Models\Vehiculo;
 use App\Services\ImpresionEntregaService;
 use App\Services\Logistica\EntregaService;
@@ -549,6 +551,7 @@ class EntregaController extends Controller
                 'fecha_programada'   => $entrega->fecha_programada?->format('Y-m-d'),
                 'vehiculo_id'        => $entrega->vehiculo_id,
                 'chofer_id'          => $entrega->chofer_id,
+                'entregador_id'      => $entrega->entregador_id,
                 'peso_kg'            => $entrega->peso_kg,
                 'volumen_m3'         => $entrega->volumen_m3,
             ],
@@ -1673,5 +1676,54 @@ class EntregaController extends Controller
             'vehiculos' => $vehiculos,
             'choferes'  => $choferes,
         ]);
+    }
+
+    /**
+     * Desvincular una venta de una entrega
+     *
+     * DELETE /api/entregas/{entrega}/ventas/{venta}
+     *
+     * Establece entrega_id = null en la venta y devuelve estado logístico a SIN_ENTREGA
+     */
+    public function desvincularVenta(Entrega $entrega, Venta $venta): JsonResponse
+    {
+        try {
+            // Verificar que la venta pertenece a la entrega
+            if ($venta->entrega_id !== $entrega->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La venta no pertenece a esta entrega',
+                ], 422);
+            }
+
+            // Desvincular venta
+            $venta->update([
+                'entrega_id' => null,
+            ]);
+
+            // Devolver estado logístico a SIN_ENTREGA
+            $estadoSinEntrega = EstadoLogistica::where('codigo', 'SIN_ENTREGA')->first();
+            if ($estadoSinEntrega) {
+                $venta->update([
+                    'estado_logistico_id' => $estadoSinEntrega->id,
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Venta #{$venta->numero} desvinculada correctamente",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al desvincular venta de entrega', [
+                'entrega_id' => $entrega->id,
+                'venta_id' => $venta->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al desvincular la venta: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

@@ -1167,7 +1167,26 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
 
             const convertirData = await convertirResponse.json();
             console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
-            toast.success('✅ Proforma convertida a venta exitosamente');
+
+            // ✅ NUEVO: Mostrar detalles del stock consumido
+            const stockConsumido = convertirData.data?.stock_consumido;
+            if (stockConsumido && stockConsumido.detalles.length > 0) {
+                // Toast con información detallada de stock consumido
+                const productosConsumidos = stockConsumido.detalles.map((p: any) =>
+                    `${p.producto_nombre} (${p.cantidad_reservada} unidades de ${p.cantidad_lotes} lote(s))`
+                ).join(', ');
+
+                toast.success(
+                    `✅ Stock Consumido: ${productosConsumidos}`,
+                    {
+                        description: `Venta ${convertirData.data.venta.numero} - Total: $${convertirData.data.venta.total}`
+                    }
+                );
+
+                console.log('%c📦 Stock Consumido - Detalles Completos:', 'color: green; font-weight: bold;', stockConsumido);
+            } else {
+                toast.success('✅ Proforma convertida a venta exitosamente');
+            }
 
             // Actualizar estado del flujo con éxito
             if (approvalFlow) {
@@ -1237,10 +1256,48 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         }
     }
 
-    const handleRechazar = () => {
-        rechazar(motivoRechazo, coordinacion)
-        setShowRechazarDialog(false)
-        setMotivoRechazo('')
+    const handleRechazar = async () => {
+        if (!motivoRechazo.trim()) {
+            toast.error('Debe indicar un motivo de rechazo');
+            return;
+        }
+
+        try {
+            setShowRechazarDialog(false);
+
+            // Obtener token CSRF
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            // Realizar la solicitud POST
+            const response = await fetch(`/proformas/${proforma.id}/rechazar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken,
+                },
+                body: JSON.stringify({ motivo: motivoRechazo.trim() }),
+            });
+
+            const data = await response.json();
+
+            // Mostrar toast con el mensaje del servidor
+            if (data.success) {
+                toast.success(data.message || 'Proforma rechazada correctamente');
+
+                // Recargar la página después de 1 segundo
+                setTimeout(() => {
+                    window.location.href = '/proformas';
+                }, 1000);
+            } else {
+                toast.error(data.message || 'Error al rechazar la proforma');
+            }
+        } catch (error) {
+            console.error('Error al rechazar proforma:', error);
+            toast.error('Error al procesar la solicitud');
+        } finally {
+            setMotivoRechazo('');
+        }
     }
 
     const handleConvertir = () => {

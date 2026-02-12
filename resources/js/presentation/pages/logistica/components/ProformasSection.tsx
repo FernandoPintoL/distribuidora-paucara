@@ -920,17 +920,7 @@ export function ProformasSection({
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Vencimiento</th>
                                 {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">🚚 Entrega Solicitada</th>
-                                {/* <th
-                                    className="px-4 py-2 text-left font-medium dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
-                                    onClick={() => handleSort('fecha')}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        Fecha
-                                        {sortField === 'fecha' && (
-                                            sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
-                                        )}
-                                    </div>
-                                </th> */}
+                                
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Creada</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">✏️ Actualizada</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Acciones</th>

@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { AlertCircle, Package, CheckCircle2, Plus, Calendar } from 'lucide-react';
+import { AlertCircle, Package, CheckCircle2, Plus, Calendar, Trash2 } from 'lucide-react';
 import { Card } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
@@ -18,6 +18,7 @@ interface Entrega {
     fecha_programada: string;
     vehiculo_id?: number;
     chofer_id?: number;
+    entregador_id?: number;
     peso_kg?: number;
     volumen_m3?: number;
 }
@@ -129,6 +130,23 @@ export default function CreateEntregasUnificado({
     }, [updateFormData]);
 
     // Hook para recomendación de vehículo (batch mode)
+    // ⚠️ En edit mode, NO usar el hook porque el backend ya envía peso_kg + ventas asignadas
+    const hookResult = isEditMode
+        ? {
+            recomendado: null,
+            disponibles: [],
+            pesoTotal: 0,
+            isLoading: false,
+            error: null,
+            alerta: null,
+        }
+        : useVehiculoRecomendado(
+            selectedVentaIds,
+            ventas,
+            true, // Auto-select recomendado
+            handleSelectVehiculo
+        );
+
     const {
         recomendado,
         disponibles,
@@ -136,12 +154,7 @@ export default function CreateEntregasUnificado({
         isLoading: loadingRecomendacion,
         error: errorRecomendacion,
         alerta: alertaRecomendacion,
-    } = useVehiculoRecomendado(
-        selectedVentaIds,
-        ventas,
-        true, // Auto-select recomendado
-        handleSelectVehiculo
-    );
+    } = hookResult;
 
     // Auto-seleccionar vehículo cuando se carga la recomendación
     useEffect(() => {
@@ -191,15 +204,24 @@ export default function CreateEntregasUnificado({
                 numero_entrega: entrega.numero_entrega,
                 vehiculo_id: entrega.vehiculo_id,
                 chofer_id: entrega.chofer_id,
+                fecha_programada: entrega.fecha_programada,
+            });
+
+            // Convertir fecha al formato correcto para datetime-local input
+            const fechaFormato = convertToDatetimeLocalFormat(entrega.fecha_programada);
+            console.log('🕐 Fecha convertida:', {
+                original: entrega.fecha_programada,
+                convertida: fechaFormato,
             });
 
             // Cargar datos de la entrega existente
             updateFormData({
                 vehiculo_id: entrega.vehiculo_id,
                 chofer_id: entrega.chofer_id,
+                entregador_id: entrega.entregador_id,
                 peso_kg: entrega.peso_kg,
                 volumen_m3: entrega.volumen_m3,
-                fecha_programada: entrega.fecha_programada,
+                fecha_programada: fechaFormato,
             });
 
             // Pre-seleccionar las ventas asignadas
@@ -284,6 +306,56 @@ export default function CreateEntregasUnificado({
         }
     }, [formData.vehiculo_id, formData.chofer_id, isBatchMode, capacidadInsuficiente, totals.pesoTotal]);
 
+    // Handler para eliminar venta asignada
+    const [ventasEliminando, setVentasEliminando] = useState<Set<Id>>(new Set());
+    const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+
+    const handleEliminarVenta = async (ventaId: Id) => {
+        if (!isEditMode || !entrega) return;
+
+        const confirmed = window.confirm('¿Estás seguro de que deseas eliminar esta venta de la entrega?');
+        if (!confirmed) return;
+
+        setVentasEliminando(prev => new Set([...prev, ventaId]));
+        setErrorEliminar(null);
+
+        try {
+            const response = await fetch(`/logistica/entregas/${entrega.id}/ventas/${ventaId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setErrorEliminar(data.message || 'Error al eliminar la venta');
+                return;
+            }
+
+            // Remover de selectedVentaIds
+            setSelectedVentaIds(prev => prev.filter(id => id !== ventaId));
+            console.log('✅ Venta eliminada:', ventaId);
+
+            // Recargar la página después de 500ms para asegurar que el backend procesó todo
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Error desconocido';
+            setErrorEliminar(message);
+            console.error('❌ Error al eliminar venta:', error);
+        } finally {
+            setVentasEliminando(prev => {
+                const next = new Set(prev);
+                next.delete(ventaId);
+                return next;
+            });
+        }
+    };
+
     // Handlers
     const handleToggleVenta = (ventaId: Id) => {
         setSelectedVentaIds((prev) => {
@@ -326,6 +398,18 @@ export default function CreateEntregasUnificado({
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    // Helper para convertir fecha ISO (2026-02-11) a formato datetime-local (2026-02-11T00:00)
+    const convertToDatetimeLocalFormat = (dateString?: string) => {
+        if (!dateString) return getTodayDateTimeLocal();
+        // Si ya tiene T (formato correcto), devolver tal cual
+        if (dateString.includes('T')) return dateString;
+        // Si es solo fecha (YYYY-MM-DD), agregar T00:00
+        if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return `${dateString}T00:00`;
+        }
+        return getTodayDateTimeLocal();
     };
 
     // Renderizar panel dinámico según selección
@@ -429,13 +513,38 @@ export default function CreateEntregasUnificado({
                         Asignación de Recursos
                     </h2>
 
+                    {/* ✅ DEBUG: Mostrar estado de renderización */}
+                    {isEditMode && (
+                        <div className="text-xs bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 rounded text-blue-700 dark:text-blue-300">
+                            DEBUG - Edit Mode: vehiculo_id={formData.vehiculo_id}, chofer_id={formData.chofer_id}
+                        </div>
+                    )}
+
                     {/* Recomendación Inteligente de Vehículo O Datos de Edición */}
-                    {(recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion || (isEditMode && formData.vehiculo_id)) && (
+                    {(() => {
+                        // En edit mode: solo necesitas que vehiculo_id esté setado
+                        // En create mode: necesitas algo del hook (recomendación, alerta, error, etc.)
+                        const shouldRender = isEditMode
+                            ? Boolean(formData.vehiculo_id)
+                            : (recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion);
+
+                        console.log('🎯 [VehicleRecommendationCard] shouldRender:', shouldRender, {
+                            isEditMode,
+                            vehiculo_id: formData.vehiculo_id,
+                            recomendado: !!recomendado,
+                            hook_values: {
+                                alerta: !!alertaRecomendacion,
+                                error: !!errorRecomendacion,
+                                loading: loadingRecomendacion,
+                            }
+                        });
+                        return shouldRender;
+                    })() && (
                         <VehicleRecommendationCard
                             recomendado={recomendado}
                             disponibles={disponibles}
                             todosVehiculos={vehiculos}
-                            pesoTotal={isEditMode ? totals.pesoTotal : pesoRecomendacion}
+                            pesoTotal={isEditMode ? 0 : pesoRecomendacion}
                             isLoading={loadingRecomendacion}
                             error={errorRecomendacion}
                             alerta={alertaRecomendacion}
@@ -448,6 +557,65 @@ export default function CreateEntregasUnificado({
                             onSelectChofer={handleSelectChofer}
                             onSelectEntregador={handleSelectEntregador}
                         />
+                    )}
+
+                    {/* ✅ NUEVO: Mostrar ventas asignadas en modo edición */}
+                    {isEditMode && selectedCount > 0 && (
+                        <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                Ventas Asignadas a esta Entrega
+                            </h3>
+
+                            {/* Mostrar error si existe */}
+                            {errorEliminar && (
+                                <div className="mb-3 p-2 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded text-xs text-red-700 dark:text-red-300">
+                                    ❌ {errorEliminar}
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                {ventasAsignadas && ventasAsignadas.length > 0 ? (
+                                    ventasAsignadas.map((venta) => (
+                                        <div key={venta.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    #{venta.numero_venta}
+                                                </p>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    {venta.cliente?.nombre} • Bs {(venta.subtotal ?? 0).toLocaleString('es-BO', { minimumFractionDigits: 2 })}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-right">
+                                                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                                                        {venta.peso_estimado ? `${venta.peso_estimado.toFixed(1)} kg` : '-'}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleEliminarVenta(venta.id)}
+                                                    disabled={ventasEliminando.has(venta.id)}
+                                                    className="flex-shrink-0 p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Eliminar venta de esta entrega"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Sin ventas asignadas
+                                    </p>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">
+                                {ventasAsignadas?.length === 1
+                                    ? '1 venta asignada a esta entrega'
+                                    : `${ventasAsignadas?.length ?? 0} ventas asignadas a esta entrega`
+                                }
+                            </p>
+                        </Card>
                     )}
 
                     {/* Fecha de Entrega Programada */}

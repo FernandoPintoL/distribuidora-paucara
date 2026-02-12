@@ -53,6 +53,7 @@ import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
 import ProformaController from './ProformaController'
+import ReservaController from './ReservaController'
 import CajaController from './CajaController'
 import GastoController from './GastoController'
 import CierreDiarioGeneralController from './CierreDiarioGeneralController'
@@ -133,6 +134,7 @@ DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
 ProformaController,
+ReservaController,
 CajaController,
 GastoController,
 CierreDiarioGeneralController,

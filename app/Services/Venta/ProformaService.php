@@ -9,6 +9,7 @@ use App\Exceptions\Venta\EstadoInvalidoException;
 use App\Models\Cliente;
 use App\Models\DetalleProforma;
 use App\Models\Proforma;
+use App\Services\Reservas\ReservaDistribucionService;
 use App\Services\Stock\StockService;
 use App\Services\Traits\LogsOperations;
 use App\Services\Traits\ManagesTransactions;
@@ -258,9 +259,25 @@ class ProformaService
 
             $this->validarTransicion($proforma->estado, 'RECHAZADA');
 
-            // Liberar reservas de stock (manejado por modelo Proforma)
-            // Esto devuelve la cantidad_disponible y elimina registros de reservas_proforma
-            $proforma->liberarReservas();
+            // ✅ Liberar TODAS las reservas usando ReservaDistribucionService
+            $distribucionService = new ReservaDistribucionService();
+            $resultadoLiberacion = $distribucionService->liberarTodasLasReservas(
+                $proforma,
+                "Rechazo de proforma: {$motivo}"
+            );
+
+            if (!$resultadoLiberacion['success']) {
+                Log::warning('⚠️ Advertencia al liberar reservas en rechazo de proforma', [
+                    'proforma_id' => $proformaId,
+                    'error' => $resultadoLiberacion['error'] ?? 'Error desconocido',
+                ]);
+            } else {
+                Log::info('✅ Reservas liberadas exitosamente en rechazo de proforma', [
+                    'proforma_id' => $proformaId,
+                    'cantidad_liberada' => $resultadoLiberacion['cantidad_liberada'],
+                    'reservas_liberadas' => $resultadoLiberacion['reservas_liberadas'],
+                ]);
+            }
 
             // ✅ Obtener el estado RECHAZADA (ID=3 en estados_logistica, categoría: proforma)
             $estadoRechazada = \App\Models\EstadoLogistica::where('codigo', 'RECHAZADA')
@@ -274,7 +291,9 @@ class ProformaService
                 'observaciones'      => ($proforma->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
             ]);
 
-            event(new \App\Events\ProformaRechazada($proforma, $motivo));
+            // ⚠️ COMENTADO: WebSocket endpoint no configurado, event broadcasting deshabilitado
+            // Las reservas ya fueron liberadas correctamente arriba
+            // event(new \App\Events\ProformaRechazada($proforma, $motivo));
 
             return $proforma;
         });

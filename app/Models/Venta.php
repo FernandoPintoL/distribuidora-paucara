@@ -621,11 +621,13 @@ class Venta extends Model
         // ✅ CORREGIDO (2026-02-10): Buscar AMBOS tipos de movimiento
         // - SALIDA_VENTA: Ventas creadas directamente (sin proforma)
         // - CONSUMO_RESERVA: Ventas convertidas desde proforma
+        // ✅ CORREGIDO (2026-02-11): Agregado lockForUpdate() para prevenir race conditions
         $movimientos = MovimientoInventario::where('numero_documento', $this->numero)
             ->whereIn('tipo', [
                 MovimientoInventario::TIPO_SALIDA_VENTA,
                 'CONSUMO_RESERVA'  // ✅ Agregar este tipo para proformas convertidas a venta
             ])
+            ->lockForUpdate()  // ✅ Previene race conditions en actualizaciones concurrentes
             ->get();
 
         DB::beginTransaction();

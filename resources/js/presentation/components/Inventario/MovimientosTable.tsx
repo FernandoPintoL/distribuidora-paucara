@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface MovimientoInventario {
     id: number;
     numero: string;
+    numero_documento?: string;  // ✅ NUEVO: Referencia a venta/proforma/etc (VEN20260212-0001)
     fecha: string;
     created_at: string;  // ✅ NUEVO (2026-02-11): Fecha de creación del registro
     tipo: string;
@@ -97,6 +98,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead className="text-center">Cant. Anterior</TableHead>
                             <TableHead className="text-center">Cambio</TableHead>
                             <TableHead className="text-center">Cant. Posterior</TableHead>
+                            {/* ✅ NUEVO: Columna de documento relacionado (venta/proforma) */}
+                            <TableHead>📋 Documento</TableHead>
                             <TableHead>Motivo</TableHead>
                             <TableHead>Usuario</TableHead>
                         </TableRow>
@@ -174,6 +177,20 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                         <span className="text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
                                             {movimiento.cantidad_posterior}
                                         </span>
+                                    </TableCell>
+                                    {/* ✅ NUEVO: Documento relacionado (Venta, Proforma, etc) */}
+                                    <TableCell>
+                                        {movimiento.numero_documento ? (
+                                            <a
+                                                href={`/ventas/${movimiento.numero_documento.split('-')[1]}`}
+                                                className="font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                title={`Ver documento: ${movimiento.numero_documento}`}
+                                            >
+                                                📋 {movimiento.numero_documento}
+                                            </a>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm">-</span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-sm">{movimiento.motivo}</TableCell>
                                     <TableCell>

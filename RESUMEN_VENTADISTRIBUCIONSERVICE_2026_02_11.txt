@@ -1,0 +1,274 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║             ✅ VERIFICACIÓN: VentaDistribucionService                           ║
+║                    Integridad de Datos - POST /ventas                           ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+📍 UBICACIONES CLAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Servicio:
+  ├─ VentaDistribucionService.php
+  │  ├─ consumirStock() - línea 51
+  │  ├─ devolverStock() - línea 206
+  │  ├─ validarDisponible() - línea 350
+  │  └─ obtenerDisponibilidad() - línea 406
+  │
+Integración:
+  ├─ VentaService.php
+  │  ├─ Validación: línea 91
+  │  └─ Consumo: línea 271
+  │
+  └─ VentaController@store
+     └─ Llama a VentaService::crear()
+
+
+✅ ACTUALIZACIÓN EN STOCK_PRODUCTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AL CREAR VENTA:
+
+  1. Captura ANTES (línea 133-134)
+     ├─ $cantidadAnterior = $stock->cantidad
+     └─ $cantidadDisponibleAnterior = $stock->cantidad_disponible
+
+  2. Actualiza AMBAS columnas (línea 137-138)
+     ├─ $stock->decrement('cantidad_disponible', $cantidadTomar)
+     └─ $stock->decrement('cantidad', $cantidadTomar)
+
+  3. Captura DESPUÉS (línea 142-143)
+     ├─ $stock->refresh()
+     ├─ $cantidadPosterior = $stock->cantidad
+     └─ $cantidadDisponiblePosterior = $stock->cantidad_disponible
+
+  EJEMPLO:
+  ┌─────────────────────────────────────────┐
+  │ Venta: 10 unidades Pepsi                │
+  ├─────────────────────────────────────────┤
+  │ ANTES:     cantidad=100, disponible=80  │
+  │ ACTUALIZA: -10 unidades                 │
+  │ DESPUÉS:   cantidad=90, disponible=70   │
+  └─────────────────────────────────────────┘
+
+
+✅ REGISTRO EN MOVIMIENTOS_INVENTARIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Campos Clave (línea 146-165):
+
+  ✅ cantidad:           -10 (NEGATIVO para salida)
+  ✅ cantidad_anterior:  100 (ANTES de actualizar)
+  ✅ cantidad_posterior: 90  (DESPUÉS de actualizar)
+  ✅ tipo:               TIPO_SALIDA_VENTA
+  ✅ numero_documento:   VEN20260211-0001 (referencia)
+
+  Observacion JSON (línea 153-162):
+  ├─ evento: "Consumo de stock para venta"
+  ├─ venta_numero: "VEN20260211-0001"
+  ├─ producto_id: 5
+  ├─ lote: "PEPSI-20260315"
+  ├─ cantidad_anterior: 100 ✅
+  ├─ cantidad_posterior: 90  ✅
+  ├─ cantidad_disponible_anterior: 80 ✅
+  └─ cantidad_disponible_posterior: 70 ✅
+
+
+🔄 FLUJO COMPLETO: CREATE VENTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+POST /ventas
+  ↓
+VentaService::crear()
+  ├─ 1️⃣ VALIDAR STOCK (línea 91)
+  │  └─ ventaDistribucionService->validarDisponible($detalles)
+  │     → Si insuficiente: StockInsuficientException
+  │
+  ├─ 2️⃣ CREAR VENTA (línea 163)
+  │  └─ Venta::create([...])
+  │
+  ├─ 3️⃣ CREAR DETALLES (línea 239)
+  │  └─ DetalleVenta::create([...])
+  │
+  ├─ 4️⃣ CONSUMIR STOCK (línea 271)
+  │  └─ ventaDistribucionService->consumirStock(
+  │     $detalles,
+  │     $venta->numero,
+  │     permitirStockNegativo: $esCREDITO
+  │  )
+  │     ├─ Obtener stocks FIFO (vencimiento + id)
+  │     ├─ Para cada lote:
+  │     │  ├─ Captura ANTES
+  │     │  ├─ Decrement cantidad y disponible
+  │     │  ├─ Captura DESPUÉS
+  │     │  └─ Registra movimiento SALIDA_VENTA
+  │     └─ Return: array de movimientos
+  │
+  ├─ 5️⃣ GENERAR TOKEN (línea 291)
+  │  └─ VentaAccessToken::create([...])
+  │
+  └─ 6️⃣ EVENTO (línea 299)
+     └─ event(new VentaCreada($venta))
+
+✅ RESULTADO FINAL:
+   ├─ Venta creada ✓
+   ├─ Stock actualizado FIFO ✓
+   ├─ Movimientos registrados ✓
+   ├─ Auditoría completa ✓
+   └─ Evento para caja ✓
+
+
+🔄 DEVOLUCIÓN AL ANULAR VENTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cuando se anula una venta:
+
+  1. Obtener movimientos SALIDA_VENTA (línea 216)
+     └─ MovimientoInventario::where('numero_documento', $numeroVenta)
+
+  2. Para cada movimiento (línea 237)
+     ├─ Captura ANTES (línea 242-243)
+     ├─ Restaura cantidad (línea 255-261)
+     │  ├─ cantidad + cantidadADevolver
+     │  └─ cantidad_disponible + cantidadADevolver
+     ├─ Captura DESPUÉS (línea 268-270)
+     └─ Registra ENTRADA_AJUSTE (línea 282-301)
+        ├─ cantidad: +10 (POSITIVO)
+        ├─ cantidad_anterior: 90 (ANTES)
+        ├─ cantidad_posterior: 100 (DESPUÉS)
+        └─ numero_documento: "VEN20260211-0001-DEV"
+
+  EJEMPLO:
+  ┌─────────────────────────────────────────┐
+  │ Anular: VEN20260211-0001 (10 unidades)  │
+  ├─────────────────────────────────────────┤
+  │ ANTES:     cantidad=90, disponible=70   │
+  │ RESTAURA:  +10 unidades                 │
+  │ DESPUÉS:   cantidad=100, disponible=80  │
+  └─────────────────────────────────────────┘
+
+
+⚙️ CARACTERÍSTICAS DE SEGURIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Lock Pesimista (línea 93)
+   └─ .lockForUpdate() previene race conditions
+
+✅ Transacciones Atómicas (línea 67)
+   └─ DB::transaction() garantiza atomicidad
+
+✅ FIFO (línea 88-92)
+   └─ Ordena por fecha_vencimiento, luego id
+
+✅ Stock Negativo para CREDITO (línea 54, 112)
+   └─ Permitido solo cuando $permitirStockNegativo=true
+
+✅ Auditoría Completa (línea 153-162)
+   └─ JSON con TODOS los detalles
+
+✅ Rastrabilidad (línea 152)
+   └─ numero_documento: referencia a venta
+
+
+📊 TABLA COMPARATIVA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Característica              │ ReservaDistribucion │ VentaDistribucion
+────────────────────────────┼──────────────────────┼──────────────────
+Guarda cantidad_anterior    │ ✅                   │ ✅
+Guarda cantidad_posterior   │ ✅                   │ ✅
+Actualiza cantidad_disponible│ ✅                  │ ✅
+Actualiza cantidad          │ ✅                   │ ✅
+Lock pesimista              │ ✅                   │ ✅
+FIFO                        │ ✅                   │ ✅
+Transacciones              │ ✅                   │ ✅
+JSON en observacion         │ ✅                   │ ✅
+Cantidad_disponible anterior│ ✅                   │ ✅
+Cantidad_disponible posterior│ ✅                  │ ✅
+
+
+🧪 CASOS DE PRUEBA ESENCIALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CASO 1: Venta Normal (Suficiente Stock)
+  Setup:   Pepsi 100 unidades
+  Acción:  Venta de 10 unidades
+  Esperado:
+    ├─ stock_productos.cantidad: 100→90 ✅
+    ├─ stock_productos.cantidad_disponible: 100→90 ✅
+    ├─ movimientos: 1 registro ✅
+    ├─ cantidad_anterior: 100 ✅
+    └─ cantidad_posterior: 90 ✅
+
+CASO 2: Venta a Crédito (Stock Negativo)
+  Setup:   Pepsi 10 unidades
+  Acción:  Venta CREDITO de 20 unidades
+  Esperado:
+    ├─ Validación omitida ✅
+    ├─ stock_productos.cantidad: 10→-10 ✅
+    ├─ stock_productos.cantidad_disponible: 10→-10 ✅
+    └─ movimientos: 1 registro (SALIDA_VENTA) ✅
+
+CASO 3: Múltiples Lotes (FIFO)
+  Setup:   Pepsi A (30, vence 20260320)
+           Pepsi B (50, vence 20260325)
+  Acción:  Venta de 40 unidades
+  Esperado:
+    ├─ Lote A: toma 30 (vencimiento más cercano) ✅
+    ├─ Lote B: toma 10 (complemento) ✅
+    ├─ movimientos: 2 registros ✅
+    └─ FIFO respetado ✅
+
+CASO 4: Devolución (Anular Venta)
+  Setup:   Venta VEN20260211-0001 (10 unidades ya consumidas)
+  Acción:  Anular venta
+  Esperado:
+    ├─ stock_productos.cantidad: 90→100 ✅
+    ├─ stock_productos.cantidad_disponible: 70→80 ✅
+    ├─ movimientos: 1 ENTRADA_AJUSTE ✅
+    ├─ cantidad_anterior: 90 ✅
+    └─ cantidad_posterior: 100 ✅
+
+
+✅ CONCLUSIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 VentaDistribucionService ESTÁ CORRECTAMENTE IMPLEMENTADO
+
+Lo que hace bien:
+  ✅ Actualiza cantidad_disponible (lo importante)
+  ✅ Actualiza cantidad (total del lote)
+  ✅ Registra cantidad_anterior (ANTES)
+  ✅ Registra cantidad_posterior (DESPUÉS)
+  ✅ FIFO por vencimiento + id
+  ✅ Lock pesimista (concurrencia segura)
+  ✅ Transacciones atómicas
+  ✅ JSON detallado en observacion
+  ✅ Permite stock negativo para CREDITO
+  ✅ Devolución inversa al anular
+  ✅ Logging completo
+
+Integración en VentaService:
+  ✅ Valida ANTES de crear
+  ✅ Consume DESPUÉS de detalles
+  ✅ Usa número de venta para referencia
+  ✅ Pasa $esCREDITO para stock negativo
+  ✅ Recibe movimientos creados
+
+Patrón:
+  ✅ Mismo que ReservaDistribucionService
+  ✅ Consistente con auditoría
+  ✅ Inversión correcta en devoluciones
+
+
+📄 DOCUMENTACIÓN GENERADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  📋 ANALISIS_VENTADISTRIBUCIONSERVICE_INTEGRIDAD_DATOS_2026_02_11.md
+     └─ Análisis técnico completo con ejemplos y tabla comparativa
+
+
+📍 ÚLTIMA ACTUALIZACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Fecha:  2026-02-11
+  Status: ✅ VERIFICADO - Integridad de datos confirmada
+  Versión: 1.0

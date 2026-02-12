@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\ApiVentaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ApiPoliticaPagoController;
+use App\Http\Controllers\Api\ReservaProformaController;
 use App\Http\Controllers\Api\ChoferPreferenciaController;
 use App\Http\Controllers\Api\EmpleadoApiController;
 use App\Http\Controllers\Api\EntregaBatchController;
@@ -304,6 +305,13 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::get('/proformas/productos-disponibles', [ApiProformaController::class, 'obtenerProductosDisponibles']);
     // ✅ NUEVO: Navegación entre proformas pendientes
     Route::get('/proformas/siguiente-pendiente', [ApiProformaController::class, 'obtenerSiguientePendiente']);
+
+    // ==========================================
+    // 📦 RESERVAS PROFORMA - GESTIÓN DE STOCK
+    // ==========================================
+    Route::get('/reservas-proforma', [ReservaProformaController::class, 'index']);           // Lista con filtros y paginación
+    Route::get('/reservas-proforma/{id}', [ReservaProformaController::class, 'show']);       // Ver detalle
+    Route::post('/reservas-proforma/{id}/liberar', [ReservaProformaController::class, 'liberar']); // Liberar reserva
 
     // 🛒 ENDPOINTS LEGACY PARA APP MÓVIL (mantener por compatibilidad)
     // TODO: Migrar app móvil para usar /proformas en lugar de /app/pedidos

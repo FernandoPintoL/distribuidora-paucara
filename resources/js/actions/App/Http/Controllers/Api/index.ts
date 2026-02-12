@@ -8,6 +8,7 @@ import ChoferPreferenciaController from './ChoferPreferenciaController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
+import ReservaProformaController from './ReservaProformaController'
 import ApiVentaController from './ApiVentaController'
 import TipoOperacionController from './TipoOperacionController'
 import PrecioRangoProductoController from './PrecioRangoProductoController'
@@ -36,6 +37,7 @@ ChoferPreferenciaController,
 TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
+ReservaProformaController,
 ApiVentaController,
 TipoOperacionController,
 PrecioRangoProductoController,

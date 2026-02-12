@@ -418,6 +418,13 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });
 
+    // ==========================================
+    // 📦 GESTIÓN DE RESERVAS DE PROFORMAS
+    // ==========================================
+    Route::prefix('reservas')->name('reservas.')->middleware('auth')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ReservaController::class, 'index'])->name('index');
+    });
+
     // ✅ RUTAS PARA USUARIO: Gestión de su propia caja
     Route::prefix('cajas')->name('cajas.')->middleware('permission:cajas.index')->group(function () {
         // ✅ NUEVO: Dashboard de caja de usuario específico (admin viendo caja de otro usuario)
@@ -689,6 +696,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::post('{entrega}/novedad', [\App\Http\Controllers\EntregaController::class, 'reportarNovedad'])->name('novedad');
             Route::post('{entrega}/rechazar', [\App\Http\Controllers\EntregaController::class, 'rechazar'])->name('rechazar'); // Legacy
             Route::post('{entrega}/ubicacion', [\App\Http\Controllers\EntregaController::class, 'registrarUbicacion'])->name('ubicacion');
+
+            // ✅ Desvincular venta de entrega en edit mode
+            Route::delete('{entrega}/ventas/{venta}', [\App\Http\Controllers\EntregaController::class, 'desvincularVenta'])->name('desvincular-venta');
         });
 
         // ✅ FASE 2: Reportes de Carga (gestión centralizada)

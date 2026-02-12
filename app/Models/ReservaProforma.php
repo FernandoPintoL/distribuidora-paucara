@@ -134,8 +134,10 @@ class ReservaProforma extends Model
 
         try {
             // 1️⃣ OBTENER VALORES ANTES DEL CAMBIO
+            // ✅ NUEVO (2026-02-11): Agregado lockForUpdate() para prevenir race conditions
             $stockAntes = \Illuminate\Support\Facades\DB::table('stock_productos')
                 ->where('id', $this->stock_producto_id)
+                ->lockForUpdate()  // ← Previene race conditions en consumos concurrent
                 ->first(['cantidad', 'cantidad_disponible', 'cantidad_reservada']);
 
             if (!$stockAntes) {
@@ -178,10 +180,45 @@ class ReservaProforma extends Model
                     'cantidad_reservada_posterior' => (int) $stockDespues->cantidad_reservada,
                 ];
 
+                // ✅ MEJORADO (2026-02-11): Obtener información adicional de venta y producto
+                $venta = null;
+                $ventaId = null;
+                if ($numeroVenta) {
+                    $venta = Venta::where('numero', $numeroVenta)->first(['id', 'numero', 'cliente_id', 'total']);
+                    $ventaId = $venta ? $venta->id : null;
+                }
+
+                // Obtener nombre del producto desde la relación stockProducto
+                $stockProducto = $this->stockProducto;
+                if (!$stockProducto) {
+                    $stockProducto = StockProducto::find($this->stock_producto_id);
+                }
+                $productoNombre = ($stockProducto && $stockProducto->producto) ? $stockProducto->producto->nombre : 'Producto desconocido';
+                $productoId = $stockProducto ? $stockProducto->producto_id : null;
+                $lote = $stockProducto ? $stockProducto->lote : 'Sin lote';
+
+                // Obtener número de proforma
+                $proforma = $this->proforma;
+                if (!$proforma) {
+                    $proforma = Proforma::find($this->proforma_id);
+                }
+                $proformaNumero = $proforma ? $proforma->numero : "PRO-{$this->proforma_id}";
+
                 $observacionData = [
-                    'evento' => 'Consumo de reserva',
-                    'venta' => $numeroVenta ?? 'sin_numero',
+                    'evento' => 'Consumo de reserva - Convertida a Venta',
+                    // 🔗 VENTA (INFORMACIÓN CRÍTICA)
+                    'venta_numero' => $numeroVenta ?? 'sin_numero',
+                    'venta_id' => $ventaId,
+                    // 📊 PROFORMA (REFERENCIA)
+                    'proforma_numero' => $proformaNumero,
                     'proforma_id' => $this->proforma_id,
+                    // 📦 PRODUCTO
+                    'producto_nombre' => $productoNombre,
+                    'producto_id' => $productoId,
+                    'lote' => $lote,
+                    'stock_producto_id' => $this->stock_producto_id,
+                    // 📝 CANTIDAD
+                    'cantidad_consumida' => (int) $this->cantidad_reservada,
                     'reserva_id' => $this->id,
                     'detalles' => $detallesMovimiento,
                 ];

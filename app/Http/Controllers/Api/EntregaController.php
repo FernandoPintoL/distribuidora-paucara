@@ -2428,7 +2428,7 @@ class EntregaController extends Controller
 
                 // Reemplazar ventas asociadas
                 // Primero, obtener las ventas actuales
-                $ventasActuales = $entrega->ventas()->pluck('venta_id')->toArray();
+                $ventasActuales = $entrega->ventas()->pluck('id')->toArray();
                 $ventasNuevas = $validated['venta_ids'];
 
                 // Desasociar ventas que fueron removidas

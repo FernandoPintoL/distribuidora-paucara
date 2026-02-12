@@ -226,7 +226,8 @@ class InventarioController extends Controller
         });
 
         // Combinar stock existente con productos sin stock
-        $stockPorAlmacen = $stockPorAlmacenCollection->concat($stockSinRegistros)->sortBy(['almacen_nombre', 'producto_nombre'])->values()->toArray();
+        // ✅ ORDENAMIENTO (2026-02-11): Ordenar SOLO por nombre de producto (alfabético)
+        $stockPorAlmacen = $stockPorAlmacenCollection->concat($stockSinRegistros)->sortBy('producto_nombre')->values()->toArray();
 
         // Movimientos recientes (últimos 7 días)
         $movimientosRecientes  = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
@@ -556,6 +557,7 @@ class InventarioController extends Controller
                         'id'     => null,
                         'nombre' => '[Almacén No Disponible]',
                     ],
+                    'numero_documento'  => $movimiento->numero_documento,  // ✅ NUEVO: Identificador de venta/proforma
                     'referencia'        => $movimiento->numero_documento,
                     'referencia_tipo'   => $movimiento->referencia_tipo,
                     'referencia_id'     => $movimiento->referencia_id,
@@ -597,6 +599,7 @@ class InventarioController extends Controller
                     'id'     => $stockProducto->almacen->id,
                     'nombre' => $stockProducto->almacen->nombre,
                 ],
+                'numero_documento'  => $movimiento->numero_documento,  // ✅ NUEVO: Identificador de venta/proforma
                 'referencia'        => $movimiento->numero_documento,
                 'referencia_tipo'   => $movimiento->referencia_tipo,
                 'referencia_id'     => $movimiento->referencia_id,

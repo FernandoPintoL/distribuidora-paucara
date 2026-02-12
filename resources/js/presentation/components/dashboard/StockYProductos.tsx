@@ -28,7 +28,7 @@ export default function StockYProductos({
         busqueda: '',
         almacenId: '',
         rangoStock: 'todos',
-        ordenamiento: 'cantidad-desc',
+        ordenamiento: 'producto',  // ✅ CHANGED (2026-02-11): Ordenar alfabético por nombre de producto
     });
 
     // Estado para datos filtrados del backend

@@ -358,51 +358,34 @@ class Proforma extends Model
         ]);
 
         // ✅ LIBERAR RESERVAS DE STOCK cuando se rechaza
-        // Obtener todas las reservas activas con su stock asociado
-        $reservasActivas = $this->reservas()
-            ->where('estado', ReservaProforma::ACTIVA)
-            ->with('stockProducto')
-            ->get();
+        // Usar el servicio de distribución para liberar todas las reservas de forma consistente
+        try {
+            $distribucionService = new \App\Services\Reservas\ReservaDistribucionService();
+            $resultado = $distribucionService->liberarTodasLasReservas($this, "Proforma rechazada: {$motivo}");
 
-        // Liberar cada reserva en stock_productos (actualizar cantidad_disponible y cantidad_reservada)
-        foreach ($reservasActivas as $reserva) {
-            if ($reserva->stockProducto) {
-                $stock = $reserva->stockProducto;
-                $cantidadAnterior = $stock->cantidad_disponible;
-
-                // Liberar la reserva
-                $stock->liberarReserva($reserva->cantidad_reservada);
-
-                // ✅ NUEVO: Registrar movimiento de liberación en movimientos_inventario
-                \App\Models\MovimientoInventario::create([
-                    'stock_producto_id'  => $stock->id,
-                    'cantidad'           => $reserva->cantidad_reservada,  // Positiva = Liberación
-                    'cantidad_anterior'  => $cantidadAnterior,
-                    'cantidad_posterior' => $stock->cantidad_disponible,
-                    'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
-                    'numero_documento'   => "PRO-{$this->numero}",
-                    'observacion'        => "Liberación de reserva proforma (rechazada por: {$motivo})",
-                    'fecha'              => now(),
-                    'user_id'            => auth()->id(),
+            if ($resultado['success']) {
+                \Illuminate\Support\Facades\Log::info('✅ Reservas liberadas exitosamente por rechazo de proforma', [
+                    'proforma_id' => $this->id,
+                    'proforma_numero' => $this->numero,
+                    'reservas_liberadas' => $resultado['reservas_liberadas'],
+                    'cantidad_total_liberada' => $resultado['cantidad_liberada'],
+                    'motivo' => $motivo,
+                ]);
+            } else {
+                \Illuminate\Support\Facades\Log::error('❌ Error liberando reservas en rechazo de proforma', [
+                    'proforma_id' => $this->id,
+                    'error' => $resultado['error'],
                 ]);
             }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Error crítico al liberar reservas', [
+                'proforma_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+            // No lanzar excepción: solo registrar en log para no bloquear el rechazo
         }
 
-        // Marcar todas las reservas activas como LIBERADAS
-        $this->reservas()
-            ->where('estado', ReservaProforma::ACTIVA)
-            ->update(['estado' => ReservaProforma::LIBERADA]);
-
-        \Illuminate\Support\Facades\Log::info('Reservas liberadas por rechazo de proforma', [
-            'proforma_id' => $this->id,
-            'proforma_numero' => $this->numero,
-            'reservas_liberadas' => $reservasActivas->count(),
-            'cantidad_total_liberada' => $reservasActivas->sum('cantidad_reservada'),
-        ]);
-
-        // ✅ Disparar evento para notificaciones (no crítico si falla)
-        // El evento ProformaRechazada dispara el listener SendProformaRejectedNotification
-        // que utiliza ProformaNotificationService para enviar notificaciones
+        // ✅ Disparar evento para notificaciones
         try {
             event(new \App\Events\ProformaRechazada($this->fresh(), $motivo));
         } catch (\Exception $broadcastError) {
@@ -468,114 +451,50 @@ class Proforma extends Model
             return true;
         }
 
-        // 🔧 Obtener el almacén de la empresa del usuario autenticado
-        $user = auth()->user();
-        if (!$user || !$user->empresa) {
-            \Illuminate\Support\Facades\Log::error('No se encontró empresa para el usuario', [
-                'proforma_id' => $this->id,
-                'user_id' => $user?->id,
-            ]);
-            return false;
-        }
-
-        $almacenId = $user->empresa->almacen_id;
-        if (!$almacenId) {
-            \Illuminate\Support\Facades\Log::error('La empresa no tiene almacén definido', [
-                'proforma_id' => $this->id,
-                'empresa_id' => $user->empresa->id,
-            ]);
-            return false;
-        }
-
-        // ✅ REMOVIDO: DB::beginTransaction() ya se maneja en ProformaService::crear()
+        // ✅ USAR SERVICIO DE DISTRIBUCIÓN PARA RESERVAR STOCK (FIFO automático)
         try {
+            $distribucionService = new \App\Services\Reservas\ReservaDistribucionService();
+
             foreach ($this->detalles as $detalle) {
-                // Buscar stock disponible con BLOQUEO PESIMISTA para evitar race conditions
-                // 🔧 Filtrar por almacén_id de la empresa
-                $stocksDisponibles = StockProducto::where('producto_id', $detalle->producto_id)
-                    ->where('almacen_id', $almacenId)  // ← NUEVO: Filtrar por almacén
-                    ->where('cantidad_disponible', '>', 0)
-                    ->orderBy('fecha_vencimiento', 'asc')
-                    ->orderBy('id', 'asc') // FIFO como criterio secundario
-                    ->lockForUpdate() // 🔒 BLOQUEO PESIMISTA
-                    ->get();
+                // Usar el servicio para distribuir automáticamente entre lotes
+                // El servicio obtiene el almacén internamente de la empresa del usuario autenticado
+                $resultado = $distribucionService->distribuirReserva(
+                    $this,
+                    $detalle->producto_id,
+                    $detalle->cantidad,
+                    3  // 3 días de vencimiento
+                );
 
-                $cantidadPendiente = $detalle->cantidad;
-
-                foreach ($stocksDisponibles as $stock) {
-                    if ($cantidadPendiente <= 0) {
-                        break;
-                    }
-
-                    $cantidadAReservar = min($cantidadPendiente, $stock->cantidad_disponible);
-
-                    // Reservar el stock (ya está bloqueado)
-                    if ($stock->reservar($cantidadAReservar)) {
-                        // Crear registro de reserva
-                        ReservaProforma::create([
-                            'proforma_id' => $this->id,
-                            'stock_producto_id' => $stock->id,
-                            'cantidad_reservada' => (int) $cantidadAReservar,  // ← Convertir a INT
-                            'fecha_reserva' => now(),
-                            'fecha_expiracion' => now()->addDays(3), // ✅ 3 DÍAS para aprobar
-                            'estado' => ReservaProforma::ACTIVA,
-                        ]);
-
-                        // ✅ NUEVO: Registrar movimiento en movimientos_inventario
-                        \App\Models\MovimientoInventario::create([
-                            'stock_producto_id'  => $stock->id,
-                            'cantidad'           => -$cantidadAReservar,  // Negativa = Reserva (bloqueo)
-                            'cantidad_anterior'  => $stock->cantidad_disponible + $cantidadAReservar,
-                            'cantidad_posterior' => $stock->cantidad_disponible,
-                            'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
-                            'numero_documento'   => "PRO-{$this->numero}",  // Referencia a la proforma
-                            'observacion'        => "Reserva proforma: {$cantidadAReservar} unidades (vencimiento: " . now()->addDays(3)->format('d/m/Y') . ")",
-                            'fecha'              => now(),
-                            'user_id'            => auth()->id(),
-                        ]);
-
-                        $cantidadPendiente -= $cantidadAReservar;
-
-                        \Illuminate\Support\Facades\Log::info('Stock reservado para proforma', [
-                            'proforma_id' => $this->id,
-                            'producto_id' => $detalle->producto_id,
-                            'stock_producto_id' => $stock->id,
-                            'cantidad_reservada' => $cantidadAReservar,
-                            'cantidad_pendiente' => $cantidadPendiente,
-                        ]);
-                    } else {
-                        \Illuminate\Support\Facades\Log::warning('Fallo al reservar stock individual', [
-                            'proforma_id' => $this->id,
-                            'producto_id' => $detalle->producto_id,
-                            'stock_producto_id' => $stock->id,
-                            'cantidad_solicitada' => $cantidadAReservar,
-                        ]);
-                    }
-                }
-
-                // Si no se pudo reservar toda la cantidad
-                if ($cantidadPendiente > 0) {
-                    \Illuminate\Support\Facades\Log::warning('Stock insuficiente para reservar proforma completa', [
+                // Validar resultado
+                if (!$resultado['success']) {
+                    \Illuminate\Support\Facades\Log::warning('Stock insuficiente para reservar producto', [
                         'proforma_id' => $this->id,
                         'producto_id' => $detalle->producto_id,
                         'cantidad_requerida' => $detalle->cantidad,
-                        'cantidad_faltante' => $cantidadPendiente,
+                        'error' => $resultado['error'],
                     ]);
-
-                    // ✅ REMOVIDO: No lanzar excepción aquí, dejar que el caller maneje el rollback
-                    throw new \Exception("Stock insuficiente para reservar proforma");
+                    throw new \Exception($resultado['error']);
                 }
+
+                \Illuminate\Support\Facades\Log::info('✅ Producto reservado con distribución FIFO', [
+                    'proforma_id' => $this->id,
+                    'producto_id' => $detalle->producto_id,
+                    'cantidad_solicitada' => $detalle->cantidad,
+                    'cantidad_reservada' => $resultado['resumen']['cantidad_reservada'],
+                    'cantidad_lotes' => $resultado['resumen']['cantidad_lotes'],
+                ]);
             }
 
-            \Illuminate\Support\Facades\Log::info('Stock reservado completamente para proforma', [
+            \Illuminate\Support\Facades\Log::info('✅ Stock reservado completamente para proforma (FIFO)', [
                 'proforma_id' => $this->id,
+                'numero' => $this->numero,
                 'numero_detalles' => $this->detalles->count(),
             ]);
 
             return true;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al reservar stock para proforma', [
+            \Illuminate\Support\Facades\Log::error('❌ Error al reservar stock para proforma', [
                 'proforma_id' => $this->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

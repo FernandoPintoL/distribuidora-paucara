@@ -37,6 +37,7 @@ class VentaService
     public function __construct(
         private StockService $stockService,
         private ContabilidadService $contabilidadService,
+        private VentaDistribucionService $ventaDistribucionService,
     ) {}
 
     /**
@@ -80,25 +81,25 @@ class VentaService
         $detallesParaStock = $this->stockService->expandirCombos($dto->detalles);
 
         if (!$esCREDITO) {
-            Log::info('🔄 [VentaService::crear] Validando stock disponible', [
-                'almacen_id'     => $dto->almacen_id,
+            Log::info('🔄 [VentaService::crear] Validando stock disponible con VentaDistribucionService', [
                 'detalles_count' => count($dto->detalles),
                 'politica_pago'  => $dto->politica_pago,
+                'almacen_id'     => auth()->user()?->empresa?->almacen_id ?? 1,
             ]);
 
-            $validacionStock = $this->stockService->validarDisponible(
-                $detallesParaStock,
-                $dto->almacen_id
+            // ✅ NUEVO (2026-02-11): Usar VentaDistribucionService para validar
+            $validacionStock = $this->ventaDistribucionService->validarDisponible(
+                $detallesParaStock
             );
 
-            if (! $validacionStock->valido) {
+            if (! $validacionStock['valido']) {
                 Log::warning('❌ [VentaService::crear] Stock insuficiente', [
-                    'detalles' => $validacionStock->detalles,
+                    'detalles' => $validacionStock['detalles'],
                 ]);
-                throw StockInsuficientException::create($validacionStock->detalles);
+                throw StockInsuficientException::create($validacionStock['detalles']);
             }
 
-            Log::info('✅ [VentaService::crear] Stock validado exitosamente');
+            Log::info('✅ [VentaService::crear] Stock validado exitosamente con VentaDistribucionService');
         } else {
             Log::info('⏭️ [VentaService::crear] Saltando validación de stock (CREDITO permite stock negativo)', [
                 'politica_pago' => $dto->politica_pago,
@@ -258,22 +259,25 @@ class VentaService
                 'cantidad_detalles' => count($dto->detalles),
             ]);
 
-            // 3.3 Consumir stock (Service maneja su propia lógica dentro de transacción)
-            Log::debug('🔄 [VentaService::crear] Procesando salida de stock', [
+            // 3.3 Consumir stock usando VentaDistribucionService (centralizado FIFO)
+            // ✅ NUEVO (2026-02-11): Usar VentaDistribucionService centralizado
+            Log::debug('🔄 [VentaService::crear] Procesando salida de stock con VentaDistribucionService', [
                 'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
                 'politica_pago' => $dto->politica_pago,
+                'permite_stock_negativo' => $esCREDITO,
             ]);
 
-            // ✅ NUEVO: Permitir stock negativo para CREDITO (son promesas de pago, no ventas inmediatas)
-            $this->stockService->procesarSalidaVenta(
+            $movimientosStock = $this->ventaDistribucionService->consumirStock(
                 $detallesParaStock,
                 $venta->numero,
-                $dto->almacen_id,
                 permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
             );
 
-            Log::info('✅ [VentaService::crear] Stock procesado exitosamente', [
+            Log::info('✅ [VentaService::crear] Stock procesado exitosamente con VentaDistribucionService', [
                 'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'movimientos_creados' => count($movimientosStock),
                 'politica_pago' => $dto->politica_pago,
             ]);
 
