@@ -18,46 +18,31 @@ class ImpresionComprasController extends Controller
     public function imprimirIndividual(Compra $compra, Request $request): Response
     {
         try {
+            // Aumentar límite de memoria para DomPDF
+            // PHP restaura automáticamente después de la request
+            ini_set('memory_limit', '3072M');
+
             $formato = $request->get('formato', 'A4');
             $accion = $request->get('accion', 'stream');
 
-            $vistaMap = [
-                'A4'        => 'impresion.compras.hoja-completa-compra-individual',
-                'TICKET_80' => 'impresion.compras.ticket-80-individual',
-            ];
-
-            $vista = $vistaMap[$formato] ?? 'impresion.compras.hoja-completa-compra-individual';
-
-            // Obtener empresa
-            $empresa = auth()->user()->empresa ?? Empresa::first();
-
-            // Envolver la compra en una colección para que la vista funcione
-            $compras = collect([$compra]);
-
-            \Log::info('🖨️ [ImpresionComprasController::imprimirIndividual]', [
+            \Log::info('🖨️ [ImpresionComprasController::imprimirIndividual] Generando PDF de compra', [
                 'compra_id' => $compra->id,
                 'formato' => $formato,
                 'accion' => $accion,
                 'usuario_id' => auth()->id(),
+                'memory_limit_actual' => ini_get('memory_limit'),
             ]);
 
-            // Renderizar vista
-            $html = view($vista, [
-                'compras' => $compras,
-                'filtros' => [],
-                'empresa' => $empresa,
-            ])->render();
+            // Usar ImpresionService para generar PDF
+            $impresionService = app(ImpresionService::class);
+            $pdf = $impresionService->imprimirCompra($compra, $formato);
 
-            // Nombre del archivo
-            $nombreArchivo = "compra-{$compra->id}-" . now()->format('Ymd-His') . '.html';
+            $nombreArchivo = "compra-{$compra->numero}-" . now()->format('YmdHis') . '.pdf';
 
             if ($accion === 'stream') {
-                return response($html)
-                    ->header('Content-Type', 'text/html; charset=utf-8');
+                return $pdf->stream($nombreArchivo);
             } else {
-                return response($html)
-                    ->header('Content-Type', 'text/html; charset=utf-8')
-                    ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}\"");
+                return $pdf->download($nombreArchivo);
             }
 
         } catch (\Exception $e) {
