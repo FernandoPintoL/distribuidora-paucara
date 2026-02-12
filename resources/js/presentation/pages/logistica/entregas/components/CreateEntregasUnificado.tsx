@@ -592,7 +592,7 @@ export default function CreateEntregasUnificado({
                                             <div className="flex items-center gap-3">
                                                 <div className="text-right">
                                                     <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                                                        {venta.peso_estimado ? `${venta.peso_estimado.toFixed(1)} kg` : '-'}
+                                                        {venta.peso_estimado ? `${(parseFloat(venta.peso_estimado as any) ?? 0).toFixed(1)} kg` : '-'}
                                                     </p>
                                                 </div>
                                                 <button
@@ -672,7 +672,7 @@ export default function CreateEntregasUnificado({
                                         Capacidad insuficiente
                                     </p>
                                     <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                                        Peso: {totals.pesoTotal.toFixed(1)} kg / Capacidad: {(selectedVehiculo?.capacidad_kg ?? 0).toFixed(1)} kg
+                                        Peso: {totals.pesoTotal.toFixed(1)} kg / Capacidad: {(parseFloat(selectedVehiculo?.capacidad_kg as any) ?? 0).toFixed(1)} kg
                                     </p>
                                 </div>
                             </div>
