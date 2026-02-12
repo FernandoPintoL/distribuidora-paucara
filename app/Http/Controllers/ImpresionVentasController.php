@@ -27,6 +27,43 @@ class ImpresionVentasController extends Controller
                 'empresa_id' => $empresa?->id,
             ]);
 
+            // ✅ NUEVO: Log detallado de estructura de datos
+            if ($ventas->count() > 0) {
+                $primeraVenta = $ventas->first();
+                $estructura = [
+                    'es_array' => is_array($primeraVenta),
+                    'es_objeto' => is_object($primeraVenta),
+                    'tipo' => get_class($primeraVenta),
+                ];
+
+                // Si es array, mostrar keys
+                if (is_array($primeraVenta)) {
+                    $estructura['keys'] = array_keys($primeraVenta);
+                    $estructura['muestra'] = [
+                        'id' => $primeraVenta['id'] ?? 'N/A',
+                        'numero' => $primeraVenta['numero'] ?? 'N/A',
+                        'total' => $primeraVenta['total'] ?? 'N/A',
+                        'cliente' => $primeraVenta['cliente'] ?? 'N/A',
+                        'estadoDocumento' => $primeraVenta['estadoDocumento'] ?? 'N/A',
+                        'tipoPago' => $primeraVenta['tipoPago'] ?? 'N/A',
+                    ];
+                } elseif (is_object($primeraVenta)) {
+                    // Si es objeto, mostrar atributos
+                    $estructura['atributos'] = array_keys($primeraVenta->getAttributes());
+                    $estructura['muestra'] = [
+                        'id' => $primeraVenta->id ?? 'N/A',
+                        'numero' => $primeraVenta->numero ?? 'N/A',
+                        'total' => $primeraVenta->total ?? 'N/A',
+                        'cliente_nombre' => $primeraVenta->cliente?->nombre ?? 'N/A',
+                        'estadoDocumento_nombre' => $primeraVenta->estadoDocumento?->nombre ?? 'N/A',
+                        'tipoPago_nombre' => $primeraVenta->tipoPago?->nombre ?? 'N/A',
+                        'detalles_count' => $primeraVenta->detalles?->count() ?? 0,
+                    ];
+                }
+
+                \Log::info('📊 [ImpresionVentasController] Estructura de PRIMERA VENTA', $estructura);
+            }
+
             $formato = $request->get('formato', 'A4');
             $accion = $request->get('accion', 'download');
 
