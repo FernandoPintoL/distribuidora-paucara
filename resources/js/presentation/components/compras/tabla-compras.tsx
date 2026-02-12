@@ -252,12 +252,12 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             </Link>
                                         )}
 
-                                        {/* Botón Imprimir/Exportar - Solo si está APROBADO */}
-                                        {compra.estado_documento?.codigo === 'APROBADO' && can('compras.show') && (
+                                        {/* Botón Imprimir/Exportar - Disponible para todas las compras */}
+                                        {can('compras.show') && (
                                             <button
                                                 onClick={() => setOutputModal({ isOpen: true, compra })}
                                                 className="inline-flex items-center p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                                title="Exportar documento"
+                                                title="Imprimir documento"
                                             >
                                                 <Printer className="h-4 w-4" />
                                             </button>

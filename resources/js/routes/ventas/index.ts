@@ -1563,7 +1563,7 @@ show.head = (args: { id: string | number } | [id: string | number ] | string | n
     show.form = showForm
 /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
 export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1578,7 +1578,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
 imprimir.url = (options?: RouteQueryOptions) => {
@@ -1587,7 +1587,7 @@ imprimir.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
 imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1596,7 +1596,7 @@ imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
 imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1606,7 +1606,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
     const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1616,7 +1616,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
         imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1625,7 +1625,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionVentasController::imprimir
- * @see app/Http/Controllers/ImpresionVentasController.php:15
+ * @see app/Http/Controllers/ImpresionVentasController.php:58
  * @route '/ventas/imprimir'
  */
         imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

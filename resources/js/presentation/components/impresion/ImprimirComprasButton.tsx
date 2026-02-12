@@ -36,7 +36,6 @@ interface ImprimirComprasButtonProps {
 const FORMATOS_COMPRAS = [
     { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar carta' },
     { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
-    { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
 ];
 
 export function ImprimirComprasButton({

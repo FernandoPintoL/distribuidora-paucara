@@ -24,7 +24,7 @@
 </div>
 
 {{-- Tabla de stock --}}
-<table class="tabla-productos">
+<table class="tabla-productos mt-2">
     <thead>
         <tr>
             <th style="width: 2%;">#</th>
@@ -32,10 +32,10 @@
             <th style="width: 8%;">Código</th>
             <th style="width: 8%;">SKU</th>
             <th style="width: 12%;">Almacén</th>
-            <th style="width: 9%;" class="text-right">Total</th>
-            <th style="width: 9%;" class="text-right">Dispo</th>
-            <th style="width: 9%;" class="text-right">Reser</th>
-            <th style="width: 9%;" class="text-right">Valor Total</th>
+            <th style="width: 9%;">Total</th>
+            <th style="width: 9%;">Dispo</th>
+            <th style="width: 9%;">Reser</th>
+            <th style="width: 9%;">Valor Total</th>
         </tr>
     </thead>
     <tbody>
@@ -48,10 +48,10 @@
             <td>{{ $item['producto_codigo'] }}</td>
             <td>{{ $item['producto_sku'] }}</td>
             <td>{{ $item['almacen_nombre'] }}</td>
-            <td class="text-right"><strong>{{ number_format($item['cantidad'], 2) }}</strong></td>
-            <td class="text-right">{{ number_format($item['cantidad_disponible'] ?? 0, 2) }}</td>
-            <td class="text-right">{{ number_format($item['cantidad_reservada'] ?? 0, 2) }}</td>
-            <td class="text-right"><strong>Bs{{ number_format(($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0), 2) }}</strong></td>
+            <td><strong>{{ number_format($item['cantidad'], 2) }}</strong></td>
+            <td>{{ number_format($item['cantidad_disponible'] ?? 0, 2) }}</td>
+            <td>{{ number_format($item['cantidad_reservada'] ?? 0, 2) }}</td>
+            <td><strong>Bs{{ number_format(($item['cantidad'] ?? 0) * ($item['precio_venta'] ?? 0), 2) }}</strong></td>
         </tr>
         @endforeach
     </tbody>

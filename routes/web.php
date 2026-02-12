@@ -307,7 +307,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // RUTAS DE IMPRESIÓN - COMPRAS (INDIVIDUAL)
     // ==========================================
     Route::prefix('compras')->name('compras.')->group(function () {
-        Route::get('{compra}/imprimir', [\App\Http\Controllers\CompraController::class, 'imprimirCompra'])->name('imprimir-compra');
+        Route::get('{compra}/imprimir', [\App\Http\Controllers\ImpresionComprasController::class, 'imprimirIndividual'])->name('imprimir-compra');
         Route::get('{compra}/preview', [\App\Http\Controllers\CompraController::class, 'previewCompra'])->name('preview');
         Route::get('{compra}/exportar-excel', [\App\Http\Controllers\CompraController::class, 'exportarExcel'])->name('exportar-excel');
         Route::get('{compra}/exportar-pdf', [\App\Http\Controllers\CompraController::class, 'exportarPdf'])->name('exportar-pdf');

@@ -71,7 +71,7 @@
                 @endphp
                 <strong>{{ $cliente }}</strong>
             </td>
-            <td class="text-right">
+            <td>
                 @php
                     $total = 0;
                     if (is_array($item) && isset($item['total'])) {
@@ -180,7 +180,7 @@
 {{-- Nota de documentación --}}
 <div class="observaciones" style="margin-top: 10px; border-left-color: #3498db; background: #ecf0f1;">
     <strong>Nota Informativa:</strong>
-    <p style="margin-top: 5px; font-size: 8px;">
+    <p style="margin-top: 5px;">
         Este es un reporte de referencia de ventas.
         Generado el {{ now()->format('d/m/Y \\a \\l\\a\\s H:i') }}.
     </p>

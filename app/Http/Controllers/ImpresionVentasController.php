@@ -6,13 +6,56 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\Response;
 use App\Models\Empresa;
+use App\Services\ImpresionService;
 
 class ImpresionVentasController extends Controller
 {
     /**
-     * Renderizar reporte de ventas
+     * Renderizar venta individual
      */
-    public function imprimir(Request $request)
+    public function imprimirIndividual(\App\Models\Venta $venta, Request $request): Response
+    {
+        try {
+            // Obtener empresa del usuario autenticado
+            $empresa = auth()->user()->empresa ?? Empresa::first();
+
+            \Log::info('🖨️ [ImpresionVentasController::imprimirIndividual] Generando PDF de venta individual', [
+                'venta_id' => $venta->id,
+                'empresa_id' => $empresa?->id,
+                'formato' => $request->get('formato'),
+            ]);
+
+            $formato = $request->get('formato', 'A4');
+            $accion = $request->get('accion', 'download');
+
+            // Usar ImpresionService para generar PDF
+            $impresionService = app(ImpresionService::class);
+            $pdf = $impresionService->imprimirVenta($venta, $formato);
+
+            $nombreArchivo = 'venta-' . $venta->numero . '-' . now()->format('YmdHis') . '.pdf';
+
+            if ($accion === 'download') {
+                return $pdf->download($nombreArchivo);
+            }
+
+            // Retornar PDF para visualización en navegador
+            return $pdf->stream($nombreArchivo);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ Error al imprimir venta individual', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response("Error al generar el reporte: " . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Renderizar reporte de ventas (batch)
+     * Usa template específica para colecciones de ventas
+     */
+    public function imprimir(Request $request): Response
     {
         try {
             $ventas = collect(session('ventas_impresion', []));
@@ -21,83 +64,48 @@ class ImpresionVentasController extends Controller
             // Obtener empresa del usuario autenticado
             $empresa = auth()->user()->empresa ?? Empresa::first();
 
-            \Log::info('🖨️ [ImpresionVentasController] Renderizando reporte', [
+            \Log::info('🖨️ [ImpresionVentasController::imprimir] Generando reporte de ventas', [
                 'cantidad_ventas' => $ventas->count(),
                 'filtros' => $filtros,
                 'empresa_id' => $empresa?->id,
             ]);
 
-            // ✅ NUEVO: Log detallado de estructura de datos
-            if ($ventas->count() > 0) {
-                $primeraVenta = $ventas->first();
-                $estructura = [
-                    'es_array' => is_array($primeraVenta),
-                    'es_objeto' => is_object($primeraVenta),
-                    'tipo' => is_object($primeraVenta) ? get_class($primeraVenta) : 'array',
-                ];
-
-                // Si es array, mostrar keys
-                if (is_array($primeraVenta)) {
-                    $estructura['keys'] = array_keys($primeraVenta);
-                    $estructura['muestra'] = [
-                        'id' => $primeraVenta['id'] ?? 'N/A',
-                        'numero' => $primeraVenta['numero'] ?? 'N/A',
-                        'total' => $primeraVenta['total'] ?? 'N/A',
-                        'cliente' => $primeraVenta['cliente'] ?? 'N/A',
-                        'estadoDocumento' => $primeraVenta['estadoDocumento'] ?? 'N/A',
-                        'tipoPago' => $primeraVenta['tipoPago'] ?? 'N/A',
-                    ];
-                } elseif (is_object($primeraVenta)) {
-                    // Si es objeto, mostrar atributos
-                    $estructura['atributos'] = array_keys($primeraVenta->getAttributes());
-                    $estructura['muestra'] = [
-                        'id' => $primeraVenta->id ?? 'N/A',
-                        'numero' => $primeraVenta->numero ?? 'N/A',
-                        'total' => $primeraVenta->total ?? 'N/A',
-                        'cliente_nombre' => $primeraVenta->cliente?->nombre ?? 'N/A',
-                        'estadoDocumento_nombre' => $primeraVenta->estadoDocumento?->nombre ?? 'N/A',
-                        'tipoPago_nombre' => $primeraVenta->tipoPago?->nombre ?? 'N/A',
-                        'detalles_count' => $primeraVenta->detalles?->count() ?? 0,
-                    ];
-                }
-
-                \Log::info('📊 [ImpresionVentasController] Estructura de PRIMERA VENTA', $estructura);
-            }
-
             $formato = $request->get('formato', 'A4');
             $accion = $request->get('accion', 'download');
 
+            // Limpiar sesión
+            session()->forget(['ventas_impresion', 'ventas_filtros']);
+
+            // Mapear formato a vista específica para batch (colecciones)
             $vistaMap = [
-                'A4' => 'impresion.ventas.hoja-completa-ventas',
+                'A4'        => 'impresion.ventas.hoja-completa-ventas',
                 'TICKET_80' => 'impresion.ventas.ticket-80',
                 'TICKET_58' => 'impresion.ventas.ticket-58',
             ];
 
             $vista = $vistaMap[$formato] ?? 'impresion.ventas.hoja-completa-ventas';
 
-            // Renderizar vista
+            // Renderizar vista HTML con las ventas
             $html = view($vista, [
                 'ventas' => $ventas,
                 'filtros' => $filtros,
                 'empresa' => $empresa,
             ])->render();
 
-            // Limpiar sesión
-            session()->forget(['ventas_impresion', 'ventas_filtros']);
+            // Convertir HTML a PDF usando DomPDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+
+            $nombreArchivo = 'reporte-ventas-' . now()->format('YmdHis') . '.pdf';
 
             if ($accion === 'download') {
-                return response()->streamDownload(
-                    fn () => print($html),
-                    'reporte-ventas-' . now()->format('YmdHis') . '.html',
-                    ['Content-Type' => 'text/html; charset=utf-8']
-                );
+                return $pdf->download($nombreArchivo);
             }
 
-            // Retornar HTML para visualización en navegador
-            return response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+            // Retornar PDF para visualización en navegador
+            return $pdf->stream($nombreArchivo);
 
         } catch (\Exception $e) {
-            \Log::error('❌ Error al imprimir ventas', [
+            \Log::error('❌ Error al imprimir reporte de ventas', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

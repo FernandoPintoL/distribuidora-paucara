@@ -42,9 +42,8 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
     compra: [
-        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
-        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
-        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar carta' },
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
     ],
     pago: [
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
@@ -216,10 +215,10 @@ export function OutputSelectionModal({
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'cuenta-por-cobrar') {
                 // Para cuentas por cobrar
-                url = `/ventas${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+                url = `${rutaBase}/imprimir-ticket-80`;
             } else if (tipoDocumento === 'cuenta-por-pagar') {
                 // Para cuentas por pagar
-                url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
+                url = `${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
             } else if (tipoDocumento === 'stock') {
                 // Para stock
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
@@ -232,6 +231,12 @@ export function OutputSelectionModal({
                 url = `${rutaBase}/descargar?formato=${formato}&accion=stream`;
             } else if (tipoDocumento === 'pago') {
                 // Para pagos
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'venta') {
+                // Para ventas
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'compra') {
+                // Para compras - usar nuevo endpoint HTML-based
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'cuenta-por-cobrar') {
                 // Para cuentas por cobrar - ruta específica para ticket-80

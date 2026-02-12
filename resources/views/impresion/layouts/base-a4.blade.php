@@ -12,18 +12,25 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
         body {
             color: #333;
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
         }
 
         .page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 10mm;
-            margin: 0 auto;
-            box-sizing: border-box;
+            padding: 45px;
         }
 
         /* Header con información de empresa */
@@ -34,6 +41,13 @@
             margin-bottom: 20px;
             border-bottom: 2px solid #4F81BD;
             padding-bottom: 10px;
+            width: 100%;
+        }
+
+        /* Contenido del documento */
+        .contenido-documento {
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .header-logo {
@@ -50,17 +64,16 @@
             flex: 1;
             text-align: right;
             padding-left: 20px;
+            font-size: 10px;
         }
 
         .header-empresa h1 {
-            font-size: 18px;
             color: #4F81BD;
             margin-bottom: 5px;
             font-weight: bold;
         }
 
         .header-empresa p {
-            font-size: 9px;
             margin: 2px 0;
             color: #555;
         }
@@ -72,6 +85,7 @@
             margin-bottom: 15px;
             border-radius: 4px;
             border-left: 4px solid #4F81BD;
+            font-size: 12px;
         }
 
         .documento-info-grid {
@@ -85,14 +99,12 @@
         }
 
         .documento-info h2 {
-            font-size: 16px;
             color: #4F81BD;
             margin-bottom: 10px;
             font-weight: bold;
         }
 
         .documento-info p {
-            font-size: 9px;
             margin: 3px 0;
         }
 
@@ -102,10 +114,11 @@
 
         /* Tablas de productos */
         table.tabla-productos {
-            width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
             border-collapse: collapse;
             margin: 15px 0;
-            font-size: 16px;
+            box-sizing: border-box !important;
         }
 
         table.tabla-productos thead {
@@ -116,14 +129,12 @@
         table.tabla-productos thead th {
             padding: 8px 5px;
             text-align: left;
-            font-size: 9px;
             font-weight: bold;
         }
 
         table.tabla-productos tbody td {
             padding: 6px 5px;
             border-bottom: 1px solid #ddd;
-            font-size: 9px;
         }
 
         table.tabla-productos tbody tr:nth-child(even) {
@@ -148,7 +159,6 @@
 
         .totales td {
             padding: 5px 10px;
-            font-size: 10px;
         }
 
         .totales .subtotal-row td {
@@ -156,7 +166,6 @@
         }
 
         .totales .total-final {
-            font-size: 14px;
             font-weight: bold;
             background: #f5f5f5;
             border-top: 2px solid #4F81BD;
@@ -169,7 +178,6 @@
             padding: 10px;
             background: #f9f9f9;
             border-left: 3px solid #4F81BD;
-            font-size: 9px;
         }
 
         .observaciones strong {
@@ -185,7 +193,6 @@
             background: #e3f2fd;
             border-left: 4px solid #2196F3;
             border-radius: 4px;
-            font-size: 9px;
         }
 
         .entrega-info strong {
@@ -201,7 +208,6 @@
             background: #f3e5f5;
             border-left: 4px solid #9c27b0;
             border-radius: 4px;
-            font-size: 9px;
         }
 
         .estado-logistico strong {
@@ -217,7 +223,6 @@
             background: #fff3e0;
             border-left: 4px solid #ff9800;
             border-radius: 4px;
-            font-size: 9px;
         }
 
         .informacion-pago p {
@@ -225,9 +230,6 @@
         }
 
         /* Cliente Info */
-        .cliente-info {
-            font-size: 9px;
-        }
 
         .cliente-info p {
             margin: 3px 0;
@@ -258,7 +260,6 @@
         }
 
         .qr-label {
-            font-size: 7px;
             margin-top: 3px;
             color: #666;
             font-weight: bold;
@@ -270,14 +271,12 @@
             padding: 12px;
             background: #f0f0f0;
             border-radius: 4px;
-            font-size: 7px;
             page-break-inside: avoid;
         }
 
         .terminos-titulo {
             display: block;
             color: #333;
-            font-size: 8px;
             margin-bottom: 8px;
             border-bottom: 1px solid #ccc;
             padding-bottom: 5px;
@@ -295,14 +294,12 @@
 
         .terminos-contenido li {
             margin: 3px 0;
-            font-size: 7px;
         }
 
         .terminos-contacto {
             margin-top: 8px;
             padding-top: 8px;
             border-top: 1px solid #ddd;
-            font-size: 8px;
         }
 
         .terminos-contacto strong {
@@ -312,7 +309,6 @@
 
         .terminos-contacto p {
             margin: 2px 0;
-            font-size: 7px;
         }
 
         /* Utilities */
@@ -337,7 +333,7 @@
 <body>
     <div class="page">
         {{-- Header con datos de empresa --}}
-        <div class="header" style="padding-left: 25px; padding-right: 25px;">
+        <div class="header">
             <div class="header-logo">
                 @if($empresa->logo_principal)
                 <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
@@ -358,7 +354,7 @@
         </div>
 
         {{-- Contenido específico de cada documento --}}
-        <div>
+        <div class="contenido-documento">
             @yield('contenido')
         </div>
     </div>

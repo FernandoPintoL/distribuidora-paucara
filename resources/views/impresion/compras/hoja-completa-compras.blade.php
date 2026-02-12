@@ -7,15 +7,18 @@
 <div class="documento-info">
     <div class="documento-info-grid">
         <div class="documento-info-seccion">
-            <h2 style="color: #3498db;">REPORTE DE COMPRAS</h2>
+            <h2 style="color: #3498db;">LISTADO DE COMPRAS</h2>
             <p><strong>Fecha de generación:</strong> {{ now()->format('d/m/Y H:i') }}</p>
+            @if($filtros && isset($filtros['proveedor_id']) && $filtros['proveedor_id'])
+                <p><strong>Proveedor:</strong> {{ $filtros['proveedor_id'] }}</p>
+            @endif
             @if($filtros && isset($filtros['estado_documento_id']) && $filtros['estado_documento_id'])
-                <p><strong>Estado:</strong> {{ $filtros['estado_documento_id'] ?? '-' }}</p>
+                <p><strong>Estado:</strong> {{ $filtros['estado_documento_id'] }}</p>
             @endif
         </div>
         <div class="documento-info-seccion" style="text-align: right;">
             <p><strong>Total de registros:</strong> {{ count($compras) }}</p>
-            <p><strong>Monto Total:</strong> {{ number_format($compras->sum('total'), 2) }}</p>
+            <p><strong>Monto total:</strong> Bs{{ number_format($compras->sum('total'), 2) }}</p>
         </div>
     </div>
 </div>
@@ -24,14 +27,13 @@
 <table class="tabla-productos">
     <thead>
         <tr>
-            <th style="width: 5%;">#</th>
+            <th style="width: 3%;">#</th>
             <th style="width: 10%;">Fecha</th>
-            <th style="width: 15%;">Proveedor</th>
-            <th style="width: 20%;">Producto</th>
-            <th style="width: 8%;">Cantidad</th>
+            <th style="width: 20%;">Proveedor</th>
+            <th style="width: 10%;">Cantidad</th>
             <th style="width: 12%;">P. Unit.</th>
             <th style="width: 12%;">Subtotal</th>
-            <th style="width: 10%;">Estado</th>
+            <th style="width: 5%;">Estado</th>
         </tr>
     </thead>
     <tbody>
@@ -75,39 +77,6 @@
             </td>
             <td>
                 @php
-                    $detallesHtml = '';
-                    if (is_array($item) && isset($item['detalles'])) {
-                        $detalles = $item['detalles'];
-                        if (is_array($detalles)) {
-                            foreach ($detalles as $detalle) {
-                                $prod = is_array($detalle) ? ($detalle['producto'] ?? null) : (is_object($detalle) ? ($detalle->producto ?? null) : null);
-                                if ($prod) {
-                                    $nombre = is_array($prod) ? ($prod['nombre'] ?? '-') : (is_object($prod) ? ($prod->nombre ?? '-') : '-');
-                                    $sku = is_array($prod) ? ($prod['sku'] ?? '') : (is_object($prod) ? ($prod->sku ?? '') : '');
-                                    $detallesHtml .= '<div><strong>' . $nombre . '</strong>';
-                                    if ($sku) {
-                                        $detallesHtml .= '<br><span style="font-size: 8px; color: #666;">SKU: ' . $sku . '</span>';
-                                    }
-                                    $detallesHtml .= '</div>';
-                                }
-                            }
-                        }
-                    } elseif (is_object($item) && isset($item->detalles)) {
-                        foreach ($item->detalles as $detalle) {
-                            if (isset($detalle->producto)) {
-                                $detallesHtml .= '<div><strong>' . ($detalle->producto->nombre ?? '-') . '</strong>';
-                                if ($detalle->producto->sku ?? false) {
-                                    $detallesHtml .= '<br><span style="font-size: 8px; color: #666;">SKU: ' . $detalle->producto->sku . '</span>';
-                                }
-                                $detallesHtml .= '</div>';
-                            }
-                        }
-                    }
-                @endphp
-                {!! $detallesHtml ?: '-' !!}
-            </td>
-            <td>
-                @php
                     $cantidadTotal = 0;
                     if (is_array($item) && isset($item['detalles'])) {
                         $detalles = $item['detalles'];
@@ -125,7 +94,7 @@
                 @endphp
                 <strong>{{ number_format($cantidadTotal, 2) }}</strong>
             </td>
-            <td class="text-right">
+            <td>
                 @php
                     $precioUnit = 0;
                     if (is_array($item) && isset($item['detalles'])) {
@@ -139,9 +108,9 @@
                         }
                     }
                 @endphp
-                {{ number_format($precioUnit, 2) }}
+                Bs{{ number_format($precioUnit, 2) }}
             </td>
-            <td class="text-right">
+            <td>
                 @php
                     $subtotal = 0;
                     if (is_array($item) && isset($item['subtotal'])) {
@@ -150,7 +119,7 @@
                         $subtotal = (float)$item->subtotal;
                     }
                 @endphp
-                <strong>{{ number_format($subtotal, 2) }}</strong>
+                <strong>Bs{{ number_format($subtotal, 2) }}</strong>
             </td>
             <td>
                 @php
@@ -162,9 +131,7 @@
                         $estado = $item->estadoDocumento->nombre ?? '-';
                     }
                 @endphp
-                <span style="font-size: 11px; padding: 2px 4px; background: #f0f0f0; border-radius: 3px;">
-                    {{ $estado }}
-                </span>
+                {{ $estado }}
             </td>
         </tr>
         @empty
@@ -181,15 +148,15 @@
 <div class="totales">
     <table>
         <tr class="total-final">
-            <td><strong>TOTAL DE COMPRAS:</strong></td>
-            <td class="text-right">
+            <td><strong>TOTAL DE REGISTROS:</strong></td>
+            <td>
                 <strong>{{ count($compras) }}</strong>
             </td>
         </tr>
-        <tr class="total-final">
+        <tr class="subtotal-row">
             <td><strong>MONTO TOTAL:</strong></td>
-            <td class="text-right">
-                <strong>{{ number_format($compras->sum('total'), 2) }}</strong>
+            <td>
+                <strong>Bs{{ number_format($compras->sum('total'), 2) }}</strong>
             </td>
         </tr>
     </table>
@@ -198,9 +165,9 @@
 {{-- Nota de documentación --}}
 <div class="observaciones" style="margin-top: 10px; border-left-color: #3498db; background: #ecf0f1;">
     <strong>Nota Informativa:</strong>
-    <p style="margin-top: 5px; font-size: 8px;">
-        Este es un reporte de referencia de compras.
-        Generado el {{ now()->format('d/m/Y \\a \\l\\a\\s H:i') }}.
+    <p style="margin-top: 5px;">
+        Este es un listado de referencia de compras de la empresa.
+        Generado el {{ now()->format('d/m/Y \a \l\a\s H:i') }}.
     </p>
 </div>
 @endsection

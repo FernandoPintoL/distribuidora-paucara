@@ -136,134 +136,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     // const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
     const numero: string = String(entrega.proforma?.numero || entrega.venta?.numero || entrega.numero || `#${entrega.id}`);
 
-
-    /* const handleGenerarReporte = async () => {
-        setIsGeneratingReport(true);
-        setReportError(null);
-
-        try {
-            const response = await fetch('/api/reportes-carga', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({
-                    entrega_id: entrega.id,
-                    vehiculo_id: entrega.vehiculo_id,
-                    peso_total_kg: entrega.peso_kg,
-                    descripcion: `Reporte de carga para entrega #${entrega.id}`,
-                }),
-            });
-
-            if (!response.ok) {
-                let errorMsg = 'Error generando reporte';
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.message || errorMsg;
-                } catch {
-                    errorMsg = `Error del servidor (${response.status})`;
-                }
-                setReportError(errorMsg);
-                throw new Error(errorMsg);
-            }
-
-            const result = await response.json();
-
-            // Actualizar el estado de la entrega
-            setEntrega((prev) => ({
-                ...prev,
-                reporte_carga_id: result.data?.id,
-                estado: 'PREPARACION_CARGA',
-            }));
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Error desconocido';
-            console.error('Error generando reporte:', msg);
-            setReportError(msg);
-        } finally {
-            setIsGeneratingReport(false);
-        }
-    }; */
-
-    /**
-     * Descargar PDF del reporte
-     */
-    /* const handleDescargarPdf = async (reporteId: Id, detallado: boolean = false) => {
-        try {
-            const pdfLoadingState = detallado ? setLoadingPdfDetallado : setLoadingPdf;
-            pdfLoadingState(reporteId);
-
-            const endpoint = detallado
-                ? `/api/reportes-carga/${reporteId}/pdf-detallado`
-                : `/api/reportes-carga/${reporteId}/pdf`;
-
-            const response = await fetch(endpoint);
-
-            if (!response.ok) {
-                throw new Error(`Error descargando PDF (${response.status})`);
-            }
-
-            // Crear blob y descargar
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `reporte-${entrega.reportes?.[0]?.numero_reporte || 'carga'}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Error descargando PDF:', error);
-            alert('Error descargando PDF. Intenta de nuevo.');
-        } finally {
-            void (detallado ? setLoadingPdfDetallado(null) : setLoadingPdf(null));
-        }
-    }; */
-
-    /**
-     * Ver vista previa del PDF en navegador
-     */
-    /* const handleVerPdfPreview = async (reporteId: Id) => {
-        try {
-            window.open(
-                `/api/reportes-carga/${reporteId}/pdf-preview`,
-                '_blank',
-                'width=1000,height=700'
-            );
-        } catch (error) {
-            console.error('Error abriendo vista previa:', error);
-            alert('Error abriendo vista previa. Intenta de nuevo.');
-        }
-    }; */
-
-    /**
-     * Imprimir reporte (abre diálogo de impresión del navegador)
-     */
-    /* const handleImprimirReporte = async (reporteId: Id) => {
-        try {
-            setLoadingPdf(reporteId);
-            // Abre la vista previa y permite imprimir desde ahí
-            const popup = window.open(
-                `/api/reportes-carga/${reporteId}/pdf-preview`,
-                'printWindow',
-                'width=1000,height=700'
-            );
-
-            if (popup) {
-                // Espera a que cargue el PDF
-                setTimeout(() => {
-                    popup.print();
-                }, 1500);
-            }
-        } catch (error) {
-            console.error('Error imprimiendo reporte:', error);
-            alert('Error imprimiendo reporte. Intenta de nuevo.');
-        } finally {
-            setLoadingPdf(null);
-        }
-    }; */
-
     // Estados del nuevo flujo de carga
     const cargoFlowStates = [
         'PREPARACION_CARGA',
@@ -276,13 +148,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
     // Usar estado_entrega_codigo (más confiable) o caer a estado como fallback
     const estadoActualParaValidar = entrega.estado_entrega_codigo ?? entrega.estado;
     const isInCargoFlow = cargoFlowStates.includes(estadoActualParaValidar);
-    /* const estadoColors: Record<string, string> = {
-        ...estadoBadgeColor,
-        PREPARACION_CARGA: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-        EN_CARGA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-        LISTO_PARA_ENTREGA: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
-        RECHAZADO: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
-    }; */
 
     return (
         <AppLayout>
@@ -303,27 +168,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                             <p className="text-gray-500 dark:text-gray-400">Detalles de la entrega</p>
                         </div>
                     </div>
-
-                    {/* Live Status Indicator */}
-                    {/* <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-800">
-                            {isLive ? (
-                                <>
-                                    <Wifi className="w-4 h-4 text-green-500 animate-pulse" />
-                                    <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                        En vivo
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <WifiOff className="w-4 h-4 text-gray-400" />
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                        Desconectado
-                                    </span>
-                                </>
-                            )}
-                        </div>
-                    </div> */}
 
                     <EstadoBadge entrega={entrega} />
 
@@ -349,23 +193,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                         }}
                     />
                 </div>
-
-                {/* Mapa de Tracking en Tiempo Real - Mostrar cuando está EN_TRANSITO */}
-                {/* {entrega.estado_entrega_codigo === 'EN_TRANSITO' && (
-                    <div className="pt-4">
-                        <div className="mb-2">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                                📍 Tracking en Tiempo Real
-                            </h2>
-                        </div>
-                        <EstregaMap
-                            entrega={entrega}
-                            altura="500px"
-                            mostrarPolilinea={true}
-                            permitirSatellite={true}
-                        />
-                    </div>
-                )} */}
 
                 {/* Información del Lote - Entregas con mismo chofer y vehículo */}
                 {entrega.chofer && entrega.vehiculo && (
@@ -431,37 +258,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                         totalVentas={entrega.ventas.length}
                     />
                 )}
-
-
-                {/* Flujo de Carga - Mostrar si está en ese estado */}
-                {/* {isInCargoFlow && (
-                    <div className="pt-4">
-                        <EntregaFlujoCarga
-                            entrega={entrega}
-                            onStateChange={async (newState) => {
-                                // Actualizar estado localmente
-                                setEntrega((prev) => ({
-                                    ...prev,
-                                    estado: newState as EstadoEntrega,
-                                }));
-
-                                // Recargar datos del servidor para obtener coordenadas actualizadas
-                                try {
-                                    const response = await fetch(`/api/entregas/${entrega.id}`);
-                                    if (response.ok) {
-                                        const result = await response.json();
-                                        if (result.data) {
-                                            setEntrega(result.data);
-                                            console.log('✅ [Show] Entrega recargada con datos actualizados:', result.data);
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.warn('⚠️ [Show] Error recargando entrega:', error);
-                                }
-                            }}
-                        />
-                    </div>
-                )} */}
 
                 {/* Historial de Cambios de Estado */}
                 {/* <EntregaHistorialCambios entrega={entrega} /> */}

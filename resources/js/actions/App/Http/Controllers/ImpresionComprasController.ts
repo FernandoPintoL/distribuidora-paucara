@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
 export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
 imprimir.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ imprimir.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
 imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
 imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
     const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
         imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionComprasController::imprimir
- * @see app/Http/Controllers/ImpresionComprasController.php:15
+ * @see app/Http/Controllers/ImpresionComprasController.php:76
  * @route '/compras/imprimir'
  */
         imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
