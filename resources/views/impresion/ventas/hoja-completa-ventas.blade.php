@@ -27,7 +27,6 @@
             <th style="width: 4%;">#</th>
             <th style="width: 10%;">Fecha</th>
             <th style="width: 18%;">Cliente</th>
-            <th style="width: 28%;">Producto</th>
             <th style="width: 12%;">Total</th>
             <th style="width: 14%;">Estado</th>
             <th style="width: 14%;">Tipo de Pago</th>
@@ -72,39 +71,6 @@
                 @endphp
                 <strong>{{ $cliente }}</strong>
             </td>
-            <td>
-                @php
-                    $detallesHtml = '';
-                    if (is_array($item) && isset($item['detalles'])) {
-                        $detalles = $item['detalles'];
-                        if (is_array($detalles)) {
-                            foreach ($detalles as $detalle) {
-                                $prod = is_array($detalle) ? ($detalle['producto'] ?? null) : (is_object($detalle) ? ($detalle->producto ?? null) : null);
-                                if ($prod) {
-                                    $nombre = is_array($prod) ? ($prod['nombre'] ?? '-') : (is_object($prod) ? ($prod->nombre ?? '-') : '-');
-                                    $sku = is_array($prod) ? ($prod['sku'] ?? '') : (is_object($prod) ? ($prod->sku ?? '') : '');
-                                    $detallesHtml .= '<div><strong>' . $nombre . '</strong>';
-                                    if ($sku) {
-                                        $detallesHtml .= '<br><span style="font-size: 8px; color: #666;">SKU: ' . $sku . '</span>';
-                                    }
-                                    $detallesHtml .= '</div>';
-                                }
-                            }
-                        }
-                    } elseif (is_object($item) && isset($item->detalles)) {
-                        foreach ($item->detalles as $detalle) {
-                            if (isset($detalle->producto)) {
-                                $detallesHtml .= '<div><strong>' . ($detalle->producto->nombre ?? '-') . '</strong>';
-                                if ($detalle->producto->sku ?? false) {
-                                    $detallesHtml .= '<br><span style="font-size: 8px; color: #666;">SKU: ' . $detalle->producto->sku . '</span>';
-                                }
-                                $detallesHtml .= '</div>';
-                            }
-                        }
-                    }
-                @endphp
-                {!! $detallesHtml ?: '-' !!}
-            </td>
             <td class="text-right">
                 @php
                     $total = 0;
@@ -116,54 +82,66 @@
                 @endphp
                 <strong>{{ number_format($total, 2) }}</strong>
             </td>
-            {{-- Estado desde estadoDocumento --}}
-            <td style="font-size: 10px;">
+            {{-- Estado desde estado_documento --}}
+            <td>
                 @php
                     $estado = '-';
                     $estadoColor = '#f0f0f0';
 
-                    // Obtener estado desde relación estadoDocumento
+                    // Obtener estado desde relación estado_documento (snake_case)
                     if (is_object($item) && isset($item->estadoDocumento)) {
                         $estado = $item->estadoDocumento->nombre ?? '-';
-                        // Colores según estado
-                        if ($estado === 'APROBADO') {
-                            $estadoColor = '#d4edda'; // Verde claro
-                        } elseif ($estado === 'ANULADO') {
-                            $estadoColor = '#f8d7da'; // Rojo claro
-                        } elseif ($estado === 'PENDIENTE') {
-                            $estadoColor = '#fff3cd'; // Amarillo claro
+                    } elseif (is_array($item) && isset($item['estado_documento'])) {
+                        // Array con estado_documento
+                        $ed = $item['estado_documento'];
+                        if (is_array($ed)) {
+                            $estado = $ed['nombre'] ?? '-';
+                        } elseif (is_object($ed)) {
+                            $estado = $ed->nombre ?? '-';
                         }
-                    } elseif (is_array($item) && isset($item['estadoDocumento'])) {
-                        $ed = $item['estadoDocumento'];
-                        $estado = is_array($ed) ? ($ed['nombre'] ?? '-') : (is_object($ed) ? ($ed->nombre ?? '-') : '-');
+                    }
+
+                    // Colores según estado
+                    if ($estado === 'APROBADO') {
+                        $estadoColor = '#d4edda'; // Verde claro
+                    } elseif ($estado === 'ANULADO') {
+                        $estadoColor = '#f8d7da'; // Rojo claro
+                    } elseif ($estado === 'PENDIENTE') {
+                        $estadoColor = '#fff3cd'; // Amarillo claro
                     }
                 @endphp
                 <span style="padding: 3px 6px; background: {{ $estadoColor }}; border-radius: 3px; display: inline-block;">
                     <strong>{{ $estado }}</strong>
                 </span>
             </td>
-            {{-- Tipo de Pago desde tipoPago --}}
-            <td style="font-size: 10px;">
+            {{-- Tipo de Pago desde tipo_pago --}}
+            <td>
                 @php
                     $tipoPago = '-';
                     $pagoColor = '#f0f0f0';
 
-                    // Obtener tipo de pago desde relación tipoPago
+                    // Obtener tipo de pago desde relación tipo_pago (snake_case)
                     if (is_object($item) && isset($item->tipoPago)) {
                         $tipoPago = $item->tipoPago->nombre ?? '-';
-                        // Colores según tipo de pago
-                        if ($tipoPago === 'Efectivo') {
-                            $pagoColor = '#d1ecf1'; // Cyan claro
-                        } elseif ($tipoPago === 'Transferencia / QR') {
-                            $pagoColor = '#d1e7dd'; // Verde claro
-                        } elseif ($tipoPago === 'Cheque') {
-                            $pagoColor = '#e2e3e5'; // Gris claro
-                        } elseif ($tipoPago === 'Crédito') {
-                            $pagoColor = '#cfe2ff'; // Azul claro
+                    } elseif (is_array($item) && isset($item['tipo_pago'])) {
+                        // Array con tipo_pago
+                        $tp = $item['tipo_pago'];
+                        if (is_array($tp)) {
+                            $tipoPago = $tp['nombre'] ?? '-';
+                        } elseif (is_object($tp)) {
+                            $tipoPago = $tp->nombre ?? '-';
                         }
-                    } elseif (is_array($item) && isset($item['tipoPago'])) {
-                        $tp = $item['tipoPago'];
-                        $tipoPago = is_array($tp) ? ($tp['nombre'] ?? '-') : (is_object($tp) ? ($tp->nombre ?? '-') : '-');
+                    }
+
+                    // Colores según tipo de pago
+                    if ($tipoPago === 'Efectivo') {
+                        $pagoColor = '#d1ecf1'; // Cyan claro
+                    } elseif ($tipoPago === 'Transferencia / QR') {
+                        $pagoColor = '#d1e7dd'; // Verde claro
+                    } elseif ($tipoPago === 'Cheque') {
+                        $pagoColor = '#e2e3e5'; // Gris claro
+                    } elseif ($tipoPago === 'Crédito') {
+                        $pagoColor = '#cfe2ff'; // Azul claro
                     }
                 @endphp
                 <span style="padding: 3px 6px; background: {{ $pagoColor }}; border-radius: 3px; display: inline-block;">
