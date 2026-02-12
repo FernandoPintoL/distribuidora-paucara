@@ -24,14 +24,15 @@
 <table class="tabla-productos">
     <thead>
         <tr>
-            <th style="width: 5%;">#</th>
-            <th style="width: 10%;">Fecha</th>
-            <th style="width: 15%;">Cliente</th>
-            <th style="width: 20%;">Producto</th>
-            <th style="width: 8%;">Cantidad</th>
-            <th style="width: 12%;">P. Unit.</th>
-            <th style="width: 12%;">Subtotal</th>
-            <th style="width: 10%;">Estado</th>
+            <th style="width: 4%;">#</th>
+            <th style="width: 9%;">Fecha</th>
+            <th style="width: 13%;">Cliente</th>
+            <th style="width: 18%;">Producto</th>
+            <th style="width: 7%;">Cant</th>
+            <th style="width: 9%;">P. Unit.</th>
+            <th style="width: 9%;">Subtotal</th>
+            <th style="width: 11%;">Estado</th>
+            <th style="width: 12%;">Tipo de Pago</th>
         </tr>
     </thead>
     <tbody>
@@ -152,23 +153,64 @@
                 @endphp
                 <strong>{{ number_format($subtotal, 2) }}</strong>
             </td>
-            <td>
+            {{-- Estado desde estadoDocumento --}}
+            <td style="font-size: 10px;">
                 @php
                     $estado = '-';
-                    if (is_array($item) && isset($item['estado'])) {
-                        $estado = ucfirst($item['estado']);
-                    } elseif (is_object($item) && isset($item->estado)) {
-                        $estado = ucfirst($item->estado);
+                    $estadoColor = '#f0f0f0';
+
+                    // Obtener estado desde relación estadoDocumento
+                    if (is_object($item) && isset($item->estadoDocumento)) {
+                        $estado = $item->estadoDocumento->nombre ?? '-';
+                        // Colores según estado
+                        if ($estado === 'APROBADO') {
+                            $estadoColor = '#d4edda'; // Verde claro
+                        } elseif ($estado === 'ANULADO') {
+                            $estadoColor = '#f8d7da'; // Rojo claro
+                        } elseif ($estado === 'PENDIENTE') {
+                            $estadoColor = '#fff3cd'; // Amarillo claro
+                        }
+                    } elseif (is_array($item) && isset($item['estadoDocumento'])) {
+                        $ed = $item['estadoDocumento'];
+                        $estado = is_array($ed) ? ($ed['nombre'] ?? '-') : (is_object($ed) ? ($ed->nombre ?? '-') : '-');
                     }
                 @endphp
-                <span style="font-size: 11px; padding: 2px 4px; background: #f0f0f0; border-radius: 3px;">
-                    {{ $estado }}
+                <span style="padding: 3px 6px; background: {{ $estadoColor }}; border-radius: 3px; display: inline-block;">
+                    <strong>{{ $estado }}</strong>
+                </span>
+            </td>
+            {{-- Tipo de Pago desde tipoPago --}}
+            <td style="font-size: 10px;">
+                @php
+                    $tipoPago = '-';
+                    $pagoColor = '#f0f0f0';
+
+                    // Obtener tipo de pago desde relación tipoPago
+                    if (is_object($item) && isset($item->tipoPago)) {
+                        $tipoPago = $item->tipoPago->nombre ?? '-';
+                        // Colores según tipo de pago
+                        if ($tipoPago === 'Efectivo') {
+                            $pagoColor = '#d1ecf1'; // Cyan claro
+                        } elseif ($tipoPago === 'Transferencia / QR') {
+                            $pagoColor = '#d1e7dd'; // Verde claro
+                        } elseif ($tipoPago === 'Cheque') {
+                            $pagoColor = '#e2e3e5'; // Gris claro
+                        } elseif ($tipoPago === 'Crédito') {
+                            $pagoColor = '#cfe2ff'; // Azul claro
+                        }
+                    } elseif (is_array($item) && isset($item['tipoPago'])) {
+                        $tp = $item['tipoPago'];
+                        $tipoPago = is_array($tp) ? ($tp['nombre'] ?? '-') : (is_object($tp) ? ($tp->nombre ?? '-') : '-');
+                    }
+                @endphp
+                <span style="padding: 3px 6px; background: {{ $pagoColor }}; border-radius: 3px; display: inline-block;">
+                    {{ $tipoPago }}
                 </span>
             </td>
         </tr>
         @empty
         <tr>
-            <td colspan="8" style="text-align: center; padding: 20px;">
+            <td colspan="9" style="text-align: center; padding: 20px;">
                 No hay ventas para mostrar
             </td>
         </tr>
