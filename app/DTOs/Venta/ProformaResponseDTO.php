@@ -116,8 +116,15 @@ class ProformaResponseDTO extends BaseDTO
                 'sku' => $det->producto->sku ?? null,
                 'peso' => (float) ($det->producto->peso ?? 0),
                 'categoria' => $det->producto->categoria?->nombre ?? null,
-                // ✅ SIMPLIFICADO: Stock disponible directo (reservas se muestran separadas)
-                'stock_disponible' => $det->producto->stock?->first()?->cantidad_disponible ?? 0,
+                // ✅ MEJORADO (2026-02-11): Consolidar stock de múltiples lotes
+                // Suma TODOS los lotes del almacén principal, no solo el primero
+                'cantidad_total' => (int) ($det->producto->stock?->sum('cantidad') ?? 0),
+                'cantidad_disponible' => (int) ($det->producto->stock?->sum('cantidad_disponible') ?? 0),
+                'cantidad_reservada' => (int) ($det->producto->stock?->sum('cantidad_reservada') ?? 0),
+                // Alias para compatibilidad
+                'stock_disponible' => (int) ($det->producto->stock?->sum('cantidad_disponible') ?? 0),
+                'stock_total' => (int) ($det->producto->stock?->sum('cantidad') ?? 0),
+                'stock_reservado' => (int) ($det->producto->stock?->sum('cantidad_reservada') ?? 0),
                 // ✅ NUEVO: Límite de venta del producto
                 'limite_venta' => $det->producto->limite_venta ? (int) $det->producto->limite_venta : null,
             ])->toArray(),

@@ -1423,45 +1423,125 @@ class VentaController extends Controller
     /**
      * API: Obtener todas las ventas sin paginación (para impresión/exportación)
      */
+    /**
+     * ✅ ACTUALIZADO: Obtener ventas para impresión con TODOS los filtros soportados
+     *
+     * Soporta filtros dinámicos: cliente_id, estado_documento_id, usuario_id, moneda_id,
+     * tipo_pago_id, estado_pago, estado_logistico, fecha_desde, fecha_hasta, monto_min, monto_max,
+     * id, numero, busqueda_cliente, etc.
+     */
     public function ventasParaImpresion(Request $request): JsonResponse
     {
-        $cliente_id   = $request->integer('cliente_id') ?: null;
-        $estado       = $request->filled('estado') ? $request->string('estado') : null;
-        $fechaInicio  = $request->date('fecha_inicio');
-        $fechaFin     = $request->date('fecha_fin');
+        try {
+            // ✅ NUEVO: Extraer TODOS los filtros de la request
+            $filtros = $request->all();
 
-        \Log::info('📋 [ventasParaImpresion] Parámetros recibidos:', [
-            'cliente_id'   => $cliente_id,
-            'estado'       => $estado,
-            'fecha_inicio' => $fechaInicio?->format('Y-m-d'),
-            'fecha_fin'    => $fechaFin?->format('Y-m-d'),
-        ]);
+            \Log::info('📋 [ventasParaImpresion] Todos los filtros recibidos:', array_filter($filtros, fn($v) => $v !== '' && $v !== null));
 
-        $query = Venta::with([
-            'cliente:id,nombre,nit,telefono',
-            'cliente.localidad:id,nombre',
-            'usuario:id,name',
-            'detalles.producto:id,nombre,sku',
-            'detalles.producto.codigoPrincipal:id,codigo',
-        ])
-            ->when($cliente_id, fn($q) => $q->where('cliente_id', $cliente_id))
-            ->when($estado, fn($q) => $q->where('estado', $estado))
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha', '<=', $fechaFin))
-            ->orderByDesc('fecha')
-            ->orderByDesc('id');
+            $query = Venta::with([
+                'cliente:id,nombre,nit,telefono,email',
+                'cliente.localidad:id,nombre',
+                'usuario:id,name,email',
+                'estadoDocumento:id,codigo,nombre',
+                'moneda:id,codigo,nombre,simbolo',
+                'tipoPago:id,nombre',
+                'estadoLogistica:id,codigo,nombre',
+                'detalles.producto:id,nombre,sku,es_combo',
+                'detalles.producto.codigoPrincipal:id,codigo',
+            ]);
 
-        \Log::info('📋 [ventasParaImpresion] Query SQL:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+            // ✅ Aplicar filtros dinámicamente
+            // Búsqueda por ID de venta
+            if (!empty($filtros['id'])) {
+                $query->where('id', $filtros['id']);
+            }
 
-        $ventas = $query->get();
+            // Búsqueda por número de venta
+            if (!empty($filtros['numero'])) {
+                $query->where('numero', 'like', '%' . $filtros['numero'] . '%');
+            }
 
-        \Log::info('📋 [ventasParaImpresion] Resultados obtenidos:', ['cantidad' => $ventas->count()]);
+            // Filtro por cliente
+            if (!empty($filtros['cliente_id'])) {
+                $query->where('cliente_id', $filtros['cliente_id']);
+            }
 
-        return response()->json([
-            'success' => true,
-            'data' => $ventas,
-            'message' => 'Ventas obtenidas',
-        ]);
+            // Filtro por estado documento
+            if (!empty($filtros['estado_documento_id'])) {
+                $query->where('estado_documento_id', $filtros['estado_documento_id']);
+            }
+
+            // Filtro por usuario
+            if (!empty($filtros['usuario_id'])) {
+                $query->where('usuario_id', $filtros['usuario_id']);
+            }
+
+            // Filtro por moneda
+            if (!empty($filtros['moneda_id'])) {
+                $query->where('moneda_id', $filtros['moneda_id']);
+            }
+
+            // Filtro por tipo de pago
+            if (!empty($filtros['tipo_pago_id'])) {
+                $query->where('tipo_pago_id', $filtros['tipo_pago_id']);
+            }
+
+            // Filtro por estado de pago
+            if (!empty($filtros['estado_pago'])) {
+                $query->where('estado_pago', $filtros['estado_pago']);
+            }
+
+            // Filtro por estado logístico
+            if (!empty($filtros['estado_logistico'])) {
+                $query->where('estado_logistico', $filtros['estado_logistico']);
+            }
+
+            // Filtro por rango de fechas (usando fecha_desde y fecha_hasta)
+            if (!empty($filtros['fecha_desde'])) {
+                $query->whereDate('fecha', '>=', $filtros['fecha_desde']);
+            }
+            if (!empty($filtros['fecha_hasta'])) {
+                $query->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+            }
+
+            // Filtro por rango de montos
+            if (!empty($filtros['monto_min'])) {
+                $query->where('total', '>=', (float) $filtros['monto_min']);
+            }
+            if (!empty($filtros['monto_max'])) {
+                $query->where('total', '<=', (float) $filtros['monto_max']);
+            }
+
+            // Ordenar por fecha (más reciente primero)
+            $query->orderByDesc('fecha')->orderByDesc('id');
+
+            \Log::info('📋 [ventasParaImpresion] Query generada:', [
+                'sql' => $query->toSql(),
+                'bindings_count' => count($query->getBindings())
+            ]);
+
+            $ventas = $query->get();
+
+            \Log::info('📋 [ventasParaImpresion] Ventas obtenidas para impresión:', [
+                'cantidad' => $ventas->count(),
+                'filtros_activos' => count(array_filter($filtros, fn($v) => $v !== '' && $v !== null))
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $ventas,
+                'message' => "Se obtuvieron {$ventas->count()} ventas para imprimir",
+                'filtros_aplicados' => array_filter($filtros, fn($v) => $v !== '' && $v !== null)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ [ventasParaImpresion] Error:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener ventas',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

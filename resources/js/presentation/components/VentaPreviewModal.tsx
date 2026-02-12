@@ -10,13 +10,20 @@ import type {
 } from '@/domain/entities/ventas';
 import type { Id } from '@/domain/entities/shared';
 
+interface ComboItemSeleccionado {
+    producto_id: number;
+    incluido: boolean;
+    cantidad?: number;
+}
+
 interface DetalleVentaConProducto {
     producto_id: Id;
     cantidad: number;
     precio_unitario: number;
     descuento: number;
     subtotal: number;
-    producto?: Producto;
+    producto?: Producto & { es_combo?: boolean };
+    combo_items_seleccionados?: ComboItemSeleccionado[];
 }
 
 interface VentaPreviewData {
@@ -51,6 +58,7 @@ interface VentaPreviewModalProps {
     estadoDocumento: EstadoDocumento | undefined;
     processing: boolean;
     isEditing: boolean;
+    comboItemsMap?: Record<number, any[]>; // ✅ NUEVO: Mapa de items por índice de detalle
 }
 
 export default function VentaPreviewModal({
@@ -63,8 +71,19 @@ export default function VentaPreviewModal({
     moneda,
     estadoDocumento,
     processing,
-    isEditing
+    isEditing,
+    comboItemsMap
 }: VentaPreviewModalProps) {
+    console.log('🔍 [VentaPreviewModal] Datos recibidos:', {
+        data,
+        detallesWithProducts,
+        cliente,
+        moneda,
+        estadoDocumento,
+        processing,
+        isEditing,
+        comboItemsMap
+    });
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -207,34 +226,102 @@ export default function VentaPreviewModal({
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
-                                                    {detallesWithProducts.map((detalle, index) => (
-                                                        <tr key={index}>
-                                                            <td className="px-3 py-2 text-sm">
-                                                                <div>
-                                                                    <p className="font-medium text-gray-900 dark:text-white">
-                                                                        {detalle.producto?.nombre}
-                                                                    </p>
-                                                                    {detalle.producto?.codigo && (
-                                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                            Código: {detalle.producto.codigo}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
-                                                                {detalle.cantidad}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
-                                                                {formatCurrencyWith2Decimals(detalle.precio_unitario)}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
-                                                                {formatCurrencyWith2Decimals(detalle.descuento)}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-sm text-right font-medium text-gray-900 dark:text-white">
-                                                                {formatCurrencyWith2Decimals(detalle.subtotal)}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                    {detallesWithProducts.map((detalle, index) => {
+                                                        const esCombo = detalle.producto?.es_combo === true;
+                                                        // ✅ MEJORADO: Obtener items del combo desde comboItemsMap o desde detalle.combo_items_seleccionados
+                                                        const comboItemsDelMapa = comboItemsMap?.[index] || [];
+                                                        const itemsSeleccionados = comboItemsDelMapa.length > 0
+                                                            ? comboItemsDelMapa.filter(item => item.incluido !== false)
+                                                            : (detalle.combo_items_seleccionados?.filter(item => item.incluido) || []);
+
+                                                        return (
+                                                            <Fragment key={index}>
+                                                                {/* Fila del Producto / Combo */}
+                                                                <tr className={esCombo ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                                                                    <td className="px-3 py-2 text-sm">
+                                                                        <div>
+                                                                            <p className="font-medium text-gray-900 dark:text-white">
+                                                                                {esCombo && '📦 '}
+                                                                                {detalle.producto?.nombre}
+                                                                            </p>
+                                                                            {detalle.producto?.codigo && (
+                                                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                    Código: {detalle.producto.codigo}
+                                                                                </p>
+                                                                            )}
+                                                                            {esCombo && itemsSeleccionados.length > 0 && (
+                                                                                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                                                                    {itemsSeleccionados.length} item(s) seleccionado(s)
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
+                                                                        {detalle.cantidad}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
+                                                                        {formatCurrencyWith2Decimals(detalle.precio_unitario)}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
+                                                                        {formatCurrencyWith2Decimals(detalle.descuento)}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                                                                        {formatCurrencyWith2Decimals(detalle.subtotal)}
+                                                                    </td>
+                                                                </tr>
+
+                                                                {/* Filas de Items del Combo */}
+                                                                {esCombo && itemsSeleccionados.map((item) => {
+                                                                    // Obtener el producto_id correctamente según la estructura
+                                                                    const productId = item.producto_id || (item as any).producto_id;
+                                                                    // El item podría tener producto_nombre o necesitar buscarlo
+                                                                    const itemNombre = (item as any)?.producto_nombre ||
+                                                                                      (detalle.producto as any)?.comboItems?.find(
+                                                                                          (ci: any) => ci.producto_id === productId
+                                                                                      )?.producto?.nombre ||
+                                                                                      `Producto #${productId}`;
+                                                                    const itemSku = (item as any)?.producto_sku;
+
+                                                                    return (
+                                                                        <tr key={`combo-item-${productId}`} className="bg-purple-100/50 dark:bg-purple-900/10">
+                                                                            <td className="px-3 py-2 text-sm pl-8">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className="text-purple-600 dark:text-purple-400 text-lg">└─</span>
+                                                                                    <div className="flex-1">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                                                                {itemNombre}
+                                                                                            </p>
+                                                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
+                                                                                                ✓ Incluido
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        {(itemSku || (item as any)?.codigo) && (
+                                                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                                                Código: {itemSku || (item as any)?.codigo}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-sm text-right text-gray-900 dark:text-white">
+                                                                                {(item as any)?.cantidad || '-'}
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-sm text-right text-gray-500 dark:text-gray-400">
+                                                                                -
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-sm text-right text-gray-500 dark:text-gray-400">
+                                                                                -
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-sm text-right text-gray-500 dark:text-gray-400">
+                                                                                -
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </Fragment>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>

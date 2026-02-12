@@ -25,6 +25,7 @@ interface FiltrosMovimientosProps {
 }
 
 const tiposMovimiento = [
+    // ✅ Tipos principales
     { value: 'ENTRADA', label: 'Entradas' },
     { value: 'SALIDA', label: 'Salidas' },
     { value: 'AJUSTE', label: 'Ajustes' },
@@ -32,6 +33,10 @@ const tiposMovimiento = [
     { value: 'MERMA', label: 'Mermas' },
     { value: 'PRODUCCION', label: 'Producción' },
     { value: 'DEVOLUCION', label: 'Devoluciones' },
+    // ✅ NUEVO (2026-02-12): Tipos de reservas de proforma
+    { value: 'RESERVA_PROFORMA', label: 'Reserva de Proforma' },
+    { value: 'LIBERACION_RESERVA', label: 'Liberación de Reserva' },
+    { value: 'CONSUMO_RESERVA', label: 'Consumo de Reserva' },
 ];
 
 export default function FiltrosMovimientos({

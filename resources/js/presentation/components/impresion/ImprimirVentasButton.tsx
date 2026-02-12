@@ -58,15 +58,17 @@ export function ImprimirVentasButton({
             // Primero, obtener las ventas filtradas del API
             const params = new URLSearchParams();
 
-            // Agregar filtros como parámetros de query
+            // ✅ MEJORADO: Pasar TODOS los filtros sin importar cuáles sean
             if (filtros) {
-                if (filtros.cliente_id) params.append('cliente_id', String(filtros.cliente_id));
-                if (filtros.estado) params.append('estado', filtros.estado);
-                if (filtros.fecha_inicio) params.append('fecha_inicio', filtros.fecha_inicio);
-                if (filtros.fecha_fin) params.append('fecha_fin', filtros.fecha_fin);
+                Object.entries(filtros).forEach(([clave, valor]) => {
+                    // Omitir valores null, undefined, o empty strings
+                    if (valor !== null && valor !== undefined && valor !== '') {
+                        params.append(clave, String(valor));
+                    }
+                });
             }
 
-            console.log('Obteniendo ventas con parámetros:', params.toString());
+            console.log('🔍 Filtros aplicados para impresión:', Object.fromEntries(params));
 
             // Usar endpoint específico para impresión que retorna TODOS los registros sin paginación
             const apiResponse = await fetch(`/api/ventas/para-impresion?${params.toString()}`, {
@@ -250,8 +252,13 @@ export function ImprimirVentasButton({
                                     {/* Información */}
                                     <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                         <p className="text-sm text-blue-900 dark:text-blue-300">
-                                            Registros: <span className="font-semibold">{ventas.length}</span>
+                                            Registros en pantalla: <span className="font-semibold">{ventas.length}</span>
                                         </p>
+                                        {Object.keys(filtros).length > 0 && (
+                                            <p className="text-xs text-blue-800 dark:text-blue-400 mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                                                ✓ Usando filtros activos ({Object.keys(filtros).length}) - Se imprimirán TODOS los registros que coincidan con los filtros
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Pantalla principal: seleccionar acción */}

@@ -232,6 +232,19 @@ export default function VentaForm() {
         direccion_cliente_id: (venta?.direccion_cliente_id ? Number(venta.direccion_cliente_id) : null) as number | null
     });
 
+    // ✅ NUEVO (2026-02-11): Estado local para input de monto_pagado_inicial
+    // Esto evita que se pierdan decimales al scrollear o hacer otros eventos
+    const [montoPagadoInput, setMontoPagadoInput] = useState<string>(
+        data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
+    );
+
+    // Sincronizar estado local cuando cambia data.monto_pagado_inicial desde otra fuente
+    useEffect(() => {
+        setMontoPagadoInput(
+            data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
+        );
+    }, [data.monto_pagado_inicial]);
+
     // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1536,15 +1549,25 @@ export default function VentaForm() {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={data.monto_pagado_inicial === 0 && data.monto_pagado_inicial.toString() === '0' ? '' : data.monto_pagado_inicial}
+                                    value={montoPagadoInput}
                                     onChange={(e) => {
+                                        // ✅ MEJORADO: Mantener estado local mientras escribe
+                                        // Permite escribir libremente sin que se pierdan decimales al scrollear
+                                        setMontoPagadoInput(e.target.value);
+                                    }}
+                                    onWheel={(e) => {
+                                        // ✅ NUEVO (2026-02-11): Desactivar scroll para aumentar/disminuir
+                                        e.preventDefault();
+                                    }}
+                                    onBlur={(e) => {
+                                        // ✅ MEJORADO: Guardar a data solo cuando termina de editar
                                         const valor = e.target.value;
                                         const monto = valor === '' ? 0 : parseFloat(valor);
                                         if (!isNaN(monto) && monto >= 0) {
                                             setData('monto_pagado_inicial', monto);
                                         }
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right [&::-webkit-outer-spin-button]:[appearance:none] [&::-webkit-inner-spin-button]:[appearance:none] [appearance:textfield]"
                                     placeholder="0.00"
                                 />
                             </div>
@@ -1649,6 +1672,7 @@ export default function VentaForm() {
                 estadoDocumento={selectedEstado}
                 processing={processing}
                 isEditing={isEditing}
+                comboItemsMap={comboItemsMap}
             />
 
             {/* Modal para crear cliente */}

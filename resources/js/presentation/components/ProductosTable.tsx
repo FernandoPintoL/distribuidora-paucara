@@ -110,9 +110,7 @@ export default function ProductosTable({
     const [editingField, setEditingField] = useState<{ index: number; field: string } | null>(null);
     // ✅ NUEVO: Estado local para tipos de precio seleccionados (cache para re-renderización)
     const [selectedTipoPrecio, setSelectedTipoPrecio] = useState<Record<number, number>>({});
-    // ✅ NUEVO: Estado para incluir combos en búsquedas (solo para ventas)
-    const [incluirCombos, setIncluirCombos] = useState(false);
-    // ✅ NUEVO: Estado para controlar qué combos están expandidos
+    // ✅ Estado para controlar qué combos están expandidos
     const [expandedCombos, setExpandedCombos] = useState<Record<number, boolean>>({});
     // ✅ NUEVO: Mapa de combo_items actualizados por índice (se mantiene aunque detalles cambien)
     const [comboItemsMap, setComboItemsMap] = useState<Record<number, Array<any>>>({});
@@ -135,10 +133,10 @@ export default function ProductosTable({
                     [ultimoIndice]: true
                 }));
 
-                // ✅ NUEVO: Inicializar combo_items con incluido = true para obligatorios y opcionales
+                // ✅ Inicializar combo_items: obligatorios marcados, opcionales desmarcados
                 const comboItems = ((ultimoDetalle.producto as any).combo_items || []).map((item: any) => ({
                     ...item,
-                    incluido: item.es_obligatorio !== false // Si es obligatorio O es opcional pero lo incluimos por defecto
+                    incluido: item.es_obligatorio === true // Solo marcar obligatorios inicialmente
                 }));
 
                 setComboItemsMap(prev => ({
@@ -199,28 +197,33 @@ export default function ProductosTable({
             const params = new URLSearchParams({
                 q: term,
                 limite: '10',
-                tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
+                tipo: tipo // ✅ Pasar tipo de documento (compra o venta)
             });
-
-            // ✅ Pasar incluir_combos solo si es venta y está marcado
-            if (tipo === 'venta' && incluirCombos) {
-                params.append('incluir_combos', 'true');
-            }
 
             // ✅ Pasar almacen_id si está disponible
             if (almacen_id) {
                 params.append('almacen_id', almacen_id.toString());
             }
 
-            const response = await fetch(`/api/productos/buscar?${params.toString()}`);
+            const url = `/api/productos/buscar?${params.toString()}`;
+            console.log('🔍 [ProductosTable] Buscando productos con endpoint:', url);
+            console.log('📋 [ProductosTable] Parámetros:', {
+                q: term,
+                limite: '10',
+                tipo: tipo,
+                almacen_id: almacen_id || 'sin especificar'
+            });
+
+            const response = await fetch(url);
 
             if (!response.ok) {
+                console.error(`⚠️ [ProductosTable] Respuesta fallida: ${response.status} ${response.statusText}`);
                 throw new Error('Error en búsqueda de productos');
             }
 
             const data = await response.json();
 
-            console.log('📡 Respuesta API completa de la busqueda:', data.data);
+            console.log('✅ [ProductosTable] Respuesta API completa:', data.data);
 
             // Transformar respuesta de API a formato Producto
             const productosAPI = data.data.map((p: any) => {
@@ -277,22 +280,21 @@ export default function ProductosTable({
                     const esCombo = (p as any).es_combo || false;
                     const tieneComponentes = ((p as any).combo_items?.length || 0) > 0;
 
-                    // ✅ DEBUG: Log para verificar filtrado
+                    // ✅ SIMPLIFICADO: Backend determina automáticamente si es combo
                     console.log(`📦 Filtrando producto ${p.nombre}:`, {
                         es_combo: esCombo,
-                        incluir_combos: incluirCombos,
                         stock: p.stock,
                         precio_venta: p.precio_venta,
                         tiene_componentes: tieneComponentes,
-                        resultado: esCombo && incluirCombos ? tieneComponentes : (p.stock > 0 && p.precio_venta > 0)
+                        resultado: esCombo ? tieneComponentes : (p.stock > 0 && p.precio_venta > 0)
                     });
 
-                    // Si es combo e incluirCombos=true, solo requerir que tenga componentes
-                    if (esCombo && incluirCombos) {
+                    // ✅ Si es combo, solo requiere componentes (stock se calcula de ellos)
+                    if (esCombo) {
                         return tieneComponentes;
                     }
 
-                    // Para productos normales, siempre requiere stock y precio
+                    // Para productos normales, requiere stock y precio
                     return p.stock > 0 && p.precio_venta > 0;
                 }
                 return true; // Para compras mostrar todos
@@ -329,56 +331,51 @@ export default function ProductosTable({
                     tipo: tipo // ✅ NUEVO: Pasar tipo de documento (compra o venta)
                 });
 
-                // ✅ Pasar incluir_combos solo si es venta y está marcado
-                if (tipo === 'venta' && incluirCombos) {
-                    params.append('incluir_combos', 'true');
-                }
-
                 if (almacen_id) {
                     params.append('almacen_id', almacen_id.toString());
                 }
 
-                const response = await fetch(`/api/productos/buscar?${params.toString()}`);
+                const url = `/api/productos/buscar?${params.toString()}`;
+                console.log('🔍 [ProductosTable - Scanner] Buscando por código de barras:', url);
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
+                    console.error(`⚠️ [ProductosTable - Scanner] Respuesta fallida: ${response.status} ${response.statusText}`);
                     throw new Error('Error buscando producto');
                 }
 
                 const data = await response.json();
+                console.log('✅ [ProductosTable - Scanner] Respuesta:', data.data);
 
                 if (data.data && data.data.length > 0) {
                     const productoAPI = data.data[0];
 
                     // ✅ NUEVO: Validar producto para ventas (stock > 0 y precio_venta > 0)
-                    // IMPORTANTE: Si es combo e incluirCombos=true, no requiere stock ni precio (se calcula de componentes)
+                    // ✅ SIMPLIFICADO: Backend determina automáticamente si es combo
                     if (tipo === 'venta') {
                         const stock = productoAPI.stock_disponible || 0;
                         const precioVenta = productoAPI.precio_base || 0;
                         const esCombo = productoAPI.es_combo || false;
                         const tieneComponentes = (productoAPI.combo_items?.length || 0) > 0;
 
-                        // Si NO es combo, requerir stock
-                        if (!esCombo && stock === 0) {
-                            NotificationService.error('Producto sin stock disponible');
-                            return;
-                        }
+                        // Si NO es combo, requerir stock y precio
+                        if (!esCombo) {
+                            if (stock === 0) {
+                                NotificationService.error('Producto sin stock disponible');
+                                return;
+                            }
 
-                        // Si es combo pero NO está marcado incluirCombos, rechazar
-                        if (esCombo && !incluirCombos) {
-                            NotificationService.error('Para buscar combos, marca la opción "Incluir combos"');
-                            return;
-                        }
-
-                        // Si es combo, debe tener componentes
-                        if (esCombo && !tieneComponentes) {
-                            NotificationService.error('Combo sin productos componentes configurados');
-                            return;
-                        }
-
-                        // Si NO es combo, requiere precio
-                        if (!esCombo && precioVenta === 0) {
-                            NotificationService.error('Producto sin precio de venta configurado');
-                            return;
+                            if (precioVenta === 0) {
+                                NotificationService.error('Producto sin precio de venta configurado');
+                                return;
+                            }
+                        } else {
+                            // Si es combo, debe tener componentes
+                            if (!tieneComponentes) {
+                                NotificationService.error('Combo sin productos componentes configurados');
+                                return;
+                            }
                         }
                     }
 
@@ -459,29 +456,38 @@ export default function ProductosTable({
             if (!isNaN(cantidadNueva) && cantidadAnterior !== cantidadNueva) {
                 console.log(`📊 Cantidad del combo: ${cantidadAnterior} → ${cantidadNueva}`);
 
-                // ✅ Actualizar cantidades en combo_items (componentes incrustados)
+                // ✅ Obtener items actuales del mapa (si existen, preservan selecciones del usuario)
+                const itemsActualesDelMapa = comboItemsMap[index] || null;
                 const comboItems = ((detalles[index].producto as any).combo_items || []) as Array<any>;
                 console.log(`🎁 Componentes del combo encontrados: ${comboItems.length}`, comboItems.map(item => ({ nombre: item.producto_nombre, cantidadOriginal: item.cantidad })));
 
-                // ✅ CORRECTO: Multiplicar cantidad del combo × cantidad original del componente
-                const comboItemsActualizados = comboItems.map((item) => {
+                // ✅ CRÍTICO: Preservar el estado "incluido" que el usuario marcó
+                // Mapear items originales con sus selecciones guardadas
+                const comboItemsActualizados = comboItems.map((item, itemIdx) => {
                     const cantidadComponenteOriginal = item.cantidad; // Cantidad original en el combo (ej: 2, 1, etc)
                     const cantidadComponenteNueva = cantidadNueva * cantidadComponenteOriginal; // Cantidad final = combo_qty × componente_original_qty
+
+                    // ✅ IMPORTANTE: Preservar el valor "incluido" del usuario (si existe en el mapa)
+                    const incluidoDelUsuario = itemsActualesDelMapa?.[itemIdx]?.incluido;
+                    const incluido = incluidoDelUsuario !== undefined ? incluidoDelUsuario : (item.es_obligatorio !== false);
 
                     console.log(`  ✏️  Actualizando componente: ${item.producto_nombre}`, {
                         cantidadOriginal: cantidadComponenteOriginal,
                         cantidadDelCombo: cantidadNueva,
                         cantidadFinal: cantidadComponenteNueva,
+                        incluido: incluido,
+                        preservadoDelMapa: incluidoDelUsuario !== undefined
                     });
 
                     return {
                         ...item,
                         cantidad: cantidadComponenteNueva,
+                        incluido: incluido  // ✅ Preservar selección del usuario
                     };
                 });
 
                 console.log(`✅ Actualización de combo completada - componentes actualizados:`,
-                    comboItemsActualizados.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad })));
+                    comboItemsActualizados.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad, incluido: i.incluido })));
 
                 // ✅ CRÍTICO: Guardar combo_items en mapa (persisten aunque detalles cambien)
                 setComboItemsMap(prev => ({
@@ -597,22 +603,6 @@ export default function ProductosTable({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01M12 18h4.01M12 9h4.01M12 6h4.01M12 3h4.01" />
                         </svg>
                     </button>
-
-                    {/* ✅ NUEVO: Checkbox para incluir combos (solo en ventas) */}
-                    {tipo === 'venta' && (
-                        <label className="flex items-center gap-1.5 px-2 py-2 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/20 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            <input
-                                type="checkbox"
-                                checked={incluirCombos}
-                                onChange={(e) => setIncluirCombos(e.target.checked)}
-                                disabled={readOnly}
-                                className="w-3.5 h-3.5 rounded border-gray-300 dark:border-zinc-600 text-purple-600 focus:ring-purple-500 dark:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <span className="text-xs font-medium text-purple-700 dark:text-purple-400 whitespace-nowrap">
-                                Incluir combos
-                            </span>
-                        </label>
-                    )}
                 </div>
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}

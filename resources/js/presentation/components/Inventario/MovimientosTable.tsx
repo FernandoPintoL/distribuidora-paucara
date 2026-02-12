@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Table,
     TableBody,
@@ -10,7 +10,8 @@ import {
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import MovimientoDetallesModal from './MovimientoDetallesModal';
 
 interface MovimientoInventario {
     id: number;
@@ -58,6 +59,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
     pagination,
     onPageChange
 }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedMovimiento, setSelectedMovimiento] = useState<MovimientoInventario | null>(null);
     const getTipoColor = (tipo: string) => {
         const colors: Record<string, string> = {
             'ENTRADA': 'bg-green-100 text-green-800',
@@ -65,9 +68,21 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
             'TRANSFERENCIA_ENTRADA': 'bg-blue-100 text-blue-800',
             'TRANSFERENCIA_SALIDA': 'bg-yellow-100 text-yellow-800',
             'AJUSTE': 'bg-purple-100 text-purple-800',
-            'RESERVA': 'bg-orange-100 text-orange-800',  // ✅ NUEVO: Color para reservas
+            'RESERVA': 'bg-orange-100 text-orange-800',  // ✅ Color para reservas genéricas
+            // ✅ NUEVO (2026-02-12): Colores para tipos de reservas de proforma
+            'RESERVA_PROFORMA': 'bg-indigo-100 text-indigo-800',  // Reserva creada
+            'LIBERACION_RESERVA': 'bg-amber-100 text-amber-800',  // Reserva liberada
+            'CONSUMO_RESERVA': 'bg-pink-100 text-pink-800',  // Reserva consumida al convertir a venta
+            'ENTRADA_AJUSTE': 'bg-emerald-100 text-emerald-800',  // Ajuste entrada
+            'SALIDA_AJUSTE': 'bg-rose-100 text-rose-800',  // Ajuste salida
+            'ENTRADA_COMPRA': 'bg-teal-100 text-teal-800',  // Compra recibida
         };
         return colors[tipo] || 'bg-gray-100 text-gray-800';
+    };
+
+    const handleOpenDetalles = (movimiento: MovimientoInventario) => {
+        setSelectedMovimiento(movimiento);
+        setIsModalOpen(true);
     };
 
     if (isLoading) {
@@ -102,6 +117,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead>📋 Documento</TableHead>
                             <TableHead>Motivo</TableHead>
                             <TableHead>Usuario</TableHead>
+                            {/* ✅ NUEVO (2026-02-12): Columna de detalles */}
+                            <TableHead className="text-center">Detalles</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -205,8 +222,18 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                             )}
                                         </p> */}
                                     </TableCell>
-                                    {/* <TableCell>
-                                         {/* ✅ NUEVO: Mostrar rol del usuario */}
+                                    {/* ✅ NUEVO (2026-02-12): Botón Ver Detalles */}
+                                    <TableCell>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleOpenDetalles(movimiento)}
+                                            className="h-8 w-8 p-0"
+                                            title="Ver detalles y observaciones del movimiento"
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         )}
@@ -274,6 +301,13 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                         </div>
                     </div>
                 )}
+
+            {/* ✅ NUEVO (2026-02-12): Modal de detalles del movimiento */}
+            <MovimientoDetallesModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                movimiento={selectedMovimiento}
+            />
             </CardContent>
         </Card>
     );

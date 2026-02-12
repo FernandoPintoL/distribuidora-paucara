@@ -678,8 +678,8 @@ class InventarioController extends Controller
             return 'ENTRADA';
         } elseif (str_starts_with($tipo, 'SALIDA_')) {
             return 'SALIDA';
-        } elseif (str_starts_with($tipo, 'RESERVA') || str_starts_with($tipo, 'LIBERACION')) {
-            return 'RESERVA';  // ✅ NUEVO: Identificar movimientos de reserva
+        } elseif (str_starts_with($tipo, 'RESERVA') || str_starts_with($tipo, 'LIBERACION') || str_starts_with($tipo, 'CONSUMO')) {
+            return 'RESERVA';  // ✅ NUEVO: Identificar movimientos de reserva (incluyendo CONSUMO_RESERVA)
         } else {
             return 'AJUSTE';
         }
@@ -702,6 +702,7 @@ class InventarioController extends Controller
             // ✅ NUEVO: Tipos de reserva
             'RESERVA_PROFORMA'   => 'Reserva de proforma',
             'LIBERACION_RESERVA' => 'Liberación de reserva',
+            'CONSUMO_RESERVA'    => 'Consumo de reserva',  // ✅ NUEVO (2026-02-12): Consumo de reserva al convertir proforma
         ];
 
         return $tipos[$tipo] ?? 'Movimiento desconocido';

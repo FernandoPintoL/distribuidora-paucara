@@ -1165,47 +1165,37 @@ class ProductoController extends Controller
                     'nombre'              => $producto->nombre,
                     'sku'                 => $producto->sku,
                     'descripcion'         => $producto->descripcion,
-                    // 'peso'                => $producto->peso,
+                    'peso'                => $producto->peso,
                     'unidad_medida_id'    => $producto->unidad_medida_id,
-                    // 'codigo_barras'       => $producto->codigo_barras,
-                    // 'codigo_qr'           => $producto->codigo_qr,
-                    // 'stock_minimo' => $producto->stock_minimo,
-                    // 'stock_maximo' => $producto->stock_maximo,
+                    'unidad_medida_nombre' => $producto->unidad?->nombre,
+                    'codigo_barras'       => $producto->codigo_barras,
+                    'codigo_qr'           => $producto->codigo_qr,
                     'activo'              => $producto->activo,
                     'limite_venta'        => $producto->limite_venta,
                     'limite_productos'    => $producto->limite_productos,
-                    // 'fecha_creacion'      => $producto->fecha_creacion,
-                    // 'es_alquilable' => $producto->es_alquilable,
                     'categoria_id'        => $producto->categoria_id,
+                    'categoria'           => $producto->categoria?->nombre,
                     'marca_id'            => $producto->marca_id,
+                    'marca'               => $producto->marca?->nombre,
                     'proveedor_id'        => $producto->proveedor_id,
-                    'categoria'           => $producto->categoria,
-                    'marca'               => $producto->marca,
-                    'proveedor'           => $producto->proveedor,
-                    'unidad'              => $producto->unidad,
-                    'imagenes'            => $producto->imagenes ?? [], // Imágenes del producto
-                                                                  // 'precios' => $producto->precios,
-                    'codigos_barra'       => $segundoCodigoBarra, // String simple del segundo código
+                    'proveedor'           => $producto->proveedor?->nombre,
+                    'imagenes'            => $producto->imagenes ?? [],
+                    'codigos_barra'       => $segundoCodigoBarra,
+                    'precios'             => $producto->precios ?? [],
 
-                    // Para mostrar al cliente
-                    'precio'              => $precioVenta ? (float) $precioVenta->precio : 0,
-                    'cantidad_disponible' => $stockPrincipalConsolidado['cantidad_disponible'],
+                    // ✅ PRECIO: Devolver precio de venta
+                    'precio_venta'        => $precioVenta ? (float) $precioVenta->precio : 0,
+                    'precio_base'         => $precioVenta ? (float) $precioVenta->precio : 0,
+                    'precio_costo'        => $producto->precio_costo ?? 0,
 
-                    // Stock consolidado del almacén principal/seleccionado
-                    /* 'stock_principal'     => [
-                        'almacen_id'          => $stockPrincipalConsolidado['almacen_id'],
-                        'almacen_nombre'      => $stockPrincipalConsolidado['almacen_nombre'],
-                        'cantidad'            => $stockPrincipalConsolidado['cantidad'],
-                        'cantidad_disponible' => $stockPrincipalConsolidado['cantidad_disponible'],
-                        'cantidad_reservada'  => $stockPrincipalConsolidado['cantidad_reservada'],
-                    ], */
-
-                    // Stock por almacenes consolidado (para reportes/dashboards)
-                    // 'stock_por_almacenes' => $stockConsolidado,
-
-                    // Detalle de lotes del almacén seleccionado (para gestionar inventario)
-                    // 'stock_por_lotes' => $stockPorLotes,
+                    // ✅ STOCK: Devolver el TOTAL CONSOLIDADO (sin desglose de lotes)
+                    // El backend (VentaDistribucionService) distribuye entre lotes automáticamente con FIFO
+                    'stock'               => (int) $stockPrincipalConsolidado['cantidad_disponible'],  // ← Campo principal de stock disponible
+                    'stock_disponible'    => (int) $stockPrincipalConsolidado['cantidad_disponible'],  // ← Alias
+                    'stock_total'         => (int) $stockPrincipalConsolidado['cantidad'],             // ← Total incluyendo reservado
+                    'stock_reservado'     => (int) $stockPrincipalConsolidado['cantidad_reservada'],   // ← Cantidad bloqueada
                 ];
+
             });
 
         return ApiResponse::success($productos);
@@ -1477,9 +1467,8 @@ class ProductoController extends Controller
     {
         $q             = $request->string('q');
         $limite        = $request->integer('limite', 10);
-        $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ NUEVO: exacta o parcial
-        $tipo          = $request->string('tipo', 'venta'); // ✅ NUEVO: 'venta' o 'compra'
-        $incluirCombos = $request->boolean('incluir_combos', false); // ✅ NUEVO: permitir búsqueda de combos
+        $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ exacta o parcial
+        $tipo          = $request->string('tipo', 'venta'); // ✅ 'venta' o 'compra'
 
         // Obtener almacén: desde request > empresa autenticada > empresa principal > config
         // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
@@ -1501,7 +1490,6 @@ class ProductoController extends Controller
             'tipo'           => $tipo,
             'almacen_id'     => $almacenId,
             'limite'         => $limite,
-            'incluir_combos' => $incluirCombos,
         ]);
 
         // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
@@ -1511,13 +1499,14 @@ class ProductoController extends Controller
         // ✅ NUEVO: Determinar tipo de búsqueda
         $esExacta = $tipoBusqueda === 'exacta';
 
-        // ✅ NUEVO: Función auxiliar para construir la query base
+        // ✅ Función auxiliar para construir la query base
+        // Incluye es_combo para permitir búsqueda automática sin parámetro adicional
         $construirQueryBase = function($query) use ($userEmpresaId, $almacenId, $tipo) {
             return $query
                 ->select([
                     'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
                     'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-                    'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id'
+                    'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo'
                 ])
                 ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
                 ->where('activo', true)
@@ -1550,9 +1539,8 @@ class ProductoController extends Controller
             return $this->mapearProductos($productoPorId, $almacenId, $tipo);
         }
 
-        // ✅ NUEVO: PRIORIDAD 2 - Buscar por SKU exacto (case-insensitive)
-        // Si incluir_combos=true, permitimos retornar combos incluso sin stock
-        // Si incluir_combos=false, excluimos combos completamente
+        // ✅ PRIORIDAD 2 - Buscar por SKU exacto (case-insensitive)
+        // Busca automáticamente en productos y combos, retorna es_combo en respuesta
         $queryProductoPorSku = Producto::query()
             ->select([
                 'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
@@ -1563,14 +1551,13 @@ class ProductoController extends Controller
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->whereRaw('LOWER(sku) = ?', [$searchLower]);
 
-        // Si NO incluimos combos, excluir combos y aplicar filtro de stock normal
-        if (!$incluirCombos) {
-            $queryProductoPorSku->where('es_combo', false); // ✅ NUEVO: Excluir combos
-            if ($tipo === 'venta') {
-                $queryProductoPorSku->whereHas('stock', function ($sq) use ($almacenId) {
-                    $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
-                });
-            }
+        // ✅ SIMPLIFICADO: Permitir búsqueda de combos automáticamente
+        // El backend determina si es combo basándose en es_combo field
+        // No se requiere parámetro adicional del frontend
+        if ($tipo === 'venta') {
+            $queryProductoPorSku->whereHas('stock', function ($sq) use ($almacenId) {
+                $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+            });
         }
 
         $productoPorSku = $queryProductoPorSku->limit(1)->get();
@@ -1578,8 +1565,8 @@ class ProductoController extends Controller
         // ✅ DEBUG: Log para verificar búsqueda por SKU
         Log::info('🔍 Búsqueda por SKU', [
             'sku' => $searchLower,
-            'incluir_combos' => $incluirCombos,
             'resultados_encontrados' => $productoPorSku->count(),
+            'es_combo' => $productoPorSku->first()?->es_combo ?? false,
             'tipo' => $tipo,
             'empresa_id' => $userEmpresaId
         ]);
@@ -1590,9 +1577,8 @@ class ProductoController extends Controller
         }
 
         // ✅ PRIORIDAD 3 - Búsqueda normal (por nombre, código_barras, descripción, etc)
+        // ✅ SIMPLIFICADO: Permite combos automáticamente en búsqueda normal
         $productos = $construirQueryBase(Producto::query())
-            // ✅ NUEVO: Excluir combos si incluir_combos=false
-            ->when(!$incluirCombos, fn($q) => $q->where('es_combo', false))
             ->where(function ($query) use ($searchLower, $esExacta) {
                 if ($esExacta) {
                     // ✅ BÚSQUEDA EXACTA: Para código de barras (escáner)
@@ -1661,21 +1647,49 @@ class ProductoController extends Controller
             ->map(function ($producto) use ($almacenId, $tipo) {
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
 
-                // ✅ CORREGIDO: Asegurar que stock_producto está cargado para compras y ventas
+                // ✅ MEJORADO: Calcular stock consolidado considerando múltiples lotes
+                // Obtener stock ESPECÍFICO del almacén solicitado
                 $stockAlmacen = $producto->stock ? $producto->stock->firstWhere('almacen_id', $almacenId) : null;
-                $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
-                $stockTotal = $producto->stock ? $producto->stock->sum('cantidad_disponible') : 0;
-                $stockReservado = $producto->stock ? $producto->stock->sum('cantidad_reservada') : 0;
 
-                // ✅ DEBUG: Log para verificar carga de stock
-                if ($tipo === 'compra') {
-                    Log::debug("📊 [mapearProductos COMPRA] Producto {$producto->id} ({$producto->nombre})", [
-                        'stock_relation_count' => $producto->stock ? $producto->stock->count() : 0,
+                // ✅ CORRECCIÓN IMPORTANTE:
+                // - cantidad_total: suma de TODO el stock en el almacén (todos los lotes)
+                // - cantidad_disponible: suma de stock NO reservado
+                // - cantidad_reservada: suma de stock reservado
+                $stocksAlmacen = $producto->stock ? $producto->stock->filter(fn($s) => $s->almacen_id == $almacenId)->values() : collect();
+
+                // Consolidar cantidades de múltiples lotes
+                $cantidadTotal = (int) $stocksAlmacen->sum('cantidad');
+                $cantidadDisponible = (int) $stocksAlmacen->sum('cantidad_disponible');
+                $cantidadReservada = (int) $stocksAlmacen->sum('cantidad_reservada');
+
+                // Validación: cantidad_disponible + cantidad_reservada debe = cantidad_total
+                if (($cantidadDisponible + $cantidadReservada) !== $cantidadTotal) {
+                    Log::warning("⚠️ [mapearProductos] Inconsistencia de stock", [
+                        'producto_id' => $producto->id,
                         'almacen_id' => $almacenId,
-                        'stock_disponible' => $stockDisponible,
-                        'stock_total' => $stockTotal,
+                        'cantidad_total' => $cantidadTotal,
+                        'cantidad_disponible' => $cantidadDisponible,
+                        'cantidad_reservada' => $cantidadReservada,
+                        'suma_disponible_reservada' => $cantidadDisponible + $cantidadReservada,
                     ]);
                 }
+
+                // ✅ DEBUG: Log detallado para verificar cálculo de stock
+                Log::debug("📊 [mapearProductos] Producto {$producto->id} ({$producto->nombre}) - Almacén {$almacenId}", [
+                    'lotes_count' => $stocksAlmacen->count(),
+                    'lotes_detalles' => $stocksAlmacen->map(fn($s) => [
+                        'lote_id' => $s->id,
+                        'cantidad' => $s->cantidad,
+                        'cantidad_disponible' => $s->cantidad_disponible,
+                        'cantidad_reservada' => $s->cantidad_reservada,
+                    ])->all(),
+                    'totales' => [
+                        'cantidad_total' => $cantidadTotal,
+                        'cantidad_disponible' => $cantidadDisponible,
+                        'cantidad_reservada' => $cantidadReservada,
+                    ],
+                    'tipo_documento' => $tipo,
+                ]);
 
                 // ✅ NUEVO: Obtener capacidad para combos usando ProductoStockService
                 $capacidad = $producto->es_combo
@@ -1870,13 +1884,17 @@ class ProductoController extends Controller
                     // ✅ NUEVO: Tipo de precio recomendado basado en código VENTA
                     'tipo_precio_id_recomendado' => $tipoPrecioIdRecomendado,
                     'tipo_precio_nombre_recomendado' => $tipoPrecioNombreRecomendado,
-                    'stock_disponible' => (int) $stockDisponible,
-                    'stock'            => (int) $stockDisponible,
-                    'stock_reservado'  => (int) $stockReservado,
+                    // ✅ MEJORADO: Stock consolidado considerando múltiples lotes
+                    'cantidad'         => (int) $cantidadTotal,        // Total de stock en el almacén (todos los lotes)
+                    'cantidad_disponible' => (int) $cantidadDisponible, // Stock NO reservado
+                    'cantidad_reservada' => (int) $cantidadReservada,  // Stock reservado
+                    'stock_disponible' => (int) $cantidadDisponible,   // Alias para compatibilidad
+                    'stock'            => (int) $cantidadDisponible,   // Alias para compatibilidad
+                    'stock_reservado'  => (int) $cantidadReservada,    // Alias para compatibilidad
+                    'stock_total'      => (int) $cantidadTotal,        // Alias para compatibilidad
                     'capacidad'        => $capacidad,
                     'almacen_id'       => $almacenId,
                     'almacen_nombre'   => $almacenNombre,
-                    'stock_total'      => (int) $stockTotal,
                     'limite_venta'     => $producto->limite_venta ? (int) $producto->limite_venta : null,
                     'limite_productos' => $producto->limite_productos ? (int) $producto->limite_productos : null,
                     'peso'             => $producto->peso,

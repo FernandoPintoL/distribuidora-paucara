@@ -653,7 +653,7 @@ export const preview = {
 
 /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
 export const ventasParaImpresion = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -668,7 +668,7 @@ ventasParaImpresion.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
 ventasParaImpresion.url = (options?: RouteQueryOptions) => {
@@ -677,7 +677,7 @@ ventasParaImpresion.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
 ventasParaImpresion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -686,7 +686,7 @@ ventasParaImpresion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
 ventasParaImpresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -696,7 +696,7 @@ ventasParaImpresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
     const ventasParaImpresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -706,7 +706,7 @@ ventasParaImpresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
         ventasParaImpresionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -715,7 +715,7 @@ ventasParaImpresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\VentaController::ventasParaImpresion
- * @see app/Http/Controllers/VentaController.php:1426
+ * @see app/Http/Controllers/VentaController.php:1433
  * @route '/api/ventas/para-impresion'
  */
         ventasParaImpresionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1573,7 +1573,7 @@ export const anular = {
 
 /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
 export const verificarReversionStock = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1588,7 +1588,7 @@ verificarReversionStock.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
 verificarReversionStock.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1616,7 +1616,7 @@ verificarReversionStock.url = (args: { venta: string | number } | [venta: string
 
 /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
 verificarReversionStock.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1625,7 +1625,7 @@ verificarReversionStock.get = (args: { venta: string | number } | [venta: string
 })
 /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
 verificarReversionStock.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1635,7 +1635,7 @@ verificarReversionStock.head = (args: { venta: string | number } | [venta: strin
 
     /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
     const verificarReversionStockForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1645,7 +1645,7 @@ verificarReversionStock.head = (args: { venta: string | number } | [venta: strin
 
             /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
         verificarReversionStockForm.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1654,7 +1654,7 @@ verificarReversionStock.head = (args: { venta: string | number } | [venta: strin
         })
             /**
 * @see \App\Http\Controllers\VentaController::verificarReversionStock
- * @see app/Http/Controllers/VentaController.php:1490
+ * @see app/Http/Controllers/VentaController.php:1570
  * @route '/api/ventas/{venta}/verificar-reversion-stock'
  */
         verificarReversionStockForm.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1670,7 +1670,7 @@ verificarReversionStock.head = (args: { venta: string | number } | [venta: strin
     verificarReversionStock.form = verificarReversionStockForm
 /**
 * @see \App\Http\Controllers\VentaController::ejecutarReversionStock
- * @see app/Http/Controllers/VentaController.php:1598
+ * @see app/Http/Controllers/VentaController.php:1678
  * @route '/api/ventas/{venta}/ejecutar-reversion-stock'
  */
 export const ejecutarReversionStock = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1685,7 +1685,7 @@ ejecutarReversionStock.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::ejecutarReversionStock
- * @see app/Http/Controllers/VentaController.php:1598
+ * @see app/Http/Controllers/VentaController.php:1678
  * @route '/api/ventas/{venta}/ejecutar-reversion-stock'
  */
 ejecutarReversionStock.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1713,7 +1713,7 @@ ejecutarReversionStock.url = (args: { venta: string | number } | [venta: string 
 
 /**
 * @see \App\Http\Controllers\VentaController::ejecutarReversionStock
- * @see app/Http/Controllers/VentaController.php:1598
+ * @see app/Http/Controllers/VentaController.php:1678
  * @route '/api/ventas/{venta}/ejecutar-reversion-stock'
  */
 ejecutarReversionStock.post = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1723,7 +1723,7 @@ ejecutarReversionStock.post = (args: { venta: string | number } | [venta: string
 
     /**
 * @see \App\Http\Controllers\VentaController::ejecutarReversionStock
- * @see app/Http/Controllers/VentaController.php:1598
+ * @see app/Http/Controllers/VentaController.php:1678
  * @route '/api/ventas/{venta}/ejecutar-reversion-stock'
  */
     const ejecutarReversionStockForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1733,7 +1733,7 @@ ejecutarReversionStock.post = (args: { venta: string | number } | [venta: string
 
             /**
 * @see \App\Http\Controllers\VentaController::ejecutarReversionStock
- * @see app/Http/Controllers/VentaController.php:1598
+ * @see app/Http/Controllers/VentaController.php:1678
  * @route '/api/ventas/{venta}/ejecutar-reversion-stock'
  */
         ejecutarReversionStockForm.post = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

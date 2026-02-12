@@ -119,10 +119,12 @@ class VentaResponseDTO extends BaseDTO
                     'nombre' => $det->producto->nombre ?? 'N/A',
                     'codigo' => $det->producto->codigo ?? null,
                     'descripcion' => $det->producto->descripcion ?? null,
+                    'es_combo' => $det->producto->es_combo ?? false,  // ✅ NUEVO: Para saber si es combo
                 ] : null,
                 'cantidad' => $det->cantidad,
                 'precio_unitario' => (float) $det->precio_unitario,
                 'subtotal' => (float) $det->subtotal,
+                'combo_items_seleccionados' => $det->combo_items_seleccionados ?? [],  // ✅ NUEVO: Items del combo seleccionados
             ])->toArray(),
             created_at: $venta->created_at->toIso8601String(),
             updated_at: $venta->updated_at->toIso8601String(),

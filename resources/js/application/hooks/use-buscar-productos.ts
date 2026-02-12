@@ -59,15 +59,16 @@ export function useBuscarProductos(options: UseBuscarProductosOptions = {}) {
             // Crear nuevo AbortController para esta request
             abortControllerRef.current = new AbortController()
 
-            const response = await fetch(
-                `/api/productos?q=${encodeURIComponent(term)}&per_page=20`,
-                {
-                    credentials: 'same-origin',
-                    signal: abortControllerRef.current.signal,
-                }
-            )
+            const url = `/api/productos?q=${encodeURIComponent(term)}&per_page=20`
+            console.log('🔍 [API] Buscando productos con endpoint:', url)
+
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                signal: abortControllerRef.current.signal,
+            })
 
             if (!response.ok) {
+                console.warn(`⚠️ [API] Respuesta fallida: ${response.status} ${response.statusText}`)
                 if (response.status === 401) {
                     setError('No autorizado')
                 } else {
@@ -78,7 +79,9 @@ export function useBuscarProductos(options: UseBuscarProductosOptions = {}) {
             }
 
             const result = await response.json()
+            console.log('✅ [API] Respuesta recibida:', result)
             const productosData = result.data?.data || result.data || []
+            console.log(`📦 [API] ${productosData.length} productos encontrados`)
             setProductos(Array.isArray(productosData) ? productosData : [])
         } catch (err) {
             // No mostrar error si fue cancelado (normal en debounce)

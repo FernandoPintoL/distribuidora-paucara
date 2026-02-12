@@ -82,6 +82,13 @@ export interface CuentaPorCobrar extends BaseEntity {
     estado: string;
 }
 
+export interface ComboItemSeleccionado {
+    producto_id: Id;
+    incluido: boolean;
+    cantidad?: number;
+    cantidad_final?: number;
+}
+
 export interface DetalleVenta extends BaseEntity {
     id: Id;
     venta_id: Id;
@@ -90,6 +97,7 @@ export interface DetalleVenta extends BaseEntity {
     precio_unitario: number;
     descuento: number;
     subtotal: number;
+    combo_items_seleccionados?: ComboItemSeleccionado[];
     producto?: Producto;
 }
 
