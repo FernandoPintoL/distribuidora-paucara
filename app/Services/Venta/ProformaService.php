@@ -139,30 +139,38 @@ class ProformaService
 
         // 3. Crear dentro de transacción
         $proforma = $this->transaction(function () use ($dto, $almacenId, $usuarioCreadorId) {
-            // 3.1 Crear Proforma
-            // ✅ Obtener el estado PENDIENTE para la proforma inicial
-            $estadoPendiente = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE')
+            // 3.1 Obtener el estado inicial (BORRADOR o PENDIENTE)
+            $estadoInicial = \App\Models\EstadoLogistica::where('codigo', $dto->estado_inicial ?? 'BORRADOR')
+                ->where('categoria', 'proforma')
                 ->where('activo', true)
                 ->first();
 
+            // Fallback a BORRADOR si no existe el estado
+            if (!$estadoInicial) {
+                $estadoInicial = \App\Models\EstadoLogistica::where('codigo', 'BORRADOR')
+                    ->where('categoria', 'proforma')
+                    ->first();
+            }
+
+            // 3.2 Crear Proforma
             $proforma = Proforma::create([
                 'numero'             => $this->generarNumero(),
                 'cliente_id'         => $dto->cliente_id,
-                'usuario_creador_id' => $usuarioCreadorId,  // ✅ CERTIFICADO: Usuario autenticado que crea la proforma
+                'usuario_creador_id' => $usuarioCreadorId,  // ✅ Usuario que crea
+                'preventista_id'     => $dto->preventista_id,  // ✅ NUEVO: Preventista asignado
                 'fecha'              => $dto->fecha,
                 'fecha_vencimiento'  => $dto->fecha_vencimiento,
                 'subtotal'           => $dto->subtotal,
                 'impuesto'           => $dto->impuesto,
                 'total'              => $dto->total,
-                'estado_proforma_id' => $estadoPendiente?->id ?? 1,
+                'estado_proforma_id' => $estadoInicial->id,  // ✅ Estado elegido por usuario
                 'observaciones'      => $dto->observaciones,
                 'canal_origen'       => $dto->canal ?? 'PRESENCIAL',
                 'politica_pago'      => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'moneda_id'          => 1, // ✅ Bolivianos por defecto
-                                           // Nota: almacen_id no se asigna en proforma, se usa del usuario al convertir a venta
             ]);
 
-            // 3.2 Crear detalles
+            // 3.3 Crear detalles
             foreach ($dto->detalles as $detalle) {
                 DetalleProforma::create([
                     'proforma_id'     => $proforma->id,
@@ -173,27 +181,30 @@ class ProformaService
                 ]);
             }
 
-            // 3.3 RESERVAR stock (manejado por Proforma::reservarStock())
-            // Ver: El modelo Proforma tiene el método reservarStock() que:
-            // - Crea registros en tabla reservas_proforma
-            // - Decrementa stock_productos.cantidad_disponible
-            // - Usa transacciones y bloqueos pesimistas
+            // 3.4 RESERVAR stock SOLO si estado inicial es PENDIENTE
+            if ($dto->estado_inicial === 'PENDIENTE') {
+                Log::info('🔄 [ProformaService::crear] Reservando stock para proforma PENDIENTE', [
+                    'proforma_id' => $proforma->id,
+                ]);
 
-            Log::info('🔄 [ProformaService::crear] Reservando stock para proforma', [
-                'proforma_id' => $proforma->id,
-            ]);
+                if (! $proforma->reservarStock()) {
+                    throw new \Exception(
+                        'No se pudo reservar el stock requerido para la proforma. Verifica disponibilidad.'
+                    );
+                }
 
-            if (! $proforma->reservarStock()) {
-                throw new \Exception(
-                    'No se pudo reservar el stock requerido para la proforma. Verifica disponibilidad.'
-                );
+                Log::info('✅ [ProformaService::crear] Stock reservado exitosamente', [
+                    'proforma_id' => $proforma->id,
+                ]);
+            } else {
+                Log::info('📝 [ProformaService::crear] Proforma creada en BORRADOR sin reserva de stock', [
+                    'proforma_id' => $proforma->id,
+                    'estado' => 'BORRADOR',
+                    'preventista_id' => $dto->preventista_id,
+                ]);
             }
 
-            Log::info('✅ [ProformaService::crear] Stock reservado exitosamente', [
-                'proforma_id' => $proforma->id,
-            ]);
-
-            // 3.4 Emitir evento
+            // 3.5 Emitir evento
             event(new \App\Events\ProformaCreada($proforma));
 
             return $proforma;
@@ -241,6 +252,73 @@ class ProformaService
         });
 
         $this->logSuccess('Proforma aprobada', ['proforma_id' => $proformaId]);
+
+        return ProformaResponseDTO::fromModel($proforma);
+    }
+
+    /**
+     * Presentar una proforma (BORRADOR → PENDIENTE + Reservar Stock)
+     *
+     * Cambia el estado de BORRADOR a PENDIENTE y RESERVA el stock
+     * cuando entra en el flujo normal de aprobación.
+     *
+     * @throws EstadoInvalidoException
+     * @throws \Exception si falla la reserva de stock
+     */
+    public function presentarProforma(int $proformaId): ProformaResponseDTO
+    {
+        $proforma = $this->transaction(function () use ($proformaId) {
+            $proforma = Proforma::lockForUpdate()->findOrFail($proformaId);
+
+            // ✅ Validar que esté en estado BORRADOR
+            if ($proforma->estado !== 'BORRADOR') {
+                throw new EstadoInvalidoException(
+                    "No se puede presentar una proforma en estado {$proforma->estado}. Debe estar en BORRADOR."
+                );
+            }
+
+            // ✅ Validar que tenga al menos un detalle
+            if ($proforma->detalles()->count() === 0) {
+                throw new DomainException('No puede presentar una proforma sin detalles');
+            }
+
+            // ✅ RESERVAR STOCK (ahora sí, cuando se presenta)
+            \Log::info('🔄 [ProformaService::presentarProforma] Reservando stock para proforma presentada', [
+                'proforma_id' => $proformaId,
+            ]);
+
+            if (! $proforma->reservarStock()) {
+                throw new \Exception(
+                    'No se pudo reservar el stock requerido. Verifica disponibilidad.'
+                );
+            }
+
+            \Log::info('✅ [ProformaService::presentarProforma] Stock reservado exitosamente', [
+                'proforma_id' => $proformaId,
+            ]);
+
+            // ✅ Obtener el estado PENDIENTE
+            $estadoPendiente = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE')
+                ->where('categoria', 'proforma')
+                ->where('activo', true)
+                ->first();
+
+            // ✅ Cambiar a PENDIENTE
+            $proforma->update(['estado_proforma_id' => $estadoPendiente?->id ?? 1]);
+
+            // ✅ Registrar en historial
+            \Log::info('📋 [ProformaService::presentarProforma] Proforma presentada para aprobación', [
+                'proforma_id' => $proformaId,
+                'proforma_numero' => $proforma->numero,
+                'cliente_id' => $proforma->cliente_id,
+                'total' => $proforma->total,
+                'stock_reservado' => true,
+            ]);
+
+            return $proforma;
+        });
+
+        $this->logSuccess('Proforma presentada para aprobación con stock reservado', ['proforma_id' => $proformaId]);
 
         return ProformaResponseDTO::fromModel($proforma);
     }

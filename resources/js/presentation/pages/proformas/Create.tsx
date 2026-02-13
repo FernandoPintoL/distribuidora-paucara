@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -47,8 +47,6 @@ import type { Cliente } from '@/domain/entities/clientes'
 
 // APPLICATION LAYER
 import { useBuscarProductos } from '@/application/hooks/use-buscar-productos'
-import { usePrecioRangoCarrito } from '@/application/hooks/use-precio-rango-carrito'
-import { useClienteSearch } from '@/infrastructure/hooks/use-api-search'
 
 // Tipos locales
 interface ProformaDetalleLocal {
@@ -70,10 +68,25 @@ interface ProformaDetalleLocal {
 interface Props {
     clientes: Cliente[]
     productos: Producto[]
-    almacenes: any[]
+    almacenes: Array<{ id: number; nombre: string }>
+    preventistas: any[]  // Usuarios con rol 'preventista'
+    almacen_id_empresa?: number // ✅ NUEVO: ID del almacén principal de la empresa
 }
 
-export default function ProformasCreate({ clientes, productos: productosIniciales, almacenes }: Props) {
+export default function ProformasCreate({
+    clientes,
+    productos: productosIniciales,
+    almacenes,
+    preventistas,
+    almacen_id_empresa = 1
+}: Props) {
+    // ✅ NUEVO: Validaciones defensivas con useMemo para evitar renderizados múltiples
+    const clientesSeguro = useMemo(() => clientes || [], [clientes])
+    const productosSeguro = useMemo(() => productosIniciales || [], [productosIniciales])
+    const almacenesSeguro = useMemo(() => almacenes || [], [almacenes])
+    const preventistasSeguro = useMemo(() => preventistas || [], [preventistas])
+    const almacenIdSeguro = useMemo(() => almacen_id_empresa || 1, [almacen_id_empresa])
+
     // Estados principales
     const [detalles, setDetalles] = useState<ProformaDetalleLocal[]>([])
     const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
@@ -99,6 +112,10 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
     // Otros campos
     const [canal, setCanal] = useState<'PRESENCIAL' | 'ONLINE' | 'TELEFONO'>('PRESENCIAL')
     const [requiereEnvio, setRequiereEnvio] = useState(false)
+
+    // NUEVOS: Estado inicial y preventista
+    const [estadoInicial, setEstadoInicial] = useState<'BORRADOR' | 'PENDIENTE'>('BORRADOR')
+    const [preventistaId, setPreventistaId] = useState<number | null>(null)
     const [fechaEntregaSolicitada, setFechaEntregaSolicitada] = useState('')
     const [tipoEntrega, setTipoEntrega] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
     const [observaciones, setObservaciones] = useState('')
@@ -250,7 +267,9 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                 })),
                 subtotal: totales.subtotal,
                 impuesto: 0,
-                total: totales.total
+                total: totales.total,
+                estado_inicial: estadoInicial,  // ✅ NUEVO: BORRADOR o PENDIENTE
+                preventista_id: preventistaId,  // ✅ NUEVO: Preventista asignado
             }
 
             const response = await fetch('/proformas', {
@@ -331,22 +350,8 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                                 </p>
                             )}
                         </div>
-
                         <div>
-                            <Label htmlFor="fecha" className="text-sm">Fecha</Label>
-                            <Input
-                                id="fecha"
-                                type="date"
-                                value={fecha}
-                                onChange={(e) => setFecha(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    {/* Sección de Envío - SIEMPRE VISIBLE */}
-                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center justify-between mb-4">
                             <h3 className="text-md font-medium text-gray-900 dark:text-white">
                                 🚚 Información de Envío
                             </h3>
@@ -367,7 +372,81 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                                 </span>
                             </button>
                         </div>
+                        </div>
+                    </div>
 
+                    {/* NUEVO: Sección Estado y Preventista */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            {/* Estado Inicial */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    📝 Estado Inicial
+                                </label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition">
+                                        <input
+                                            type="radio"
+                                            name="estado_inicial"
+                                            value="BORRADOR"
+                                            checked={estadoInicial === 'BORRADOR'}
+                                            onChange={(e) => setEstadoInicial(e.target.value as 'BORRADOR' | 'PENDIENTE')}
+                                            className="h-4 w-4 text-gray-600 focus:ring-gray-500"
+                                        />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Borrador
+                                            </p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                Sin reservar stock, editable
+                                            </p>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-green-100 dark:hover:bg-green-900/20 cursor-pointer transition">
+                                        <input
+                                            type="radio"
+                                            name="estado_inicial"
+                                            value="PENDIENTE"
+                                            checked={estadoInicial === 'PENDIENTE'}
+                                            onChange={(e) => setEstadoInicial(e.target.value as 'BORRADOR' | 'PENDIENTE')}
+                                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                                        />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Pendiente
+                                            </p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                Reserva stock inmediatamente
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Preventista */}
+                            <div>
+                                <label htmlFor="preventista" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    👤 Preventista (Opcional)
+                                </label>
+                                <select
+                                    id="preventista"
+                                    value={preventistaId || ''}
+                                    onChange={(e) => setPreventistaId(e.target.value ? parseInt(e.target.value) : null)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                >
+                                    <option value="">-- Seleccionar preventista --</option>
+                                    {preventistas && preventistas.map((preventista: any) => (
+                                        <option key={preventista.id} value={preventista.id}>
+                                            {preventista.name} ({preventista.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sección de Envío - SIEMPRE VISIBLE */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
                         {/* Campos de envío - mostrar solo si requiere_envio es true */}
                         {requiereEnvio && (
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
@@ -445,8 +524,18 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                     </div>
 
                     {/* Información adicional */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4 mb-2">
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <Label htmlFor="fecha" className="text-sm">Fecha</Label>
+                                <Input
+                                    id="fecha"
+                                    type="date"
+                                    value={fecha}
+                                    onChange={(e) => setFecha(e.target.value)}
+                                    required
+                                />
+                            </div>
                             <div>
                                 <Label htmlFor="fecha-vencimiento" className="text-sm">Fecha Vencimiento</Label>
                                 <Input
@@ -457,23 +546,9 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                                     required
                                 />
                             </div>
-
-                            <div>
-                                <Label htmlFor="canal" className="text-sm">Canal</Label>
-                                <Select value={canal} onValueChange={(v) => setCanal(v as any)}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="PRESENCIAL">Presencial</SelectItem>
-                                            <SelectItem value="ONLINE">Online</SelectItem>
-                                            <SelectItem value="TELEFONO">Teléfono</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                         </div>
 
-                        <div>
+                        <div className='mb-2'>
                             <Label htmlFor="observaciones" className="text-sm">Observaciones</Label>
                             <Textarea
                                 id="observaciones"
@@ -499,7 +574,7 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                                 onRemoveDetail={handleRemoveDetalle}
                                 onTotalsChange={handleTotalsChange}
                                 tipo="venta"
-                                almacen_id={undefined}
+                                almacen_id={almacenIdSeguro}
                                 isCalculatingPrices={isCalculandoRangos}
                                 errors={undefined}
                             />
@@ -527,7 +602,7 @@ export default function ProformasCreate({ clientes, productos: productosIniciale
                     )}
 
                     {/* Botones de acción */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 mt-2">
                         <a href="/proformas" className="flex-1">
                             <Button type="button" variant="outline" className="w-full">
                                 Cancelar

@@ -23,6 +23,8 @@ class CrearProformaDTO extends BaseDTO
         public ?string $canal = 'PRESENCIAL',
         public ?string $politica_pago = 'CONTRA_ENTREGA',
         public ?int $usuario_id = null,
+        public ?int $preventista_id = null,
+        public ?string $estado_inicial = 'BORRADOR',  // BORRADOR o PENDIENTE
     ) {}
 
     /**
@@ -33,6 +35,13 @@ class CrearProformaDTO extends BaseDTO
      */
     public static function fromRequest(Request $request): self
     {
+        $estadoInicial = $request->input('estado_inicial', 'BORRADOR');
+
+        // ✅ Validar que estado sea BORRADOR o PENDIENTE
+        if (!in_array($estadoInicial, ['BORRADOR', 'PENDIENTE'])) {
+            $estadoInicial = 'BORRADOR';
+        }
+
         return new self(
             cliente_id: (int) $request->input('cliente_id'),
             fecha: $request->input('fecha', today()->toDateString()),
@@ -46,6 +55,8 @@ class CrearProformaDTO extends BaseDTO
             canal: $request->input('canal', 'PRESENCIAL'),
             politica_pago: $request->input('politica_pago', 'CONTRA_ENTREGA'),
             usuario_id: \Illuminate\Support\Facades\Auth::id(),
+            preventista_id: $request->input('preventista_id') ? (int) $request->input('preventista_id') : null,
+            estado_inicial: $estadoInicial,
         );
     }
 

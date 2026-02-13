@@ -19,6 +19,7 @@ class EstadosLogisticaSeeder extends Seeder
 
         // PROFORMA STATES
         $proformaStates = [
+            ['codigo' => 'BORRADOR', 'nombre' => 'Borrador', 'color' => '#9CA3AF', 'icono' => '📝', 'orden' => 0, 'permite_edicion' => true, 'es_estado_final' => false],
             ['codigo' => 'PENDIENTE', 'nombre' => 'Pendiente de Aprobación', 'color' => '#FFC107', 'icono' => '⌛', 'orden' => 1],
             ['codigo' => 'APROBADA', 'nombre' => 'Aprobada', 'color' => '#28A745', 'icono' => '✅', 'orden' => 2, 'requiere_aprobacion' => true],
             ['codigo' => 'RECHAZADA', 'nombre' => 'Rechazada', 'color' => '#DC3545', 'icono' => '✖️', 'orden' => 3, 'es_estado_final' => true, 'permite_edicion' => false],
@@ -125,6 +126,8 @@ class EstadosLogisticaSeeder extends Seeder
             ->keyBy('codigo');
 
         $transitions = [
+            ['origen' => 'BORRADOR', 'destino' => 'PENDIENTE', 'requiere_permiso' => 'submitProforma'],
+            ['origen' => 'BORRADOR', 'destino' => 'BORRADOR'],  // Permite continuar editando en borrador
             ['origen' => 'PENDIENTE', 'destino' => 'APROBADA', 'requiere_permiso' => 'approveProforma'],
             ['origen' => 'PENDIENTE', 'destino' => 'RECHAZADA', 'requiere_permiso' => 'rejectProforma'],
             ['origen' => 'APROBADA', 'destino' => 'CONVERTIDA'],

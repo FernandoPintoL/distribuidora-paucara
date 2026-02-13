@@ -12,6 +12,7 @@ use App\Models\Cliente;
 use App\Models\Producto;
 use App\Models\Proforma;
 use App\Models\TipoPrecio;
+use App\Models\User;
 use App\Services\Venta\ProformaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -77,10 +78,17 @@ class ProformaController extends Controller
      */
     public function create(): InertiaResponse
     {
+        // ✅ NUEVO: Obtener ID del almacén de la empresa autenticada
+        $almacen_id_empresa = auth()->user()->empresa->almacen_id ?? 1;
+
         return Inertia::render('proformas/Create', [
-            'clientes'  => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
-            'productos' => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
-            'almacenes' => Almacen::activos()->select('id', 'nombre')->get(),
+            'clientes'              => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'productos'             => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'almacenes'             => Almacen::activos()->select('id', 'nombre')->get(),
+            'preventistas'          => User::whereHas('roles', function ($query) {
+                $query->where('name', 'preventista');
+            })->select('id', 'name', 'email')->get(),
+            'almacen_id_empresa'    => $almacen_id_empresa, // ✅ NUEVO: Almacén principal de la empresa
         ]);
     }
 

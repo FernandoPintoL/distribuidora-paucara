@@ -488,6 +488,7 @@ class EntregaController extends Controller
                 'ventas.cliente',
                 'ventas.direccionCliente',  // NUEVO: Cargar ubicación de entrega desde venta
                 'ventas.estadoLogistica',   // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
+                'ventas.tipoPago',  // ✅ NUEVO: Cargar tipo de pago de venta para mostrar en Flutter
                 'ventas.detalles.producto.unidad',  // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
                 'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidad del cliente
                 'chofer',  // FASE 3: chofer apunta a users.id, no a empleados.id
