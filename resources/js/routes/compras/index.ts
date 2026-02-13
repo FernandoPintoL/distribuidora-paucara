@@ -669,8 +669,8 @@ update.patch = (args: { compra: string | number } | [compra: string | number ] |
     
     update.form = updateForm
 /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
 export const imprimirCompra = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -684,8 +684,8 @@ imprimirCompra.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -717,8 +717,8 @@ imprimirCompra.url = (args: { compra: number | { id: number } } | [compra: numbe
 }
 
 /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -726,8 +726,8 @@ imprimirCompra.get = (args: { compra: number | { id: number } } | [compra: numbe
     method: 'get',
 })
 /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
 imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -736,8 +736,8 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
 })
 
     /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
     const imprimirCompraForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -746,8 +746,8 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
     })
 
             /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
         imprimirCompraForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -755,8 +755,8 @@ imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: numb
             method: 'get',
         })
             /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
+* @see \App\Http\Controllers\ImpresionComprasController::imprimirCompra
+ * @see app/Http/Controllers/ImpresionComprasController.php:18
  * @route '/compras/{compra}/imprimir'
  */
         imprimirCompraForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

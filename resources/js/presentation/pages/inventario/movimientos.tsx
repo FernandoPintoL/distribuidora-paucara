@@ -10,6 +10,7 @@ import MovimientosTable from '@/presentation/components/Inventario/MovimientosTa
 import MovimientosFilters from '@/presentation/components/Inventario/MovimientosFilters';
 import MovimientosStats from '@/presentation/components/Inventario/MovimientosStats';
 import { ImprimirMovimientosButton } from '@/presentation/components/impresion/ImprimirMovimientosButton';
+import { ImprimirProductosVendidosButton } from '@/presentation/components/impresion/ImprimirProductosVendidosButton';
 import { Button } from '@/presentation/components/ui/button';
 import { Plus, BarChart3, List } from 'lucide-react';
 import type {
@@ -20,12 +21,22 @@ import type {
 import type { Pagination } from '@/domain/entities/shared';
 import { useMovimientosInventario } from '@/application/hooks/use-movimientos-inventario';
 
+interface ProductoVendido {
+    id: number;
+    nombre: string;
+    sku: string;
+    cantidad_total: number;
+    precio_unitario: number;
+    subtotal: number;
+}
+
 interface PageProps extends InertiaPageProps {
     movimientos: Pagination<MovimientoInventario>;
     filtros: FiltrosMovimientos;
     stats: MovimientosStatsType;
     almacenes: Array<{ id: number; nombre: string }>;
     productos: Array<{ id: number; nombre: string }>;
+    productosVendidosHoy?: ProductoVendido[];
 }
 
 const defaultStats: MovimientosStatsType = {
@@ -49,7 +60,8 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
     filtros,
     stats = defaultStats,
     almacenes = [],
-    productos = []
+    productos = [],
+    productosVendidosHoy = []
 }) => {
     console.log('MovimientosInventarioPage renderizado', { movimientos, filtros, stats });
     // ✅ Estado de UI
@@ -107,6 +119,11 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                         <ImprimirMovimientosButton
                             movimientos={movimientos.data as any}
                             filtros={filtros}
+                        />
+
+                        <ImprimirProductosVendidosButton
+                            productosVendidos={productosVendidosHoy}
+                            fecha={new Date().toISOString().split('T')[0]}
                         />
 
                         <Button variant="outline" onClick={handleGoToReportes}>

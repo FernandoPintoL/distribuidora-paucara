@@ -55,64 +55,10 @@ export function ImprimirVentasButton({
         setLoading(true);
 
         try {
-            // Primero, obtener las ventas filtradas del API
-            const params = new URLSearchParams();
+            // ✅ NUEVO FLUJO: Enviar filtros al backend para que haga el filtrado y genere documento
+            console.log('🔍 Filtros para enviar al backend:', filtros);
 
-            // ✅ MEJORADO: Pasar TODOS los filtros sin importar cuáles sean
-            if (filtros) {
-                Object.entries(filtros).forEach(([clave, valor]) => {
-                    // Omitir valores null, undefined, o empty strings
-                    if (valor !== null && valor !== undefined && valor !== '') {
-                        params.append(clave, String(valor));
-                    }
-                });
-            }
-
-            console.log('🔍 Filtros aplicados para impresión:', Object.fromEntries(params));
-
-            // Usar endpoint específico para impresión que retorna TODOS los registros sin paginación
-            const apiResponse = await fetch(`/api/ventas/para-impresion?${params.toString()}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-            });
-
-            if (!apiResponse.ok) {
-                throw new Error('Error al obtener ventas filtradas');
-            }
-
-            const apiData = await apiResponse.json();
-
-            console.log('📊 Respuesta API completa:', JSON.stringify(apiData, null, 2));
-            console.log('📊 apiData.data tipo:', typeof apiData.data, 'isArray:', Array.isArray(apiData.data), 'keys:', apiData.data ? Object.keys(apiData.data).slice(0, 10) : 'null');
-
-            // Extraer el array de datos
-            let ventasFiltradas: any[] = [];
-
-            if (!apiData.data) {
-                console.warn('⚠️ apiData.data es null o undefined');
-                ventasFiltradas = ventas;
-            } else if (Array.isArray(apiData.data)) {
-                console.log('✅ apiData.data es un array');
-                ventasFiltradas = apiData.data;
-            } else if (typeof apiData.data === 'object' && apiData.data.data && Array.isArray(apiData.data.data)) {
-                // Caso: respuesta paginada { data: [...], ...pagination }
-                console.log('✅ apiData.data es un objeto paginado, extrayendo .data');
-                ventasFiltradas = apiData.data.data;
-            } else if (typeof apiData.data === 'object' && Object.keys(apiData.data).length > 0) {
-                // Caso: objeto con propiedades numéricas (Collection convertida)
-                console.log('✅ apiData.data es un objeto, convirtiendo a array');
-                ventasFiltradas = Object.values(apiData.data);
-            } else {
-                console.warn('⚠️ No se pudo extraer array, usando ventas fallback');
-                ventasFiltradas = ventas;
-            }
-
-            console.log('✅ Ventas filtradas obtenidas:', { cantidad: ventasFiltradas.length, tipo: typeof ventasFiltradas, es_array: Array.isArray(ventasFiltradas) });
-
-            // Realizar petición POST para guardar datos en sesión
+            // Realizar petición POST para que backend filtre y guarde en sesión
             const response = await fetch('/api/stock/preparar-impresion-ventas', {
                 method: 'POST',
                 headers: {
@@ -120,19 +66,28 @@ export function ImprimirVentasButton({
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
-                    ventas: ventasFiltradas,
                     filtros: filtros || {},
+                    formato: formato,
                 }),
             });
 
             if (!response.ok) {
-                throw new Error('Error al preparar la impresión');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al preparar la impresión');
             }
 
-            // Construir URL de impresión
+            const responseData = await response.json();
+
+            console.log('✅ Backend preparó impresión:', {
+                cantidad: responseData.cantidad_ventas,
+                ids: responseData.venta_ids,
+                mensaje: responseData.message
+            });
+
+            // ✅ MEJORADO: El backend retorna directamente la URL
             const url = `/ventas/imprimir?formato=${formato}&accion=${accionURL}`;
 
-            console.log('URL de impresión generada:', url);
+            console.log('📄 URL de impresión generada:', url);
 
             // Abrir en nueva ventana para preview, o descargar
             if (accionURL === 'stream') {

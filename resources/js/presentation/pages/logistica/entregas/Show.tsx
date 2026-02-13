@@ -8,6 +8,7 @@ import type { Entrega, VehiculoCompleto, EstadoEntrega } from '@/domain/entities
 import EntregaFlujoCarga from './components/EntregaFlujoCarga';
 import VentasEntregaSection from './components/VentasEntregaSection';
 import ProductosAgrupados from './components/ProductosAgrupados';
+import ResumenPagosEntrega from './components/ResumenPagosEntrega';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
 import EntregaHistorialCambios from '@/presentation/components/logistica/EntregaHistorialCambios';
@@ -242,6 +243,10 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                     </div>
                 )}
 
+                {/* ✅ NUEVA 2026-02-12: Resumen de Pagos */}
+                {entrega.id && (
+                    <ResumenPagosEntrega entregaId={entrega.id} />
+                )}
 
                 {/* Productos Agrupados - Consolidación de productos de todas las ventas */}
                 {entrega.id && (

@@ -17,11 +17,11 @@ class EntregaVentaConfirmacion extends Model
         'tuvo_problema',       // ✅ NUEVO: Flag para reportes
         'firma_digital_url',
         'fotos',
-        'observaciones',
+        'observaciones_logistica',  // ✅ 2026-02-12: Renombrado de observaciones
         'tienda_abierta',
         'cliente_presente',
         'motivo_rechazo',
-        // ✅ FASE 1: Confirmación de Pago
+        // ✅ FASE 1: Confirmación de Pago (SIMPLE - Single pago)
         'estado_pago',
         'monto_recibido',
         'tipo_pago_id',
@@ -30,15 +30,24 @@ class EntregaVentaConfirmacion extends Model
         'foto_comprobante',
         'confirmado_por',
         'confirmado_en',
+        // ✅ FASE 3: Múltiples Formas de Pago (2026-02-12)
+        'desglose_pagos',           // JSON array de pagos: [{tipo_pago_id, tipo_pago_nombre, monto, referencia}, ...]
+        'total_dinero_recibido',    // Total de dinero en efectivo/transferencia recibido
+        'monto_pendiente',          // Dinero pendiente si fue pago parcial o crédito
+        'tipo_confirmacion',        // COMPLETA, CON_NOVEDAD
     ];
 
     protected $casts = [
-        'fotos' => 'array',                    // Convertir JSON a array
+        'fotos' => 'array',                         // Convertir JSON a array
         'tienda_abierta' => 'boolean',
         'cliente_presente' => 'boolean',
-        'tuvo_problema' => 'boolean',          // ✅ NUEVO: Cast boolean
+        'tuvo_problema' => 'boolean',               // ✅ NUEVO: Cast boolean
         'confirmado_en' => 'datetime',
-        'monto_recibido' => 'decimal:2',       // ✅ Dinero recibido con 2 decimales
+        'monto_recibido' => 'decimal:2',            // ✅ Dinero recibido con 2 decimales
+        // ✅ NUEVA 2026-02-12: Casts para múltiples formas de pago
+        'desglose_pagos' => 'array',                // JSON array → PHP array
+        'total_dinero_recibido' => 'decimal:2',     // Total dinero recibido
+        'monto_pendiente' => 'decimal:2',           // Dinero pendiente
     ];
 
     // ===== RELACIONES =====
@@ -115,5 +124,71 @@ class EntregaVentaConfirmacion extends Model
     public function contarFotos(): int
     {
         return is_array($this->fotos) ? count($this->fotos) : 0;
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: Obtener cantidad de métodos de pago usados
+     */
+    public function contarMetodosPago(): int
+    {
+        return is_array($this->desglose_pagos) ? count($this->desglose_pagos) : 0;
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: ¿Fue pagado completamente?
+     */
+    public function fuePagadoCompletamente(): bool
+    {
+        return $this->estado_pago === 'PAGADO';
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: ¿Fue pago parcial?
+     */
+    public function fuePagoParcial(): bool
+    {
+        return $this->estado_pago === 'PARCIAL';
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: ¿Fue a crédito total?
+     */
+    public function fueCredito(): bool
+    {
+        return $this->estado_pago === 'CREDITO';
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: Obtener descripción del estado de pago
+     */
+    public function obtenerDescripcionEstadoPago(): string
+    {
+        return match ($this->estado_pago) {
+            'PAGADO' => '✅ Pagado Completamente',
+            'PARCIAL' => '⚠️ Pago Parcial',
+            'CREDITO' => '💳 Crédito Total',
+            'NO_PAGADO' => '❌ No Pagado',
+            default => 'Desconocido',
+        };
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: Obtener desglose de pagos formateado
+     * @return array Array de pagos con formato legible
+     */
+    public function obtenerDesglosPagosFormateado(): array
+    {
+        if (!is_array($this->desglose_pagos)) {
+            return [];
+        }
+
+        return collect($this->desglose_pagos)->map(function ($pago) {
+            return [
+                'tipo' => $pago['tipo_pago_nombre'] ?? 'Desconocido',
+                'monto' => $pago['monto'] ?? 0,
+                'referencia' => $pago['referencia'] ?? null,
+                'montoFormato' => '$' . number_format($pago['monto'] ?? 0, 2),
+            ];
+        })->toArray();
     }
 }

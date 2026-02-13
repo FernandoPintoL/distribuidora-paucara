@@ -1151,6 +1151,7 @@ Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
     Route::post('preparar-impresion-movimientos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionMovimientos']);
     Route::post('preparar-impresion-ventas', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionVentas']);
     Route::post('preparar-impresion-compras', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionCompras']);
+    Route::post('preparar-impresion-productos-vendidos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionProductosVendidos']);
     Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
 });
 

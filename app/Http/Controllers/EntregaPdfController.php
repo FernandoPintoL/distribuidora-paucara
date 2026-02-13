@@ -133,6 +133,9 @@ class EntregaPdfController extends Controller
             $localidades = $localidadesService->obtenerLocalidades($entrega);
             $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
 
+            // ✅ NUEVA 2026-02-12: Obtener resumen de pagos para la impresión
+            $resumenPagos = $this->obtenerResumenPagos($entrega);
+
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
@@ -144,6 +147,7 @@ class EntregaPdfController extends Controller
                 'logo_footer_base64' => $logoFooterBase64,
                 'localidades' => $localidades,              // ✅ NUEVO
                 'localidades_resumen' => $localidadesResumen,  // ✅ NUEVO
+                'resumen_pagos' => $resumenPagos,           // ✅ NUEVA 2026-02-12: Resumen de pagos
             ];
 
             // Crear PDF con configuración según formato
@@ -231,6 +235,9 @@ class EntregaPdfController extends Controller
             $localidades = $localidadesService->obtenerLocalidades($entrega);
             $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
 
+            // ✅ NUEVA 2026-02-12: Obtener resumen de pagos para la impresión
+            $resumenPagos = $this->obtenerResumenPagos($entrega);
+
             $data = [
                 'entrega' => $entrega,
                 'fecha_generacion' => now()->format('d/m/Y H:i'),
@@ -242,6 +249,7 @@ class EntregaPdfController extends Controller
                 'logo_footer_base64' => $logoFooterBase64,
                 'localidades' => $localidades,              // ✅ NUEVO
                 'localidades_resumen' => $localidadesResumen,  // ✅ NUEVO
+                'resumen_pagos' => $resumenPagos,           // ✅ NUEVA 2026-02-12: Resumen de pagos
             ];
 
             // Crear PDF
@@ -562,6 +570,77 @@ class EntregaPdfController extends Controller
                 'message' => 'Error generando Excel',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-12: Obtener resumen de pagos de una entrega para impresión
+     *
+     * @param Entrega $entrega
+     * @return array|null Resumen de pagos o null si no hay datos
+     */
+    private function obtenerResumenPagos(Entrega $entrega): ?array
+    {
+        try {
+            // Obtener datos de confirmaciones de ventas de esta entrega
+            $confirmaciones = \App\Models\EntregaVentaConfirmacion::where('entrega_id', $entrega->id)
+                ->with([
+                    'venta.cliente',
+                    'tipoPago',
+                ])
+                ->get();
+
+            if ($confirmaciones->isEmpty()) {
+                return null;
+            }
+
+            // Agrupar por tipo de pago
+            $pagos = $confirmaciones->groupBy('tipo_pago_id')->map(function ($grupo) {
+                $tipoPagoData = $grupo->first();
+                return [
+                    'tipo_pago_id' => $tipoPagoData->tipo_pago_id,
+                    'tipo_pago' => $tipoPagoData->tipoPago?->nombre ?? 'Desconocido',
+                    'total' => (float) $grupo->sum('monto_recibido'),
+                    'cantidad_ventas' => $grupo->count(),
+                ];
+            })->values()->toArray();
+
+            // Calcular totales
+            $totalEsperado = (float) $entrega->ventas->sum('total');
+            $totalRecibido = (float) $confirmaciones->sum('monto_recibido');
+            $totalCredito = (float) $confirmaciones->sum('monto_pendiente');
+
+            // Ventas sin pago registrado
+            $ventasConfirmadas = $confirmaciones->pluck('venta_id')->toArray();
+            $ventasSinPago = $entrega->ventas
+                ->whereNotIn('id', $ventasConfirmadas)
+                ->map(function ($venta) {
+                    return [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'monto' => (float) $venta->total,
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            return [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+                'total_esperado' => $totalEsperado,
+                'pagos' => $pagos,
+                'sin_registrar' => $ventasSinPago,
+                'total_recibido' => $totalRecibido,
+                'total_credito' => $totalCredito,
+                'diferencia' => max(0, $totalEsperado - $totalRecibido - $totalCredito),
+                'porcentaje_recibido' => $totalEsperado > 0 ? (int) (($totalRecibido / $totalEsperado) * 100) : 0,
+            ];
+        } catch (\Exception $e) {
+            \Log::warning('[EntregaPdfController::obtenerResumenPagos] Error', [
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
 }

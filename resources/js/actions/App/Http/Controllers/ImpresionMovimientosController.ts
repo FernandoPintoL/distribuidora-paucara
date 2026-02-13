@@ -1,73 +1,73 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
+const imprimir953cb93fd8911e668220e194a2a1d792 = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir953cb93fd8911e668220e194a2a1d792.url(options),
     method: 'get',
 })
 
-imprimir.definition = {
+imprimir953cb93fd8911e668220e194a2a1d792.definition = {
     methods: ["get","head"],
-    url: '/movimientos/imprimir',
+    url: '/inventario/movimientos/imprimir',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-imprimir.url = (options?: RouteQueryOptions) => {
-    return imprimir.definition.url + queryParams(options)
+imprimir953cb93fd8911e668220e194a2a1d792.url = (options?: RouteQueryOptions) => {
+    return imprimir953cb93fd8911e668220e194a2a1d792.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
+imprimir953cb93fd8911e668220e194a2a1d792.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir953cb93fd8911e668220e194a2a1d792.url(options),
     method: 'get',
 })
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: imprimir.url(options),
+imprimir953cb93fd8911e668220e194a2a1d792.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimir953cb93fd8911e668220e194a2a1d792.url(options),
     method: 'head',
 })
 
     /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-    const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimir.url(options),
+    const imprimir953cb93fd8911e668220e194a2a1d792Form = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimir953cb93fd8911e668220e194a2a1d792.url(options),
         method: 'get',
     })
 
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-        imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(options),
+        imprimir953cb93fd8911e668220e194a2a1d792Form.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir953cb93fd8911e668220e194a2a1d792.url(options),
             method: 'get',
         })
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
- * @route '/movimientos/imprimir'
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/inventario/movimientos/imprimir'
  */
-        imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url({
+        imprimir953cb93fd8911e668220e194a2a1d792Form.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir953cb93fd8911e668220e194a2a1d792.url({
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
                             ...(options?.query ?? options?.mergeQuery ?? {}),
@@ -76,10 +76,94 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
     
-    imprimir.form = imprimirForm
+    imprimir953cb93fd8911e668220e194a2a1d792.form = imprimir953cb93fd8911e668220e194a2a1d792Form
+    /**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+const imprimir0b6bc42e50c7f83de29cdb7d98bede71 = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url(options),
+    method: 'get',
+})
+
+imprimir0b6bc42e50c7f83de29cdb7d98bede71.definition = {
+    methods: ["get","head"],
+    url: '/movimientos/imprimir',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+imprimir0b6bc42e50c7f83de29cdb7d98bede71.url = (options?: RouteQueryOptions) => {
+    return imprimir0b6bc42e50c7f83de29cdb7d98bede71.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+imprimir0b6bc42e50c7f83de29cdb7d98bede71.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+imprimir0b6bc42e50c7f83de29cdb7d98bede71.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+    const imprimir0b6bc42e50c7f83de29cdb7d98bede71Form = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+        imprimir0b6bc42e50c7f83de29cdb7d98bede71Form.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
+ * @route '/movimientos/imprimir'
+ */
+        imprimir0b6bc42e50c7f83de29cdb7d98bede71Form.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimir0b6bc42e50c7f83de29cdb7d98bede71.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imprimir0b6bc42e50c7f83de29cdb7d98bede71.form = imprimir0b6bc42e50c7f83de29cdb7d98bede71Form
+
+export const imprimir = {
+    '/inventario/movimientos/imprimir': imprimir953cb93fd8911e668220e194a2a1d792,
+    '/movimientos/imprimir': imprimir0b6bc42e50c7f83de29cdb7d98bede71,
+}
+
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 export const preview = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +178,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.url = (options?: RouteQueryOptions) => {
@@ -103,7 +187,7 @@ preview.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +196,7 @@ preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +206,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
     const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +216,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
         previewForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +225,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
         previewForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

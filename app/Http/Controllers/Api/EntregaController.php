@@ -848,19 +848,29 @@ class EntregaController extends Controller
     public function confirmarVentaEntregada(Request $request, $id, $venta_id)
     {
         try {
-            // ✅ SIMPLIFICADO: Solo lo esencial para confirmar entrega
+            // ✅ MEJORADO: Soporta múltiples formas de pago
             $validated = $request->validate([
-                'fotos' => 'nullable|array',                    // ✅ Fotos opcionales
+                'fotos' => 'nullable|array',
                 'fotos.*' => 'string',
-                'observaciones' => 'nullable|string|max:500',  // ✅ Observaciones (detallar manualmente pago si aplica)
-                'observaciones_logistica' => 'nullable|string|max:1000',  // ✅ NUEVO: Estado de entrega (completa, incidentes, etc.)
-                // Contexto de entrega
+                'observaciones' => 'nullable|string|max:500',
+                'observaciones_logistica' => 'nullable|string|max:1000',
                 'tienda_abierta' => 'nullable|boolean',
                 'cliente_presente' => 'nullable|boolean',
                 'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
-                // ✅ NUEVO: Registrar pago en el momento de la entrega
-                'monto_recibido' => 'nullable|numeric|min:0',  // Monto que el cliente pagó
-                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',  // ID del tipo de pago
+
+                // ✅ OPCIÓN A: Múltiples pagos (nuevo)
+                'pagos' => 'nullable|array',
+                'pagos.*.tipo_pago_id' => 'required_with:pagos|exists:tipos_pago,id',
+                'pagos.*.monto' => 'required_with:pagos|numeric|min:0',
+                'pagos.*.referencia' => 'nullable|string|max:100',
+
+                // ✅ OPCIÓN B: Pago único (backward compatibility)
+                'monto_recibido' => 'nullable|numeric|min:0',
+                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',
+
+                // ✅ CAMBIO: Soporte para crédito como boolean (promesa de pago)
+                'es_credito' => 'nullable|boolean',
+                'tipo_confirmacion' => 'nullable|in:COMPLETA,CON_NOVEDAD',
             ]);
 
             $entrega = Entrega::with('estadoEntrega')->findOrFail($id);
@@ -882,6 +892,56 @@ class EntregaController extends Controller
             $estadoEntregada = EstadoLogistica::where('codigo', 'ENTREGADA')
                 ->where('categoria', 'venta_logistica')
                 ->firstOrFail();
+
+            // ✅ NUEVO: Procesar múltiples pagos o pago único
+            $desglosePagos = null;
+            $totalDineroRecibido = 0;
+            $montoPendiente = 0;
+
+            if (isset($validated['pagos']) && !empty($validated['pagos'])) {
+                // Opción A: Múltiples pagos
+                $desglosePagos = [];
+                foreach ($validated['pagos'] as $pago) {
+                    $tipoPago = \App\Models\TipoPago::find($pago['tipo_pago_id']);
+                    $desglosePagos[] = [
+                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                        'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
+                        'monto' => (float) $pago['monto'],
+                        'referencia' => $pago['referencia'] ?? null,
+                    ];
+                    $totalDineroRecibido += (float) $pago['monto'];
+                }
+                \Log::debug('💳 [MÚLTIPLES PAGOS] Recibidos ' . count($desglosePagos) . ' tipos de pago');
+            } else if (isset($validated['monto_recibido']) && $validated['monto_recibido'] > 0) {
+                // Opción B: Pago único (backward compatibility)
+                $tipoPago = \App\Models\TipoPago::find($validated['tipo_pago_id']);
+                $desglosePagos = [[
+                    'tipo_pago_id' => $validated['tipo_pago_id'],
+                    'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
+                    'monto' => (float) $validated['monto_recibido'],
+                    'referencia' => null,
+                ]];
+                $totalDineroRecibido = (float) $validated['monto_recibido'];
+            }
+
+            // Calcular monto pendiente (si hubo crédito o pago parcial)
+            $montoPendiente = max(0, $venta->total - $totalDineroRecibido);
+
+            // ✅ CAMBIO: Determinar estado de pago
+            $estadoPago = 'NO_PAGADO';
+            if (isset($validated['es_credito']) && $validated['es_credito']) {
+                // Si es crédito, marca como CREDITO (promesa de pago, no dinero real)
+                $estadoPago = 'CREDITO';
+                $totalDineroRecibido = 0;  // NO entra dinero a caja
+            } else if ($totalDineroRecibido >= $venta->total) {
+                $estadoPago = 'PAGADO';
+            } else if ($totalDineroRecibido > 0) {
+                $estadoPago = 'PARCIAL';
+            }
+
+            \Log::debug('💰 [PAGO] Total recibido: $' . $totalDineroRecibido .
+                      ' | Pendiente: $' . $montoPendiente .
+                      ' | Estado: ' . $estadoPago);
 
             // ✅ SIMPLIFICADO: Guardar fotos opcionalmente
             $fotosUrls = [];
@@ -934,23 +994,34 @@ class EntregaController extends Controller
                 }
             }
 
-            // ✅ SIMPLIFICADO: Guardar la confirmación con datos para reportes
+            // ✅ MEJORADO: Guardar la confirmación con soporte para múltiples pagos
             $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
                 [
                     'entrega_id' => $id,
                     'venta_id' => $venta_id,
                 ],
                 [
-                    'tipo_entrega' => $tipoEntrega,              // ✅ NUEVO: COMPLETA o NOVEDAD
-                    'tipo_novedad' => $tipoNovedad,             // ✅ NUEVO: Tipo específico de novedad
-                    'tuvo_problema' => $tuvoProblema,           // ✅ NUEVO: Flag para reportes
-                    'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,  // ✅ Fotos opcionales
-                    'observaciones' => $validated['observaciones'] ?? null, // ✅ Notas del chofer (detallar pago aquí si aplica)
+                    'tipo_entrega' => $tipoEntrega,
+                    'tipo_novedad' => $tipoNovedad,
+                    'tuvo_problema' => $tuvoProblema,
+                    'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,
+                    'observaciones_logistica' => $validated['observaciones_logistica'] ?? null,
+                    'observaciones' => $validated['observaciones'] ?? null,
                     'tienda_abierta' => $validated['tienda_abierta'] ?? null,
                     'cliente_presente' => $validated['cliente_presente'] ?? null,
                     'motivo_rechazo' => $validated['motivo_rechazo'] ?? null,
-                    'monto_recibido' => $validated['monto_recibido'] ?? null,  // ✅ NUEVO: Monto que pagó el cliente
-                    'tipo_pago_id' => $validated['tipo_pago_id'] ?? null,      // ✅ NUEVO: Tipo de pago usado
+
+                    // ✅ NUEVO: Desglose de múltiples pagos
+                    'desglose_pagos' => $desglosePagos,              // Array JSON de pagos
+                    'total_dinero_recibido' => $totalDineroRecibido, // Total en efectivo/transferencia
+                    'monto_pendiente' => $montoPendiente,            // Dinero pendiente de cobro
+                    'tipo_confirmacion' => $validated['tipo_confirmacion'] ?? 'COMPLETA',
+
+                    // Backward compatibility: guardar también el primer pago en campos antiguos
+                    'monto_recibido' => $totalDineroRecibido > 0 ? $totalDineroRecibido : null,
+                    'tipo_pago_id' => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : null,
+                    'estado_pago' => $estadoPago,
+
                     'confirmado_por' => Auth::id(),
                     'confirmado_en' => now(),
                 ]
@@ -960,11 +1031,15 @@ class EntregaController extends Controller
             // El pago se gestiona por separado, no aquí
             // Si necesita detallar pago, puede escribir en observaciones
 
-            Log::info('✅ Venta entregada', [
+            Log::info('✅ Venta entregada - Confirmación de pago registrada', [
                 'entrega_id' => $id,
                 'venta_id' => $venta_id,
                 'confirmacion_id' => $confirmacion->id,
                 'fotos_guardadas' => count($fotosUrls),
+                'desglose_pagos' => $desglosePagos,
+                'total_dinero_recibido' => $totalDineroRecibido,
+                'monto_pendiente' => $montoPendiente,
+                'estado_pago' => $estadoPago,
             ]);
 
             // ✅ Recargar entrega con todas sus relaciones
@@ -2289,67 +2364,143 @@ class EntregaController extends Controller
     {
         try {
             $entrega = Entrega::with(['ventas' => function ($q) {
-                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id');
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago');
             }])->findOrFail($id);
 
-            // Obtener todas las confirmaciones de las ventas de esta entrega
-            $ventasIds = $entrega->ventas->pluck('id')->toArray();
+            // ✅ CRÍTICO: Filtrar SOLO ventas NO a crédito (excluir CREDITO del resumen)
+            // Las ventas a crédito NO generan dinero en caja y se manejan separadamente
+            $ventasParaResumen = $entrega->ventas->filter(function ($v) {
+                return $v->estado_pago !== 'CREDITO';
+            });
+
+            // Obtener todas las confirmaciones de las ventas NO crédito de esta entrega
+            $ventasIds = $ventasParaResumen->pluck('id')->toArray();
 
             $confirmaciones = EntregaVentaConfirmacion::with('tipoPago')
                 ->whereIn('venta_id', $ventasIds)
                 ->get();
 
-            // Agrupar por tipo de pago
-            $porTipoPago = $confirmaciones->groupBy('tipo_pago_id');
-
-            // Construir resumen
+            // Construir resumen con soporte para múltiples pagos
+            // ✅ NOTA: total_esperado SOLO incluye ventas NO crédito
             $resumen = [
                 'entrega_id' => $entrega->id,
                 'numero_entrega' => $entrega->numero_entrega,
-                'total_esperado' => (float) $entrega->ventas->sum('total'),
+                'total_esperado' => (float) $ventasParaResumen->sum('total'),  // ✅ Solo no-crédito
                 'pagos' => [],
                 'sin_registrar' => [],
                 'total_recibido' => 0,
             ];
 
-            // Procesar pagos registrados
-            foreach ($porTipoPago as $tipoPagoId => $confirmacionesGrupo) {
-                $tipoPago = $confirmacionesGrupo->first()->tipoPago;
-                $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
-                $cantidad = $confirmacionesGrupo->count();
+            // Procesar confirmaciones agrupadas por tipo de pago
+            $porTipoPago = $confirmaciones->groupBy(function ($item) {
+                // Si tiene desglose_pagos (múltiples pagos), agrupar por cada tipo en el desglose
+                if (!empty($item->desglose_pagos)) {
+                    return 'multiple';
+                }
+                // Si tiene tipo_pago_id único, agrupar por eso
+                return $item->tipo_pago_id;
+            });
 
-                $resumen['pagos'][] = [
-                    'tipo_pago_id' => $tipoPagoId,
-                    'tipo_pago' => $tipoPago?->nombre ?? 'Sin especificar',
-                    'tipo_pago_codigo' => $tipoPago?->codigo ?? 'N/A',
-                    'total' => $totalPago,
-                    'cantidad_ventas' => $cantidad,
-                    'ventas' => $confirmacionesGrupo->map(function ($c) {
-                        return [
-                            'venta_id' => $c->venta_id,
-                            'venta_numero' => $c->venta?->numero,
-                            'monto_recibido' => (float) $c->monto_recibido,
-                            'tipo_entrega' => $c->tipo_entrega,
-                            'tipo_novedad' => $c->tipo_novedad,
-                        ];
-                    })->toArray(),
-                ];
+            foreach ($porTipoPago as $grupoKey => $confirmacionesGrupo) {
+                if ($grupoKey === 'multiple') {
+                    // ✅ NUEVA 2026-02-12: Procesar múltiples pagos por desglose
+                    foreach ($confirmacionesGrupo as $confirmacion) {
+                        if (!empty($confirmacion->desglose_pagos)) {
+                            foreach ($confirmacion->desglose_pagos as $pago) {
+                                $tipoPagoNombre = $pago['tipo_pago_nombre'] ?? 'Desconocido';
+                                $tipoPagoCodigo = $this->obtenerCodigoTipoPago($tipoPagoNombre);
+                                $montoPago = (float) ($pago['monto'] ?? 0);
 
-                $resumen['total_recibido'] += $totalPago;
+                                // Buscar si ya existe este tipo en el resumen
+                                $existeIndex = null;
+                                foreach ($resumen['pagos'] as $idx => $p) {
+                                    if ($p['tipo_pago'] === $tipoPagoNombre) {
+                                        $existeIndex = $idx;
+                                        break;
+                                    }
+                                }
+
+                                if ($existeIndex !== null) {
+                                    // Actualizar existente
+                                    $resumen['pagos'][$existeIndex]['total'] += $montoPago;
+                                    $resumen['pagos'][$existeIndex]['cantidad_ventas']++;
+                                    $resumen['pagos'][$existeIndex]['ventas'][] = [
+                                        'venta_id' => $confirmacion->venta_id,
+                                        'venta_numero' => $confirmacion->venta?->numero,
+                                        'monto_recibido' => $montoPago,
+                                        'referencia' => $pago['referencia'] ?? null,
+                                        'tipo_entrega' => $confirmacion->tipo_entrega,
+                                        'tipo_novedad' => $confirmacion->tipo_novedad,
+                                    ];
+                                } else {
+                                    // Crear nuevo tipo
+                                    $resumen['pagos'][] = [
+                                        'tipo_pago_id' => $pago['tipo_pago_id'] ?? null,
+                                        'tipo_pago' => $tipoPagoNombre,
+                                        'tipo_pago_codigo' => $tipoPagoCodigo,
+                                        'total' => $montoPago,
+                                        'cantidad_ventas' => 1,
+                                        'ventas' => [[
+                                            'venta_id' => $confirmacion->venta_id,
+                                            'venta_numero' => $confirmacion->venta?->numero,
+                                            'monto_recibido' => $montoPago,
+                                            'referencia' => $pago['referencia'] ?? null,
+                                            'tipo_entrega' => $confirmacion->tipo_entrega,
+                                            'tipo_novedad' => $confirmacion->tipo_novedad,
+                                        ]],
+                                    ];
+                                }
+
+                                $resumen['total_recibido'] += $montoPago;
+                            }
+                        }
+                    }
+                } else {
+                    // Procesar pago único (backward compatible)
+                    $tipoPago = $confirmacionesGrupo->first()->tipoPago;
+                    $totalPago = (float) $confirmacionesGrupo->sum('total_dinero_recibido');
+                    if ($totalPago == 0) {
+                        $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
+                    }
+                    $cantidad = $confirmacionesGrupo->count();
+
+                    $resumen['pagos'][] = [
+                        'tipo_pago_id' => $grupoKey,
+                        'tipo_pago' => $tipoPago?->nombre ?? 'Sin especificar',
+                        'tipo_pago_codigo' => $tipoPago?->codigo ?? 'N/A',
+                        'total' => $totalPago,
+                        'cantidad_ventas' => $cantidad,
+                        'ventas' => $confirmacionesGrupo->map(function ($c) {
+                            return [
+                                'venta_id' => $c->venta_id,
+                                'venta_numero' => $c->venta?->numero,
+                                'monto_recibido' => (float) ($c->total_dinero_recibido ?? $c->monto_recibido),
+                                'tipo_entrega' => $c->tipo_entrega,
+                                'tipo_novedad' => $c->tipo_novedad,
+                            ];
+                        })->toArray(),
+                    ];
+
+                    $resumen['total_recibido'] += $totalPago;
+                }
             }
 
             // Ventas sin confirmación de pago
+            // ✅ CRÍTICO: Solo incluir ventas NO crédito en sin_registrar
             $ventasConfirmadas = $confirmaciones->pluck('venta_id')->unique()->toArray();
-            $ventasSinPago = $entrega->ventas->whereNotIn('id', $ventasConfirmadas);
+            $ventasSinPago = $ventasParaResumen->whereNotIn('id', $ventasConfirmadas);  // ✅ Usar ventasParaResumen (filtradas)
 
+            // ✅ IMPORTANTE: Convertir a values() para que sea un array puro, no un map con índices
             if ($ventasSinPago->isNotEmpty()) {
-                $resumen['sin_registrar'] = $ventasSinPago->map(function ($v) {
-                    return [
-                        'venta_id' => $v->id,
-                        'venta_numero' => $v->numero,
-                        'monto' => (float) $v->total,
-                    ];
-                })->toArray();
+                $resumen['sin_registrar'] = array_values(
+                    $ventasSinPago->map(function ($v) {
+                        return [
+                            'venta_id' => $v->id,
+                            'venta_numero' => $v->numero,
+                            'monto' => (float) $v->total,
+                        ];
+                    })->toArray()
+                );
             }
 
             // Calcular diferencia
@@ -2367,6 +2518,7 @@ class EntregaController extends Controller
             \Log::error('Error en obtenerResumenPagos:', [
                 'entrega_id' => $id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -2374,6 +2526,20 @@ class EntregaController extends Controller
                 'message' => 'Error al obtener resumen de pagos: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /// ✅ NUEVA 2026-02-12: Helper para obtener código de tipo de pago por nombre
+    private function obtenerCodigoTipoPago(string $nombre): string
+    {
+        $nombre = strtoupper($nombre);
+
+        if (str_contains($nombre, 'EFECTIVO')) return 'EFECTIVO';
+        if (str_contains($nombre, 'TRANSFERENCIA') || str_contains($nombre, 'QR')) return 'TRANSFERENCIA';
+        if (str_contains($nombre, 'TARJETA')) return 'TARJETA';
+        if (str_contains($nombre, 'CHEQUE')) return 'CHEQUE';
+        if (str_contains($nombre, 'CRÉDITO')) return 'CREDITO';
+
+        return 'OTRO';
     }
 
     /**

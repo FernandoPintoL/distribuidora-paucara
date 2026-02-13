@@ -46,6 +46,55 @@
 
     <div class="separador"></div>
 
+    {{-- ✅ NUEVA 2026-02-12: RESUMEN DE PAGOS (Compacto) --}}
+    @if($resumen_pagos)
+    <p style="font-size: 6px; font-weight: bold; text-align: center; margin: 1px 0;">💳 PAGOS</p>
+
+    {{-- Totales principales --}}
+    <table style="width: 100%; font-size: 4px; border-collapse: collapse; margin-bottom: 1px;">
+        <tbody>
+            <tr style="border: 0.5px solid #999;">
+                <td style="padding: 0.5px;">Esperado:</td>
+                <td style="padding: 0.5px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['total_esperado'], 2) }}</td>
+            </tr>
+            <tr style="border: 0.5px solid #999; background-color: #f5f5f5;">
+                <td style="padding: 0.5px;">Recibido:</td>
+                <td style="padding: 0.5px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['total_recibido'], 2) }}</td>
+            </tr>
+            <tr style="border: 0.5px solid #999;">
+                <td style="padding: 0.5px;">Falta:</td>
+                <td style="padding: 0.5px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['diferencia'], 2) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {{-- Progreso compacto --}}
+    <div style="margin: 1px 0; padding: 0.5px; border: 0.5px solid #999; font-size: 4px;">
+        <div style="width: 100%; height: 3px; background-color: #e0e0e0; overflow: hidden;">
+            <div style="width: {{ min($resumen_pagos['porcentaje_recibido'], 100) }}%; height: 100%; background-color: #4CAF50;"></div>
+        </div>
+        <div style="text-align: right; margin-top: 0.5px;">{{ $resumen_pagos['porcentaje_recibido'] }}%</div>
+    </div>
+
+    {{-- Desglose compacto --}}
+    @if(count($resumen_pagos['pagos']) > 0)
+    <div style="margin: 1px 0; font-size: 4px;">
+        @foreach($resumen_pagos['pagos'] as $pago)
+        <div style="padding: 0.5px;">{{ substr($pago['tipo_pago'], 0, 12) }}: {{ number_format($pago['total'], 2) }}</div>
+        @endforeach
+    </div>
+    @endif
+
+    {{-- Alerta ventas sin pago --}}
+    @if(count($resumen_pagos['sin_registrar']) > 0)
+    <div style="margin: 1px 0; padding: 0.5px; border: 1px solid #ff9800; background-color: #fff3e0; font-size: 4px; color: #ff6f00;">
+        <strong>⚠ {{ count($resumen_pagos['sin_registrar']) }} SIN PAGO</strong>
+    </div>
+    @endif
+    @endif
+
+    <div class="separador"></div>
+
     {{-- RESUMEN PARA CHOFER --}}
     <p style="font-size: 6px; font-weight: bold; text-align: center; margin: 2px 0;">RESUMEN CHOFER</p>
 

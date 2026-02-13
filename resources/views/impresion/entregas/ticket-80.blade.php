@@ -146,11 +146,75 @@
 
     <div class="separador"></div>
 
+    {{-- ✅ NUEVA 2026-02-12: RESUMEN DE PAGOS --}}
+    @if($resumen_pagos)
+    <p style="font-weight: bold; text-align: center; margin: 3px 0;">💳 RESUMEN DE PAGOS</p>
+
+    {{-- Totales principales --}}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 3px;">
+        <tbody>
+            <tr style="border: 1px solid #999;">
+                <td style="padding: 2px; width: 50%;"><strong>Total Esperado:</strong></td>
+                <td style="padding: 2px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['total_esperado'], 2) }}</td>
+            </tr>
+            <tr style="border: 1px solid #999; background-color: #f0f0f0;">
+                <td style="padding: 2px; width: 50%;"><strong>Recibido:</strong></td>
+                <td style="padding: 2px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['total_recibido'], 2) }}</td>
+            </tr>
+            <tr style="border: 1px solid #999;">
+                <td style="padding: 2px; width: 50%;"><strong>Falta:</strong></td>
+                <td style="padding: 2px; text-align: right; font-weight: bold;">{{ number_format($resumen_pagos['diferencia'], 2) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {{-- Barra de progreso --}}
+    <div style="margin: 2px 0; padding: 2px; border: 1px solid #999;">
+        <div style="margin: 2px 0;">
+            <span style="font-weight: bold;">{{ $resumen_pagos['porcentaje_recibido'] }}%</span>
+        </div>
+        <div style="width: 100%; height: 6px; background-color: #e0e0e0; border-radius: 2px; overflow: hidden;">
+            <div style="width: {{ min($resumen_pagos['porcentaje_recibido'], 100) }}%; height: 100%; background-color: #434A43;"></div>
+        </div>
+    </div>
+
+    {{-- Desglose por tipo de pago --}}
+    @if(count($resumen_pagos['pagos']) > 0)
+    <div style="margin: 3px 0; padding: 2px; border: 1px solid #999;">
+        <p style="font-weight: bold; margin: 2px 0;">Desglose:</p>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+                @foreach($resumen_pagos['pagos'] as $pago)
+                <tr style="border-bottom: 1px dotted #999;">
+                    <td style="padding: 1px 2px;">{{ substr($pago['tipo_pago'], 0, 15) }}</td>
+                    <td style="padding: 1px 2px; text-align: right; font-weight: bold;">{{ number_format($pago['total'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    {{-- Ventas sin pago --}}
+    @if(count($resumen_pagos['sin_registrar']) > 0)
+    <div style="margin: 3px 0; padding: 2px; border: 2px solid #111110; background-color: #fff3e0;">
+        <p style="font-weight: bold; margin: 2px 0; color: #0C0C0C;">SIN PAGO ({{ count($resumen_pagos['sin_registrar']) }})</p>
+        @foreach($resumen_pagos['sin_registrar'] as $venta)
+        <p style="margin: 1px 0; color: #171616;">{{ $venta['venta_numero'] }}: {{ number_format($venta['monto'], 2) }}</p>
+        @endforeach
+    </div>
+    @endif
+    @endif
+
+    
+
+    <div class="separador"></div>
+
      {{-- ✅ FIRMAS DEL CLIENTE --}}
     <div style="margin-top: 130px !important;">
         <div style="margin-bottom: 35px !important; padding-bottom: 35px !important;">
             <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
-            <p style="text-align: center; font-size: 10px; margin: 2px 0 !important;">Firma / Sello</p>
+            <p style="text-align: center; margin: 2px 0 !important;">Firma / Sello</p>
         </div>
     </div>
 

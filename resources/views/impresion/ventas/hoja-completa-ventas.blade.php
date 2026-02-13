@@ -25,10 +25,11 @@
     <thead>
         <tr>
             <th style="width: 4%;">#</th>
+            <th style="width: 12%;">ID / Número</th>
             <th style="width: 10%;">Fecha</th>
-            <th style="width: 18%;">Cliente</th>
+            <th style="width: 16%;">Cliente</th>
             <th style="width: 12%;">Total</th>
-            <th style="width: 14%;">Estado</th>
+            <th style="width: 12%;">Estado</th>
             <th style="width: 14%;">Tipo de Pago</th>
         </tr>
     </thead>
@@ -36,6 +37,21 @@
         @forelse($ventas as $item)
         <tr>
             <td>{{ $loop->iteration }}</td>
+            <td>
+                @php
+                    $id = '-';
+                    $numero = '-';
+                    if (is_array($item)) {
+                        $id = $item['id'] ?? '-';
+                        $numero = $item['numero'] ?? '-';
+                    } elseif (is_object($item)) {
+                        $id = $item->id ?? '-';
+                        $numero = $item->numero ?? '-';
+                    }
+                @endphp
+                <strong>{{ $id }}</strong><br>
+                <small style="color: #666;">{{ $numero }}</small>
+            </td>
             <td>
                 @php
                     $fecha = null;
@@ -151,7 +167,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="7" style="text-align: center; padding: 20px;">
+            <td colspan="8" style="text-align: center; padding: 20px;">
                 No hay ventas para mostrar
             </td>
         </tr>

@@ -360,12 +360,12 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             conIcono={true}
                                             mostrarLabel={true}
                                         />
-                                        <p>
-                                            creador: <div className="text-sm text-gray-900 dark:text-white">
+                                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            creador: <span className="font-medium text-gray-900 dark:text-white">
                                             {venta.usuario?.name || 'Sin usuario'}
+                                        </span>
                                         </div>
-                                        </p>
-                                        <p>
+                                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             {venta.proforma?.numero ? (
                                             <Link
                                                 href={`/proformas/${venta.proforma.id}`}
@@ -377,7 +377,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                         ) : (
                                             <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
                                         )}
-                                        </p>
+                                        </div>
                                     </td>
 
                                     <td className="px-6 py-4">

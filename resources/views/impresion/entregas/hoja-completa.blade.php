@@ -165,6 +165,74 @@
 @endphp
 @include('impresion.entregas.partials._lista-generica')
 
+{{-- ✅ NUEVA 2026-02-12: RESUMEN DE PAGOS --}}
+@if($resumen_pagos)
+<div style="margin: 15px 0; border-top: 2px solid #131313; padding-top: 10px;">
+    <h3 style="margin-top: 0;">💳 Resumen de Pagos</h3>
+
+    {{-- Totales principales en 3 columnas --}}
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div style="padding: 8px; background: #DFDADA; border: 1px solid #ccc; border-radius: 3px;">
+            <p style="margin: 0 0 5px 0; color: #666;">Total Esperado</p>
+            <p style="margin: 0; font-weight: bold; color: #121213;">Bs. {{ number_format($resumen_pagos['total_esperado'], 2) }}</p>
+        </div>
+        <div style="padding: 8px; background: #D0D5D0; border: 1px solid #161716; border-radius: 3px;">
+            <p style="margin: 0 0 5px 0; color: #141514;">Total Recibido</p>
+            <p style="margin: 0; font-weight: bold; color: #080908;">Bs. {{ number_format($resumen_pagos['total_recibido'], 2) }}</p>
+        </div>
+        <div style="padding: 8px; background: #BABAB4; border: 1px solid #151514; border-radius: 3px;">
+            <p style="margin: 0 0 5px 0; color: #171616;">Falta por Recibir</p>
+            <p style="margin: 0; font-weight: bold; color: #0F0E0E;">Bs. {{ number_format($resumen_pagos['diferencia'], 2) }}</p>
+        </div>
+    </div>
+
+    {{-- Barra de progreso --}}
+    <div style="margin: 10px 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span style="font-size: 12px; font-weight: bold;">Progreso de Pago</span>
+            <span style="font-size: 12px; font-weight: bold;">{{ $resumen_pagos['porcentaje_recibido'] }}%</span>
+        </div>
+        <div style="width: 100%; height: 20px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden; border: 1px solid #999;">
+            <div style="width: {{ min($resumen_pagos['porcentaje_recibido'], 100) }}%; height: 100%; background-color: #E9F3E9; transition: width 0.3s ease;"></div>
+        </div>
+    </div>
+
+    {{-- Desglose por tipo de pago --}}
+    @if(count($resumen_pagos['pagos']) > 0)
+    <div style="margin: 10px 0;">
+        <p style="font-size: 12px; font-weight: bold; margin: 5px 0;">Desglose por Tipo de Pago:</p>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+                @foreach($resumen_pagos['pagos'] as $pago)
+                <tr style="border-bottom: 1px dotted #ccc;">
+                    <td style="padding: 5px; width: 70%;"><strong>{{ $pago['tipo_pago'] }}</strong> ({{ $pago['cantidad_ventas'] }} venta{{ $pago['cantidad_ventas'] != 1 ? 's' : '' }})</td>
+                    <td style="padding: 5px; text-align: right; font-weight: bold;">Bs. {{ number_format($pago['total'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    {{-- Ventas sin pago registrado --}}
+    @if(count($resumen_pagos['sin_registrar']) > 0)
+    <div style="margin: 10px 0; padding: 8px; background: #fff3e0; border: 2px solid #131312; border-radius: 3px;">
+        <p style="margin: 5px 0; font-size: 12px; font-weight: bold; color: #232222;">Ventas sin Pago Registrado ({{ count($resumen_pagos['sin_registrar']) }})</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <tbody>
+                @foreach($resumen_pagos['sin_registrar'] as $venta)
+                <tr style="border-bottom: 1px dotted #0D0C0C;">
+                    <td style="padding: 3px; color: #191818;">{{ $venta['venta_numero'] }}</td>
+                    <td style="padding: 3px; text-align: right; font-weight: bold; color: #151413;">Bs. {{ number_format($venta['monto'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+</div>
+@endif
+
 {{-- 3. COMPROBANTES DE VENTAS (al final para entrega al cliente) --}}
 @include('impresion.entregas.partials._comprobantes-ventas')
 

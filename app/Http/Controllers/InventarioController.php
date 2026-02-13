@@ -18,6 +18,7 @@ use App\Models\TipoMerma;
 use App\Models\TipoOperacion;
 use App\Models\TransferenciaInventario;
 use App\Models\User;
+use App\Models\Venta;
 use App\Models\Vehiculo;
 use App\Services\ExcelExportService;
 use Illuminate\Http\JsonResponse;
@@ -633,6 +634,58 @@ class InventarioController extends Controller
             'tendencia_semanal'      => [],
         ];
 
+        // ✅ NUEVO: Obtener productos vendidos hoy (APROBADOS)
+        $productosVendidosHoy = [];
+        $ventasHoy = Venta::with([
+            'detalles.producto:id,nombre,sku',
+            'estadoDocumento:id,codigo,nombre',
+        ])
+        ->whereHas('estadoDocumento', fn($q) => $q->where('codigo', 'APROBADO'))
+        ->whereDate('created_at', today())
+        ->get();
+
+        // Agrupar por producto
+        $productosSumario = [];
+        foreach ($ventasHoy as $venta) {
+            foreach ($venta->detalles as $detalle) {
+                $productoId = $detalle->producto_id;
+                if (!isset($productosSumario[$productoId])) {
+                    $productosSumario[$productoId] = [
+                        'id'                 => $productoId,
+                        'nombre'             => $detalle->producto?->nombre ?? 'Producto sin nombre',
+                        'sku'                => $detalle->producto?->sku ?? '-',
+                        'cantidad_total'     => 0,
+                        'precio_unitario'    => $detalle->precio_unitario,
+                        'subtotal'           => 0,
+                        'stock_actual'       => 0,
+                        'stock_inicial'      => 0,
+                    ];
+                }
+                $cantidad = $detalle->cantidad ?? 0;
+                $precio = $detalle->precio_unitario ?? 0;
+                $productosSumario[$productoId]['cantidad_total'] += $cantidad;
+                $productosSumario[$productoId]['subtotal'] += ($cantidad * $precio);
+            }
+        }
+
+        // ✅ NUEVO: Obtener stock actual y calcular stock inicial
+        foreach ($productosSumario as &$producto) {
+            // Stock actual = suma de stock disponible en todos los almacenes
+            $stockActual = StockProducto::where('producto_id', $producto['id'])
+                ->sum('cantidad_disponible');
+
+            // Stock inicial = stock actual + cantidad vendida
+            $stockInicial = $stockActual + $producto['cantidad_total'];
+
+            $producto['stock_actual'] = (int) $stockActual;
+            $producto['stock_inicial'] = (int) $stockInicial;
+        }
+        unset($producto);
+
+        // Convertir a array indexado y ordenar por nombre
+        $productosVendidosHoy = array_values($productosSumario);
+        usort($productosVendidosHoy, fn($a, $b) => strcmp($a['nombre'], $b['nombre']));
+
         // Datos para filtros
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
         $productos = Producto::where('activo', true)
@@ -659,14 +712,18 @@ class InventarioController extends Controller
             ],
             'stats'                   => $stats,
             'filtros'                 => [
-                'fecha_inicio' => $fechaInicio->toDateString(),
-                'fecha_fin'    => $fechaFin->toDateString(),
-                'tipo'         => $tipo,
-                'almacen_id'   => $almacenId,
-                'producto_id'  => $productoId,
+                'fecha_inicio'      => $fechaInicio->toDateString(),
+                'fecha_fin'         => $fechaFin->toDateString(),
+                'tipo'              => $tipo,
+                'almacen_id'        => $almacenId,
+                'producto_id'       => $productoId,
+                'producto_busqueda' => $productoBusqueda,
+                'numero_documento'  => $numeroDocumento,
+                'observaciones'     => $observaciones,
             ],
             'almacenes'               => $almacenes,
             'productos'               => $productos,
+            'productosVendidosHoy'    => $productosVendidosHoy,
             'tipo_mermas'             => $tipo_mermas,
             'tipos_ajuste_inventario' => $tipos_ajueste_inventario,
             'estado_mermas'           => $estado_mermas,

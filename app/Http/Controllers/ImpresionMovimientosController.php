@@ -2,31 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Empresa;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
+use Illuminate\View\View;
+use Illuminate\Http\Response;
+use App\Models\Empresa;
 
 class ImpresionMovimientosController extends Controller
 {
     /**
-     * Imprimir listado de movimientos de inventario en diferentes formatos (PDF)
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\Response
+     * Renderizar reporte de movimientos de inventario (batch)
+     * Usa template específica para colecciones de movimientos
      */
-    public function imprimir(Request $request)
+    public function imprimir(Request $request): Response
     {
         try {
-            // Aumentar límite de memoria para DomPDF
-            // PHP restaura automáticamente después de la request
-            ini_set('memory_limit', '3072M');
-
-            // Obtener datos de movimientos de la sesión
-            $movimientos = session('movimientos_impresion', []);
+            $movimientos = collect(session('movimientos_impresion', []));
             $filtros = session('movimientos_filtros', []);
-
-            // Convertir a Collection
-            $movimientos = collect($movimientos);
 
             // Obtener empresa del usuario autenticado
             $empresa = auth()->user()->empresa ?? Empresa::first();
@@ -35,55 +26,41 @@ class ImpresionMovimientosController extends Controller
                 'cantidad_movimientos' => $movimientos->count(),
                 'filtros' => $filtros,
                 'empresa_id' => $empresa?->id,
-                'memory_limit_actual' => ini_get('memory_limit'),
             ]);
 
-            // Obtener formato solicitado
             $formato = $request->get('formato', 'A4');
             $accion = $request->get('accion', 'download');
 
-            // Mapear formato a vista
+            // Limpiar sesión
+            session()->forget(['movimientos_impresion', 'movimientos_filtros']);
+
+            // Mapear formato a vista específica para batch (colecciones)
             $vistaMap = [
-                'A4'        => 'impresion.movimientos.hoja-completa',
+                'A4'        => 'impresion.movimientos.hoja-completa-movimientos',
                 'TICKET_80' => 'impresion.movimientos.ticket-80',
                 'TICKET_58' => 'impresion.movimientos.ticket-58',
             ];
 
-            $vista = $vistaMap[$formato] ?? 'impresion.movimientos.hoja-completa';
+            $vista = $vistaMap[$formato] ?? 'impresion.movimientos.hoja-completa-movimientos';
 
-            // Datos para la vista
-            $datos = [
-                'movimientos'      => $movimientos,
-                'filtros'          => $filtros,
-                'empresa'          => $empresa,
-                'fecha_impresion'  => now(),
-                'usuario'          => auth()->user()->name ?? null,
-            ];
+            // Renderizar vista HTML con los movimientos
+            $html = view($vista, [
+                'movimientos' => $movimientos,
+                'filtros' => $filtros,
+                'empresa' => $empresa,
+            ])->render();
 
-            // Limpiar sesión después de usar los datos
-            session()->forget(['movimientos_impresion', 'movimientos_filtros']);
-
-            // Renderizar vista HTML
-            $html = view($vista, $datos)->render();
-
-            // Convertir HTML a PDF usando DomPDF con opciones optimizadas
+            // Convertir HTML a PDF usando DomPDF
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-            $pdf->getDomPDF()->setBasePath(public_path());
-
-            // Optimizaciones para memoria
-            $dompdf = $pdf->getDomPDF();
-            $options = $dompdf->getOptions();
-            $options->setChroot(public_path());
-            $options->setLogOutputFile(storage_path('logs/dompdf.log'));
 
             $nombreArchivo = 'reporte-movimientos-' . now()->format('YmdHis') . '.pdf';
 
-            // Si es stream, mostrar en navegador; si es download, forzar descarga
-            if ($accion === 'stream') {
-                return $pdf->stream($nombreArchivo);
-            } else {
+            if ($accion === 'download') {
                 return $pdf->download($nombreArchivo);
             }
+
+            // Retornar PDF para visualización en navegador
+            return $pdf->stream($nombreArchivo);
 
         } catch (\Exception $e) {
             \Log::error('❌ Error al imprimir reporte de movimientos', [
@@ -93,17 +70,5 @@ class ImpresionMovimientosController extends Controller
 
             return response("Error al generar el reporte: " . $e->getMessage(), 500);
         }
-    }
-
-    /**
-     * Vista previa del listado de movimientos
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\Response
-     */
-    public function preview(Request $request)
-    {
-        $request->merge(['accion' => 'stream']);
-        return $this->imprimir($request);
     }
 }

@@ -1109,108 +1109,6 @@ edit.head = (args: { compra: string | number } | [compra: string | number ] | st
     
     edit.form = editForm
 /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-export const imprimirCompra = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimirCompra.url(args, options),
-    method: 'get',
-})
-
-imprimirCompra.definition = {
-    methods: ["get","head"],
-    url: '/compras/{compra}/imprimir',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-imprimirCompra.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { compra: args }
-    }
-
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { compra: args.id }
-        }
-    
-    if (Array.isArray(args)) {
-        args = {
-                    compra: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        compra: typeof args.compra === 'object'
-                ? args.compra.id
-                : args.compra,
-                }
-
-    return imprimirCompra.definition.url
-            .replace('{compra}', parsedArgs.compra.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-imprimirCompra.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimirCompra.url(args, options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-imprimirCompra.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: imprimirCompra.url(args, options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-    const imprimirCompraForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimirCompra.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-        imprimirCompraForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimirCompra.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\CompraController::imprimirCompra
- * @see app/Http/Controllers/CompraController.php:1195
- * @route '/compras/{compra}/imprimir'
- */
-        imprimirCompraForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimirCompra.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    imprimirCompra.form = imprimirCompraForm
-/**
 * @see \App\Http\Controllers\CompraController::previewCompra
  * @see app/Http/Controllers/CompraController.php:1231
  * @route '/compras/{compra}/preview'
@@ -1516,6 +1414,6 @@ exportarPdf.head = (args: { compra: number | { id: number } } | [compra: number 
         })
     
     exportarPdf.form = exportarPdfForm
-const CompraController = { comprasParaImpresion, index, store, show, update, destroy, anular, create, edit, imprimirCompra, previewCompra, exportarExcel, exportarPdf }
+const CompraController = { comprasParaImpresion, index, store, show, update, destroy, anular, create, edit, previewCompra, exportarExcel, exportarPdf }
 
 export default CompraController

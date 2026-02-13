@@ -57,6 +57,8 @@ import ReservaController from './ReservaController'
 import CajaController from './CajaController'
 import GastoController from './GastoController'
 import CierreDiarioGeneralController from './CierreDiarioGeneralController'
+import ImpresionMovimientosController from './ImpresionMovimientosController'
+import ImpresionProductosVendidosController from './ImpresionProductosVendidosController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import ReservaStockController from './ReservaStockController'
@@ -75,7 +77,6 @@ import ReporteVentasController from './ReporteVentasController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
 import ImpresionStockController from './ImpresionStockController'
-import ImpresionMovimientosController from './ImpresionMovimientosController'
 import ImpresionVentasController from './ImpresionVentasController'
 import Settings from './Settings'
 const Controllers = {
@@ -138,6 +139,8 @@ ReservaController,
 CajaController,
 GastoController,
 CierreDiarioGeneralController,
+ImpresionMovimientosController,
+ImpresionProductosVendidosController,
 TipoAjusteInventarioController,
 InventarioInicialController,
 ReservaStockController,
@@ -156,7 +159,6 @@ ReporteVentasController,
 ConteoFisicoController,
 AnalisisAbcController,
 ImpresionStockController,
-ImpresionMovimientosController,
 ImpresionVentasController,
 Settings,
 }

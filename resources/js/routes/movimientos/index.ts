@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
 export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
 imprimir.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ imprimir.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
 imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +34,7 @@ imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
 imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +44,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
     const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +54,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
         imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +63,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::imprimir
- * @see app/Http/Controllers/ImpresionMovimientosController.php:17
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:16
  * @route '/movimientos/imprimir'
  */
         imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +79,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     imprimir.form = imprimirForm
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 export const preview = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ preview.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
 preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
     const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
         previewForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionMovimientosController::preview
- * @see app/Http/Controllers/ImpresionMovimientosController.php:104
+ * @see app/Http/Controllers/ImpresionMovimientosController.php:0
  * @route '/movimientos/preview'
  */
         previewForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -79,7 +79,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     imprimir.form = imprimirForm
 /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
 export const preview = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
 preview.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ preview.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
 preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +112,7 @@ preview.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
 preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +122,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
     const previewForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +132,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
         previewForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +141,7 @@ preview.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ImpresionStockController::preview
- * @see app/Http/Controllers/ImpresionStockController.php:113
+ * @see app/Http/Controllers/ImpresionStockController.php:105
  * @route '/stock/preview'
  */
         previewForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

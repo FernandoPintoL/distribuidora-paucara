@@ -1436,7 +1436,12 @@ class VentaController extends Controller
             // ✅ NUEVO: Extraer TODOS los filtros de la request
             $filtros = $request->all();
 
-            \Log::info('📋 [ventasParaImpresion] Todos los filtros recibidos:', array_filter($filtros, fn($v) => $v !== '' && $v !== null));
+            // ✅ CRÍTICO: Excluir parámetros de paginación y especiales
+            $parametrosExcluir = ['page', 'per_page', 'sort', 'order', 'all', 'print'];
+            $filtros = array_diff_key($filtros, array_flip($parametrosExcluir));
+
+            \Log::info('📋 [ventasParaImpresion] Todos los filtros recibidos (ANTES):', array_filter($request->all(), fn($v) => $v !== '' && $v !== null));
+            \Log::info('📋 [ventasParaImpresion] Filtros LIMPIOS (DESPUÉS):', array_filter($filtros, fn($v) => $v !== '' && $v !== null));
 
             $query = Venta::with([
                 'cliente:id,nombre,nit,telefono,email',
@@ -1517,10 +1522,20 @@ class VentaController extends Controller
 
             \Log::info('📋 [ventasParaImpresion] Query generada:', [
                 'sql' => $query->toSql(),
-                'bindings_count' => count($query->getBindings())
+                'bindings_count' => count($query->getBindings()),
+                'bindings' => $query->getBindings(),
+                'filtros_recibidos' => $filtros,  // ✅ NUEVO: Log de todos los filtros
+                'request_all_parameter' => request()->input('all'),  // ✅ NUEVO: Log del parámetro 'all'
             ]);
 
             $ventas = $query->get();
+
+            // 🔍 DEBUG: Mostrar IDs de ventas retornadas
+            \Log::info('📋 [ventasParaImpresion] IDs de ventas retornadas:', [
+                'cantidad' => $ventas->count(),
+                'ids' => $ventas->pluck('id')->toArray(),
+                'modo' => request()->input('all') === 'true' ? 'SIN PAGINACION' : 'CON PAGINACION',  // ✅ NUEVO
+            ]);
 
             \Log::info('📋 [ventasParaImpresion] Ventas obtenidas para impresión:', [
                 'cantidad' => $ventas->count(),

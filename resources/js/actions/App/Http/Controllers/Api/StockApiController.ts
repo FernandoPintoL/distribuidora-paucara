@@ -111,7 +111,7 @@ prepararImpresionMovimientos.post = (options?: RouteQueryOptions): RouteDefiniti
     prepararImpresionMovimientos.form = prepararImpresionMovimientosForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:89
+ * @see app/Http/Controllers/Api/StockApiController.php:178
  * @route '/api/stock/preparar-impresion-ventas'
  */
 export const prepararImpresionVentas = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -126,7 +126,7 @@ prepararImpresionVentas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:89
+ * @see app/Http/Controllers/Api/StockApiController.php:178
  * @route '/api/stock/preparar-impresion-ventas'
  */
 prepararImpresionVentas.url = (options?: RouteQueryOptions) => {
@@ -135,7 +135,7 @@ prepararImpresionVentas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:89
+ * @see app/Http/Controllers/Api/StockApiController.php:178
  * @route '/api/stock/preparar-impresion-ventas'
  */
 prepararImpresionVentas.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -145,7 +145,7 @@ prepararImpresionVentas.post = (options?: RouteQueryOptions): RouteDefinition<'p
 
     /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:89
+ * @see app/Http/Controllers/Api/StockApiController.php:178
  * @route '/api/stock/preparar-impresion-ventas'
  */
     const prepararImpresionVentasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -155,7 +155,7 @@ prepararImpresionVentas.post = (options?: RouteQueryOptions): RouteDefinition<'p
 
             /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:89
+ * @see app/Http/Controllers/Api/StockApiController.php:178
  * @route '/api/stock/preparar-impresion-ventas'
  */
         prepararImpresionVentasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -166,7 +166,7 @@ prepararImpresionVentas.post = (options?: RouteQueryOptions): RouteDefinition<'p
     prepararImpresionVentas.form = prepararImpresionVentasForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:123
+ * @see app/Http/Controllers/Api/StockApiController.php:290
  * @route '/api/stock/preparar-impresion-compras'
  */
 export const prepararImpresionCompras = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -181,7 +181,7 @@ prepararImpresionCompras.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:123
+ * @see app/Http/Controllers/Api/StockApiController.php:290
  * @route '/api/stock/preparar-impresion-compras'
  */
 prepararImpresionCompras.url = (options?: RouteQueryOptions) => {
@@ -190,7 +190,7 @@ prepararImpresionCompras.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:123
+ * @see app/Http/Controllers/Api/StockApiController.php:290
  * @route '/api/stock/preparar-impresion-compras'
  */
 prepararImpresionCompras.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -200,7 +200,7 @@ prepararImpresionCompras.post = (options?: RouteQueryOptions): RouteDefinition<'
 
     /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:123
+ * @see app/Http/Controllers/Api/StockApiController.php:290
  * @route '/api/stock/preparar-impresion-compras'
  */
     const prepararImpresionComprasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -210,7 +210,7 @@ prepararImpresionCompras.post = (options?: RouteQueryOptions): RouteDefinition<'
 
             /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:123
+ * @see app/Http/Controllers/Api/StockApiController.php:290
  * @route '/api/stock/preparar-impresion-compras'
  */
         prepararImpresionComprasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -220,8 +220,63 @@ prepararImpresionCompras.post = (options?: RouteQueryOptions): RouteDefinition<'
     
     prepararImpresionCompras.form = prepararImpresionComprasForm
 /**
+* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
+ * @see app/Http/Controllers/Api/StockApiController.php:324
+ * @route '/api/stock/preparar-impresion-productos-vendidos'
+ */
+export const prepararImpresionProductosVendidos = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: prepararImpresionProductosVendidos.url(options),
+    method: 'post',
+})
+
+prepararImpresionProductosVendidos.definition = {
+    methods: ["post"],
+    url: '/api/stock/preparar-impresion-productos-vendidos',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
+ * @see app/Http/Controllers/Api/StockApiController.php:324
+ * @route '/api/stock/preparar-impresion-productos-vendidos'
+ */
+prepararImpresionProductosVendidos.url = (options?: RouteQueryOptions) => {
+    return prepararImpresionProductosVendidos.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
+ * @see app/Http/Controllers/Api/StockApiController.php:324
+ * @route '/api/stock/preparar-impresion-productos-vendidos'
+ */
+prepararImpresionProductosVendidos.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: prepararImpresionProductosVendidos.url(options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
+ * @see app/Http/Controllers/Api/StockApiController.php:324
+ * @route '/api/stock/preparar-impresion-productos-vendidos'
+ */
+    const prepararImpresionProductosVendidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: prepararImpresionProductosVendidos.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
+ * @see app/Http/Controllers/Api/StockApiController.php:324
+ * @route '/api/stock/preparar-impresion-productos-vendidos'
+ */
+        prepararImpresionProductosVendidosForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: prepararImpresionProductosVendidos.url(options),
+            method: 'post',
+        })
+    
+    prepararImpresionProductosVendidos.form = prepararImpresionProductosVendidosForm
+/**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:157
+ * @see app/Http/Controllers/Api/StockApiController.php:431
  * @route '/api/stock/productos/{id}'
  */
 export const destroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -236,7 +291,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:157
+ * @see app/Http/Controllers/Api/StockApiController.php:431
  * @route '/api/stock/productos/{id}'
  */
 destroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -264,7 +319,7 @@ destroy.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:157
+ * @see app/Http/Controllers/Api/StockApiController.php:431
  * @route '/api/stock/productos/{id}'
  */
 destroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -274,7 +329,7 @@ destroy.delete = (args: { id: string | number } | [id: string | number ] | strin
 
     /**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:157
+ * @see app/Http/Controllers/Api/StockApiController.php:431
  * @route '/api/stock/productos/{id}'
  */
     const destroyForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -289,7 +344,7 @@ destroy.delete = (args: { id: string | number } | [id: string | number ] | strin
 
             /**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:157
+ * @see app/Http/Controllers/Api/StockApiController.php:431
  * @route '/api/stock/productos/{id}'
  */
         destroyForm.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -303,6 +358,6 @@ destroy.delete = (args: { id: string | number } | [id: string | number ] | strin
         })
     
     destroy.form = destroyForm
-const StockApiController = { prepararImpresion, prepararImpresionMovimientos, prepararImpresionVentas, prepararImpresionCompras, destroy }
+const StockApiController = { prepararImpresion, prepararImpresionMovimientos, prepararImpresionVentas, prepararImpresionCompras, prepararImpresionProductosVendidos, destroy }
 
 export default StockApiController

@@ -1,8 +1,8 @@
 /**
- * Componente: Botón de Impresión para Listado de Movimientos
+ * Componente: Botón de Impresión para Productos Vendidos
  *
- * Reemplaza FormatoSelector con Modal Dialog para seleccionar formato de impresión.
- * Soporta formatos: A4 (Carta), TICKET_80, TICKET_58
+ * Modal de selección de formato de impresión (A4, TICKET_80)
+ * para reporte de productos vendidos agrupados del día.
  */
 
 import { Fragment, useState } from 'react';
@@ -11,70 +11,53 @@ import { Button } from '@/presentation/components/ui/button';
 import { Printer, Download, ChevronLeft, X } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-interface Movimiento {
+interface ProductoVendido {
     id: number;
-    fecha: string;
-    tipo: string;
-    cantidad: number;
-    motivo: string;
+    nombre: string;
+    sku: string;
+    cantidad_total: number;
+    precio_unitario: number;
+    subtotal: number;
     [key: string]: any;
 }
 
-interface FiltrosMovimientos {
-    tipo?: string;
-    producto_id?: string;
-    almacen_id?: string;
-    [key: string]: any;
-}
-
-interface ImprimirMovimientosButtonProps {
-    movimientos: Movimiento[];
-    filtros?: FiltrosMovimientos;
+interface ImprimirProductosVendidosButtonProps {
+    productosVendidos?: ProductoVendido[];
+    fecha?: string;
     className?: string;
     iconOnly?: boolean;
 }
 
-const FORMATOS_MOVIMIENTOS = [
+const FORMATOS_PRODUCTOS = [
     { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar carta' },
     { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
-    { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
 ];
 
-export function ImprimirMovimientosButton({
-    movimientos,
-    filtros = {},
+export function ImprimirProductosVendidosButton({
+    productosVendidos = [],
+    fecha = new Date().toISOString().split('T')[0],
     className = '',
     iconOnly = false,
-}: ImprimirMovimientosButtonProps) {
+}: ImprimirProductosVendidosButtonProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [accion, setAccion] = useState<'imprimir' | 'pdf' | null>(null);
     const [formatoSeleccionado, setFormatoSeleccionado] = useState<string>('A4');
 
     const prepararImpresion = async (formato: string, accionURL: 'download' | 'stream' = 'stream') => {
-        console.log('Preparando impresión de movimientos:', { formato, filtros, accion: accionURL });
+        console.log('Preparando impresión de productos vendidos:', { formato, fecha, accion: accionURL });
         setLoading(true);
 
         try {
-            // ✅ NUEVO FLUJO: Enviar filtros al backend para que haga el filtrado y genere documento
-            // Limpiar filtros null/undefined/empty string antes de enviar
-            const filtrosLimpios = Object.fromEntries(
-                Object.entries(filtros || {}).filter(([_, value]) =>
-                    value !== null && value !== undefined && value !== ''
-                )
-            );
-
-            console.log('🔍 Filtros para enviar al backend:', filtrosLimpios);
-
-            // Realizar petición POST para que backend filtre y guarde en sesión
-            const response = await fetch('/api/stock/preparar-impresion-movimientos', {
+            // Realizar petición POST para que backend prepare datos
+            const response = await fetch('/api/stock/preparar-impresion-productos-vendidos', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
-                    filtros: filtrosLimpios,
+                    fecha: fecha,
                     formato: formato,
                 }),
             });
@@ -87,13 +70,14 @@ export function ImprimirMovimientosButton({
             const responseData = await response.json();
 
             console.log('✅ Backend preparó impresión:', {
-                cantidad: responseData.cantidad_movimientos,
-                ids: responseData.movimiento_ids,
+                cantidad_productos: responseData.cantidad_productos,
+                total_cantidad_vendida: responseData.total_cantidad_vendida,
+                total_monto: responseData.total_monto,
                 mensaje: responseData.message
             });
 
-            // ✅ MEJORADO: El backend retorna directamente la URL
-            const url = `/inventario/movimientos/imprimir?formato=${formato}&accion=${accionURL}`;
+            // Generar URL de impresión
+            const url = `/inventario/productos-vendidos/imprimir?formato=${formato}&accion=${accionURL}`;
 
             console.log('📄 URL de impresión generada:', url);
 
@@ -104,7 +88,7 @@ export function ImprimirMovimientosButton({
                 window.location.href = url;
             }
 
-            NotificationService.success('Reporte de movimientos enviado');
+            NotificationService.success('Reporte de productos vendidos enviado');
             handleClose();
         } catch (error) {
             console.error('Error al imprimir:', error);
@@ -134,8 +118,8 @@ export function ImprimirMovimientosButton({
         setAccion(null);
     };
 
-    // No mostrar si no hay movimientos
-    if (movimientos.length === 0) {
+    // No mostrar si no hay productos
+    if (productosVendidos.length === 0) {
         return null;
     }
 
@@ -158,7 +142,7 @@ export function ImprimirMovimientosButton({
                     onClick={() => setIsModalOpen(true)}
                 >
                     <Printer className="mr-2 h-4 w-4" />
-                    {loading ? 'Generando...' : 'Imprimir'}
+                    {loading ? 'Generando...' : 'Reporte Productos'}
                 </Button>
             )}
 
@@ -201,7 +185,7 @@ export function ImprimirMovimientosButton({
                                                 </button>
                                             )}
                                             <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
-                                                {accion ? 'Seleccionar formato' : 'Reporte de Movimientos'}
+                                                {accion ? 'Seleccionar formato' : 'Productos Vendidos'}
                                             </Dialog.Title>
                                         </div>
                                         <button
@@ -213,9 +197,14 @@ export function ImprimirMovimientosButton({
                                     </div>
 
                                     {/* Información */}
-                                    <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                        <p className="text-sm text-blue-900 dark:text-blue-300">
-                                            Registros: <span className="font-semibold">{movimientos.length}</span>
+                                    <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                        <p className="text-sm text-green-900 dark:text-green-300">
+                                            Productos: <span className="font-semibold">{productosVendidos.length}</span>
+                                        </p>
+                                        <p className="text-sm text-green-900 dark:text-green-300 mt-1">
+                                            Total Cantidad: <span className="font-semibold">
+                                                {productosVendidos.reduce((sum, p) => sum + (p.cantidad_total || 0), 0)}
+                                            </span>
                                         </p>
                                     </div>
 
@@ -265,7 +254,7 @@ export function ImprimirMovimientosButton({
                                                     Formato de impresión
                                                 </label>
                                                 <div className="space-y-2">
-                                                    {FORMATOS_MOVIMIENTOS.map((formato) => (
+                                                    {FORMATOS_PRODUCTOS.map((formato) => (
                                                         <button
                                                             key={formato.formato}
                                                             onClick={() => setFormatoSeleccionado(formato.formato)}
