@@ -5,38 +5,40 @@
 @section('contenido')
 {{-- Información del documento --}}
 <div class="documento-info">
-    <div class="documento-info-grid">
-        <div class="documento-info-seccion">
-            <h2 style="color: #3498db;">REPORTE DE VENTAS</h2>
-            <p><strong>Fecha de generación:</strong> {{ now()->format('d/m/Y H:i') }}</p>
-            @if($filtros && isset($filtros['estado']) && $filtros['estado'])
-                <p><strong>Estado:</strong> {{ ucfirst($filtros['estado']) }}</p>
-            @endif
-        </div>
-        <div class="documento-info-seccion" style="text-align: right;">
-            <p><strong>Total de registros:</strong> {{ count($ventas) }}</p>
-            <p><strong>Monto Total:</strong> {{ number_format($ventas->sum('total'), 2) }}</p>
-        </div>
-    </div>
+    <table>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="documento-info-seccion">
+                        <h2 style="color: #3498db;">REPORTE DE VENTAS</h2>
+                        <p><strong>Fecha de generación:</strong> {{ now()->format('d/m/Y H:i') }}</p>
+                        @if($filtros && isset($filtros['estado']) && $filtros['estado'])
+                            <p><strong>Estado:</strong> {{ ucfirst($filtros['estado']) }}</p>
+                        @endif
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 
 {{-- Tabla de ventas --}}
 <table class="tabla-productos">
     <thead>
         <tr>
-            <th style="width: 4%;">#</th>
-            <th style="width: 12%;">ID / Número</th>
-            <th style="width: 10%;">Fecha</th>
-            <th style="width: 16%;">Cliente</th>
-            <th style="width: 12%;">Total</th>
-            <th style="width: 12%;">Estado</th>
-            <th style="width: 14%;">Tipo de Pago</th>
+            <th style="width: 8%;">Folio</th>
+            <th style="width: 8%;">Fecha</th>
+            <th style="width: 14%;">Cliente</th>
+            <th style="width: 10%;">Total</th>
+            <th style="width: 10%;">Estado</th>
+            <th style="width: 12%;">Tipo de Pago</th>
+            <th style="width: 15%;">Usuario Creador</th>
+            {{-- <th style="width: 8%;">ID Caja</th> --}}
         </tr>
     </thead>
     <tbody>
         @forelse($ventas as $item)
         <tr>
-            <td>{{ $loop->iteration }}</td>
             <td>
                 @php
                     $id = '-';
@@ -50,7 +52,7 @@
                     }
                 @endphp
                 <strong>{{ $id }}</strong><br>
-                <small style="color: #666;">{{ $numero }}</small>
+                {{-- <small style="color: #666;">{{ $numero }}</small> --}}
             </td>
             <td>
                 @php
@@ -164,6 +166,38 @@
                     {{ $tipoPago }}
                 </span>
             </td>
+            {{-- ✅ NUEVO: Usuario Creador --}}
+            <td>
+                @php
+                    $usuarioCreador = '-';
+                    if (is_object($item) && isset($item->usuario)) {
+                        $usuarioCreador = $item->usuario->name ?? '-';
+                    } elseif (is_array($item) && isset($item['usuario'])) {
+                        $usr = $item['usuario'];
+                        $usuarioCreador = is_array($usr) ? ($usr['name'] ?? '-') : (is_object($usr) ? ($usr->name ?? '-') : '-');
+                    }
+                @endphp
+                {{ $usuarioCreador }}
+            </td>
+            {{-- ✅ NUEVO: ID Caja --}}
+            {{-- <td>
+                @php
+                    $idCaja = '-';
+                    // Obtener desde movimientoCaja -> caja -> id
+                    if (is_object($item) && isset($item->movimientoCaja) && isset($item->movimientoCaja->caja)) {
+                        $idCaja = $item->movimientoCaja->caja->id ?? '-';
+                    } elseif (is_array($item) && isset($item['movimiento_caja'])) {
+                        $mc = $item['movimiento_caja'];
+                        if (is_array($mc) && isset($mc['caja'])) {
+                            $caja = $mc['caja'];
+                            $idCaja = is_array($caja) ? ($caja['id'] ?? '-') : (is_object($caja) ? ($caja->id ?? '-') : '-');
+                        } elseif (is_object($mc) && isset($mc->caja)) {
+                            $idCaja = $mc->caja->id ?? '-';
+                        }
+                    }
+                @endphp
+                <strong>{{ $idCaja }}</strong>
+            </td> --}}
         </tr>
         @empty
         <tr>
@@ -176,7 +210,7 @@
 </table>
 
 {{-- Resumen --}}
-<div class="totales">
+<div class="totales" style="font-size: 14px;">
     <table>
         <tr class="total-final">
             <td><strong>TOTAL DE VENTAS:</strong></td>
@@ -194,7 +228,7 @@
 </div>
 
 {{-- Nota de documentación --}}
-<div class="observaciones" style="margin-top: 10px; border-left-color: #3498db; background: #ecf0f1;">
+<div class="observaciones" style="margin-top: 10px; border-left-color: #3498db; background: #ecf0f1; font-size: 13px;">
     <strong>Nota Informativa:</strong>
     <p style="margin-top: 5px;">
         Este es un reporte de referencia de ventas.

@@ -226,6 +226,11 @@ class Proforma extends Model
         return $this->fecha_vencimiento && $this->fecha_vencimiento->isPast();
     }
 
+    public function tieneReservas(): bool
+    {
+        return $this->reservas()->exists();
+    }
+
     public function esDeAppExterna(): bool
     {
         return $this->canal_origen === self::CANAL_APP_EXTERNA;

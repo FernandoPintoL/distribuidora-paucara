@@ -1,100 +1,92 @@
 @extends('impresion.layouts.base-ticket')
-
 @section('titulo', 'Proforma #' . $documento->numero)
 
 @section('contenido')
-<div class="separador"></div>
 
-{{-- Info del documento --}}
-<div class="documento-titulo">PROFORMA (COTIZACIÓN)</div>
-<div class="documento-numero">#{{ $documento->numero }}</div>
-<div class="center" style="margin-top: 3px; font-size: 7px;">
-    {{ $documento->fecha->format('d/m/Y') }}
-</div>
-<div class="center" style="font-size: 6px;">
-    Válida hasta: {{ $documento->fecha_vencimiento ? $documento->fecha_vencimiento->format('d/m/Y') : 'N/A' }}
+<div class="separador"></div>
+{{-- Encabezado --}}
+<div style="text-align: center; margin-bottom: 10px;">
+    <h3 style="margin: 5px 0;">PROFORMA <br/> {{ $documento->numero }}</h3>
+    <p>Folio: {{ $documento->id }}</p>
+    <p style="margin: 3px 0;">{{ $documento->created_at->format('d/m/Y H:i') }}</p>
 </div>
 
 <div class="separador"></div>
 
-{{-- Info del cliente --}}
-<div class="documento-info">
-    <p><strong>Cliente:</strong> {{ $documento->cliente->nombre }}</p>
-    @if($documento->cliente->nit)
-    <p><strong>NIT/CI:</strong> {{ $documento->cliente->nit }}</p>
+{{-- CLIENTE --}}
+<div style="margin-bottom: 8px;">
+    <p style="margin: 2px 0;"><strong>{{ $documento->cliente?->nombre ?? 'CLIENTE' }}</strong></p>
+    @if($documento->cliente?->nit_ci)
+        <p style="margin: 2px 0;">NIT/CI: {{ $documento->cliente->nit_ci }}</p>
     @endif
-    <p><strong>Estado:</strong> {{ $documento->estado }}</p>
-</div>
-
-<div class="separador"></div>
-
-{{-- Items --}}
-<table class="items">
-    @foreach($documento->detalles as $detalle)
-    <tr>
-        <td colspan="3" class="item-nombre">{{ $detalle->producto->nombre }}</td>
-    </tr>
-    @if($detalle->producto->codigo)
-    <tr>
-        <td colspan="3" class="item-detalle">Código: {{ $detalle->producto->codigo }}</td>
-    </tr>
+    @if($documento->cliente?->localidad)
+        <p style="margin: 2px 0;">📍 {{ $documento->cliente->localidad->nombre }}</p>
     @endif
-    <tr>
-        <td style="width: 50%;">
-            {{ number_format($detalle->cantidad, 2) }} x {{ number_format($detalle->precio_unitario, 2) }}
-        </td>
-        <td style="width: 10%;"></td>
-        <td style="width: 40%; text-align: right;">
-            <strong>{{ number_format($detalle->subtotal, 2) }}</strong>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="3" style="height: 3px;"></td>
-    </tr>
-    @endforeach
-</table>
-
-<div class="separador-doble"></div>
-
-{{-- Totales --}}
-<div class="totales">
-    <table>
-        {{-- <tr>
-            <td>Subtotal:</td>
-            <td class="right">{{ number_format($documento->subtotal, 2) }}</td>
-        </tr> --}}
-        {{-- @if($documento->descuento > 0)
-        <tr>
-            <td>Descuento:</td>
-            <td class="right">-{{ number_format($documento->descuento, 2) }}</td>
-        </tr>
-        @endif --}}
-        {{-- @if($documento->impuesto > 0)
-        <tr>
-            <td>Impuesto:</td>
-            <td class="right">{{ number_format($documento->impuesto, 2) }}</td>
-        </tr>
-        @endif --}}
-        <tr class="total-final">
-            <td><strong>TOTAL {{ $documento->moneda->codigo ?? 'BOB' }}:</strong></td>
-            <td class="right"><strong>{{ number_format($documento->subtotal, 2) }}</strong></td>
-        </tr>
-    </table>
 </div>
 
-<div class="separador"></div>
-
-{{-- Nota --}}
-<div class="center" style="font-size: 6px; margin-top: 5px;">
-    <p style="margin: 2px 0;">Esta es una cotización</p>
-    <p>No constituye documento fiscal</p>
-</div>
-
-{{-- Observaciones --}}
-@if($documento->observaciones)
-<div class="observaciones">
-    <strong>Obs:</strong>
-    {{ Str::limit($documento->observaciones, 100) }}
+{{-- PREVENTISTA --}}
+@if($documento->usuarioCreador)
+<div style="margin-bottom: 8px;">
+    <p style="margin: 2px 0;"><strong>Preventista:</strong> {{ $documento->usuarioCreador->name }}</p>
 </div>
 @endif
+
+<hr style="margin: 10px 0; border: none; border-top: 1px solid #333;">
+
+{{-- PRODUCTOS/ITEMS --}}
+@include('impresion.ventas.partials._items', ['formato' => 'ticket-80'])
+
+{{-- TOTALES --}}
+<div style="margin: 10px 0; border-top: 2px solid #333; border-bottom: 1px solid #333;">
+    @php
+        $subtotal = $documento->subtotal ?? 0;
+        $descuento = $documento->descuento ?? 0;
+        $impuesto = $documento->impuesto ?? 0;
+        $total = $documento->total ?? 0;
+    @endphp
+    @if($subtotal > 0)
+    <div style="display: flex; justify-content: space-between; padding: 3px 0;">
+        <span>Subtotal:</span>
+        <span>{{ number_format($subtotal, 2) }}</span>
+    </div>
+    @endif
+    @if($descuento > 0)
+    <div style="display: flex; justify-content: space-between; padding: 3px 0;">
+        <span>Descuento:</span>
+        <span>-{{ number_format($descuento, 2) }}</span>
+    </div>
+    @endif
+    @if($impuesto > 0)
+    <div style="display: flex; justify-content: space-between; padding: 3px 0;">
+        <span>IVA:</span>
+        <span>{{ number_format($impuesto, 2) }}</span>
+    </div>
+    @endif
+    <div style="display: flex; justify-content: space-between; padding: 5px 0; font-weight: bold; border-top: 1px solid #333; margin-top: 3px;">
+        <span>TOTAL:</span>
+        <span>{{ number_format($total, 2) }}</span>
+    </div>
+</div>
+
+{{-- INFORMACIÓN IMPORTANTE --}}
+<div style="margin-top: 10px;">
+    <p style="margin: 3px 0;">
+        <strong>📅 Válida hasta:</strong><br>
+        {{ $documento->fecha_vencimiento->format('d/m/Y') }}
+        @if($documento->fecha_vencimiento < now())
+            <span style="color: red; font-weight: bold;">⚠️ VENCIDA</span>
+        @endif
+    </p>
+
+    @if($documento->fecha_entrega_solicitada)
+    <p style="margin: 3px 0; margin-top: 5px;">
+        <strong>🚚 Entrega solicitada:</strong><br>
+        {{ $documento->fecha_entrega_solicitada->format('d/m/Y') }}
+        @if($documento->hora_entrega_solicitada)
+            ⏰ {{ $documento->hora_entrega_solicitada }}
+        @endif
+    </p>
+    @endif
+</div>
+
 @endsection

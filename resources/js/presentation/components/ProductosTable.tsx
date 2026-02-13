@@ -145,6 +145,28 @@ export default function ProductosTable({
                 }));
             }
         }
+
+        // ✅ NUEVO: Inicializar select de tipo de precio con "Precio Venta"
+        if (tipo === 'venta') {
+            const precios = ultimoDetalle.producto?.precios || [];
+            const preciosVenta = precios.filter(p => {
+                const nombre = (p.nombre || '').toLowerCase();
+                return !nombre.includes('costo') && !nombre.includes('cost');
+            });
+
+            // Buscar "Precio Venta" o usar el primero disponible
+            const precioVenta = preciosVenta.find(p =>
+                (p.nombre || '').toLowerCase().includes('venta')
+            ) || preciosVenta[0];
+
+            if (precioVenta && !selectedTipoPrecio[ultimoIndice]) {
+                console.log(`✅ [ProductosTable] Inicializando select tipo de precio con: ${precioVenta.nombre}`);
+                setSelectedTipoPrecio(prev => ({
+                    ...prev,
+                    [ultimoIndice]: precioVenta.nombre || ''
+                }));
+            }
+        }
     }, [detalles.length]); // Solo vigilar cambios en la cantidad de detalles
 
     // ✅ NUEVO: Estado para modal de cascada de precios
@@ -1109,10 +1131,13 @@ export default function ProductosTable({
                                                         ) : null;
                                                     }
 
+                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar el primero de venta
+                                                    const valorInicial = selectedTipoPrecio[index] ?? detalle.tipo_precio_nombre ?? preciosVenta[0]?.nombre ?? '';
+
                                                     return (
                                                         <select
                                                             disabled={readOnly}
-                                                            value={selectedTipoPrecio[index] ?? detalle.tipo_precio_nombre ?? preciosVenta[0]?.nombre ?? ''}
+                                                            value={valorInicial}
                                                             onChange={(e) => {
                                                                 const nombreSeleccionado = e.target.value;
                                                                 const precioSeleccionado = preciosVenta.find(p => p.nombre === nombreSeleccionado);
@@ -1138,7 +1163,8 @@ export default function ProductosTable({
                                                             }}
                                                             className="mt-1 px-2 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            <option value="">Seleccionar tipo de precio</option>
+                                                            {/* ✅ NUEVO: Solo mostrar opción vacía si no hay valor inicial */}
+                                                            {!valorInicial && <option value="">Seleccionar tipo de precio</option>}
                                                             {preciosVenta.map((precio) => (
                                                                 <option key={precio.id || precio.tipo_precio_id} value={precio.nombre || ''}>
                                                                     {precio.nombre || `Tipo ${precio.tipo_precio_id}`} - {formatCurrencyWith2Decimals(precio.precio || 0)}

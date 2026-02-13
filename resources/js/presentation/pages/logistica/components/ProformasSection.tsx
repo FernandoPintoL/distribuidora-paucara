@@ -5,10 +5,11 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
-import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown, Printer } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
 import { useEstadosProformas } from '@/application/hooks';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 type SortField = 'numero' | 'cliente' | 'estado' | 'monto' | 'fecha' | null;
 type SortDirection = 'asc' | 'desc' | null;
@@ -112,6 +113,8 @@ export function ProformasSection({
     const [amountTo, setAmountTo] = useState<string>('');
     const [searchInput, setSearchInput] = useState<string>(searchProforma);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+    const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+    const [selectedProformaForPrint, setSelectedProformaForPrint] = useState<ProformaAppExterna | null>(null);
 
     // Fase 3: Usar hook de estados centralizados para obtener estados dinámicamente
     const { estados: estadosAPI, isLoading, error } = useEstadosProformas();
@@ -998,6 +1001,18 @@ export function ProformasSection({
                                             >
                                                 <Eye className="h-4 w-4 dark:text-gray-400" />
                                             </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setSelectedProformaForPrint(proforma);
+                                                    setShowPrintModal(true);
+                                                }}
+                                                className="dark:hover:bg-slate-700"
+                                                title="Imprimir proforma"
+                                            >
+                                                <Printer className="h-4 w-4 dark:text-gray-400" />
+                                            </Button>
                                             {['PENDIENTE', 'APROBADA', 'VENCIDA'].includes(proforma.estado) && (
                                                 <Button
                                                     size="sm"
@@ -1041,6 +1056,24 @@ export function ProformasSection({
                         Siguiente <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
+
+                {/* ✅ NUEVO: Modal de Impresión */}
+                {showPrintModal && selectedProformaForPrint && (
+                    <OutputSelectionModal
+                        isOpen={showPrintModal}
+                        onClose={() => {
+                            setShowPrintModal(false);
+                            setSelectedProformaForPrint(null);
+                        }}
+                        tipoDocumento="proforma"
+                        documentoId={selectedProformaForPrint.id}
+                        documentoInfo={{
+                            numero: selectedProformaForPrint.numero,
+                            fecha: selectedProformaForPrint.created_at,
+                            monto: selectedProformaForPrint.total,
+                        }}
+                    />
+                )}
             </CardContent>
         </Card>
     );

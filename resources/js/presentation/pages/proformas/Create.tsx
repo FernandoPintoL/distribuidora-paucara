@@ -160,7 +160,18 @@ export default function ProformasCreate({
 
     // Handlers para ProductosTable
     const handleAgregarProducto = (producto: Producto) => {
-        const precioUnitario = (producto.precio_base as number) || 0
+        // ✅ CAMBIO 2026-02-13: Usar tipo_precio_id_recomendado para seleccionar el precio correcto
+        const tipoPrecioRecomendado = (producto as any).tipo_precio_id_recomendado
+
+        // Buscar el precio recomendado en el array de precios
+        const preciosArray = (producto as any).precios || []
+        const precioRecomendado = preciosArray.find((p: any) => p.tipo_precio_id === tipoPrecioRecomendado)
+
+        // Usar el precio recomendado si existe, si no, usar el precio de venta, si no, usar precio base
+        const precioUnitario = precioRecomendado?.precio ?? (producto.precio_venta as number) ?? (producto.precio_base as number) ?? 0
+
+        console.debug('💰 [Agregar Producto] tipoPrecioRecomendado:', tipoPrecioRecomendado, 'precioUnitario:', precioUnitario)
+
         const nuevoDetalle: ProformaDetalleLocal = {
             id: Math.random(),
             producto,
@@ -182,7 +193,7 @@ export default function ProformasCreate({
         const itemsParaCalcular = nuevosDetalles.map(d => ({
             producto_id: d.producto_id,
             cantidad: d.cantidad,
-            tipo_precio_id: undefined
+            tipo_precio_id: tipoPrecioRecomendado  // ✅ CAMBIO: Usar el tipo_precio_id recomendado
         }))
         calcularCarritoDebounced(itemsParaCalcular)
     }

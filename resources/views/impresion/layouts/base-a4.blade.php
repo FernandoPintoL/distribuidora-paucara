@@ -119,6 +119,7 @@
             border-collapse: collapse;
             margin: 15px 0;
             box-sizing: border-box !important;
+            font-size: 12px;
         }
 
         table.tabla-productos thead {
@@ -336,19 +337,18 @@
         <div class="header">
             <div class="header-logo">
                 @if($empresa->logo_principal)
-                <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
+                    <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
+                @endif
+                @if(!empty($logo_principal_base64))
+                    <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 390px; max-height: 130px; object-fit: contain;">
                 @endif
             </div>
             <div class="header-empresa">
                 <h1>{{ $empresa->nombre_comercial }}</h1>
-                <p><strong>{{ $empresa->razon_social }}</strong></p>
+                {{-- <p><strong>{{ $empresa->razon_social }}</strong></p> --}}
                 <p>{{ $empresa->direccion }}</p>
-                <p>{{ $empresa->ciudad }} - {{ $empresa->pais }}</p>
                 @if($empresa->telefono)
-                <p>Tel: {{ $empresa->telefono }}</p>
-                @endif
-                @if($empresa->email)
-                <p>Email: {{ $empresa->email }}</p>
+                <p>Cel: {{ $empresa->telefono }}</p>
                 @endif
             </div>
         </div>

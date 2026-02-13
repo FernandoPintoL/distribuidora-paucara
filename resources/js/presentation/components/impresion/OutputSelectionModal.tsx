@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock';
+export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock';
 
 interface FormatoConfig {
     formato: string;
@@ -40,6 +40,10 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    proforma: [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
     ],
     compra: [
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar carta' },

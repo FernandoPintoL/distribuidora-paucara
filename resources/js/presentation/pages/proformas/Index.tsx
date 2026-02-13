@@ -13,7 +13,8 @@ import {
     TableRow,
 } from '@/presentation/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select'
-import { Search, Eye, CheckCircle, XCircle, FileText, Filter } from 'lucide-react'
+import { Search, Eye, CheckCircle, XCircle, FileText, Filter, Printer } from 'lucide-react'
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Proforma } from '@/domain/entities/proformas'
@@ -38,6 +39,8 @@ export default function ProformasIndex({ proformas }: Props) {
     const [search, setSearch] = useState('')
     const [filtroEstado, setFiltroEstado] = useState<string>('TODOS')
     const [isLoading, setIsLoading] = useState(false)
+    const [showPrintModal, setShowPrintModal] = useState<boolean>(false)
+    const [selectedProformaForPrint, setSelectedProformaForPrint] = useState<Proforma | null>(null)
 
     // Generar opciones de estado desde el API
     const estadoOptions = useMemo(() => {
@@ -201,6 +204,18 @@ export default function ProformasIndex({ proformas }: Props) {
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
 
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedProformaForPrint(proforma)
+                                                            setShowPrintModal(true)
+                                                        }}
+                                                        title="Imprimir proforma"
+                                                    >
+                                                        <Printer className="h-4 w-4" />
+                                                    </Button>
+
                                                     {proforma.estado === 'PENDIENTE' && (
                                                         <>
                                                             <Button
@@ -256,6 +271,24 @@ export default function ProformasIndex({ proformas }: Props) {
                             })}
                         </div>
                     </div>
+                )}
+
+                {/* ✅ NUEVO: Modal de Impresión */}
+                {showPrintModal && selectedProformaForPrint && (
+                    <OutputSelectionModal
+                        isOpen={showPrintModal}
+                        onClose={() => {
+                            setShowPrintModal(false)
+                            setSelectedProformaForPrint(null)
+                        }}
+                        tipoDocumento="proforma"
+                        documentoId={selectedProformaForPrint.id}
+                        documentoInfo={{
+                            numero: selectedProformaForPrint.numero,
+                            fecha: selectedProformaForPrint.created_at,
+                            monto: selectedProformaForPrint.total,
+                        }}
+                    />
                 )}
             </div>
         </AppLayout>
