@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Services\Notifications\ProformaNotificationService;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class Proforma extends Model
 {
@@ -59,6 +60,11 @@ class Proforma extends Model
         'entregado_en',
         'entregado_a',
         'observaciones_entrega',
+    ];
+
+    // ✅ CRÍTICO: Incluir accessors en la serialización para Inertia
+    protected $appends = [
+        'estado', // Usar el accessor que devuelve estadoLogistica->codigo
     ];
 
     protected function casts(): array
@@ -196,11 +202,20 @@ class Proforma extends Model
     }
 
     /**
+     * ✅ NUEVO: Relación con el preventista asignado a la proforma
+     */
+    public function preventista(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'preventista_id');
+    }
+
+    /**
      * Relación con el estado logístico (FK)
      */
     public function estadoLogistica(): BelongsTo
     {
-        return $this->belongsTo(EstadoLogistica::class, 'estado_proforma_id');
+        return $this->belongsTo(EstadoLogistica::class, 'estado_proforma_id')
+            ->where('categoria', 'proforma');  // ✅ NUEVO: Filtrar por categoría 'proforma'
     }
 
     // Métodos de utilidad

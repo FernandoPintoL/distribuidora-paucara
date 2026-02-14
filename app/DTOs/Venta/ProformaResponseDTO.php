@@ -44,6 +44,8 @@ class ProformaResponseDTO extends BaseDTO
         public string $updated_at = '',
         public ?int $usuario_creador_id = null,
         public ?array $usuario_creador = null,
+        // ✅ CRÍTICO: Incluir datos completos del estado logístico para Show.tsx
+        public ?array $estado_logistica = null,
     ) {}
 
     /**
@@ -138,6 +140,17 @@ class ProformaResponseDTO extends BaseDTO
                 'id' => $model->usuarioCreador->id,
                 'name' => $model->usuarioCreador->name,
                 'email' => $model->usuarioCreador->email,
+            ] : null,
+            // ✅ CRÍTICO: Incluir datos del estado logístico para que Show.tsx muestre icon/nombre/color
+            estado_logistica: $model->relationLoaded('estadoLogistica') && $model->estadoLogistica ? [
+                'id' => $model->estadoLogistica->id,
+                'codigo' => $model->estadoLogistica->codigo,
+                'nombre' => $model->estadoLogistica->nombre,
+                'icono' => $model->estadoLogistica->icono ?? null,
+                'color' => $model->estadoLogistica->color ?? null,
+                'categoria' => $model->estadoLogistica->categoria,
+                'descripcion' => $model->estadoLogistica->descripcion ?? null,
+                'activo' => $model->estadoLogistica->activo,
             ] : null,
         );
     }

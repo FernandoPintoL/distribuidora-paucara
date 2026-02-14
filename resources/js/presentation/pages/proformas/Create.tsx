@@ -65,12 +65,73 @@ interface ProformaDetalleLocal {
 }
 
 
+interface ProformaData {
+    // ✅ Campos básicos
+    id: number
+    numero: string
+    estado: string
+    estado_proforma_id?: number
+
+    // ✅ Cliente
+    cliente_id: number
+    cliente_nombre: string
+
+    // ✅ Fechas
+    fecha: string
+    fecha_vencimiento: string
+    fecha_entrega_solicitada?: string
+
+    // ✅ Horario de entrega
+    hora_entrega_solicitada?: string
+    hora_entrega_solicitada_fin?: string
+
+    // ✅ Montos
+    subtotal: number
+    impuesto: number
+    total: number
+    descuento?: number | string
+
+    // ✅ Entrega
+    tipo_entrega?: 'DELIVERY' | 'PICKUP'
+    direccion_entrega_solicitada_id?: number | null
+    direccion_entrega_confirmada_id?: number | null
+
+    // ✅ Configuración
+    canal: string
+    canal_origen?: string
+    politica_pago: string
+    observaciones?: string
+
+    // ✅ Asignaciones
+    preventista_id?: number | null
+    usuario_creador_id?: number
+    usuario_creador?: {
+        id: number
+        name: string
+        email: string
+    }
+
+    // ✅ Estado actual
+    estado_logistica?: {
+        id: number
+        codigo: string
+        nombre: string
+        categoria: string
+        icono: string
+        color: string
+    }
+}
+
 interface Props {
     clientes: Cliente[]
     productos: Producto[]
     almacenes: Array<{ id: number; nombre: string }>
     preventistas: any[]  // Usuarios con rol 'preventista'
     almacen_id_empresa?: number // ✅ NUEVO: ID del almacén principal de la empresa
+    modo?: 'crear' | 'editar'  // ✅ NUEVO: Modo de operación
+    proforma?: ProformaData  // ✅ NUEVO: Datos de proforma en modo edición
+    detallesProforma?: ProformaDetalleLocal[]  // ✅ NUEVO: Detalles precargados
+    direccionesCliente?: Array<{ id: number; direccion: string; localidad_id: number }>  // ✅ NUEVO: Direcciones del cliente
 }
 
 export default function ProformasCreate({
@@ -78,8 +139,15 @@ export default function ProformasCreate({
     productos: productosIniciales,
     almacenes,
     preventistas,
-    almacen_id_empresa = 1
+    almacen_id_empresa = 1,
+    modo = 'crear',
+    proforma,
+    detallesProforma = [],
+    direccionesCliente = []
 }: Props) {
+    console.log('🚀 ProformasCreate renderizado con props:', { clientes, productosIniciales, almacenes, preventistas, almacen_id_empresa, modo, proforma, detallesProforma, direccionesCliente });
+
+
     // ✅ NUEVO: Validaciones defensivas con useMemo para evitar renderizados múltiples
     const clientesSeguro = useMemo(() => clientes || [], [clientes])
     const productosSeguro = useMemo(() => productosIniciales || [], [productosIniciales])
@@ -120,6 +188,50 @@ export default function ProformasCreate({
     const [tipoEntrega, setTipoEntrega] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
     const [observaciones, setObservaciones] = useState('')
     const [politicaPago, setPoliticaPago] = useState<'CONTRA_ENTREGA' | 'ANTICIPADO_100'>('CONTRA_ENTREGA')
+
+    // ✅ NUEVO: useEffect para precarga de datos en modo edición
+    useEffect(() => {
+        if (modo === 'editar' && proforma) {
+            // ✅ Fechas
+            setFecha(proforma.fecha)
+            setFechaVencimiento(proforma.fecha_vencimiento)
+            if (proforma.fecha_entrega_solicitada) {
+                setFechaEntregaSolicitada(proforma.fecha_entrega_solicitada)
+            }
+
+            // ✅ Configuración
+            setCanal(proforma.canal as any)
+            setPoliticaPago(proforma.politica_pago as any)
+            setObservaciones(proforma.observaciones || '')
+            setTipoEntrega((proforma.tipo_entrega as 'DELIVERY' | 'PICKUP') || 'DELIVERY')
+
+            // ✅ Horarios de entrega (si existen)
+            if (proforma.hora_entrega_solicitada) {
+                // Actualizar la hora si es necesario
+            }
+
+            // ✅ Asignaciones
+            setPreventistaId(proforma.preventista_id || null)
+
+            // ✅ Precarga de cliente
+            const clienteEncontrado = clientesSeguro.find(c => c.id === proforma.cliente_id)
+            if (clienteEncontrado) {
+                setClienteValue(clienteEncontrado.id)
+                setClienteDisplay(clienteEncontrado.nombre)
+                setClienteSeleccionado(clienteEncontrado)
+            }
+
+            // ✅ Precarga de detalles
+            if (detallesProforma && detallesProforma.length > 0) {
+                setDetalles(detallesProforma)
+            }
+
+            // ✅ Activar envío si hay fecha de entrega solicitada
+            if (proforma.fecha_entrega_solicitada) {
+                setRequiereEnvio(true)
+            }
+        }
+    }, [modo, proforma, detallesProforma, clientesSeguro])
 
     // Búsqueda de productos
     const {
@@ -261,55 +373,100 @@ export default function ProformasCreate({
         setIsSubmitting(true)
 
         try {
-            const payload = {
-                cliente_id: clienteValue,
-                fecha,
-                fecha_vencimiento: fechaVencimiento,
-                canal,
-                requiere_envio: requiereEnvio,
-                fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
-                tipo_entrega: tipoEntrega,
-                politica_pago: politicaPago,
-                observaciones,
-                detalles: detalles.map(d => ({
-                    producto_id: d.producto_id,
-                    cantidad: d.cantidad,
-                    precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario
-                })),
-                subtotal: totales.subtotal,
-                impuesto: 0,
-                total: totales.total,
-                estado_inicial: estadoInicial,  // ✅ NUEVO: BORRADOR o PENDIENTE
-                preventista_id: preventistaId,  // ✅ NUEVO: Preventista asignado
+            // ✅ NUEVO: Diferencia entre crear y editar
+            if (modo === 'editar' && proforma) {
+                // 📝 MODO EDICIÓN: Actualizar detalles y otros campos de proforma existente
+                const detallesPayload = {
+                    detalles: detalles.map(d => ({
+                        producto_id: d.producto_id,
+                        cantidad: d.cantidad,
+                        precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario,
+                        subtotal: d.cantidad * (getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario)
+                    })),
+                    // ✅ NUEVO: Incluir campos adicionales opcionales para edición completa
+                    fecha: fecha || undefined,
+                    fecha_vencimiento: fechaVencimiento || undefined,
+                    fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
+                    tipo_entrega: tipoEntrega,
+                    canal: canal,
+                    politica_pago: politicaPago,
+                    observaciones: observaciones || undefined,
+                }
+
+                const response = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(detallesPayload),
+                })
+
+                if (!response.ok) {
+                    const error = await response.json()
+                    throw new Error(error.message || 'Error al actualizar proforma')
+                }
+
+                toast.success('✅ Proforma actualizada exitosamente')
+
+                // Redirigir a la proforma actualizada
+                setTimeout(() => {
+                    window.location.href = `/proformas/${proforma.id}`
+                }, 1000)
+            } else {
+                // ✅ MODO CREACIÓN: Crear nueva proforma
+                const payload = {
+                    cliente_id: clienteValue,
+                    fecha,
+                    fecha_vencimiento: fechaVencimiento,
+                    canal,
+                    requiere_envio: requiereEnvio,
+                    fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
+                    tipo_entrega: tipoEntrega,
+                    politica_pago: politicaPago,
+                    observaciones,
+                    detalles: detalles.map(d => ({
+                        producto_id: d.producto_id,
+                        cantidad: d.cantidad,
+                        precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario
+                    })),
+                    subtotal: totales.subtotal,
+                    impuesto: 0,
+                    total: totales.total,
+                    estado_inicial: estadoInicial,  // ✅ NUEVO: BORRADOR o PENDIENTE
+                    preventista_id: preventistaId,  // ✅ NUEVO: Preventista asignado
+                }
+
+                const response = await fetch('/proformas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(payload),
+                })
+
+                if (!response.ok) {
+                    const error = await response.json()
+                    throw new Error(error.message || 'Error al crear proforma')
+                }
+
+                const data = await response.json()
+                toast.success('✅ Proforma creada exitosamente')
+
+                // Redirigir a la proforma
+                setTimeout(() => {
+                    window.location.href = `/proformas/${data.data.id}`
+                }, 1000)
             }
-
-            const response = await fetch('/proformas', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(payload),
-            })
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.message || 'Error al crear proforma')
-            }
-
-            const data = await response.json()
-            toast.success('✅ Proforma creada exitosamente')
-
-            // Redirigir a la proforma
-            setTimeout(() => {
-                window.location.href = `/proformas/${data.data.id}`
-            }, 1000)
 
         } catch (error) {
             console.error('Error:', error)
-            toast.error(error instanceof Error ? error.message : 'Error al crear proforma')
+            toast.error(error instanceof Error ? error.message : modo === 'editar' ? 'Error al actualizar proforma' : 'Error al crear proforma')
         } finally {
             setIsSubmitting(false)
         }
@@ -319,9 +476,9 @@ export default function ProformasCreate({
         <>
         <AppLayout breadcrumbs={[
             { title: 'Proformas', href: '/proformas' },
-            { title: 'Nueva proforma', href: '#' }
+            { title: modo === 'editar' ? `Editar Proforma #${proforma?.numero}` : 'Nueva proforma', href: '#' }
         ]}>
-            <Head title="Nueva proforma" />
+            <Head title={modo === 'editar' ? `Editar Proforma #${proforma?.numero}` : 'Nueva proforma'} />
 
             <form onSubmit={handleCrearProforma} className="space-y-6 p-4">
                 {/* Información básica */}
@@ -627,10 +784,10 @@ export default function ProformasCreate({
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Creando...
+                                    {modo === 'editar' ? 'Guardando...' : 'Creando...'}
                                 </>
                             ) : (
-                                'Crear Proforma'
+                                modo === 'editar' ? 'Guardar Cambios' : 'Crear Proforma'
                             )}
                         </Button>
                     </div>

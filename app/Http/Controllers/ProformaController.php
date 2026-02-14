@@ -93,6 +93,177 @@ class ProformaController extends Controller
     }
 
     /**
+     * ✅ NUEVO: Mostrar formulario de edición para proforma existente
+     */
+    public function edit(Proforma $proforma): InertiaResponse
+    {
+        // Obtener ID del almacén de la empresa autenticada
+        $almacen_id_empresa = auth()->user()->empresa->almacen_id ?? 1;
+
+        // Cargar relaciones necesarias
+        $proforma->load([
+            'cliente',
+            'cliente.direcciones',
+            'cliente.localidad',
+            'detalles.producto.unidad',
+            'detalles.producto.categoria',
+            'detalles.producto.conversiones',
+            'detalles.producto.codigoPrincipal',
+            'preventista',
+            'usuarioCreador',
+            'estadoLogistica'
+        ]);
+
+        // Mapear detalles al formato esperado por el frontend
+        $detallesProforma = $proforma->detalles->map(function ($detalle) use ($almacen_id_empresa) {
+            $producto = $detalle->producto;
+
+            // 🔍 DEBUG: Buscar stock en TODOS los almacenes si no existe en el principal
+            $stock = $producto->stock()
+                ->where('almacen_id', $almacen_id_empresa)
+                ->first();
+
+            // Si no encuentra stock en almacén principal, obtener el primer stock disponible
+            if (!$stock) {
+                $stock = $producto->stock()->first();
+            }
+
+            // DEBUG LOG
+            \Log::debug('📦 Stock Query Debug', [
+                'producto_id' => $producto->id,
+                'producto_nombre' => $producto->nombre,
+                'almacen_id_buscado' => $almacen_id_empresa,
+                'stock_encontrado' => $stock ? [
+                    'id' => $stock->id,
+                    'almacen_id' => $stock->almacen_id,
+                    'cantidad' => $stock->cantidad,
+                    'cantidad_disponible' => $stock->cantidad_disponible,
+                    'cantidad_reservada' => $stock->cantidad_reservada,
+                ] : 'NULL - No hay stock en ningún almacén',
+            ]);
+
+            return [
+                'id'                 => $detalle->id,
+                'producto_id'        => $detalle->producto_id,
+                'cantidad'           => (int) $detalle->cantidad,
+                'precio_unitario'    => (float) $detalle->precio_unitario,
+                'descuento'          => 0,
+                'subtotal'           => (float) ($detalle->cantidad * $detalle->precio_unitario),
+
+                // ✅ CRÍTICO: Objeto producto completo para que el frontend lo encuentre
+                'producto'           => [
+                    'id'                 => $producto->id,
+                    'nombre'             => $producto->nombre ?? '',
+                    'codigo'             => $producto->sku ?? '',
+                    'codigo_barras'      => $producto->codigo_barras ?? '',
+                    'precio_venta'       => (float) $detalle->precio_unitario,
+                    'precio_compra'      => (float) ($producto->precio_compra ?? 0),
+                    'precio_costo'       => (float) ($producto->precio_costo ?? 0),
+                    'peso'               => (float) ($producto->peso ?? 0),
+                    'es_fraccionado'     => (bool) ($producto->es_fraccionado ?? false),
+                    'categoria_id'       => $producto->categoria_id,
+                    'limite_venta'       => $producto->limite_venta ? (int) $producto->limite_venta : null,
+
+                    // ✅ STOCK: Información de disponibilidad (ANIDADO DENTRO DE PRODUCTO como espera ProductosTable)
+                    'stock_disponible'   => (int) ($stock?->cantidad_disponible ?? 0),  // Disponible para usar
+                    'stock_total'        => (int) ($stock?->cantidad ?? 0),              // Total del lote/almacén
+
+                    // ✅ Unidad medida
+                    'unidad_id'          => $producto->unidad_id,
+                    'unidad_nombre'      => $producto->unidad?->nombre ?? '',
+
+                    // ✅ Conversiones disponibles
+                    'conversiones'       => $producto->conversiones ? $producto->conversiones->map(function ($conv) {
+                        return [
+                            'unidad_origen_id'   => $conv->unidad_origen_id,
+                            'unidad_destino_id'  => $conv->unidad_destino_id,
+                            'unidad_destino_nombre' => $conv->unidadDestino?->nombre ?? '',
+                            'factor_conversion'  => (float) $conv->factor,
+                        ];
+                    })->toArray() : [],
+                ],
+
+                // ✅ Información adicional para compatibilidad
+                'unidad_medida_id'       => $producto->unidad_id,
+                'unidad_medida_nombre'   => $producto->unidad?->nombre ?? '',
+                'unidad_venta_id'        => $producto->unidad_id,
+                'conversiones_count'     => (int) ($producto->conversiones?->count() ?? 0),
+                'es_fraccionado'         => (bool) ($producto->es_fraccionado ?? false),
+                'precio_venta'           => (float) $detalle->precio_unitario,
+            ];
+        })->toArray();
+
+        return Inertia::render('proformas/Create', [
+            'modo'                  => 'editar',
+            'proforma'              => [
+                // ✅ Campos básicos
+                'id'                => $proforma->id,
+                'numero'            => $proforma->numero,
+                'estado'            => $proforma->estado,
+                'estado_proforma_id' => $proforma->estado_proforma_id,
+
+                // ✅ Cliente
+                'cliente_id'        => $proforma->cliente_id,
+                'cliente_nombre'    => $proforma->cliente->nombre,
+
+                // ✅ Fechas (formato yyyy-MM-dd para HTML input[type=date])
+                'fecha'             => $proforma->fecha?->format('Y-m-d'),
+                'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                'fecha_entrega_solicitada' => $proforma->fecha_entrega_solicitada?->format('Y-m-d'),
+
+                // ✅ Horario de entrega
+                'hora_entrega_solicitada' => $proforma->hora_entrega_solicitada,
+                'hora_entrega_solicitada_fin' => $proforma->hora_entrega_solicitada_fin,
+
+                // ✅ Montos
+                'subtotal'          => $proforma->subtotal,
+                'impuesto'          => $proforma->impuesto,
+                'total'             => $proforma->total,
+                'descuento'         => $proforma->descuento ?? 0,
+
+                // ✅ Entrega
+                'tipo_entrega'      => $proforma->tipo_entrega,
+                'direccion_entrega_solicitada_id' => $proforma->direccion_entrega_solicitada_id,
+                'direccion_entrega_confirmada_id' => $proforma->direccion_entrega_confirmada_id,
+
+                // ✅ Configuración
+                'canal'             => $proforma->canal,
+                'canal_origen'      => $proforma->canal_origen ?? 'APP_EXTERNA',
+                'politica_pago'     => $proforma->politica_pago,
+                'observaciones'     => $proforma->observaciones,
+
+                // ✅ Asignaciones
+                'preventista_id'    => $proforma->preventista_id,
+                'usuario_creador_id' => $proforma->usuario_creador_id,
+                'usuario_creador'   => $proforma->usuarioCreador ? [
+                    'id'    => $proforma->usuarioCreador->id,
+                    'name'  => $proforma->usuarioCreador->name,
+                    'email' => $proforma->usuarioCreador->email,
+                ] : null,
+
+                // ✅ Estado actual
+                'estado_logistica'  => $proforma->estadoLogistica ? [
+                    'id'       => $proforma->estadoLogistica->id,
+                    'codigo'   => $proforma->estadoLogistica->codigo,
+                    'nombre'   => $proforma->estadoLogistica->nombre,
+                    'categoria' => $proforma->estadoLogistica->categoria,
+                    'icono'    => $proforma->estadoLogistica->icono,
+                    'color'    => $proforma->estadoLogistica->color,
+                ] : null,
+            ],
+            'detallesProforma'      => $detallesProforma,
+            'direccionesCliente'    => $proforma->cliente->direcciones()->select('id', 'direccion', 'localidad_id')->get(),
+            'clientes'              => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
+            'productos'             => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'almacenes'             => Almacen::activos()->select('id', 'nombre')->get(),
+            'preventistas'          => User::whereHas('roles', function ($query) {
+                $query->where('name', 'preventista');
+            })->select('id', 'name', 'email')->get(),
+            'almacen_id_empresa'    => $almacen_id_empresa,
+        ]);
+    }
+
+    /**
      * Crear una proforma
      *
      * FLUJO:

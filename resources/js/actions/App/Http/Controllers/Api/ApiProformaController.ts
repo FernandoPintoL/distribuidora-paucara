@@ -1372,7 +1372,7 @@ obtenerProductosDisponibles.head = (options?: RouteQueryOptions): RouteDefinitio
     obtenerProductosDisponibles.form = obtenerProductosDisponiblesForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
 export const obtenerSiguientePendiente = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1387,7 +1387,7 @@ obtenerSiguientePendiente.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.url = (options?: RouteQueryOptions) => {
@@ -1396,7 +1396,7 @@ obtenerSiguientePendiente.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1405,7 +1405,7 @@ obtenerSiguientePendiente.get = (options?: RouteQueryOptions): RouteDefinition<'
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1415,7 +1415,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
     const obtenerSiguientePendienteForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1425,7 +1425,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
         obtenerSiguientePendienteForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1434,7 +1434,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:3877
+ * @see app/Http/Controllers/Api/ApiProformaController.php:3895
  * @route '/api/proformas/siguiente-pendiente'
  */
         obtenerSiguientePendienteForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

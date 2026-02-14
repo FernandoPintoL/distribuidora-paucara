@@ -351,6 +351,9 @@ function ProductSelectionDialog({
     )
 }
 
+// ✅ NUEVO: Helper para verificar si una proforma puede ser editada/aprobada
+const puedeSerEditada = (estado: string) => ['PENDIENTE', 'BORRADOR'].includes(estado);
+
 export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Props) {
     // APPLICATION LAYER: Lógica de negocio desde hook
     console.log('📦 Proforma recibida en Show.tsx:', proforma);
@@ -918,7 +921,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         console.log('%c✏️ Intentando actualizar detalles de proforma', 'color: blue;');
 
         // Validar que la proforma está en estado PENDIENTE
-        if (proforma.estado !== 'PENDIENTE') {
+        if (!puedeSerEditada(proforma.estado)) {
             if (mostrarNotificaciones) {
                 toast.error('Solo se pueden actualizar detalles de proformas pendientes');
             }
@@ -1044,10 +1047,10 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
             // ✅ NUEVO: Solo ejecutar si la proforma está en estado "pendiente"
             console.log('%c🔍 PASO 1: Validando estado de proforma...', 'color: blue;', {
                 estado: proforma.estado,
-                ejecutar: proforma.estado === 'PENDIENTE',
+                ejecutar: puedeSerEditada(proforma.estado),
             });
 
-            if (proforma.estado === 'PENDIENTE') {
+            if (puedeSerEditada(proforma.estado)) {
                 console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
 
                 const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
@@ -1431,7 +1434,15 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                         ✏️ Actualizada: {new Date(proforma.updated_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
-                                <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
+                                {/* ✅ MEJORADO: Mostrar estado_logistica con icono + nombre (como en Index) */}
+                                {proforma.estado_logistica ? (
+                                    <div className="w-fit flex items-center gap-2 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
+                                        <span className="text-lg">{proforma.estado_logistica.icono}</span>
+                                        <span className="text-sm font-medium">{proforma.estado_logistica.nombre}</span>
+                                    </div>
+                                ) : (
+                                    <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
+                                )}
 
                                 {/* ✅ NUEVO: Mostrar información de venta cuando está convertida */}
                                 {proforma.estado === 'CONVERTIDA' && proforma.venta && (
@@ -1587,7 +1598,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                     <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
 
                         {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
-                        {proforma.estado === 'PENDIENTE' && (
+                        {puedeSerEditada(proforma.estado) && (
                             <Button
                                 variant="outline"
                                 onClick={() => actualizarDetallesProforma(true)}
@@ -1631,7 +1642,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                         )}
 
                         {/* ✅ NUEVO: Botón para ir a la siguiente proforma pendiente */}
-                        {/* {proforma.estado === 'PENDIENTE' && (
+                        {/* {puedeSerEditada(proforma.estado) && (
                             <Button
                                 onClick={handleSiguiente}
                                 disabled={loadingSiguiente}
@@ -1681,7 +1692,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                     <Package className="h-5 w-5" />
                                     Detalles de la Proforma
                                 </CardTitle>
-                                {/* {proforma.estado === 'PENDIENTE' && (
+                                {/* {puedeSerEditada(proforma.estado) && (
                                     <Button
                                         size="sm"
                                         variant="default"
@@ -1695,7 +1706,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {/* ✅ NUEVO: Búsqueda rápida de productos por código */}
-                                {proforma.estado === 'PENDIENTE' && (
+                                {puedeSerEditada(proforma.estado) && (
                                     <form onSubmit={handleBuscarYAgregarProducto} className="space-y-2">
                                         <div className="flex gap-2">
                                             <div className="flex-1 relative">
@@ -1763,7 +1774,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                             <TableHead className="font-semibold">Tipo Precio</TableHead>
                                             <TableHead className="font-semibold">Precio Unit.</TableHead>
                                             <TableHead className="font-semibold">Subtotal</TableHead>
-                                            {proforma.estado === 'PENDIENTE' && <TableHead className="text-center font-semibold">Acciones</TableHead>}
+                                            {puedeSerEditada(proforma.estado) && <TableHead className="text-center font-semibold">Acciones</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -1834,7 +1845,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                                     </p>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                    {puedeSerEditada(proforma.estado) ? (
                                                         <Input
                                                             type="number"
                                                             min="1"
@@ -1878,7 +1889,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
 
                                                 {/* ✅ NUEVO: Selector de Tipo de Precio (desde Backend) */}
                                                 <TableCell>
-                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                    {puedeSerEditada(proforma.estado) ? (
                                                         <Select
                                                             value={detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : '0'}
                                                             onValueChange={(value) => handleCambiarTipoPrecio(index, value === '0' ? null : parseInt(value, 10))}
@@ -1906,7 +1917,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
 
                                                 {/* Precio actualizado según rango */}
                                                 <TableCell className="font-medium">
-                                                    {proforma.estado === 'PENDIENTE' ? (
+                                                    {puedeSerEditada(proforma.estado) ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input
                                                                 type="number"
@@ -1981,7 +1992,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                                         )
                                                     })()}
                                                 </TableCell>
-                                                {proforma.estado === 'PENDIENTE' && (
+                                                {puedeSerEditada(proforma.estado) && (
                                                     <TableCell className="text-center">
                                                         <Button
                                                             size="sm"
@@ -2149,7 +2160,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                             </ProformaCard>
                         )}
                         {/* Coordinación de Entrega - Mostrar cuando está PENDIENTE */}
-                        {proforma.estado === 'PENDIENTE' && (
+                        {puedeSerEditada(proforma.estado) && (
                             <Card>
                                 <CardHeader>
                                     <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowCoordinacionForm(!showCoordinacionForm)}>

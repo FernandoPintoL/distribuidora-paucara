@@ -89,4 +89,5 @@
     @endif
 </div>
 
+<div class="separador"></div>
 @endsection

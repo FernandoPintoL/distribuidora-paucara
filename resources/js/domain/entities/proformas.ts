@@ -47,6 +47,10 @@ export interface Proforma extends BaseEntity {
     usuario_id?: Id;
     usuario_creador_id?: Id; // ID del usuario que creó la proforma
     estado_documento_id?: Id;
+    // ✅ NUEVO: Estado logístico ID (PENDIENTE, EN_TRÁNSITO, ENTREGADA, etc.)
+    estado_proforma_id?: Id;
+    // ✅ NUEVO: Preventista asignado
+    preventista_id?: Id;
     moneda_id?: Id;
     moneda?: Moneda; // ✅ NUEVO: Objeto de moneda con código y símbolo
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
@@ -95,8 +99,26 @@ export interface Proforma extends BaseEntity {
     usuarioCreador?: Usuario; // Usuario del sistema que creó la proforma
     usuario_creador?: { id: Id; name: string; email: string }; // Datos del usuario creador desde backend
     estado_documento?: EstadoDocumento;
+    // ✅ NUEVO: Estado logístico con detalles (icono, color, nombre, etc.)
+    estado_logistica?: {
+        id: Id;
+        codigo: string;
+        nombre: string;
+        icono: string;
+        color: string;
+        categoria: string;
+        descripcion?: string;
+        activo: boolean;
+        visual?: { color: string; icono: string };
+    };
     detalles: ProformaDetalle[]; // ✅ OBLIGATORIO - Una proforma siempre tiene detalles
-    venta?: any; // ✅ NUEVO: Relación a venta cuando está CONVERTIDA
+    // ✅ NUEVO: Relación a venta cuando está CONVERTIDA
+    venta?: {
+        id: Id;
+        numero: string;
+        fecha?: string;
+        total?: number;
+    };
 
     // Timestamps
     created_at: string;
@@ -154,6 +176,7 @@ export interface ProformaDetalleFormData extends BaseFormData {
  * Mapeo de estados de proforma a etiquetas y variantes visuales
  */
 export const PROFORMA_ESTADOS = {
+    BORRADOR: { label: 'Borrador', variant: 'outline' as const },
     PENDIENTE: { label: 'Pendiente', variant: 'default' as const },
     APROBADA: { label: 'Aprobada', variant: 'default' as const },
     RECHAZADA: { label: 'Rechazada', variant: 'destructive' as const },

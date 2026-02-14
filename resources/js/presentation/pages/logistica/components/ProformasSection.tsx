@@ -932,15 +932,15 @@ export function ProformasSection({
                         <tbody>
                             {sortedProformas.map((proforma) => (
                                 <tr key={proforma.id} className="border-t dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-2 font-mono text-xs dark:text-gray-300">
-                                        <p>Folio: {proforma.id} | {proforma.numero}</p>
-                                        <p><div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
+                                    <td className="px-4 py-2 font-mono text-xs dark:text-gray-300 space-y-2">
+                                        <div>Folio: {proforma.id} | {proforma.numero}</div>
+                                        <div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
                                             {getEstadoIcon(proforma.estado)}
                                             {proforma.estado}
-                                        </div></p>                                        
+                                        </div>
                                     </td>
-                                    <td className="px-4 py-2 dark:text-gray-300">
-                                       <p>Cliente: <strong>{proforma.cliente_nombre}</strong></p> 
+                                    <td className="px-4 py-2 dark:text-gray-300 space-y-2">
+                                       <div>Cliente: <strong>{proforma.cliente_nombre}</strong></div>
                                        <div className="flex flex-col gap-1 text-green-600 dark:text-green-400">
                                             <span className="font-medium text-sm text-green">Creador: <strong>{proforma.usuario_creador_nombre}</strong></span>
                                             <Badge variant="outline" className="w-fit text-xs bg-transparent dark:bg-slate-700 dark:text-gray-300">

@@ -10,7 +10,7 @@ import ModoManual from './components/modo-manual';
 import ModoTabla from './components/modo-tabla';
 import ModoImportacion from './components/modo-importacion';
 import InventarioInicialAvanzado from './inventario-inicial-avanzado';
-import { store as storeInventarioInicial } from '@/routes/inventario/inicial';
+import { store as storeInventarioInicial } from '@/routes/inventario/inicial/index';
 import { Producto } from '@/domain/entities/productos';
 import { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
 import { InventarioItem } from '@/domain/entities/inventario-inicial';

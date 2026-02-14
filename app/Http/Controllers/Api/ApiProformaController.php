@@ -3745,14 +3745,22 @@ class ApiProformaController extends Controller
             'detalles.*.cantidad' => 'required|numeric|min:0.01',
             'detalles.*.precio_unitario' => 'required|numeric|min:0',
             'detalles.*.subtotal' => 'required|numeric|min:0',
+            // ✅ NUEVO: Campos adicionales opcionales para edición completa
+            'fecha' => 'nullable|date',
+            'fecha_vencimiento' => 'nullable|date',
+            'fecha_entrega_solicitada' => 'nullable|date',
+            'tipo_entrega' => 'nullable|in:DELIVERY,PICKUP',
+            'canal' => 'nullable|in:PRESENCIAL,ONLINE,TELEFONO',
+            'politica_pago' => 'nullable|in:CONTRA_ENTREGA,ANTICIPADO_100',
+            'observaciones' => 'nullable|string|max:1000',
         ]);
 
         try {
-            // Solo se pueden actualizar proformas en estado PENDIENTE
-            if ($proforma->estado !== 'PENDIENTE') {
+            // ✅ ACTUALIZADO: Permitir actualizar proformas en estado PENDIENTE o BORRADOR
+            if (!in_array($proforma->estado, ['PENDIENTE', 'BORRADOR'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden actualizar detalles de proformas pendientes',
+                    'message' => 'Solo se pueden actualizar proformas en estado PENDIENTE o BORRADOR',
                 ], 400);
             }
 
@@ -3806,12 +3814,22 @@ class ApiProformaController extends Controller
                 $proforma->detalles()->create($detalle);
             }
 
-            // Actualizar la proforma con los nuevos totales
-            $proforma->update([
+            // Actualizar la proforma con los nuevos totales y campos adicionales opcionales
+            $updateData = [
                 'subtotal' => $subtotalNuevo,
                 'impuesto' => $impuestoNuevo,
                 'total' => $totalNuevo,
-            ]);
+            ];
+
+            // ✅ NUEVO: Agregar campos opcionales si están presentes en la request
+            $camposOpcionales = ['fecha', 'fecha_vencimiento', 'fecha_entrega_solicitada', 'tipo_entrega', 'canal', 'politica_pago', 'observaciones'];
+            foreach ($camposOpcionales as $campo) {
+                if ($request->has($campo) && $request->input($campo) !== null) {
+                    $updateData[$campo] = $request->input($campo);
+                }
+            }
+
+            $proforma->update($updateData);
 
             // ✅ NUEVO: Ajustar reservaciones para que coincidan con los nuevos detalles
             $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);

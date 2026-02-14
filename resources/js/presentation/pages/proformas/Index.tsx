@@ -13,7 +13,7 @@ import {
     TableRow,
 } from '@/presentation/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select'
-import { Search, Eye, CheckCircle, XCircle, FileText, Filter, Printer } from 'lucide-react'
+import { Search, Eye, CheckCircle, XCircle, FileText, Filter, Printer, PencilIcon } from 'lucide-react'
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'
 
 // DOMAIN LAYER: Importar tipos desde domain
@@ -138,10 +138,10 @@ export default function ProformasIndex({ proformas }: Props) {
                                 <TableRow>
                                     <TableHead>Número</TableHead>
                                     <TableHead>Cliente</TableHead>
-                                    <TableHead>Fecha</TableHead>
                                     <TableHead>Total</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead>Usuario</TableHead>
+                                    <TableHead>🛍️ Venta</TableHead>
                                     <TableHead>📅 Creada</TableHead>
                                     <TableHead>✏️ Actualizada</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
@@ -150,7 +150,7 @@ export default function ProformasIndex({ proformas }: Props) {
                             <TableBody>
                                 {filteredProformas.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={10} className="text-center text-muted-foreground">
                                             {search ? 'No se encontraron proformas que coincidan con la búsqueda' : 'No hay proformas registradas'}
                                         </TableCell>
                                     </TableRow>
@@ -171,16 +171,34 @@ export default function ProformasIndex({ proformas }: Props) {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                {new Date(proforma.fecha).toLocaleDateString('es-ES')}
-                                            </TableCell>
-                                            <TableCell>
                                                 Bs. {proforma.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </TableCell>
                                             <TableCell>
-                                                <ProformaEstadoBadge estado={proforma.estado} />
+                                                {/* ✅ FIJO: Usar estado_logistica completo en lugar de solo proforma.estado */}
+                                                {proforma.estado_logistica ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-lg">{proforma.estado_logistica.icono}</span>
+                                                        <span className="text-sm font-medium">{proforma.estado_logistica.nombre}</span>
+                                                    </div>
+                                                ) : (
+                                                    <ProformaEstadoBadge estado={proforma.estado} />
+                                                )}
                                             </TableCell>
                                             <TableCell>
-                                                {proforma.usuarioCreador?.name || 'Sin asignar'}
+                                                {/* ✅ FIJO: Backend envía usuario_creador (snake_case), no usuarioCreador */}
+                                                {(proforma.usuario_creador as any)?.name || 'Sin asignar'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {/* ✅ NUEVO: Mostrar venta asociada si la proforma está CONVERTIDA */}
+                                                {proforma.venta ? (
+                                                    <Link href={`/ventas/${proforma.venta.id}`}>
+                                                        <div className="flex items-center gap-2 text-blue-600 hover:text-blue-800 cursor-pointer">
+                                                            <span className="font-medium">🛍️ {proforma.venta.numero}</span>
+                                                        </div>
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">-</span>
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-sm text-muted-foreground">
                                                 <div className="whitespace-nowrap">
@@ -215,6 +233,20 @@ export default function ProformasIndex({ proformas }: Props) {
                                                     >
                                                         <Printer className="h-4 w-4" />
                                                     </Button>
+
+                                                    {['PENDIENTE', 'BORRADOR'].includes(proforma.estado) && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            asChild
+                                                            className="text-blue-600 hover:text-blue-700"
+                                                            title="Editar proforma"
+                                                        >
+                                                            <Link href={`/proformas/${proforma.id}/edit`}>
+                                                                <PencilIcon className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                    )}
 
                                                     {proforma.estado === 'PENDIENTE' && (
                                                         <>

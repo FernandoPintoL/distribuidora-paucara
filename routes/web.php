@@ -396,6 +396,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/', [\App\Http\Controllers\ProformaController::class, 'store'])->name('store');
         Route::get('formatos-disponibles', [\App\Http\Controllers\ProformaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
 
+        // ✅ NUEVO: Editar proforma existente
+        Route::get('/{proforma}/edit', [\App\Http\Controllers\ProformaController::class, 'edit'])->name('edit');
+
         // Rutas con parámetros dinámicos van al final
         // Vista: Detalle de proforma (usa ProformaController::show)
         Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');

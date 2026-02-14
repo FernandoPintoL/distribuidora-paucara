@@ -80,7 +80,13 @@ class ProformaService
             });
         }
 
-        return $query->with(['cliente', 'detalles'])
+        return $query->with([
+                'cliente',           // Relación con cliente
+                'detalles',          // Detalles de productos
+                'usuarioCreador',    // ✅ NUEVO: Usuario que creó la proforma
+                'estadoLogistica',   // ✅ NUEVO: Estado actual de la proforma (desde estados_logistica tabla con categoria='proforma')
+                'venta',             // ✅ NUEVO: Venta asociada cuando proforma está CONVERTIDA
+            ])
             ->latest()
             ->paginate($perPage);
     }
@@ -688,6 +694,8 @@ class ProformaService
             'direccionConfirmada',
             'moneda',
             'usuarioCreador',
+            // ✅ CRÍTICO: Cargar estado_logistica para mostrar en Show.tsx
+            'estadoLogistica',
         ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);
