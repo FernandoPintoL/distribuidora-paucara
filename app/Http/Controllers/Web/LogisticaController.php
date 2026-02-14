@@ -20,7 +20,8 @@ class LogisticaController extends Controller
         // proformas recientes con paginación y filtros
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
         // ✅ ACTUALIZADO: Cargar roles del usuarioCreador
-        $query = Proforma::with(['cliente.localidad', 'usuarioCreador.roles', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada']);
+        // ✅ NUEVO: Cargar venta asociada cuando proforma está convertida
+        $query = Proforma::with(['cliente.localidad', 'usuarioCreador.roles', 'usuarioAprobador', 'estadoLogistica', 'direccionSolicitada', 'venta']);
 
         // Aplicar filtros desde query params - default a PENDIENTE y APROBADA
         if (request()->has('estado')) {
@@ -177,6 +178,9 @@ class LogisticaController extends Controller
                     // ✅ NUEVO: Timestamps para mostrar fechas de creación y actualización
                     'created_at'                      => $proforma->created_at,
                     'updated_at'                      => $proforma->updated_at,
+                    // ✅ NUEVO: Información de la venta si la proforma fue convertida
+                    'venta_id'                        => $proforma->venta?->id,
+                    'venta_numero'                    => $proforma->venta?->numero,
                 ];
             }),
             'current_page' => $proformasPaginated->currentPage(),

@@ -1131,16 +1131,17 @@ export default function ProductosTable({
                                                         ) : null;
                                                     }
 
-                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar el primero de venta
-                                                    const valorInicial = selectedTipoPrecio[index] ?? detalle.tipo_precio_nombre ?? preciosVenta[0]?.nombre ?? '';
+                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar tipo_precio_id del detalle o el primero de venta
+                                                    const valorInicial = selectedTipoPrecio[index] ?? (detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : preciosVenta[0]?.tipo_precio_id ? String(preciosVenta[0].tipo_precio_id) : '');
 
                                                     return (
                                                         <select
                                                             disabled={readOnly}
                                                             value={valorInicial}
                                                             onChange={(e) => {
-                                                                const nombreSeleccionado = e.target.value;
-                                                                const precioSeleccionado = preciosVenta.find(p => p.nombre === nombreSeleccionado);
+                                                                const tipoPrecioIdSeleccionado = e.target.value;
+                                                                // ✅ CORREGIDO: Buscar por tipo_precio_id (más confiable que nombre)
+                                                                const precioSeleccionado = preciosVenta.find(p => String(p.tipo_precio_id) === String(tipoPrecioIdSeleccionado));
 
                                                                 if (precioSeleccionado) {
                                                                     // ✅ NUEVO: Notificar al padre que el usuario ha seleccionado manualmente
@@ -1148,10 +1149,10 @@ export default function ProductosTable({
                                                                         onManualTipoPrecioChange(index);
                                                                     }
 
-                                                                    // ✅ NUEVO: Actualizar estado local del select inmediatamente (usando nombre como key)
+                                                                    // ✅ NUEVO: Actualizar estado local del select inmediatamente (usando tipo_precio_id)
                                                                     setSelectedTipoPrecio(prev => ({
                                                                         ...prev,
-                                                                        [index]: nombreSeleccionado
+                                                                        [index]: tipoPrecioIdSeleccionado
                                                                     }));
 
                                                                     // ✅ Actualizar tipo de precio y precio en orden
@@ -1166,7 +1167,7 @@ export default function ProductosTable({
                                                             {/* ✅ NUEVO: Solo mostrar opción vacía si no hay valor inicial */}
                                                             {!valorInicial && <option value="">Seleccionar tipo de precio</option>}
                                                             {preciosVenta.map((precio) => (
-                                                                <option key={precio.id || precio.tipo_precio_id} value={precio.nombre || ''}>
+                                                                <option key={precio.id || precio.tipo_precio_id} value={String(precio.tipo_precio_id)}>
                                                                     {precio.nombre || `Tipo ${precio.tipo_precio_id}`} - {formatCurrencyWith2Decimals(precio.precio || 0)}
                                                                 </option>
                                                             ))}

@@ -160,6 +160,7 @@ export default function ProformasCreate({
     const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+
     // Estados para cliente con búsqueda mejorada
     const [clienteValue, setClienteValue] = useState<string | number | null>(null)
     const [clienteDisplay, setClienteDisplay] = useState<string>('')
@@ -188,6 +189,25 @@ export default function ProformasCreate({
     const [tipoEntrega, setTipoEntrega] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
     const [observaciones, setObservaciones] = useState('')
     const [politicaPago, setPoliticaPago] = useState<'CONTRA_ENTREGA' | 'ANTICIPADO_100'>('CONTRA_ENTREGA')
+
+    // ✅ NUEVO: Función para transformar detalles del backend al formato que ProductosTable espera
+    const transformarDetalles = (detalles: any[]) => {
+        return detalles.map((d) => ({
+            id: d.id,
+            producto: d.producto, // ✅ Ya viene con la estructura correcta del backend (incluye precios array)
+            producto_id: d.producto_id,
+            producto_nombre: d.producto_nombre || d.producto?.nombre || '',
+            sku: d.sku || d.producto?.sku || '',
+            cantidad: parseFloat(d.cantidad),
+            precio_unitario: parseFloat(d.precio_unitario),
+            tipo_precio_id: d.tipo_precio_id, // ✅ ProductosTable lo usará para inicializar select
+            subtotal: d.subtotal ? parseFloat(d.subtotal) : parseFloat(d.cantidad) * parseFloat(d.precio_unitario),
+            stock_disponible: d.stock_disponible || d.producto?.stock_disponible || 0,
+            peso: d.peso || d.producto?.peso || 0,
+            categoria: d.categoria || d.producto?.categoria || null,
+            limite_venta: d.limite_venta || d.producto?.limite_venta || null,
+        }))
+    }
 
     // ✅ NUEVO: useEffect para precarga de datos en modo edición
     useEffect(() => {
@@ -221,9 +241,10 @@ export default function ProformasCreate({
                 setClienteSeleccionado(clienteEncontrado)
             }
 
-            // ✅ Precarga de detalles
+            // ✅ Precarga de detalles - Transformar al formato correcto para ProductosTable
             if (detallesProforma && detallesProforma.length > 0) {
-                setDetalles(detallesProforma)
+                const detallesTransformados = transformarDetalles(detallesProforma)
+                setDetalles(detallesTransformados)
             }
 
             // ✅ Activar envío si hay fecha de entrega solicitada

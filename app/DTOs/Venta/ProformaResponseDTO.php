@@ -111,24 +111,32 @@ class ProformaResponseDTO extends BaseDTO
                 'id' => $det->id,
                 'producto_id' => $det->producto_id,
                 'producto_nombre' => $det->producto->nombre ?? 'N/A',
-                'cantidad' => $det->cantidad,
+                'cantidad' => (float) $det->cantidad,
                 'precio_unitario' => (float) $det->precio_unitario,
+                'descuento' => (float) ($det->descuento ?? 0),  // ✅ NUEVO: Campo descuento para ProductosTable
                 'subtotal' => (float) $det->subtotal,
-                // ✅ NUEVO: Agregar información adicional del producto
+                // ✅ NUEVO: Información de unidad de medida para ProductosTable (obtener del PRODUCTO, relación se llama "unidad")
+                'unidad_medida_id' => $det->producto->unidad_medida_id ?? $det->unidad_medida_id,
+                'unidad_medida_nombre' => $det->producto->relationLoaded('unidad') && $det->producto->unidad ? $det->producto->unidad->nombre : null,
+                // ✅ NUEVO: Información adicional del producto
                 'sku' => $det->producto->sku ?? null,
                 'peso' => (float) ($det->producto->peso ?? 0),
                 'categoria' => $det->producto->categoria?->nombre ?? null,
-                // ✅ MEJORADO (2026-02-11): Consolidar stock de múltiples lotes
-                // Suma TODOS los lotes del almacén principal, no solo el primero
-                'cantidad_total' => (int) ($det->producto->stock?->sum('cantidad') ?? 0),
-                'cantidad_disponible' => (int) ($det->producto->stock?->sum('cantidad_disponible') ?? 0),
-                'cantidad_reservada' => (int) ($det->producto->stock?->sum('cantidad_reservada') ?? 0),
-                // Alias para compatibilidad
+                // ✅ Stock disponible para mostrar en ProductosTable
                 'stock_disponible' => (int) ($det->producto->stock?->sum('cantidad_disponible') ?? 0),
                 'stock_total' => (int) ($det->producto->stock?->sum('cantidad') ?? 0),
                 'stock_reservado' => (int) ($det->producto->stock?->sum('cantidad_reservada') ?? 0),
                 // ✅ NUEVO: Límite de venta del producto
                 'limite_venta' => $det->producto->limite_venta ? (int) $det->producto->limite_venta : null,
+                // ✅ NUEVO: Precios disponibles para select de tipos de precio en ProductosTable
+                'precios' => $det->producto->relationLoaded('precios') && $det->producto->precios
+                    ? $det->producto->precios->map(fn($p) => [
+                        'id' => $p->id,
+                        'tipo_precio_id' => $p->tipo_precio_id,
+                        'nombre' => $p->tipoPrecio?->nombre ?? 'Precio',
+                        'precio' => (float) $p->precio,
+                    ])->toArray()
+                    : [],
             ])->toArray(),
             politica_pago: $model->politica_pago ?? 'CONTRA_ENTREGA',
             canal_origen: $model->canal_origen ?? $model->canal ?? null,

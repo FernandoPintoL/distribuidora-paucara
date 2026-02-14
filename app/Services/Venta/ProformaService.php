@@ -687,6 +687,10 @@ class ProformaService
             'detalles.producto.marca',
             // ✅ NUEVO: Cargar stock y almacén para mostrar en la tabla
             'detalles.producto.stock',
+            // ✅ NUEVO: Cargar unidad de medida del PRODUCTO para ProductosTable (relación se llama "unidad")
+            'detalles.producto.unidad',
+            // ✅ NUEVO: Cargar precios del PRODUCTO para select de tipos de precio (con su relación tipoPrecio)
+            'detalles.producto.precios.tipoPrecio',
             // ✅ SIMPLIFICADO: Cargar reservas_proforma de esta proforma
             'reservas',
             'cliente',

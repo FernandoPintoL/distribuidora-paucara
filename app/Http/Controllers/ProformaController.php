@@ -109,6 +109,7 @@ class ProformaController extends Controller
             'detalles.producto.categoria',
             'detalles.producto.conversiones',
             'detalles.producto.codigoPrincipal',
+            'detalles.producto.precios.tipoPrecio', // ✅ NUEVO: Cargar tipos de precios
             'preventista',
             'usuarioCreador',
             'estadoLogistica'
@@ -118,28 +119,29 @@ class ProformaController extends Controller
         $detallesProforma = $proforma->detalles->map(function ($detalle) use ($almacen_id_empresa) {
             $producto = $detalle->producto;
 
-            // 🔍 DEBUG: Buscar stock en TODOS los almacenes si no existe en el principal
-            $stock = $producto->stock()
+            // ✅ CRÍTICO: SUMAR TODOS LOS LOTES del producto (no solo el primero)
+            // Filtrar por almacén si es necesario
+            $stocks = $producto->stock()
                 ->where('almacen_id', $almacen_id_empresa)
-                ->first();
+                ->get();
 
-            // Si no encuentra stock en almacén principal, obtener el primer stock disponible
-            if (!$stock) {
-                $stock = $producto->stock()->first();
+            // Si no hay stock en almacén principal, obtener de todos los almacenes
+            if ($stocks->isEmpty()) {
+                $stocks = $producto->stock()->get();
             }
+
+            // SUMAR todos los lotes
+            $cantidadDisponibleTotal = (int) ($stocks->sum('cantidad_disponible') ?? 0);
+            $cantidadTotal = (int) ($stocks->sum('cantidad') ?? 0);
 
             // DEBUG LOG
             \Log::debug('📦 Stock Query Debug', [
                 'producto_id' => $producto->id,
                 'producto_nombre' => $producto->nombre,
                 'almacen_id_buscado' => $almacen_id_empresa,
-                'stock_encontrado' => $stock ? [
-                    'id' => $stock->id,
-                    'almacen_id' => $stock->almacen_id,
-                    'cantidad' => $stock->cantidad,
-                    'cantidad_disponible' => $stock->cantidad_disponible,
-                    'cantidad_reservada' => $stock->cantidad_reservada,
-                ] : 'NULL - No hay stock en ningún almacén',
+                'cantidad_lotes' => $stocks->count(),
+                'stock_disponible_total' => $cantidadDisponibleTotal,
+                'stock_total' => $cantidadTotal,
             ]);
 
             return [
@@ -147,6 +149,7 @@ class ProformaController extends Controller
                 'producto_id'        => $detalle->producto_id,
                 'cantidad'           => (int) $detalle->cantidad,
                 'precio_unitario'    => (float) $detalle->precio_unitario,
+                'tipo_precio_id'     => $detalle->tipo_precio_id, // ✅ NUEVO: Para que ProductosTable sepa qué precio select usar
                 'descuento'          => 0,
                 'subtotal'           => (float) ($detalle->cantidad * $detalle->precio_unitario),
 
@@ -164,9 +167,9 @@ class ProformaController extends Controller
                     'categoria_id'       => $producto->categoria_id,
                     'limite_venta'       => $producto->limite_venta ? (int) $producto->limite_venta : null,
 
-                    // ✅ STOCK: Información de disponibilidad (ANIDADO DENTRO DE PRODUCTO como espera ProductosTable)
-                    'stock_disponible'   => (int) ($stock?->cantidad_disponible ?? 0),  // Disponible para usar
-                    'stock_total'        => (int) ($stock?->cantidad ?? 0),              // Total del lote/almacén
+                    // ✅ STOCK: Información de disponibilidad (SUMA DE TODOS LOS LOTES)
+                    'stock_disponible'   => $cantidadDisponibleTotal,  // SUMA de cantidad_disponible de todos los lotes
+                    'stock_total'        => $cantidadTotal,              // SUMA de cantidad de todos los lotes
 
                     // ✅ Unidad medida
                     'unidad_id'          => $producto->unidad_id,
@@ -181,6 +184,16 @@ class ProformaController extends Controller
                             'factor_conversion'  => (float) $conv->factor,
                         ];
                     })->toArray() : [],
+
+                    // ✅ CRÍTICO: Precios disponibles para seleccionar tipo de precio (ProductosTable necesita esto)
+                    'precios' => $producto->relationLoaded('precios') && $producto->precios
+                        ? $producto->precios->map(fn($p) => [
+                            'id' => $p->id,
+                            'tipo_precio_id' => $p->tipo_precio_id,
+                            'nombre' => $p->tipoPrecio?->nombre ?? 'Precio',
+                            'precio' => (float) $p->precio,
+                        ])->toArray()
+                        : [],
                 ],
 
                 // ✅ Información adicional para compatibilidad

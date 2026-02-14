@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -13,6 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/presentation/components/ui/table'
+import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable' // ✅ NUEVO: Componente centralizado
 import {
     Dialog,
     DialogContent,
@@ -70,6 +71,7 @@ interface TipoPrecioOption {
 interface Props {
     item: Proforma
     tiposPrecio?: TipoPrecioOption[]
+    almacen_id_empresa?: number
 }
 
 // Interfaz para detalle que devuelve el diálogo de selección
@@ -354,7 +356,7 @@ function ProductSelectionDialog({
 // ✅ NUEVO: Helper para verificar si una proforma puede ser editada/aprobada
 const puedeSerEditada = (estado: string) => ['PENDIENTE', 'BORRADOR'].includes(estado);
 
-export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Props) {
+export default function ProformasShow({ item: proforma, tiposPrecio = [], almacen_id_empresa = 1 }: Props) {
     // APPLICATION LAYER: Lógica de negocio desde hook
     console.log('📦 Proforma recibida en Show.tsx:', proforma);
     console.log('💰 Tipos de Precio disponibles:', tiposPrecio);
@@ -410,6 +412,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
     // APPROVAL FLOW CONTEXT: Estado del flujo de aprobación (puede ser null si el provider no existe)
     const approvalFlow = useApprovalFlow();
 
+    // ✅ NUEVO: Validación defensiva para almacén con useMemo
+    const almacenIdSeguro = useMemo(() => almacen_id_empresa || 1, [almacen_id_empresa])
+
     // PRESENTATION LAYER: Estados locales solo de UI
     const [showAprobarDialog, setShowAprobarDialog] = useState(false)
     const [showRechazarDialog, setShowRechazarDialog] = useState(false)
@@ -439,7 +444,34 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
     const [ventaParaImprimir, setVentaParaImprimir] = useState<any>(null)
 
     // Estados para edición de detalles
-    const [editableDetalles, setEditableDetalles] = useState(proforma.detalles.map(d => ({ ...d })))
+    const [editableDetalles, setEditableDetalles] = useState(
+        proforma.detalles.map(d => ({
+            ...d,
+            // ✅ Convertir cantidad de string a number si es necesario
+            cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad) : (d.cantidad || 1),
+            // ✅ Asegurar que precio_unitario es número
+            precio_unitario: typeof d.precio_unitario === 'string' ? parseFloat(d.precio_unitario) : (d.precio_unitario || 0),
+            // ✅ Asegurar que subtotal es número
+            subtotal: typeof d.subtotal === 'string' ? parseFloat(d.subtotal) : (d.subtotal || 0),
+            // ✅ NUEVO: Construir objeto producto para ProductosTable (con datos disponibles en el detalle)
+            producto: {
+                id: d.producto_id,
+                nombre: d.producto_nombre,
+                sku: d.sku || null,
+                codigo: d.sku || null,
+                peso: d.peso || 0,
+                stock_disponible: d.stock_disponible || 0,  // ← CRÍTICO para ProductosTable
+                stock_total: d.stock_total || 0,
+                stock_reservado: d.stock_reservado || 0,
+                precio_venta: d.precio_unitario || 0,
+                precio_costo: d.precio_unitario || 0,
+                categoria: d.categoria || null,
+                limite_venta: d.limite_venta || null,
+                // ✅ NUEVO: Array de precios para select de tipos de precio en ProductosTable
+                precios: Array.isArray(d.precios) ? d.precios : [],
+            }
+        }))
+    )
     const [preciosEditadosManualmente, setPreciosEditadosManualmente] = useState<Set<number>>(new Set())
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
 
@@ -713,6 +745,73 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         calcularCarritoDebounced(itemsParaCalcular)
     }
 
+    // ✅ NUEVO: Handlers para ProductosTable (centralizados)
+    const handleAgregarProducto = (producto: Producto) => {
+        const nuevoDetalle: any = {
+            id: Math.random(),
+            producto,
+            producto_id: producto.id,
+            producto_nombre: producto.nombre,
+            sku: producto.sku,
+            cantidad: 1,
+            precio_unitario: (producto.precio_venta as number) ?? (producto.precio_base as number) ?? 0,
+            subtotal: (producto.precio_venta as number) ?? (producto.precio_base as number) ?? 0,
+            stock_disponible: (producto as any).stock_disponible || 0,
+            peso: (producto as any).peso || 0,
+            categoria: (producto as any).categoria || undefined,
+            limite_venta: (producto as any).limite_venta || null,
+            tipo_precio_id: (producto as any).tipo_precio_id_recomendado || null,
+        }
+
+        const nuevosDetalles = [...editableDetalles, nuevoDetalle]
+        setEditableDetalles(nuevosDetalles)
+
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad,
+            tipo_precio_id: d.tipo_precio_id
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
+    }
+
+    const handleUpdateDetalle = (index: number, field: keyof DetalleProducto, value: number | string) => {
+        const nuevosDetalles = [...editableDetalles]
+        const detalle = nuevosDetalles[index]
+
+        if (field === 'cantidad') {
+            const cantidadValida = Math.max(0.01, isNaN(value as any) ? 0.01 : (value as number))
+            detalle.cantidad = cantidadValida
+            detalle.subtotal = cantidadValida * detalle.precio_unitario
+        } else if (field === 'precio_unitario') {
+            detalle.precio_unitario = value as number
+            detalle.subtotal = detalle.cantidad * (value as number)
+            const detalleId = detalle.id
+            if (detalleId) {
+                setPreciosEditadosManualmente(prev => new Set(prev).add(detalleId))
+            }
+        } else {
+            (detalle as any)[field] = value
+        }
+
+        setEditableDetalles(nuevosDetalles)
+
+        const itemsParaCalcular = nuevosDetalles.map(d => ({
+            producto_id: d.producto_id,
+            cantidad: d.cantidad,
+            tipo_precio_id: d.tipo_precio_id
+        }))
+        calcularCarritoDebounced(itemsParaCalcular)
+    }
+
+    const handleRemoveDetalle = (index: number) => {
+        const nuevosDetalles = editableDetalles.filter((_, i) => i !== index)
+        setEditableDetalles(nuevosDetalles)
+    }
+
+    const handleTotalsChange = (detalles: any[]) => {
+        // Handler opcional si ProductosTable notifica cambios de totales
+    }
+
     // Calcular total en tiempo real (usando precios actualizados por rango)
     const calcularTotales = () => {
         const subtotal = editableDetalles.reduce((sum, d) => {
@@ -764,67 +863,6 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
         }
     }
 
-    const handleAgregarProducto = (detalle: ProformaDetalleDialogo | Producto) => {
-        // Si viene del diálogo, ya es un ProformaDetalleDialogo
-        // Si viene de otra fuente, es un Producto simple
-        const nuevoDetalle: ProformaDetalleInput = 'cantidad' in detalle && 'precio_unitario' in detalle
-            ? {       // Ya es un detalle del diálogo, agregar campos faltantes
-                ...(detalle as ProformaDetalleDialogo),
-                proforma_id: proforma.id,
-                descuento: 0
-            }
-            : {       // Es un producto simple, necesita ser transformado
-                id: Math.random(),
-                proforma_id: proforma.id,
-                producto: detalle as Producto,
-                producto_id: (detalle as Producto).id,
-                producto_nombre: (detalle as Producto).nombre,
-                sku: (detalle as Producto).sku || undefined,
-                cantidad: 1,
-                precio_unitario: (detalle as Producto).precio_base || 0,
-                descuento: 0,
-                subtotal: (detalle as Producto).precio_base || 0,
-                // ✅ NUEVO: Incluir stock, peso, categoría y límite de venta del producto
-                stock_disponible: (detalle as Producto).stock_disponible || 0,
-                peso: (detalle as Producto).peso || 0,
-                categoria: (detalle as Producto).categoria?.nombre || (detalle as any).categoria || undefined,
-                limite_venta: (detalle as Producto).limite_venta || null
-            }
-
-        // ✅ NUEVO: Verificar si el producto ya existe en la tabla
-        const productoExistente = editableDetalles.find(d => d.producto_id === nuevoDetalle.producto_id)
-
-        let nuevosDetalles: typeof editableDetalles
-
-        if (productoExistente) {
-            // ✅ Si el producto ya existe, incrementar su cantidad
-            nuevosDetalles = editableDetalles.map(d =>
-                d.producto_id === nuevoDetalle.producto_id
-                    ? {
-                        ...d,
-                        cantidad: d.cantidad + 1,
-                        subtotal: (d.cantidad + 1) * d.precio_unitario
-                    }
-                    : d
-            )
-            console.log(`📦 Producto "${nuevoDetalle.producto_nombre}" ya existe. Cantidad incrementada.`)
-        } else {
-            // ✅ Si es nuevo, agregarlo como una nueva fila
-            nuevosDetalles = [...editableDetalles, nuevoDetalle]
-            console.log(`📦 Nuevo producto "${nuevoDetalle.producto_nombre}" agregado.`)
-        }
-
-        setEditableDetalles(nuevosDetalles)
-        setShowAgregarProductoDialog(false)
-
-        // Calcular rangos para el nuevo detalle
-        const itemsParaCalcular = nuevosDetalles.map(d => ({
-            producto_id: d.producto_id,
-            cantidad: d.cantidad,
-            tipo_precio_id: d.tipo_precio_id // ✅ NUEVO: Respetar tipo_precio_id seleccionado
-        }))
-        calcularCarritoDebounced(itemsParaCalcular)
-    }
 
     // ✅ NUEVO: Función para búsqueda rápida por código/ID de producto
     const handleBuscarYAgregarProducto = async (e?: React.FormEvent) => {
@@ -1705,310 +1743,21 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [] }: Prop
                                 )} */}
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {/* ✅ NUEVO: Búsqueda rápida de productos por código */}
-                                {puedeSerEditada(proforma.estado) && (
-                                    <form onSubmit={handleBuscarYAgregarProducto} className="space-y-2">
-                                        <div className="flex gap-2">
-                                            <div className="flex-1 relative">
-                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none" />
-                                                <Input
-                                                    type="text"
-                                                    placeholder="Búsqueda rápida: código, SKU o ID del producto..."
-                                                    value={busquedaRapidaCodigo}
-                                                    onChange={(e) => {
-                                                        setBusquedaRapidaCodigo(e.target.value)
-                                                        setErrorBusquedaRapida(null)
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !cargandoBusquedaRapida) {
-                                                            handleBuscarYAgregarProducto()
-                                                        }
-                                                    }}
-                                                    disabled={cargandoBusquedaRapida}
-                                                    className="pl-10"
-                                                />
-                                            </div>
-                                            <Button
-                                                type="submit"
-                                                variant="secondary"
-                                                size="sm"
-                                                disabled={cargandoBusquedaRapida || !busquedaRapidaCodigo.trim()}
-                                                onClick={() => handleBuscarYAgregarProducto()}
-                                            >
-                                                {cargandoBusquedaRapida ? (
-                                                    <>
-                                                        <div className="animate-spin h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full" />
-                                                        Buscando...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Search className="h-4 w-4 mr-1" />
-                                                        Buscar
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-
-                                        {/* Mensaje de error o ayuda */}
-                                        {errorBusquedaRapida && (
-                                            <div className="text-xs text-red-600 dark:text-red-400">
-                                                ⚠️ {errorBusquedaRapida}
-                                            </div>
-                                        )}
-                                        {!errorBusquedaRapida && !busquedaRapidaCodigo && (
-                                            <div className="text-xs text-muted-foreground">
-                                                💡 Escribe el código, SKU o ID del producto y presiona Enter o haz clic en Buscar
-                                            </div>
-                                        )}
-                                    </form>
-                                )}
-
                                 <Separator />
 
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-muted/50">
-                                            <TableHead className="font-semibold">Producto</TableHead>
-                                            <TableHead className="font-semibold">Cantidad</TableHead>
-                                            {/* <TableHead className="font-semibold text-center">Rango</TableHead> */}
-                                            <TableHead className="font-semibold">Tipo Precio</TableHead>
-                                            <TableHead className="font-semibold">Precio Unit.</TableHead>
-                                            <TableHead className="font-semibold">Subtotal</TableHead>
-                                            {puedeSerEditada(proforma.estado) && <TableHead className="text-center font-semibold">Acciones</TableHead>}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {editableDetalles.map((detalle, index) => {
-                                            // ✅ ACTUALIZADO: Solo validar sobrestock para detalles NUEVOS
-                                            // Los detalles existentes (del backend) ya están reservados, no necesitan validación
-                                            const tieneSobrestock = (detalle as any).esNuevo && parseFloat(String(detalle.cantidad || 0)) > parseFloat(String(detalle.stock_disponible || 0))
-
-                                            return (
-                                                <TableRow
-                                                key={detalle.id}
-                                                className={`transition-colors hover:bg-muted/30 ${
-                                                    tieneSobrestock
-                                                        ? 'bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500'
-                                                        : index % 2 === 0
-                                                            ? 'bg-background'
-                                                            : 'bg-muted/10'
-                                                }`}
-                                            >
-                                                <TableCell>
-                                                    <div className="space-y-1">
-                                                        <div className="font-medium text-[var(--text-base)] flex items-center gap-2">
-                                                            {detalle.producto?.nombre || detalle.producto_nombre || 'Producto sin datos'}
-                                                            {tieneSobrestock && (
-                                                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" title="Cantidad supera el stock disponible" />
-                                                            )}
-                                                        </div>
-                                                        {/* {(detalle.producto || detalle.categoria) && (
-                                                            <div className="text-[var(--text-sm)] text-muted-foreground">
-                                                                {detalle.producto?.categoria?.nombre || detalle.categoria || 'Sin categoría'}
-                                                                {detalle.producto?.marca?.nombre && ` - ${detalle.producto.marca.nombre}`}
-                                                            </div>
-                                                        )} */}
-                                                        {(detalle.producto?.codigo || detalle.sku) && (
-                                                            <div className="text-[var(--text-xs)] text-muted-foreground font-mono">
-                                                                Código: {detalle.producto?.codigo || detalle.sku}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <p className="font-medium">
-                                                        {Math.floor(detalle.stock_disponible || 0)} Unid. Dispobibles
-                                                    </p>
-                                                    {/* <p className="font-medium">
-                                                        {detalle.peso ? detalle.peso.toFixed(2) : '0.00'} Kg
-                                                    </p> */}
-                                                    <p>
-                                                        {detalle.limite_venta ? (
-                                                            <>
-                                                                <span className={`font-medium ${detalle.cantidad > detalle.limite_venta
-                                                                    ? 'text-red-600 dark:text-red-400'
-                                                                    : detalle.cantidad >= detalle.limite_venta * 0.8
-                                                                        ? 'text-yellow-600 dark:text-yellow-400'
-                                                                        : 'text-green-600 dark:text-green-400'
-                                                                    }`}>
-                                                                    Limite Venta: {Math.floor(detalle.limite_venta)}
-                                                                </span>
-                                                                {detalle.cantidad > detalle.limite_venta && (
-                                                                    <span className="text-xs text-red-600 dark:text-red-400 font-semibold">
-                                                                        ¡Excedido!
-                                                                    </span>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                Sin límite
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {puedeSerEditada(proforma.estado) ? (
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            inputMode="numeric"
-                                                            value={detalle.cantidad && detalle.cantidad > 0 ? Math.floor(detalle.cantidad).toString() : ''}
-                                                            onChange={(e) => {
-                                                                const valor = e.target.value
-                                                                // ✅ MEJORADO: Permitir escribir y borrar libremente
-                                                                if (valor === '') {
-                                                                    // Permitir que quede vacío mientras escribe
-                                                                    handleEditarCantidad(index, 0)
-                                                                } else {
-                                                                    const cantidad = parseInt(valor, 10)
-                                                                    // Solo actualizar si es un número válido (parseInt no falla)
-                                                                    if (!isNaN(cantidad)) {
-                                                                        handleEditarCantidad(index, Math.floor(cantidad))
-                                                                    }
-                                                                }
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                const valor = e.target.value.trim()
-                                                                // ✅ Al perder el foco, establecer valor por defecto si está vacío
-                                                                if (valor === '') {
-                                                                    handleEditarCantidad(index, 1)
-                                                                } else {
-                                                                    const cantidad = Math.floor(parseInt(valor, 10) || 0)
-                                                                    handleEditarCantidad(index, Math.max(1, cantidad))
-                                                                }
-                                                            }}
-                                                            placeholder="1"
-                                                            className={`w-24 text-center ${
-                                                                tieneSobrestock
-                                                                    ? 'border-red-500 border-2 focus:ring-red-500'
-                                                                    : ''
-                                                            }`}
-                                                        />
-                                                    ) : (
-                                                        <span className="font-medium">{Math.floor(detalle.cantidad || 1)}</span>
-                                                    )}
-                                                </TableCell>
-
-                                                {/* ✅ NUEVO: Selector de Tipo de Precio (desde Backend) */}
-                                                <TableCell>
-                                                    {puedeSerEditada(proforma.estado) ? (
-                                                        <Select
-                                                            value={detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : '0'}
-                                                            onValueChange={(value) => handleCambiarTipoPrecio(index, value === '0' ? null : parseInt(value, 10))}
-                                                        >
-                                                            <SelectTrigger className="w-40 text-sm">
-                                                                <SelectValue placeholder="Seleccionar..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="0">📌 Base</SelectItem>
-                                                                {tiposPrecio.map((tipo) => (
-                                                                    <SelectItem key={tipo.value} value={String(tipo.value)}>
-                                                                        {tipo.icono} {tipo.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <span className="text-sm">
-                                                            {detalle.tipo_precio_id
-                                                                ? tiposPrecio.find(t => t.value === detalle.tipo_precio_id)?.label || 'Base'
-                                                                : '📌 Base'}
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-
-                                                {/* Precio actualizado según rango */}
-                                                <TableCell className="font-medium">
-                                                    {puedeSerEditada(proforma.estado) ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <Input
-                                                                type="number"
-                                                                step="0.01"
-                                                                min="0.01"
-                                                                value={detalle.precio_unitario || ''}
-                                                                onChange={(e) => handleEditarPrecio(index, parseFloat(e.target.value))}
-                                                                placeholder="Precio"
-                                                                className={`w-28 text-right text-sm ${
-                                                                    preciosEditadosManualmente.has(detalle.id)
-                                                                        ? 'border-orange-500 border-2 bg-orange-50 dark:bg-orange-950'
-                                                                        : ''
-                                                                }`}
-                                                                title={preciosEditadosManualmente.has(detalle.id) ? '✏️ Editado manualmente - No se actualizará al cambiar tipo de precio' : '📊 Precio automático - Se actualizará según tipo de precio y cantidad'}
-                                                            />
-                                                            {/* ✅ Indicador visual si fue editado manualmente */}
-                                                            {preciosEditadosManualmente.has(detalle.id) && (
-                                                                <span className="text-orange-600 dark:text-orange-400 text-xs font-bold" title="Editado manualmente">
-                                                                    ✏️
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        (() => {
-                                                            const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
-                                                            const precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
-
-                                                            return (
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    <span>
-                                                                        Bs. {precio.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                    </span>
-                                                                    {precioActualizado && precioActualizado !== detalle.precio_unitario && (
-                                                                        <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
-                                                                            {detalle.precio_unitario.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        })()
-                                                    )}
-                                                </TableCell>
-                                                {/* Subtotal actualizado */}
-                                                <TableCell className="font-semibold">
-                                                    {(() => {
-                                                        let precio: number
-
-                                                        // ✅ PRIORIDAD 1: Si el precio fue editado manualmente, usar ese
-                                                        if (preciosEditadosManualmente.has(detalle.id)) {
-                                                            precio = detalle.precio_unitario ?? 0
-                                                        } else {
-                                                            // ✅ PRIORIDAD 2: Si el API carrito tiene precio, usar ese
-                                                            const precioActualizado = getPrecioActualizado(detalle.producto_id as number)
-                                                            precio = precioActualizado ?? (detalle.precio_unitario ?? 0)
-                                                        }
-
-                                                        const subtotalActualizado = detalle.cantidad * precio
-
-                                                        return (
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <span className={preciosEditadosManualmente.has(detalle.id) ? 'text-orange-600 dark:text-orange-400 font-bold' : ''}>
-                                                                    Bs. {subtotalActualizado.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                </span>
-                                                                {/* Mostrar precio anterior si fue actualizado por carrito */}
-                                                                {!preciosEditadosManualmente.has(detalle.id) && getPrecioActualizado(detalle.producto_id as number) &&
-                                                                    subtotalActualizado !== detalle.subtotal && (
-                                                                    <span className="text-xs text-green-600 dark:text-green-400 line-through opacity-60">
-                                                                        {detalle.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })()}
-                                                </TableCell>
-                                                {puedeSerEditada(proforma.estado) && (
-                                                    <TableCell className="text-center">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleEliminarProducto(index)}
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        )
-                                        })}
-                                    </TableBody>
-                                </Table>
+                                <ProductosTable
+                                    productos={[]}
+                                    detalles={editableDetalles as DetalleProducto[]}
+                                    onAddProduct={handleAgregarProducto}
+                                    onUpdateDetail={handleUpdateDetalle}
+                                    onRemoveDetail={handleRemoveDetalle}
+                                    onTotalsChange={handleTotalsChange}
+                                    tipo="venta"
+                                    almacen_id={almacenIdSeguro}
+                                    isCalculatingPrices={isCalculandoRangos}
+                                    readOnly={!puedeSerEditada(proforma.estado)}
+                                    errors={undefined}
+                                />
 
                                 {/* Resumen de Totales en Tiempo Real */}
                                 <div className="mt-6 pt-6 border-t border-border/50 space-y-3">
