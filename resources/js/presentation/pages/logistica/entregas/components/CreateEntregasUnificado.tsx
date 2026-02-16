@@ -262,30 +262,36 @@ export default function CreateEntregasUnificado({
         }
     }, [selectedCount, selectedVentaIds, ventas, isEditMode]);
 
-    // Totales seleccionados - En edit mode, usar peso_kg del backend
+    // Totales seleccionados - En edit mode, calcular dinámicamente cuando cambian las ventas
     const totals = useMemo(() => {
-        // En edit mode, usar el peso_kg de la entrega (viene del backend)
-        if (isEditMode && entrega?.peso_kg) {
-            const pesoFromBackend = parseFloat(String(entrega.peso_kg));
-            console.log('📊 [Edit Mode] Usando peso_kg del backend:', pesoFromBackend);
-            return {
-                count: selectedVentaIds.length,
-                pesoTotal: pesoFromBackend,
-                montoTotal: 0, // No calculamos monto en edit mode
-            };
+        // ✅ En edit mode: combinar ventasAsignadas (ya en la entrega) + ventasDisponibles (nuevas)
+        // En modo crear: solo usar ventasDisponibles
+        const allVentas = isEditMode
+            ? [...ventasAsignadas, ...ventas]
+            : ventas;
+
+        const selectedVentas = allVentas.filter((v) => selectedVentaIds.includes(v.id));
+        const pesoCalculado = selectedVentas.reduce((sum, v) => {
+            const peso = parseFloat(v.peso_total_estimado as any) || parseFloat(v.peso_estimado as any) || 0;
+            return sum + peso;
+        }, 0);
+
+        if (isEditMode) {
+            console.log('📊 [Edit Mode] Peso calculado desde ventas seleccionadas:', {
+                ventasAsignadas: ventasAsignadas.length,
+                ventasDisponibles: ventas.length,
+                ventasSeleccionadas: selectedVentaIds.length,
+                pesoCalculado,
+                pesoBackend: entrega?.peso_kg,
+            });
         }
 
-        // En create mode, calcular desde ventas seleccionadas
-        const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
         return {
             count: selectedVentaIds.length,
-            pesoTotal: selectedVentas.reduce((sum, v) => {
-                const peso = parseFloat(v.peso_total_estimado as any) || parseFloat(v.peso_estimado as any) || 0;
-                return sum + peso;
-            }, 0),
+            pesoTotal: pesoCalculado,
             montoTotal: selectedVentas.reduce((sum, v) => sum + (parseFloat(v.subtotal as any) ?? 0), 0),
         };
-    }, [ventas, selectedVentaIds, isEditMode, entrega?.peso_kg]);
+    }, [ventas, ventasAsignadas, selectedVentaIds, isEditMode]);
 
     // Validaciones para batch - DEBE IR ANTES del useEffect que lo usa
     const selectedVehiculo = vehiculos.find((v) => v.id === formData.vehiculo_id);
@@ -525,14 +531,15 @@ export default function CreateEntregasUnificado({
 
                     {/* Recomendación Inteligente de Vehículo O Datos de Edición */}
                     {(() => {
-                        // En edit mode: solo necesitas que vehiculo_id esté setado
-                        // En create mode: necesitas algo del hook (recomendación, alerta, error, etc.)
+                        // En edit mode: mostrar si hay ventas seleccionadas (el componente se precargará después)
+                        // En create mode: mostrar si hay recomendación o estado del hook
                         const shouldRender = isEditMode
-                            ? Boolean(formData.vehiculo_id)
+                            ? selectedCount > 0
                             : (recomendado || alertaRecomendacion || errorRecomendacion || loadingRecomendacion);
 
                         console.log('🎯 [VehicleRecommendationCard] shouldRender:', shouldRender, {
                             isEditMode,
+                            selectedCount,
                             vehiculo_id: formData.vehiculo_id,
                             recomendado: !!recomendado,
                             hook_values: {
@@ -547,7 +554,7 @@ export default function CreateEntregasUnificado({
                             recomendado={recomendado}
                             disponibles={disponibles}
                             todosVehiculos={vehiculos}
-                            pesoTotal={isEditMode ? 0 : pesoRecomendacion}
+                            pesoTotal={isEditMode ? totals.pesoTotal : pesoRecomendacion}
                             isLoading={loadingRecomendacion}
                             error={errorRecomendacion}
                             alerta={alertaRecomendacion}
@@ -622,7 +629,7 @@ export default function CreateEntregasUnificado({
                     )}
 
                     {/* Fecha de Entrega Programada */}
-                    <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-amber-500">
+                    {/* <Card className="dark:bg-slate-900 dark:border-slate-700 p-4 border-l-4 border-l-amber-500">
                         <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                             Fecha de Entrega
@@ -639,7 +646,7 @@ export default function CreateEntregasUnificado({
                                 : `📦 Se aplicará a las ${selectedCount} entregas consolidadas`
                             }
                         </p>
-                    </Card>
+                    </Card> */}
                 </div>
 
                 {/* BLOQUE 3: Opciones & Validación */}
@@ -710,10 +717,10 @@ export default function CreateEntregasUnificado({
                 <div className="mb-8 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            Crear Entregas ({selectedCount} Seleccionada{selectedCount !== 1 ? 's' : ''})
+                            {isEditMode ? 'Editar Entrega' : `Crear Entregas (${selectedCount} Seleccionada${selectedCount !== 1 ? 's' : ''})`}
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400 mt-2">
-                            Selecciona una o más ventas para continuar
+                            {isEditMode ? 'Modifica la entrega según sea necesario' : 'Selecciona una o más ventas para continuar'}
                         </p>
                     </div>
 
@@ -820,7 +827,7 @@ export default function CreateEntregasUnificado({
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent border-r-transparent rounded-full animate-spin" />
                                     <span className="hidden sm:inline text-sm font-medium">
-                                        {isEditMode ? 'Guardando...' : 'Creando...'}
+                                        {isEditMode ? 'Editando...' : 'Creando...'}
                                     </span>
                                     <span className="sm:hidden text-sm">...</span>
                                 </>
@@ -829,7 +836,7 @@ export default function CreateEntregasUnificado({
                                     <Plus className="h-5 w-5" />
                                     <span className="hidden sm:inline text-sm">
                                         {isEditMode
-                                            ? 'Guardar Cambios'
+                                            ? 'Editar Entrega'
                                             : `${selectedCount} ${selectedCount === 1 ? 'Entrega' : 'Entregas'}`
                                         }
                                     </span>

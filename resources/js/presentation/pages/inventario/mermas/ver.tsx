@@ -7,11 +7,12 @@ import { Badge } from '@/presentation/components/ui/badge';
 import { Textarea } from '@/presentation/components/ui/textarea';
 import { Label } from '@/presentation/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/presentation/components/ui/dialog';
-import { ArrowLeft, CheckCircle, XCircle, Calendar, MapPin, AlertTriangle, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Calendar, MapPin, AlertTriangle, FileText, Printer } from 'lucide-react';
 import { useAuth } from '@/application/hooks/use-auth';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import type { MermaInventario } from '@/domain/entities/mermas-inventario';
 import { TIPOS_MERMA, ESTADOS_MERMA } from '@/presentation/config/inventory.config';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 // Componente EstadoBadge simple para mermas
 const EstadoBadge = ({ estado }: { estado: string }) => {
@@ -35,6 +36,7 @@ interface VerMermaProps {
 }
 
 export default function VerMerma({ merma }: VerMermaProps) {
+    console.log('Merma data:', merma); // LOG para depuración
     const { can } = useAuth();
     const [isApproving, setIsApproving] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
@@ -42,6 +44,7 @@ export default function VerMerma({ merma }: VerMermaProps) {
     const [observacionesRechazo, setObservacionesRechazo] = useState('');
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogType, setDialogType] = useState<'aprobar' | 'rechazar'>('aprobar');
+    const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
 
     const handleAprobar = async () => {
         setIsApproving(true);
@@ -94,6 +97,19 @@ export default function VerMerma({ merma }: VerMermaProps) {
         setDialogOpen(true);
     };
 
+    const handleImprimir = async (formato: 'A4' | 'TICKET_80' | 'TICKET_58') => {
+        setIsPrinting(true);
+        try {
+            const url = `/inventario/mermas/${merma.id}/imprimir?formato=${formato}&accion=stream`;
+            window.open(url, '_blank');
+        } catch (error) {
+            NotificationService.error('Error al abrir documento de impresión');
+            console.error(error);
+        } finally {
+            setIsPrinting(false);
+        }
+    };
+
     // Acceder a configuraciones de tipo y estado
     const tipoMermaConfig = TIPOS_MERMA[merma.tipo_merma];
     const estadoConfig = ESTADOS_MERMA[merma.estado];
@@ -124,6 +140,19 @@ export default function VerMerma({ merma }: VerMermaProps) {
 
                     <div className="flex items-center gap-2">
                         <EstadoBadge estado={merma.estado} />
+
+                        {/* Botón de impresión con modal */}
+                        <div className="border-l pl-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setMostrarModalImpresion(true)}
+                                title="Imprimir o descargar merma"
+                            >
+                                <Printer className="h-4 w-4 mr-1" />
+                                Imprimir
+                            </Button>
+                        </div>
 
                         {merma.estado === 'PENDIENTE' && can('inventario.mermas.aprobar') && (
                             <div className="flex gap-2">
@@ -250,24 +279,36 @@ export default function VerMerma({ merma }: VerMermaProps) {
                                                 className="border rounded-lg p-4 space-y-2"
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <h4 className="font-medium">
                                                             {detalle.producto?.nombre || 'Producto no especificado'}
                                                         </h4>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {detalle.producto?.codigo || 'Sin código'}
-                                                        </p>
+                                                        <div className="mt-1 space-y-1">
+                                                            {detalle.producto?.sku && (
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    SKU: <span className="font-mono font-medium">{detalle.producto.sku}</span>
+                                                                </p>
+                                                            )}
+                                                            {detalle.producto?.codigo && (
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Código: {detalle.producto.codigo}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                         {detalle.lote && (
-                                                            <p className="text-sm text-muted-foreground">
+                                                            <p className="text-sm text-muted-foreground mt-2">
                                                                 Lote: {detalle.lote}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <div className="text-right">
+                                                    <div className="text-right ml-4">
                                                         <p className="font-medium">
                                                             {detalle.cantidad} uds
                                                         </p>
-                                                        <p className="text-sm text-red-600">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            @ Bs. {detalle.costo_unitario?.toFixed(2) || '0.00'}
+                                                        </p>
+                                                        <p className="text-sm font-medium text-red-600 mt-1">
                                                             Bs. {detalle.costo_total?.toFixed(2) || '0.00'}
                                                         </p>
                                                     </div>
@@ -411,6 +452,20 @@ export default function VerMerma({ merma }: VerMermaProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Selección de Formato de Impresión */}
+            {mostrarModalImpresion && (
+                <OutputSelectionModal
+                    isOpen={mostrarModalImpresion}
+                    onClose={() => setMostrarModalImpresion(false)}
+                    documentoId={merma.id}
+                    tipoDocumento="merma"
+                    documentoInfo={{
+                        numero: merma.numero,
+                        fecha: new Date(merma.fecha).toLocaleDateString('es-ES'),
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

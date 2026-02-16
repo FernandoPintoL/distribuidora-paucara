@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock';
+export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock' | 'ajuste' | 'merma';
 
 interface FormatoConfig {
     formato: string;
@@ -60,6 +60,14 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
     inventario: [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+    ],
+    ajuste: [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    merma: [
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
         { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
@@ -192,6 +200,12 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'stock') {
             // Para stock - no requiere documentoId
             rutaBase = '/stock';
+        } else if (tipoDocumento === 'ajuste') {
+            // Para ajustes - no requiere documentoId (se envían desde sesión)
+            rutaBase = '/inventario/ajuste';
+        } else if (tipoDocumento === 'merma') {
+            // Para mermas
+            rutaBase = `/inventario/mermas/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -226,6 +240,16 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'stock') {
                 // Para stock
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'ajuste') {
+                // Para ajustes - incluir ajuste_id si es positivo (impresión histórica)
+                if (documentoId && documentoId > 0) {
+                    url = `${rutaBase}/imprimir?formato=${formato}&accion=download&ajuste_id=${documentoId}`;
+                } else {
+                    url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+                }
+            } else if (tipoDocumento === 'merma') {
+                // Para mermas
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -250,6 +274,16 @@ export function OutputSelectionModal({
                 url = `/compras${rutaBase}/imprimir-${formato.toLowerCase().replace(/_/g, '-')}`;
             } else if (tipoDocumento === 'stock') {
                 // Para stock
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'ajuste') {
+                // Para ajustes - incluir ajuste_id si es positivo (impresión histórica)
+                if (documentoId && documentoId > 0) {
+                    url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}&ajuste_id=${documentoId}`;
+                } else {
+                    url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+                }
+            } else if (tipoDocumento === 'merma') {
+                // Para mermas
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;

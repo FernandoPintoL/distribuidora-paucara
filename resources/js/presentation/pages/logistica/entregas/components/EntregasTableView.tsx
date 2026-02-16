@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/compone
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/components/ui/table';
-import { Eye, Truck, User, Plus, Route, XCircle, FileText, Pencil } from 'lucide-react';
+import { Eye, Truck, User, Plus, Route, XCircle, FileText, Pencil, Calendar } from 'lucide-react';
 import type { Entrega } from '@/domain/entities/entregas';
 import type { Pagination } from '@/domain/entities/shared';
 import { getEstadoBadgeVariant, getEstadoLabel, formatearFecha } from '@/lib/entregas.utils';
 import { useEntregas } from '@/application/hooks/use-entregas';
 import { useEstadosEntregas } from '@/application/hooks';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ModalOptimizacionRutas } from '@/presentation/components/logistica/modal-optimizacion-rutas';
 import { useQueryParam } from '@/application/hooks/use-query-param';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
@@ -54,6 +54,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
     const [estadoLogisticaURL, setEstadoLogisticaURL] = useQueryParam('estado_logistica_id', '');
     const [fechaDesdeURL, setFechaDesdeURL] = useQueryParam('fecha_desde', '');
     const [fechaHastaURL, setFechaHastaURL] = useQueryParam('fecha_hasta', '');
+    const [mostrarTodasLasFechas, setMostrarTodasLasFechas] = useState(false); // ✅ NUEVO: Estado local para mostrar todas las fechas (default: solo hoy)
 
     // Estado de filtros
     const [filtros, setFiltros] = useState<FiltrosEntregas>({
@@ -79,38 +80,38 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
     const [mostrarOutputSelection, setMostrarOutputSelection] = useState(false);
     const [entregaSeleccionadaParaOutput, setEntregaSeleccionadaParaOutput] = useState<number | null>(null);
 
-    // Handler para cambiar filtros y actualizar URL
+    // Handler para cambiar filtros (SOLO ESTADO LOCAL, sin refetch)
     const handleFilterChange = useCallback((key: keyof FiltrosEntregas, value: string) => {
         setFiltros(prev => ({ ...prev, [key]: value }));
+    }, []);
 
-        // Actualizar URL correspondiente
-        switch (key) {
-            case 'estado':
-                setEstadoURL(value);
-                break;
-            case 'busqueda':
-                setBusquedaURL(value);
-                break;
-            case 'chofer_id':
-                setChoferURL(value);
-                break;
-            case 'vehiculo_id':
-                setVehiculoURL(value);
-                break;
-            case 'localidad_id':
-                setLocalidadURL(value);
-                break;
-            case 'estado_logistica_id':
-                setEstadoLogisticaURL(value);
-                break;
-            case 'fecha_desde':
-                setFechaDesdeURL(value);
-                break;
-            case 'fecha_hasta':
-                setFechaHastaURL(value);
-                break;
-        }
-    }, [setEstadoURL, setBusquedaURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
+    // Handler para APLICAR filtros (manual - ENTER o botón Buscar)
+    const handleAplicarFiltros = useCallback(() => {
+        // Actualizar URL con los filtros actuales
+        setEstadoURL(filtros.estado);
+        setBusquedaURL(filtros.busqueda);
+        setChoferURL(filtros.chofer_id);
+        setVehiculoURL(filtros.vehiculo_id);
+        setLocalidadURL(filtros.localidad_id);
+        setEstadoLogisticaURL(filtros.estado_logistica_id);
+        setFechaDesdeURL(filtros.fecha_desde);
+        setFechaHastaURL(filtros.fecha_hasta);
+
+        // Construir URL con parámetros
+        const params = new URLSearchParams();
+        if (filtros.estado && filtros.estado !== 'TODOS') params.append('estado', filtros.estado);
+        if (filtros.busqueda) params.append('q', filtros.busqueda);
+        if (filtros.chofer_id) params.append('chofer_id', filtros.chofer_id);
+        if (filtros.vehiculo_id) params.append('vehiculo_id', filtros.vehiculo_id);
+        if (filtros.localidad_id) params.append('localidad_id', filtros.localidad_id);
+        if (filtros.estado_logistica_id) params.append('estado_logistica_id', filtros.estado_logistica_id);
+        if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+        if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+
+        // Navegar con nuevos filtros
+        const url = `/logistica/entregas${params.toString() ? '?' + params.toString() : ''}`;
+        window.location.href = url; // Recarga simple
+    }, [filtros, setEstadoURL, setBusquedaURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
 
     // Handler para resetear todos los filtros
     const handleResetFiltros = useCallback(() => {
@@ -132,6 +133,10 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setEstadoLogisticaURL('');
         setFechaDesdeURL('');
         setFechaHastaURL('');
+        setMostrarTodasLasFechas(false);
+
+        // Recargar página sin filtros
+        window.location.href = '/logistica/entregas';
     }, [setEstadoURL, setBusquedaURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
 
     // Handler para abrir modal de cancelación
@@ -157,54 +162,27 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setMostrarOutputSelection(true);
     }, []);
 
-    // ✅ FILTRADO MEJORADO: Usar búsqueda manual y filtros múltiples
+    // ✅ NUEVO: Auto-activar "Todas las fechas" si hay parámetros de fecha en URL
+    useEffect(() => {
+        if (fechaDesdeURL || fechaHastaURL) {
+            setMostrarTodasLasFechas(true);  // Activar automáticamente si hay fechas en URL
+        }
+    }, [fechaDesdeURL, fechaHastaURL]);
+
+    // ✅ SIMPLIFICADO: El backend ya filtra TODO, aquí solo usamos los datos ya filtrados
     const entregasFiltradas = useMemo(() => {
-        return entregas.data.filter(entrega => {
-            // Filtro por estado
-            const cumpleEstado = filtros.estado === 'TODOS' || entrega.estado === filtros.estado;
-
-            // Filtro por búsqueda (manual - solo con Enter o botón) - busca en múltiples campos case insensitive
-            const searchLower = filtros.busqueda.toLowerCase();
-            const cumpleBusqueda = filtros.busqueda === '' || (
-                // Buscar en datos del chofer
-                entrega.chofer?.nombre?.toLowerCase().includes(searchLower) ||
-                entrega.chofer?.name?.toLowerCase().includes(searchLower) ||
-                // Buscar en datos del vehículo
-                entrega.vehiculo?.placa?.toLowerCase().includes(searchLower) ||
-                // Buscar en ventas asignadas a la entrega (numero de venta)
-                entrega.ventas?.some(venta =>
-                    venta.numero?.toLowerCase().includes(searchLower) ||
-                    venta.cliente?.nombre?.toLowerCase().includes(searchLower)
-                )
+        // El backend ya aplicó todos los filtros (estado, fechas, chofer, vehículo, localidad, estado_logística, búsqueda)
+        // Solo filtrar localmente si es necesario mostrar "Solo Hoy"
+        if (!mostrarTodasLasFechas && !filtros.fecha_desde && !filtros.fecha_hasta) {
+            // Si está en "Solo Hoy" y no hay parámetros de fecha en URL, filtrar por created_at
+            return entregas.data.filter(entrega =>
+                entrega.created_at &&
+                new Date(entrega.created_at).toDateString() === new Date().toDateString()
             );
-
-            // Filtro por chofer
-            const cumpleChofer = !filtros.chofer_id ||
-                entrega.chofer_id?.toString() === filtros.chofer_id;
-
-            // Filtro por vehículo
-            const cumpleVehiculo = !filtros.vehiculo_id ||
-                entrega.vehiculo_id?.toString() === filtros.vehiculo_id;
-
-            // Filtro por localidad (zona_id en tabla entregas)
-            const cumpleLocalidad = !filtros.localidad_id ||
-                entrega.zona_id?.toString() === filtros.localidad_id;
-
-            // Filtro por estado logístico (estado_entrega_id en tabla entregas)
-            const cumpleEstadoLogistica = !filtros.estado_logistica_id ||
-                entrega.estado_entrega_id?.toString() === filtros.estado_logistica_id;
-
-            // Filtro por fecha desde
-            const cumpleFechaDesde = !filtros.fecha_desde ||
-                (entrega.fecha_programada && new Date(entrega.fecha_programada) >= new Date(filtros.fecha_desde));
-
-            // Filtro por fecha hasta
-            const cumpleFechaHasta = !filtros.fecha_hasta ||
-                (entrega.fecha_programada && new Date(entrega.fecha_programada) <= new Date(filtros.fecha_hasta));
-
-            return cumpleEstado && cumpleBusqueda && cumpleChofer && cumpleVehiculo && cumpleLocalidad && cumpleEstadoLogistica && cumpleFechaDesde && cumpleFechaHasta;
-        });
-    }, [entregas.data, filtros]);
+        }
+        // Si hay parámetros de fecha, el backend ya filtró - devolver datos tal cual
+        return entregas.data;
+    }, [entregas.data, filtros, mostrarTodasLasFechas]);
 
     // Selección múltiple
     const toggleSeleccion = (id: number) => {
@@ -271,6 +249,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                 filtros={filtros}
                 onFilterChange={handleFilterChange}
                 onReset={handleResetFiltros}
+                onApply={handleAplicarFiltros}
                 estadosAPI={estadosAPI}
                 vehiculos={vehiculos}
                 choferes={choferes}
@@ -278,6 +257,19 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                 estadosLogisticos={estadosLogisticos}
                 isLoading={estadosLoading}
             />
+
+            {/* ✅ NUEVO: Toggle para ver "Todas las fechas" */}
+            <div className="flex items-center gap-2 mb-4">
+                <Button
+                    variant={mostrarTodasLasFechas ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMostrarTodasLasFechas(!mostrarTodasLasFechas)}
+                    className="gap-2"
+                >
+                    <Calendar className="h-4 w-4" />
+                    {mostrarTodasLasFechas ? '📅 Todas las Fechas' : '📅 Solo Hoy'}
+                </Button>
+            </div>
 
             <Card>
                 <CardHeader>
@@ -300,10 +292,11 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                             <Table className="w-full table-fixed">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[25%]">#ID</TableHead>
+                                        <TableHead className="w-[20%]">#ID</TableHead>
                                         <TableHead className="w-[25%]">Vehículo / Chofer</TableHead>
-                                        <TableHead className="w-[25%]">Total</TableHead>
-                                        <TableHead className="w-[25%]">Acciones</TableHead>
+                                        <TableHead className="w-[18%]">Total</TableHead>
+                                        <TableHead className="w-[18%]">🕐 Creada</TableHead>
+                                        <TableHead className="w-[19%]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -312,13 +305,13 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                             key={entrega.id}
                                             className={entregasSeleccionadas.includes(Number(entrega.id)) ? 'bg-blue-50 dark:bg-blue-950' : ''}
                                         >
-                                            <TableCell className="w-[25%]">
+                                            <TableCell className="w-[20%]">
                                                 {/* <Checkbox
                                                     checked={entregasSeleccionadas.includes(Number(entrega.id))}
                                                     onCheckedChange={() => toggleSeleccion(Number(entrega.id))}
                                                     aria-label={`Seleccionar entrega ${entrega.id}`}
                                                 /> */}
-                                                #{entrega.id} | {entrega.numero_entrega || entrega.numero_envio}
+                                                Folio: {entrega.id} <br/> {entrega.numero_entrega || entrega.numero_envio}
                                                 <br />
                                                 <EstadoEntregaBadge
                                                     estado={entrega.estado}
@@ -327,7 +320,6 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                     mostrarLabel={true}
                                                 />
                                                 <br />
-                                                {formatearFecha(entrega.fecha_programada)}
                                             </TableCell>
                                             <TableCell className="w-[25%]">
                                                 {entrega.vehiculo ? (
@@ -352,7 +344,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                     <span className="text-muted-foreground">-</span>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="w-[25%]">
+                                            <TableCell className="w-[18%]">
                                                 <span className="font-bold text-lg">
                                                     {entrega.peso_kg ? (
                                                         <span className="font-medium">{entrega.peso_kg} kg</span>
@@ -371,7 +363,31 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
                                                     {entrega.ventas?.length || 0} venta{(entrega.ventas?.length || 0) !== 1 ? 's' : ''}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="w-[25%]">
+                                            {/* ✅ NUEVO: Columna Fecha de Creación */}
+                                            <TableCell className="w-[18%]">
+                                                <div className="text-sm">
+                                                    {entrega.created_at ? (
+                                                        <>
+                                                            <div className="font-medium">
+                                                                {new Date(entrega.created_at).toLocaleDateString('es-BO', {
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    year: 'numeric'
+                                                                })}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {new Date(entrega.created_at).toLocaleTimeString('es-BO', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[19%]">
                                                 <div className="flex gap-2 flex-wrap">
                                                     <Button
                                                         size="sm"

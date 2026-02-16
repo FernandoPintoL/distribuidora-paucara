@@ -56,12 +56,6 @@
         <span>-{{ number_format($descuento, 2) }}</span>
     </div>
     @endif
-    @if($impuesto > 0)
-    <div style="display: flex; justify-content: space-between; padding: 3px 0;">
-        <span>IVA:</span>
-        <span>{{ number_format($impuesto, 2) }}</span>
-    </div>
-    @endif
     <div style="display: flex; justify-content: space-between; padding: 5px 0; font-weight: bold; border-top: 1px solid #333; margin-top: 3px;">
         <span>TOTAL:</span>
         <span>{{ number_format($total, 2) }}</span>

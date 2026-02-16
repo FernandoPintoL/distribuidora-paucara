@@ -35,11 +35,13 @@ class LogisticaController extends Controller
             }
             // Si estado === 'TODOS', no aplicar filtro (mostrar todos)
         } else {
-            // Default: mostrar solo PENDIENTE y APROBADA si no se proporciona filtro de estado
+            // Default: mostrar BORRADOR, PENDIENTE y APROBADA si no se proporciona filtro de estado
+            $estadoBorradorId = Proforma::obtenerIdEstado('BORRADOR', 'proforma');
             $estadoPendienteId = Proforma::obtenerIdEstado('PENDIENTE', 'proforma');
             $estadoAprobadaId = Proforma::obtenerIdEstado('APROBADA', 'proforma');
-            if ($estadoPendienteId && $estadoAprobadaId) {
-                $query->whereIn('estado_proforma_id', [$estadoPendienteId, $estadoAprobadaId]);
+            $estadoIds = array_filter([$estadoBorradorId, $estadoPendienteId, $estadoAprobadaId]);
+            if (!empty($estadoIds)) {
+                $query->whereIn('estado_proforma_id', $estadoIds);
             }
         }
 

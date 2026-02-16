@@ -5,7 +5,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
-import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown, Printer } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown, Printer, Pencil } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
 import { useEstadosProformas } from '@/application/hooks';
@@ -54,6 +54,7 @@ interface ProformasSectionProps {
     setFiltroHoraEntregaSolicitadaHasta: (value: string) => void;
     cambiarPagina: (page: number) => void;
     onVerProforma: (proforma: ProformaAppExterna) => void;
+    onEditarProforma?: (proforma: ProformaAppExterna) => void;
     onRechazarProforma?: (proforma: ProformaAppExterna) => void;
     getEstadoBadge: (estado: string, proforma: ProformaAppExterna) => any;
     estaVencida: (proforma: ProformaAppExterna) => boolean;
@@ -99,6 +100,7 @@ export function ProformasSection({
     setFiltroHoraEntregaSolicitadaHasta,
     cambiarPagina,
     onVerProforma,
+    onEditarProforma,
     onRechazarProforma,
     getEstadoBadge,
     estaVencida,
@@ -122,7 +124,18 @@ export function ProformasSection({
     // Crear array de opciones: TODOS + estados del API
     const estados = useMemo(() => {
         const estadosCodigos = estadosAPI.map(e => e.codigo);
-        return ['TODOS' as const, ...estadosCodigos];
+        const resultado = ['TODOS' as const, ...estadosCodigos];
+
+        // 🔍 DEBUG: Log en consola web
+        console.log('📊 [ProformasSection] Estados cargados:', {
+            estadosAPI: estadosAPI,
+            estadosCodigos: estadosCodigos,
+            resultado: resultado,
+            isLoading: isLoading,
+            error: error
+        });
+
+        return resultado;
     }, [estadosAPI]);
 
     // Función para contar filtros activos
@@ -145,38 +158,6 @@ export function ProformasSection({
     };
 
     const activeFiltersCount = countActiveFilters();
-
-    // Función para obtener etiqueta del filtro activo
-    /* const getFilterLabel = (key: string, value: string): string => {
-        switch (key) {
-            case 'localidad':
-                return `Localidad: ${localidades.find(l => l.id.toString() === value)?.nombre || value}`;
-            case 'tipo_entrega':
-                return `Entrega: ${value === 'DELIVERY' ? '🚚 Delivery' : '🏪 Pickup'}`;
-            case 'politica_pago':
-                const politicas: Record<string, string> = {
-                    'CONTRA_ENTREGA': 'Contra Entrega',
-                    'ANTICIPADO_100': 'Anticipado 100%',
-                    'MEDIO_MEDIO': 'Medio/Medio',
-                    'CREDITO': 'Crédito'
-                };
-                return `Pago: ${politicas[value] || value}`;
-            case 'estado_logistica':
-                return `Logístico: ${estadosLogistica.find(e => e.id.toString() === value)?.nombre || value}`;
-            case 'coordinacion':
-                return `Coordinación: ${value === 'true' ? '✓ Completada' : '⏳ Pendiente'}`;
-            case 'usuario_aprobador':
-                return `Aprobador: ${usuariosAprobadores.find(u => u.id.toString() === value)?.name || value}`;
-            case 'vencidas':
-                return 'Solo Vencidas';
-            case 'rango_fecha':
-                return `Fechas: ${dateFrom || 'Inicio'} - ${dateTo || 'Fin'}`;
-            case 'rango_monto':
-                return `Monto: ${amountFrom || '0'} - ${amountTo || '∞'}`;
-            default:
-                return value;
-        }
-    }; */
 
     // Función para manejar el click en headers para ordenar
     const handleSort = (field: SortField) => {
@@ -267,6 +248,8 @@ export function ProformasSection({
     const getEstadoIcon = (estado: string) => {
         // Fallback a iconos hardcodeados si el API no está disponible
         switch (estado) {
+            case 'BORRADOR':
+                return <Pencil className="w-4 h-4" />;
             case 'PENDIENTE':
                 return <Clock className="w-4 h-4" />;
             case 'APROBADA':
@@ -287,6 +270,8 @@ export function ProformasSection({
     // Función para obtener estilos del badge según estado
     const getEstadoBadgeStyles = (estado: string) => {
         switch (estado) {
+            case 'BORRADOR':
+                return 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700';
             case 'PENDIENTE':
                 return 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700';
             case 'APROBADA':
@@ -313,6 +298,10 @@ export function ProformasSection({
         }
 
         const stateStyles = {
+            'BORRADOR': {
+                active: 'bg-gray-500 dark:bg-gray-600 text-white border border-gray-600 dark:border-gray-700 shadow-md',
+                inactive: 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-900/50'
+            },
             'PENDIENTE': {
                 active: 'bg-yellow-500 dark:bg-yellow-600 text-white border border-yellow-600 dark:border-yellow-700 shadow-md',
                 inactive: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-700 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
@@ -342,6 +331,8 @@ export function ProformasSection({
     // Función para obtener ícono del filtro según estado
     const getFilterIcon = (estado: string) => {
         switch (estado) {
+            case 'BORRADOR':
+                return <Pencil className="w-4 h-4" />;
             case 'PENDIENTE':
                 return <Clock className="w-4 h-4" />;
             case 'APROBADA':
@@ -408,20 +399,27 @@ export function ProformasSection({
                     {/* Filtro de Estado */}
                     <div>
                         <label className="text-sm font-medium mb-2 block dark:text-gray-300">
-                            Estado de Proforma
+                            Estado de Proforma ({estados.length} opciones)
                             {isLoading && <span className="text-xs text-gray-500 ml-2">(cargando...)</span>}
+                            {error && <span className="text-xs text-red-500 ml-2">⚠️ Error: {error.message}</span>}
                         </label>
                         <div className="flex flex-wrap gap-2">
-                            {estados.map((estado) => (
-                                <button
-                                    key={estado}
-                                    onClick={() => setFiltroEstadoProforma(estado)}
-                                    className={`px-4 py-2 rounded-lg text-sm ${getFilterButtonStyles(estado, filtroEstadoProforma === estado)}`}
-                                >
-                                    {getFilterIcon(estado)}
-                                    {estado}
-                                </button>
-                            ))}
+                            {estados.map((estado) => {
+                                console.log('🔘 Renderizando botón:', estado);
+                                return (
+                                    <button
+                                        key={estado}
+                                        onClick={() => {
+                                            console.log('📍 Click en filtro:', estado);
+                                            setFiltroEstadoProforma(estado);
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-sm ${getFilterButtonStyles(estado, filtroEstadoProforma === estado)}`}
+                                    >
+                                        {getFilterIcon(estado)}
+                                        {estado}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -919,6 +917,8 @@ export function ProformasSection({
                                         )}
                                     </div>
                                 </th>
+                                {/* ✅ NUEVO: Columna Venta (cuando proforma convertida) */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">💬 Venta</th>
                                 {/* ✅ NUEVO: Columna Fecha Vencimiento */}
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Vencimiento</th>
                                 {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
@@ -932,11 +932,21 @@ export function ProformasSection({
                         <tbody>
                             {sortedProformas.map((proforma) => (
                                 <tr key={proforma.id} className="border-t dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-2 font-mono text-xs dark:text-gray-300 space-y-2">
-                                        <div>Folio: {proforma.id} | {proforma.numero}</div>
-                                        <div className={`gap-2 flex items-center w-fit px-3 py-1 rounded-full font-medium text-sm ${getEstadoBadgeStyles(proforma.estado)}`}>
-                                            {getEstadoIcon(proforma.estado)}
-                                            {proforma.estado}
+                                    {/* ✅ PRIMERA COLUMNA: ESTADO DESTACADO CON COLOR DEL BACKEND */}
+                                    <td className="px-4 py-2 dark:text-gray-300">
+                                        <div className="space-y-2">
+                                            <div
+                                                className="inline-flex gap-2 items-center px-3 py-2 rounded-lg font-semibold text-sm text-white"
+                                                style={{
+                                                    backgroundColor: proforma.estado_logistica?.color || '#6B7280'
+                                                }}
+                                            >
+                                                <span>{proforma.estado_logistica?.icono || '📋'}</span>
+                                                <span>{proforma.estado_logistica?.nombre || proforma.estado}</span>
+                                            </div>
+                                            <div className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                                                Folio: {proforma.id} | {proforma.numero}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-4 py-2 dark:text-gray-300 space-y-2">
@@ -950,6 +960,28 @@ export function ProformasSection({
                                     </td>
                                     <td className="px-4 py-2 text-right dark:text-gray-300">
                                         Bs {proforma.total.toLocaleString('es-BO', { maximumFractionDigits: 2 })}
+                                    </td>
+                                    {/* ✅ COLUMNA: VENTA CONVERTIDA */}
+                                    <td className="px-4 py-2 dark:text-gray-300">
+                                        {proforma.venta_numero ? (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">🛍️</span>
+                                                    <div>
+                                                        <div className="font-semibold text-sm text-green-700 dark:text-green-400">
+                                                            {proforma.venta_numero}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                                                            ID: {proforma.venta_id}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-xs text-gray-400 dark:text-gray-500 italic">
+                                                Sin convertir
+                                            </div>
+                                        )}
                                     </td>
                                     {/* ✅ NUEVO: Columna Fecha Vencimiento */}
                                     <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
@@ -1013,6 +1045,17 @@ export function ProformasSection({
                                             >
                                                 <Printer className="h-4 w-4 dark:text-gray-400" />
                                             </Button>
+                                            {['BORRADOR', 'PENDIENTE'].includes(proforma.estado) && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => onEditarProforma?.(proforma)}
+                                                    className="dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400"
+                                                    title="Editar proforma"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             {['PENDIENTE', 'APROBADA', 'VENCIDA'].includes(proforma.estado) && (
                                                 <Button
                                                     size="sm"

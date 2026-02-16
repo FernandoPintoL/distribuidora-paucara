@@ -28,6 +28,7 @@ class StoreMermaRequest extends FormRequest
             'observaciones' => ['nullable', 'string', 'max:1000'],
             'productos' => ['required', 'array', 'min:1'],
             'productos.*.producto_id' => ['required', 'integer', 'exists:productos,id'],
+            'productos.*.stock_producto_id' => ['nullable', 'integer', 'exists:stock_productos,id'],
             'productos.*.cantidad' => ['required', 'numeric', 'min:0.01'],
             'productos.*.costo_unitario' => ['nullable', 'numeric', 'min:0'],
             'productos.*.lote' => ['nullable', 'string', 'max:100'],

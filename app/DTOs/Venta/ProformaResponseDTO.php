@@ -46,6 +46,8 @@ class ProformaResponseDTO extends BaseDTO
         public ?array $usuario_creador = null,
         // ✅ CRÍTICO: Incluir datos completos del estado logístico para Show.tsx
         public ?array $estado_logistica = null,
+        // ✅ NUEVO: Incluir datos de venta cuando la proforma es CONVERTIDA
+        public ?array $venta = null,
     ) {}
 
     /**
@@ -159,6 +161,11 @@ class ProformaResponseDTO extends BaseDTO
                 'categoria' => $model->estadoLogistica->categoria,
                 'descripcion' => $model->estadoLogistica->descripcion ?? null,
                 'activo' => $model->estadoLogistica->activo,
+            ] : null,
+            // ✅ NUEVO: Incluir datos de venta cuando la proforma fue convertida (para mostrar en Show.tsx)
+            venta: $model->relationLoaded('venta') && $model->venta ? [
+                'id' => $model->venta->id,
+                'numero' => $model->venta->numero,
             ] : null,
         );
     }

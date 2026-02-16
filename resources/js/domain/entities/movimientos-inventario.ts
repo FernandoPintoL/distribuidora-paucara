@@ -18,9 +18,29 @@ export interface MovimientoInventario extends BaseEntity {
     created_at?: string;
     updated_at?: string;
 
+    // ✅ Tipo de ajuste (relación FK)
+    tipo_ajuste_inventario_id?: Id;
+    tipoAjusteInventario?: TipoAjusteInventario;
+
     // Relaciones
     stockProducto?: StockProducto;
     user?: User;
+}
+
+/**
+ * Interface para TipoAjusteInventario
+ * Contiene configuración y detalles del tipo de ajuste (entrada/salida)
+ */
+export interface TipoAjusteInventario {
+    id: Id;
+    clave: string;                           // ej: ENTRADA_COMPRA, SALIDA_VENTA
+    label: string;                           // ej: "Entrada por Compra"
+    tipo_operacion: 'entrada' | 'salida' | 'ambos';  // ← Para filtrar
+    descripcion?: string | null;
+    color?: string | null;                   // Color hex: #10b981
+    bg_color?: string | null;                // Clase Tailwind: bg-green-50
+    text_color?: string | null;              // Clase Tailwind: text-green-800
+    activo: boolean;
 }
 
 export interface StockProducto {

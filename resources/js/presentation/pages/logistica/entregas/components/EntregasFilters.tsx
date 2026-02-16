@@ -24,6 +24,7 @@ interface Props {
     filtros: FiltrosEntregas;
     onFilterChange: (key: keyof FiltrosEntregas, value: string) => void;
     onReset: () => void;
+    onApply?: () => void;
     estadosAPI: Array<{ codigo: string; nombre: string }>;
     vehiculos: Array<{ id: number; placa: string; marca: string; modelo: string }>;
     choferes: Array<{ id: number; nombre: string }>;
@@ -46,6 +47,7 @@ export function EntregasFilters({
     filtros,
     onFilterChange,
     onReset,
+    onApply,
     estadosAPI,
     vehiculos,
     choferes,
@@ -275,6 +277,11 @@ export function EntregasFilters({
                                 type="date"
                                 value={filtros.fecha_desde || ''}
                                 onChange={(e) => onFilterChange('fecha_desde', e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        onApply?.();
+                                    }
+                                }}
                                 className="bg-background"
                                 disabled={isLoading}
                             />
@@ -287,11 +294,28 @@ export function EntregasFilters({
                                 type="date"
                                 value={filtros.fecha_hasta || ''}
                                 onChange={(e) => onFilterChange('fecha_hasta', e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        onApply?.();
+                                    }
+                                }}
                                 className="bg-background"
                                 disabled={isLoading}
                             />
                         </div>
                     </div>
+
+                    {/* Botón Aplicar Filtros */}
+                    {onApply && (
+                        <Button
+                            onClick={onApply}
+                            disabled={isLoading}
+                            className="w-full"
+                        >
+                            <Filter className="h-4 w-4 mr-2" />
+                            Aplicar Filtros
+                        </Button>
+                    )}
                 </div>
             )}
 

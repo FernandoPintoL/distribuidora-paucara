@@ -700,6 +700,8 @@ class ProformaService
             'usuarioCreador',
             // ✅ CRÍTICO: Cargar estado_logistica para mostrar en Show.tsx
             'estadoLogistica',
+            // ✅ NUEVO: Cargar venta si la proforma fue convertida (para mostrar ID y número de venta)
+            'venta',
         ])->findOrFail($proformaId);
 
         return ProformaResponseDTO::fromModel($proforma);

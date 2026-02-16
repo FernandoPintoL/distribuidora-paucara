@@ -8,8 +8,59 @@ import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useAuth } from '@/application/hooks/use-auth';
 import { toast } from 'react-hot-toast';
 import { Almacen } from '@/domain/entities/almacenes';
-import { StockProducto } from '@/domain/entities/movimientos-inventario';
-import { Id } from '@/domain/entities/shared';
+import type { StockProducto } from '@/domain/entities/movimientos-inventario';
+import { Id, Pagination } from '@/domain/entities/shared';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import { Printer } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/presentation/components/ui/dialog';
+
+interface AjusteInventario {
+    id: number;
+    numero: string;
+    almacen_id: number;
+    user_id: number;
+    cantidad_entradas: number;
+    cantidad_salidas: number;
+    cantidad_productos: number;
+    observacion?: string;
+    estado: 'pendiente' | 'procesado' | 'anulado';
+    fecha_anulacion?: string;
+    user_anulacion_id?: number;
+    motivo_anulacion?: string;
+    created_at: string;
+    updated_at: string;
+    almacen?: {
+        id: number;
+        nombre: string;
+    };
+    user?: {
+        id: number;
+        name: string;
+    };
+}
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/presentation/components/ui/table';
+import { Button } from '@/presentation/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/presentation/components/ui/select';
 
 interface AjusteItem {
     stock_producto_id: number;
@@ -31,6 +82,7 @@ interface PageProps extends InertiaPageProps {
     almacenes: Almacen[];
     stock_productos: StockProducto[];
     almacen_seleccionado?: number;
+    ajustes_inventario?: Pagination<AjusteInventario>;
 }
 
 // Helper function para redondear a 2 decimales
@@ -51,12 +103,129 @@ const breadcrumbs = [
 
 export default function AjusteInventario() {
     const { props } = usePage<PageProps>();
-    const { almacenes, stock_productos, almacen_seleccionado } = props;
-    const { can } = useAuth();
+    const { almacenes, stock_productos, almacen_seleccionado, ajustes_inventario } = props;
+    const { can, hasRole } = useAuth();
+
+    // 🔍 LOG: Mostrar estructura completa de datos que llega del backend
+    useEffect(() => {
+        console.group('📊 DATOS DEL BACKEND - GET /inventario/ajuste');
+        console.log('🏪 Almacenes:', almacenes);
+        console.log('📦 Stock Productos (del almacén seleccionado):', stock_productos);
+        console.log('🏷️ Almacén Seleccionado:', almacen_seleccionado);
+
+        if (ajustes_inventario) {
+            console.group('📋 AJUSTES DE INVENTARIO (Paginación)');
+            console.log('Total registros:', ajustes_inventario.total);
+            console.log('Por página:', ajustes_inventario.per_page);
+            console.log('Página actual:', ajustes_inventario.current_page);
+            console.log('Última página:', ajustes_inventario.last_page);
+            console.log('Mostrando:', `${ajustes_inventario.from} a ${ajustes_inventario.to}`);
+
+            console.group('📌 ESTRUCTURA DE CADA AJUSTE:');
+            if (ajustes_inventario.data.length > 0) {
+                const primerAjuste = ajustes_inventario.data[0];
+                console.log('🔵 PRIMER AJUSTE (Ejemplo completo):', primerAjuste);
+                console.table([primerAjuste]);
+
+                console.group('🔍 Desglose de Campos:');
+                console.log('├─ id:', primerAjuste.id);
+                console.log('├─ cantidad:', primerAjuste.cantidad, '(cambio: + entrada, - salida)');
+                console.log('├─ cantidad_anterior:', primerAjuste.cantidad_anterior, '✅ Stock ANTES');
+                console.log('├─ cantidad_posterior:', primerAjuste.cantidad_posterior, '✅ Stock DESPUÉS');
+                console.log('├─ tipo:', primerAjuste.tipo, '(genérico: ENTRADA_AJUSTE, SALIDA_AJUSTE)');
+                console.log('├─ tipo_ajuste_inventario_id:', primerAjuste.tipo_ajuste_inventario_id);
+                console.log('├─ tipoAjusteInventario:', primerAjuste.tipoAjusteInventario, '✅ RELACIÓN');
+                console.log('│  ├─ label:', primerAjuste.tipoAjusteInventario?.label, '(nombre descriptivo)');
+                console.log('│  ├─ tipo_operacion:', primerAjuste.tipoAjusteInventario?.tipo_operacion, '(entrada/salida)');
+                console.log('│  ├─ clave:', primerAjuste.tipoAjusteInventario?.clave);
+                console.log('│  ├─ descripcion:', primerAjuste.tipoAjusteInventario?.descripcion);
+                console.log('│  └─ color:', primerAjuste.tipoAjusteInventario?.color);
+                console.log('├─ observacion:', primerAjuste.observacion);
+                console.log('├─ numero_documento:', primerAjuste.numero_documento);
+                console.log('├─ created_at:', primerAjuste.created_at);
+                console.log('├─ stockProducto:', primerAjuste.stockProducto, '✅ RELACIÓN');
+                console.log('│  ├─ producto:', primerAjuste.stockProducto?.producto?.nombre);
+                console.log('│  ├─ sku:', primerAjuste.stockProducto?.producto?.sku);
+                console.log('│  └─ almacen:', primerAjuste.stockProducto?.almacen?.nombre);
+                console.log('├─ user:', primerAjuste.user?.name, '(usuario que hizo ajuste)');
+                console.groupEnd();
+
+                console.group('📊 TODOS LOS AJUSTES:');
+                if (ajustes_inventario?.data) {
+                    console.table(ajustes_inventario.data.map(a => ({
+                        'Número': a.numero,
+                        'Almacén': a.almacen?.nombre,
+                        'Usuario': a.user?.name,
+                        'Entradas': a.cantidad_entradas,
+                        'Salidas': a.cantidad_salidas,
+                        'Productos': a.cantidad_productos,
+                        'Observación': a.observacion,
+                        'Fecha': new Date(a.created_at).toLocaleDateString('es-ES')
+                    })));
+                }
+                console.groupEnd();
+            } else {
+                console.log('⚠️ No hay ajustes realizados');
+            }
+            console.groupEnd();
+            console.groupEnd();
+        }
+        console.groupEnd();
+    }, [almacenes, stock_productos, almacen_seleccionado, ajustes_inventario]);
 
     const [almacenSeleccionado, setAlmacenSeleccionado] = useState<string>(
         almacen_seleccionado ? String(almacen_seleccionado) : ''
     );
+
+    // Estado para controlar qué vista mostrar - Inicia en HISTÓRICO por defecto
+    const [vista, setVista] = useState<'crear' | 'tabla' | 'historico'>('historico');
+
+    // Estados para el modal de impresión
+    const [isModalImpresionOpen, setIsModalImpresionOpen] = useState(false);
+    const [ajusteIdParaImprimir, setAjusteIdParaImprimir] = useState<number | null>(null);
+
+    // Estados para el dialog de anulación
+    const [ajusteParaAnular, setAjusteParaAnular] = useState<number | null>(null);
+    const [motivoAnulacion, setMotivoAnulacion] = useState('');
+    const [anulandoAjuste, setAnulandoAjuste] = useState(false);
+
+    // Handler para abrir el modal de impresión
+    const handleAbrirImpresion = (ajusteId: number) => {
+        setAjusteIdParaImprimir(ajusteId);
+        setIsModalImpresionOpen(true);
+    };
+
+    // Handler para anular un ajuste
+    const handleAnularAjuste = async () => {
+        if (!ajusteParaAnular) return;
+
+        setAnulandoAjuste(true);
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const response = await fetch(`/api/inventario/ajuste/${ajusteParaAnular}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ motivo: motivoAnulacion }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                toast.success(data.message || 'El ajuste ha sido anulado exitosamente');
+                router.reload();
+            } else {
+                toast.error(data.message || 'No se pudo anular el ajuste');
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Ocurrió un error al anular el ajuste');
+        } finally {
+            setAnulandoAjuste(false);
+            setAjusteParaAnular(null);
+            setMotivoAnulacion('');
+        }
+    };
 
     const [ajustes, setAjustes] = useState<Record<string, AjusteIndividual>>({});
     const [productoSeleccionado, setProductoSeleccionado] = useState<StockProducto | null>(null);
@@ -475,30 +644,39 @@ export default function AjusteInventario() {
                                     Ajuste de Inventario
                                 </h2>
                                 <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                    Realizar ajustes manuales de stock por almacén
+                                    {vista === 'crear' ? 'Realizar ajustes manuales de stock por almacén' : vista === 'tabla' ? 'Ajuste masivo de stock por tabla editable' : 'Historial de ajustes realizados'}
                                 </p>
                             </div>
-                            {/* <div className="flex gap-2">
-                                <Link
-                                    href="/inventario"
-                                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+
+                            {/* Tabs/Botones para cambiar de vista */}
+                            <div className="flex gap-2 flex-wrap">
+                                {/* <Button
+                                    variant={vista === 'crear' ? 'default' : 'outline'}
+                                    onClick={() => setVista('crear')}
+                                    className="transition-colors"
                                 >
-                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                    Volver al Dashboard
-                                </Link>
-                                <Link
-                                    href="/inventario/tipos-ajuste-inventario"
-                                    className="inline-flex items-center px-4 py-2 border border-blue-300 dark:border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-700 dark:text-blue-300 bg-white dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-800 transition-colors duration-200"
+                                    ➕ Crear Ajuste
+                                </Button> */}
+                                <Button
+                                    variant="outline"
+                                    onClick={() => router.visit('/inventario/ajuste-tabla')}
+                                    className="transition-colors"
                                 >
-                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Tipos de Ajuste
-                                </Link>
-                            </div> */}
+                                    📊 Ajuste por Tabla
+                                </Button>
+                                <Button
+                                    variant={vista === 'historico' ? 'default' : 'outline'}
+                                    onClick={() => setVista('historico')}
+                                    className="transition-colors"
+                                >
+                                    📋 Histórico
+                                </Button>
+                            </div>
                         </div>
+
+                        {/* VISTA: CREAR AJUSTE */}
+                        {vista === 'crear' && (
+                        <>
                         {/* Selección de almacén y buscador de productos en una fila */}
                         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1049,7 +1227,247 @@ export default function AjusteInventario() {
                             </div>
                         )}
                         {/* Aquí irán los siguientes pasos: agregar a lista y resumen */}
+                        </>
+                        )}
+
+                        {/* VISTA: AJUSTE POR TABLA */}
+                        {vista === 'tabla' && (
+                        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                    Importa y procesa múltiples ajustes de una tabla editable
+                                </p>
+                                <Button asChild>
+                                    <a href="/inventario/ajuste-tabla" className="inline-flex items-center">
+                                        📊 Ir a Ajuste por Tabla Editable
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+                        )}
+
+                        {/* VISTA: HISTÓRICO DE AJUSTES */}
+                        {vista === 'historico' && (
+                        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                            {ajustes_inventario && ajustes_inventario.data.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>🔢 Número</TableHead>
+                                                    <TableHead>🏪 Almacén</TableHead>
+                                                    <TableHead>👤 Usuario</TableHead>
+                                                    <TableHead>📅 Fecha</TableHead>
+                                                    <TableHead className="text-center">📦 Productos</TableHead>
+                                                    <TableHead className="text-center">📥 Entradas</TableHead>
+                                                    <TableHead className="text-center">📤 Salidas</TableHead>
+                                                    <TableHead>📝 Observación</TableHead>
+                                                    <TableHead className="text-center">📊 Estado</TableHead>
+                                                    <TableHead className="text-center">⚙️ Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {ajustes_inventario.data.map((ajuste) => (
+                                                    <TableRow key={ajuste.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                        <TableCell className="font-mono font-semibold text-gray-900 dark:text-gray-100">
+                                                            {ajuste.numero}
+                                                        </TableCell>
+                                                        <TableCell className="text-sm">
+                                                            <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-medium">
+                                                                {ajuste.almacen?.nombre || 'Sin almacén'}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm whitespace-nowrap">
+                                                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                                                                {ajuste.user?.name || 'Usuario desconocido'}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm whitespace-nowrap">
+                                                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                                                                {new Date(ajuste.created_at).toLocaleDateString('es-ES')}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {new Date(ajuste.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center font-bold text-gray-900 dark:text-gray-100">
+                                                            {ajuste.cantidad_productos}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold text-sm">
+                                                                {ajuste.cantidad_entradas}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold text-sm">
+                                                                {ajuste.cantidad_salidas}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 max-w-xs">
+                                                            <div className="truncate" title={ajuste.observacion || ''}>
+                                                                {ajuste.observacion || '(sin observación)'}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {ajuste.estado === 'anulado' ? (
+                                                                <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold text-sm">
+                                                                    ❌ Anulado
+                                                                </div>
+                                                            ) : ajuste.estado === 'procesado' ? (
+                                                                <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-semibold text-sm">
+                                                                    ✅ Procesado
+                                                                </div>
+                                                            ) : (
+                                                                <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold text-sm">
+                                                                    ⏳ Pendiente
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex gap-2 justify-center">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleAbrirImpresion(ajuste.id)}
+                                                                    className="gap-2"
+                                                                    title="Imprimir ajuste"
+                                                                >
+                                                                    <Printer className="h-4 w-4" />
+                                                                    <span className="hidden sm:inline">Imprimir</span>
+                                                                </Button>
+                                                                {ajuste.estado !== 'anulado' && hasRole('admin') && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="destructive"
+                                                                        onClick={() => setAjusteParaAnular(ajuste.id)}
+                                                                        className="gap-2"
+                                                                        title="Anular ajuste"
+                                                                    >
+                                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                                        </svg>
+                                                                        <span className="hidden sm:inline">Anular</span>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    {/* Paginación */}
+                                    {ajustes_inventario.last_page > 1 && (
+                                        <div className="flex items-center justify-between mt-4">
+                                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                                Mostrando {ajustes_inventario.from} a {ajustes_inventario.to} de {ajustes_inventario.total} ajustes
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {ajustes_inventario.links?.map((link, idx) => (
+                                                    link.url ? (
+                                                        <Button
+                                                            key={idx}
+                                                            variant={link.active ? 'default' : 'outline'}
+                                                            size="sm"
+                                                            onClick={() => router.visit(link.url)}
+                                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                                        />
+                                                    ) : null
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <p className="text-gray-500 dark:text-gray-400">
+                                        📭 No hay ajustes registrados aún
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        )}
                     </div>
+
+                    {/* Modal para seleccionar formato de impresión */}
+                    <OutputSelectionModal
+                        isOpen={isModalImpresionOpen}
+                        onClose={() => setIsModalImpresionOpen(false)}
+                        documentoId={ajusteIdParaImprimir || 0}
+                        tipoDocumento="ajuste"
+                        documentoInfo={{
+                            numero: ajustes_inventario?.data.find(a => a.id === ajusteIdParaImprimir)?.numero || 'Ajuste'
+                        }}
+                    />
+
+                    {/* Dialog para confirmar anulación */}
+                    <Dialog open={ajusteParaAnular !== null} onOpenChange={(open) => {
+                        if (!open) {
+                            setAjusteParaAnular(null);
+                            setMotivoAnulacion('');
+                        }
+                    }}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>¿Anular ajuste?</DialogTitle>
+                                <DialogDescription>
+                                    Esta acción revertirá todos los movimientos de stock asociados al ajuste {ajustes_inventario?.data.find(a => a.id === ajusteParaAnular)?.numero}. No se puede deshacer.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div>
+                                    <label htmlFor="motivo-anulacion" className="text-sm font-medium">
+                                        Motivo de anulación (opcional)
+                                    </label>
+                                    <textarea
+                                        id="motivo-anulacion"
+                                        value={motivoAnulacion}
+                                        onChange={(e) => setMotivoAnulacion(e.target.value)}
+                                        placeholder="Ingresa el motivo de la anulación..."
+                                        className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        rows={3}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setAjusteParaAnular(null);
+                                        setMotivoAnulacion('');
+                                    }}
+                                    disabled={anulandoAjuste}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleAnularAjuste}
+                                    disabled={anulandoAjuste}
+                                    className="gap-2"
+                                >
+                                    {anulandoAjuste ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Anulando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Anular ajuste
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </>
             </AppLayout>
         );

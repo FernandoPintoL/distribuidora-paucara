@@ -3,7 +3,7 @@ import FilterService from '@/infrastructure/services/filter.service';
 
 interface ProformaFilterState {
     searchProforma: string;
-    filtroEstadoProforma: 'TODOS' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
+    filtroEstadoProforma: 'TODOS' | 'BORRADOR' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CONVERTIDA' | 'VENCIDA';
     soloVencidas: boolean;
     filtroLocalidad: string;
     filtroTipoEntrega: string;

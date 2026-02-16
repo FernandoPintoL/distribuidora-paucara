@@ -82,12 +82,12 @@ export default function Dashboard() {
                 </div>
 
                 {/* Secciones del Dashboard */}
-                <EstadisticasCards
+                {/* <EstadisticasCards
                     estadisticas={data.estadisticas}
                     canViewStockBajo={can('inventario.stock-bajo')}
                     canViewProximosVencer={can('inventario.proximos-vencer')}
                     canViewVencidos={can('inventario.vencidos')}
-                />
+                /> */}
 
                 <StockYProductos
                     stockPorAlmacen={props.stock_por_almacen}

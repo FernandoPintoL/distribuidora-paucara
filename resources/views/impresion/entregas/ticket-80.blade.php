@@ -25,9 +25,9 @@
 
     @if($entrega->chofer)
     <div style="margin: 2px 0;">
-        <p style="margin: 2px 0;"><strong>Chofer:</strong> {{ $entrega->chofer->name ?? $entrega->chofer->nombre ?? 'S/N' }}</p>
-        @if($entrega->chofer->phone ?? false)
-        <p style="margin: 2px 0;"><strong>Teléfono:</strong> {{ $entrega->chofer->phone }}</p>
+        <p style="margin: 2px 0;"><strong>Chofer:</strong> {{ $entrega->chofer?->name ?? $entrega->chofer?->nombre ?? 'S/N' }}</p>
+        @if($entrega->chofer?->phone ?? false)
+        <p style="margin: 2px 0;"><strong>Teléfono:</strong> {{ $entrega->chofer?->phone }}</p>
         @endif
     </div>
     @else
@@ -36,12 +36,12 @@
 
     @if($entrega->vehiculo)
     <div style="margin: 2px 0;">
-        <p style="margin: 2px 0;"><strong>Placa:</strong> {{ $entrega->vehiculo->placa }}</p>
-        @if($entrega->vehiculo->marca)
-        <p style="margin: 2px 0;"><strong>Marca:</strong> {{ $entrega->vehiculo->marca }}</p>
+        <p style="margin: 2px 0;"><strong>Placa:</strong> {{ $entrega->vehiculo?->placa }}</p>
+        @if($entrega->vehiculo?->marca)
+        <p style="margin: 2px 0;"><strong>Marca:</strong> {{ $entrega->vehiculo?->marca }}</p>
         @endif
-        @if($entrega->vehiculo->modelo)
-        <p style="margin: 2px 0;"><strong>Modelo:</strong> {{ $entrega->vehiculo->modelo }}</p>
+        @if($entrega->vehiculo?->modelo)
+        <p style="margin: 2px 0;"><strong>Modelo:</strong> {{ $entrega->vehiculo?->modelo }}</p>
         @endif
     </div>
     @else
@@ -51,9 +51,9 @@
     {{-- ✅ NUEVO: ENTREGADOR --}}
     @if($entrega->entregador)
     <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px; background-color: #f9f9f9;">
-        <p style="margin: 2px 0;"><strong>Entregador:</strong> {{ $entrega->entregador->name ?? $entrega->entregador->nombre ?? 'S/N' }}</p>
-        @if($entrega->entregador->phone ?? false)
-        <p style="margin: 2px 0;"><strong>Teléfono:</strong> {{ $entrega->entregador->phone }}</p>
+        <p style="margin: 2px 0;"><strong>Entregador:</strong> {{ $entrega->entregador?->name ?? $entrega->entregador?->nombre ?? 'S/N' }}</p>
+        @if($entrega->entregador?->phone ?? false)
+        <p style="margin: 2px 0;"><strong>Teléfono:</strong> {{ $entrega->entregador?->phone }}</p>
         @endif
     </div>
     @endif
@@ -64,7 +64,7 @@
         <p style="margin: 2px 0; font-weight: bold;">Localidades:</p>
         <div style="margin: 2px 0;">
             @foreach($localidades as $localidad)
-            <p style="margin: 1px 0; padding-left: 5px;">• {{ $localidad->nombre }} @if($localidad->codigo)({{ $localidad->codigo }})@endif</p>
+            <p style="margin: 1px 0; padding-left: 5px;">• {{ $localidad?->nombre }} @if($localidad?->codigo)({{ $localidad?->codigo }})@endif</p>
             @endforeach
         </div>
     </div>
@@ -74,11 +74,11 @@
     <div style="margin: 3px 0; padding: 3px; border: 1px solid #999; border-radius: 3px;">
         <p style="margin: 2px 0; text-align: center; font-weight: bold;">PESO DE LA ENTREGA</p>
         <p style="margin: 2px 0;"><strong>Peso Total:</strong> {{ number_format($entrega->peso_kg ?? 0, 2) }} kg</p>
-        @if($entrega->vehiculo && $entrega->vehiculo->capacidad_kg)
-        <p style="margin: 2px 0;"><strong>Capacidad Vehículo:</strong> {{ number_format($entrega->vehiculo->capacidad_kg, 1) }} kg</p>
+        @if($entrega->vehiculo && $entrega->vehiculo?->capacidad_kg)
+        <p style="margin: 2px 0;"><strong>Capacidad Vehículo:</strong> {{ number_format($entrega->vehiculo?->capacidad_kg, 1) }} kg</p>
         @php
         $pesoTotal = $entrega->peso_kg ?? 0;
-        $capacidad = $entrega->vehiculo->capacidad_kg ?? 0;
+        $capacidad = $entrega->vehiculo?->capacidad_kg ?? 0;
         $porcentajeUso = $capacidad > 0 ? ($pesoTotal / $capacidad) * 100 : 0;
         $colorEstado = $porcentajeUso > 100 ? '#0E0D0D' : ($porcentajeUso > 80 ? '#070707' : '#0B0C0B');
         @endphp
@@ -107,7 +107,7 @@
             <tr style="border-bottom: 1px dotted #999;">
                 <td style="padding: 1px 0;">{{ substr($producto['producto_nombre'], 0, 25) }}</td>
                 <td style="padding: 1px 0; text-align: center; width: 15%;"> {{ number_format($producto['cantidad_total'], 1) }}</td>
-                <td style="padding: 1px 0; text-align: right; width: 20%; font-weight: bold;">{{ number_format($producto['subtotal_total'], 2) }}</td>
+                <td style="padding: 1px 0; text-align: right; width: 20%; font-size: 12px; font-weight: bold;">{{ number_format($producto['subtotal_total'], 2) }}</td>
             </tr>
             @empty
             <tr>
@@ -186,7 +186,8 @@
             <tbody>
                 @foreach($resumen_pagos['pagos'] as $pago)
                 <tr style="border-bottom: 1px dotted #999;">
-                    <td style="padding: 1px 2px;">{{ substr($pago['tipo_pago'], 0, 15) }}</td>
+                    {{-- ✅ ACTUALIZADO 2026-02-16: Usar código en lugar de nombre para evitar discrepancias --}}
+                    <td style="padding: 1px 2px;">{{ substr($pago['tipo_pago_codigo'] ?? $pago['tipo_pago'], 0, 15) }}</td>
                     <td style="padding: 1px 2px; text-align: right; font-weight: bold;">{{ number_format($pago['total'], 2) }}</td>
                 </tr>
                 @endforeach

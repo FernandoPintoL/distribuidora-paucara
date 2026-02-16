@@ -417,8 +417,8 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('convertir-venta');
         Route::post('/{id}/renovar-reservas', [\App\Http\Controllers\ProformaController::class, 'renovarReservas'])->name('renovar-reservas');
 
-        Route::get('{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
-        Route::get('{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
+        Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
+        Route::get('/{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });
 
     // ==========================================
@@ -578,9 +578,25 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('productos-vendidos/imprimir', [\App\Http\Controllers\ImpresionProductosVendidosController::class, 'imprimir'])->middleware('permission:inventario.movimientos')->name('productos-vendidos.imprimir');
         Route::get('ajuste', [\App\Http\Controllers\InventarioController::class, 'ajusteForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste.form');
         Route::post('ajuste', [\App\Http\Controllers\InventarioController::class, 'procesarAjuste'])->middleware('permission:inventario.ajuste.procesar')->name('ajuste.procesar');
+        // ✅ NUEVO: Ruta para ajuste por tabla editable
+        Route::get('ajuste-tabla', function () {
+            $almacenes = \App\Models\Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+            $stock_productos = \App\Models\StockProducto::with(['producto:id,nombre,sku,codigo_barras,codigo_qr', 'producto.codigosBarra', 'almacen:id,nombre'])->get();
+            // ✅ Cargar tipos de ajuste para la tabla
+            $tipos_ajuste_inventario = \App\Models\TipoAjusteInventario::where('activo', true)->orderBy('label')->get();
+            return \Inertia\Inertia::render('inventario/ajuste-tabla', [
+                'almacenes' => $almacenes,
+                'stock_productos' => $stock_productos,
+                'tipos_ajuste_inventario' => $tipos_ajuste_inventario,
+            ]);
+        })->middleware('permission:inventario.ajuste.form')->name('ajuste-tabla.form');
         Route::get('ajuste-masivo', [\App\Http\Controllers\InventarioController::class, 'ajusteMasivoForm'])->middleware('permission:inventario.ajuste.form')->name('ajuste-masivo.form');
         Route::get('historial-cargas', [\App\Http\Controllers\InventarioController::class, 'historialCargasForm'])->middleware('permission:inventario.ajuste.form')->name('historial-cargas.form');
         Route::get('reportes', [\App\Http\Controllers\InventarioController::class, 'reportes'])->middleware('permission:inventario.reportes')->name('reportes');
+        Route::get('ajuste/imprimir', [\App\Http\Controllers\InventarioController::class, 'imprimirAjustes'])->middleware('permission:inventario.ajuste.form')->name('ajuste.imprimir');
+
+        // ✅ Rutas para mermas de inventario
+        Route::get('merma', [\App\Http\Controllers\InventarioController::class, 'mermaForm'])->middleware('permission:inventario.mermas.registrar')->name('merma.form');
 
         // Rutas para gestión de tipos de ajuste de inventario
         Route::resource('tipos-ajuste-inventario', \App\Http\Controllers\TipoAjusteInventarioController::class)->parameters(['tipos-ajuste-inventario' => 'tipoAjusteInventario'])->middleware('permission:inventario.tipos-ajuste.manage');
@@ -612,10 +628,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::prefix('mermas')->name('mermas.')->group(function () {
             Route::get('/', [\App\Http\Controllers\InventarioController::class, 'mermas'])->middleware('permission:inventario.mermas.index')->name('index');
             Route::get('registrar', [\App\Http\Controllers\InventarioController::class, 'formularioRegistrarMerma'])->middleware('permission:inventario.mermas.registrar')->name('registrar');
-            Route::post('registrar', [\App\Http\Controllers\InventarioController::class, 'registrarMerma'])->middleware('permission:inventario.mermas.registrar')->name('store');
-            Route::get('{merma}', [\App\Http\Controllers\InventarioController::class, 'verMerma'])->middleware('permission:inventario.mermas.ver')->name('show');
+            Route::post('registrar', [\App\Http\Controllers\InventarioController::class, 'registrarMerma'])->middleware('permission:inventario.mermas.store')->name('store');
+            Route::get('{merma}', [\App\Http\Controllers\InventarioController::class, 'verMerma'])->middleware('permission:inventario.mermas.show')->name('show');
             Route::post('{merma}/aprobar', [\App\Http\Controllers\InventarioController::class, 'aprobarMerma'])->middleware('permission:inventario.mermas.aprobar')->name('aprobar');
             Route::post('{merma}/rechazar', [\App\Http\Controllers\InventarioController::class, 'rechazarMerma'])->middleware('permission:inventario.mermas.rechazar')->name('rechazar');
+            Route::get('{id}/imprimir', [\App\Http\Controllers\InventarioController::class, 'imprimirMerma'])->middleware('permission:inventario.mermas.show')->name('imprimir');
         });
 
         // Rutas para carga masiva de inventario inicial

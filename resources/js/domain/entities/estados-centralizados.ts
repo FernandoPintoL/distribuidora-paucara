@@ -141,6 +141,19 @@ export const FALLBACK_ESTADOS_PROFORMA: Estado[] = [
     {
         id: 1,
         categoria: 'proforma',
+        codigo: 'BORRADOR',
+        nombre: 'Borrador',
+        color: '#9CA3AF',
+        orden: 0,
+        es_estado_final: false,
+        permite_edicion: true,
+        requiere_aprobacion: false,
+        created_at: '',
+        updated_at: '',
+    },
+    {
+        id: 2,
+        categoria: 'proforma',
         codigo: 'PENDIENTE',
         nombre: 'Pendiente',
         color: '#6B7280',
@@ -152,7 +165,7 @@ export const FALLBACK_ESTADOS_PROFORMA: Estado[] = [
         updated_at: '',
     },
     {
-        id: 2,
+        id: 3,
         categoria: 'proforma',
         codigo: 'APROBADA',
         nombre: 'Aprobada',
@@ -165,7 +178,7 @@ export const FALLBACK_ESTADOS_PROFORMA: Estado[] = [
         updated_at: '',
     },
     {
-        id: 3,
+        id: 4,
         categoria: 'proforma',
         codigo: 'RECHAZADA',
         nombre: 'Rechazada',
@@ -178,7 +191,7 @@ export const FALLBACK_ESTADOS_PROFORMA: Estado[] = [
         updated_at: '',
     },
     {
-        id: 4,
+        id: 5,
         categoria: 'proforma',
         codigo: 'CONVERTIDA',
         nombre: 'Convertida a Venta',
@@ -191,7 +204,7 @@ export const FALLBACK_ESTADOS_PROFORMA: Estado[] = [
         updated_at: '',
     },
     {
-        id: 5,
+        id: 6,
         categoria: 'proforma',
         codigo: 'VENCIDA',
         nombre: 'Vencida',

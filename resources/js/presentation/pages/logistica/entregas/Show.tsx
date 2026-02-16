@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
-import { ArrowLeft, Package, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Package, Wifi, WifiOff, CheckCircle2, Navigation, Flag } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import type { Entrega, VehiculoCompleto, EstadoEntrega } from '@/domain/entities/entregas';
 
@@ -9,6 +9,7 @@ import EntregaFlujoCarga from './components/EntregaFlujoCarga';
 import VentasEntregaSection from './components/VentasEntregaSection';
 import ProductosAgrupados from './components/ProductosAgrupados';
 import ResumenPagosEntrega from './components/ResumenPagosEntrega';
+import { CorregirPagoModal } from './components/CorregirPagoModal';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
 import EntregaHistorialCambios from '@/presentation/components/logistica/EntregaHistorialCambios';
@@ -18,9 +19,23 @@ import { useEntregaNotifications } from '@/application/hooks/use-entrega-notific
 import { useToastNotifications } from '@/application/hooks/use-toast-notifications';
 import { useWebSocket } from '@/application/hooks/use-websocket';
 
+interface TipoPago {
+    id: number;
+    nombre: string;
+    activo: boolean;
+}
+
+interface DesglosePago {
+    tipo_pago_id: number;
+    tipo_pago_nombre: string;
+    monto: number;
+    referencia?: string;
+}
+
 interface ShowProps {
     entrega: Entrega;
     vehiculos?: VehiculoCompleto[];
+    tiposPago: TipoPago[];
 }
 
 /* const estadoBadgeColor: Record<string, string> = {
@@ -34,10 +49,14 @@ interface ShowProps {
     CANCELADA: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
 }; */
 
-export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
+export default function EntregaShow({ entrega: initialEntrega, tiposPago }: ShowProps) {
     const [entrega, setEntrega] = useState<Entrega>(initialEntrega);
     const [isLive, setIsLive] = useState(false);
     const [isOutputModalOpen, setIsOutputModalOpen] = useState(false);
+    const [isMarking, setIsMarking] = useState(false);
+    const [isInitiatingRoute, setIsInitiatingRoute] = useState(false);
+    const [isFinalizingDelivery, setIsFinalizingDelivery] = useState(false);
+    const [corrigiendo, setCorrigiendo] = useState<{ ventaId: number; ventaNumero: string; ventaTotal: number; desglose: DesglosePago[] } | null>(null);
 
     // ✅ DEBUG: Ver qué datos llegan del backend
     useEffect(() => {
@@ -133,6 +152,177 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
         }
     }, [on, off, isConnected]);
 
+    // ✅ NUEVO: Handler para marcar entrega como listo para entrega
+    const handleMarcarListoParaEntrega = async () => {
+        setIsMarking(true);
+        console.log('[SHOW] 📤 Iniciando: Marcar como listo para entrega');
+        console.log(`[SHOW] 🔗 Endpoint: POST /api/entregas/${entrega.id}/listo-para-entrega`);
+        try {
+            const response = await fetch(`/api/entregas/${entrega.id}/listo-para-entrega`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            console.log('[SHOW] 📥 Respuesta recibida:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+            });
+
+            const data = await response.json();
+            console.log('[SHOW] ✅ Datos parseados:', data);
+            console.log('[SHOW] 🔍 Completa respuesta JSON:', JSON.stringify(data, null, 2));
+
+            if (response.ok && data.success) {
+                console.log('[SHOW] ✨ Éxito - Mostrando notificación');
+                showNotification({
+                    title: '✅ Éxito',
+                    message: data.message || 'Operación completada',
+                    type: 'success',
+                });
+                // Recargar la página para ver el cambio de estado
+                console.log('[SHOW] ⏳ Recargando página en 1.5 segundos...');
+                setTimeout(() => {
+                    router.reload();
+                }, 1500);
+            } else {
+                console.log('[SHOW] ❌ Error en respuesta:', data);
+                console.log('[SHOW] 📊 Status:', response.status, response.statusText);
+                showNotification({
+                    title: '❌ Error',
+                    message: data.message || data.error || 'Operación no completada',
+                    type: 'error',
+                });
+            }
+        } catch (error) {
+            console.error('[SHOW] ❌ Excepción al marcar listo para entrega:', error);
+            showNotification({
+                title: '❌ Error',
+                message: error instanceof Error ? error.message : 'Error desconocido',
+                type: 'error',
+            });
+        } finally {
+            setIsMarking(false);
+        }
+    };
+
+    // ✅ NUEVO: Handler para iniciar ruta
+    const handleIniciarRuta = async () => {
+        setIsInitiatingRoute(true);
+        console.log('[SHOW] 📤 Iniciando: Iniciar ruta');
+        console.log(`[SHOW] 🔗 Endpoint: POST /api/chofer/entregas/${entrega.id}/iniciar-ruta`);
+        try {
+            const response = await fetch(`/api/chofer/entregas/${entrega.id}/iniciar-ruta`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            console.log('[SHOW] 📥 Respuesta recibida:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+            });
+
+            const data = await response.json();
+            console.log('[SHOW] ✅ Datos parseados:', data);
+            console.log('[SHOW] 🔍 Completa respuesta JSON:', JSON.stringify(data, null, 2));
+
+            if (response.ok && data.success) {
+                console.log('[SHOW] ✨ Éxito - Mostrando notificación');
+                showNotification({
+                    title: '✅ Éxito',
+                    message: data.message || 'Operación completada',
+                    type: 'success',
+                });
+                // Recargar la página para ver el cambio de estado
+                console.log('[SHOW] ⏳ Recargando página en 1.5 segundos...');
+                setTimeout(() => {
+                    router.reload();
+                }, 1500);
+            } else {
+                console.log('[SHOW] ❌ Error en respuesta:', data);
+                console.log('[SHOW] 📊 Status:', response.status, response.statusText);
+                showNotification({
+                    title: '❌ Error',
+                    message: data.message || data.error || 'Operación no completada',
+                    type: 'error',
+                });
+            }
+        } catch (error) {
+            console.error('[SHOW] ❌ Excepción al iniciar ruta:', error);
+            showNotification({
+                title: '❌ Error',
+                message: error instanceof Error ? error.message : 'Error desconocido',
+                type: 'error',
+            });
+        } finally {
+            setIsInitiatingRoute(false);
+        }
+    };
+
+    // ✅ NUEVO: Handler para finalizar entrega
+    const handleFinalizarEntrega = async () => {
+        setIsFinalizingDelivery(true);
+        console.log('[SHOW] 📤 Iniciando: Finalizar entrega');
+        console.log(`[SHOW] 🔗 Endpoint: POST /api/chofer/entregas/${entrega.id}/finalizar-entrega`);
+        try {
+            const response = await fetch(`/api/chofer/entregas/${entrega.id}/finalizar-entrega`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            console.log('[SHOW] 📥 Respuesta recibida:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+            });
+
+            const data = await response.json();
+            console.log('[SHOW] ✅ Datos parseados:', data);
+            console.log('[SHOW] 🔍 Completa respuesta JSON:', JSON.stringify(data, null, 2));
+
+            if (response.ok && data.success) {
+                console.log('[SHOW] ✨ Éxito - Mostrando notificación');
+                showNotification({
+                    title: '✅ Éxito',
+                    message: data.message || 'Operación completada',
+                    type: 'success',
+                });
+                // Recargar la página para ver el cambio de estado
+                console.log('[SHOW] ⏳ Recargando página en 1.5 segundos...');
+                setTimeout(() => {
+                    router.reload();
+                }, 1500);
+            } else {
+                console.log('[SHOW] ❌ Error en respuesta:', data);
+                console.log('[SHOW] 📊 Status:', response.status, response.statusText);
+                showNotification({
+                    title: '❌ Error',
+                    message: data.message || data.error || 'Operación no completada',
+                    type: 'error',
+                });
+            }
+        } catch (error) {
+            console.error('[SHOW] ❌ Excepción al finalizar entrega:', error);
+            showNotification({
+                title: '❌ Error',
+                message: error instanceof Error ? error.message : 'Error desconocido',
+                type: 'error',
+            });
+        } finally {
+            setIsFinalizingDelivery(false);
+        }
+    };
+
     console.log('Entrega data:', entrega.numero_entrega);
     // const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
     const numero: string = String(entrega.proforma?.numero || entrega.venta?.numero || entrega.numero || `#${entrega.id}`);
@@ -165,22 +355,64 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                             <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Entrega {numero} / {entrega.numero_entrega}</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Entrega Folio: {numero}</h1>
+                            <p>{entrega.numero_entrega}</p>
                             <p className="text-gray-500 dark:text-gray-400">Detalles de la entrega</p>
                         </div>
                     </div>
 
                     <EstadoBadge entrega={entrega} />
 
-                    {/* Botón para abrir modal de impresión/descarga */}
-                    <Button
-                        onClick={() => setIsOutputModalOpen(true)}
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                    >
-                        <Package className="w-4 h-4 mr-2" />
-                        Imprimir / Descargar
-                    </Button>
+                    <div className="flex gap-2 items-center">
+                        {/* ✅ NUEVO: Botón para marcar como listo para entrega - SOLO en PREPARACION_CARGA */}
+                        {estadoActualParaValidar === 'PREPARACION_CARGA' && (
+                            <Button
+                                onClick={handleMarcarListoParaEntrega}
+                                disabled={isMarking}
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                            >
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                {isMarking ? 'Procesando...' : 'Listo para Entrega'}
+                            </Button>
+                        )}
+
+                        {/* ✅ NUEVO: Botón para iniciar ruta - SOLO en LISTO_PARA_ENTREGA */}
+                        {estadoActualParaValidar === 'LISTO_PARA_ENTREGA' && (
+                            <Button
+                                onClick={handleIniciarRuta}
+                                disabled={isInitiatingRoute}
+                                variant="default"
+                                className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+                            >
+                                <Navigation className="w-4 h-4 mr-2" />
+                                {isInitiatingRoute ? 'Iniciando...' : 'Iniciar Ruta'}
+                            </Button>
+                        )}
+
+                        {/* ✅ NUEVO: Botón para finalizar entrega - SOLO en EN_TRANSITO */}
+                        {estadoActualParaValidar === 'EN_TRANSITO' && (
+                            <Button
+                                onClick={handleFinalizarEntrega}
+                                disabled={isFinalizingDelivery}
+                                variant="default"
+                                className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+                            >
+                                <Flag className="w-4 h-4 mr-2" />
+                                {isFinalizingDelivery ? 'Finalizando...' : 'Finalizar Entrega'}
+                            </Button>
+                        )}
+
+                        {/* Botón para abrir modal de impresión/descarga */}
+                        <Button
+                            onClick={() => setIsOutputModalOpen(true)}
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                        >
+                            <Package className="w-4 h-4 mr-2" />
+                            Imprimir
+                        </Button>
+                    </div>
 
                     {/* Modal de selección de formato de impresión/descarga */}
                     <OutputSelectionModal
@@ -193,6 +425,20 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                             fecha: entrega.fecha_asignacion,
                         }}
                     />
+
+                    {/* ✅ NUEVO: Modal para corregir pagos */}
+                    {corrigiendo && (
+                        <CorregirPagoModal
+                            isOpen={Boolean(corrigiendo)}
+                            onClose={() => setCorrigiendo(null)}
+                            entregaId={entrega.id as number}
+                            ventaId={corrigiendo.ventaId}
+                            ventaNumero={corrigiendo.ventaNumero}
+                            ventaTotal={corrigiendo.ventaTotal}
+                            desgloseActual={corrigiendo.desglose}
+                            tiposPago={tiposPago}
+                        />
+                    )}
                 </div>
 
                 {/* Información del Lote - Entregas con mismo chofer y vehículo */}
@@ -243,11 +489,6 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                     </div>
                 )}
 
-                {/* ✅ NUEVA 2026-02-12: Resumen de Pagos */}
-                {entrega.id && (
-                    <ResumenPagosEntrega entregaId={entrega.id} />
-                )}
-
                 {/* Productos Agrupados - Consolidación de productos de todas las ventas */}
                 {entrega.id && (
                     <ProductosAgrupados
@@ -261,7 +502,15 @@ export default function EntregaShow({ entrega: initialEntrega }: ShowProps) {
                         entrega={entrega}
                         ventas={entrega.ventas}
                         totalVentas={entrega.ventas.length}
+                        onCorregirPago={(ventaId, ventaNumero, ventaTotal, desglose) => {
+                            setCorrigiendo({ ventaId, ventaNumero, ventaTotal, desglose });
+                        }}
                     />
+                )}
+
+                {/* ✅ NUEVA 2026-02-12: Resumen de Pagos */}
+                {entrega.id && (
+                    <ResumenPagosEntrega entregaId={entrega.id} />
                 )}
 
                 {/* Historial de Cambios de Estado */}

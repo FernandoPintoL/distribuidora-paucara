@@ -80,7 +80,8 @@
     @if(count($resumen_pagos['pagos']) > 0)
     <div style="margin: 1px 0; font-size: 4px;">
         @foreach($resumen_pagos['pagos'] as $pago)
-        <div style="padding: 0.5px;">{{ substr($pago['tipo_pago'], 0, 12) }}: {{ number_format($pago['total'], 2) }}</div>
+        {{-- ✅ ACTUALIZADO 2026-02-16: Usar código en lugar de nombre para evitar discrepancias --}}
+        <div style="padding: 0.5px;">{{ substr($pago['tipo_pago_codigo'] ?? $pago['tipo_pago'], 0, 12) }}: {{ number_format($pago['total'], 2) }}</div>
         @endforeach
     </div>
     @endif
@@ -115,7 +116,7 @@
         <p style="font-size: 6px; font-weight: bold; margin: 1px 0;">TOTAL: {{ number_format($totalGeneral, 2) }}</p>
         <p style="font-size: 5px; margin: 0.5px 0;">
             {{ $entrega->chofer?->name ?? $entrega->chofer?->nombre ?? 'S/A' }}
-            {{ $entrega->entregador ? '| ' . ($entrega->entregador->name ?? 'S/A') : '' }}
+            {{ $entrega->entregador ? '| ' . ($entrega->entregador?->name ?? 'S/A') : '' }}
             | {{ $entrega->vehiculo?->placa ?? 'S/A' }}
         </p>
     </div>

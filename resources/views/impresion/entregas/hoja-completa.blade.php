@@ -205,7 +205,8 @@
             <tbody>
                 @foreach($resumen_pagos['pagos'] as $pago)
                 <tr style="border-bottom: 1px dotted #ccc;">
-                    <td style="padding: 5px; width: 70%;"><strong>{{ $pago['tipo_pago'] }}</strong> ({{ $pago['cantidad_ventas'] }} venta{{ $pago['cantidad_ventas'] != 1 ? 's' : '' }})</td>
+                    {{-- ✅ ACTUALIZADO 2026-02-16: Usar código en lugar de nombre para evitar discrepancias --}}
+                    <td style="padding: 5px; width: 70%;"><strong>{{ $pago['tipo_pago_codigo'] ?? $pago['tipo_pago'] }}</strong> ({{ $pago['cantidad_ventas'] }} venta{{ $pago['cantidad_ventas'] != 1 ? 's' : '' }})</td>
                     <td style="padding: 5px; text-align: right; font-weight: bold;">Bs. {{ number_format($pago['total'], 2) }}</td>
                 </tr>
                 @endforeach

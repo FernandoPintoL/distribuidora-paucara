@@ -62,6 +62,9 @@ interface ProformaDetalleLocal {
     peso?: number
     categoria?: string | null
     limite_venta?: number | null
+    // ✅ NUEVO: Tipo de precio para cálculos de rango y recalcular totales
+    tipo_precio_id?: number | string
+    tipo_precio_nombre?: string
 }
 
 
@@ -200,7 +203,8 @@ export default function ProformasCreate({
             sku: d.sku || d.producto?.sku || '',
             cantidad: parseFloat(d.cantidad),
             precio_unitario: parseFloat(d.precio_unitario),
-            tipo_precio_id: d.tipo_precio_id, // ✅ ProductosTable lo usará para inicializar select
+            tipo_precio_id: d.tipo_precio_id, // ✅ ProductosTable lo usará para inicializar select + calcularCarrito
+            tipo_precio_nombre: d.tipo_precio_nombre, // ✅ Nombre del tipo de precio para auditoría
             subtotal: d.subtotal ? parseFloat(d.subtotal) : parseFloat(d.cantidad) * parseFloat(d.precio_unitario),
             stock_disponible: d.stock_disponible || d.producto?.stock_disponible || 0,
             peso: d.peso || d.producto?.peso || 0,
@@ -231,7 +235,17 @@ export default function ProformasCreate({
             }
 
             // ✅ Asignaciones
-            setPreventistaId(proforma.preventista_id || null)
+            setEstadoInicial((proforma.estado || 'BORRADOR') as 'BORRADOR' | 'PENDIENTE')
+
+            // ✅ Auto-asignar preventista si el usuario creador es preventista
+            if (proforma.preventista_id) {
+                setPreventistaId(proforma.preventista_id)
+            } else if (proforma.usuario_creador_id && preventistasSeguro.some(p => p.id === proforma.usuario_creador_id)) {
+                // Si no hay preventista asignado pero el usuario creador está en la lista de preventistas, asignar automáticamente
+                setPreventistaId(proforma.usuario_creador_id)
+            } else {
+                setPreventistaId(null)
+            }
 
             // ✅ Precarga de cliente
             const clienteEncontrado = clientesSeguro.find(c => c.id === proforma.cliente_id)
@@ -282,8 +296,12 @@ export default function ProformasCreate({
     // Calcular totales
     const calcularTotales = () => {
         const subtotal = detalles.reduce((sum, d) => {
+            // ✅ CORREGIDO: Usar d.precio_unitario primero (que incluye cambios manuales inmediatos)
+            // Solo usar getPrecioActualizado si es mejor (descuento por volumen)
             const precioActualizado = getPrecioActualizado(d.producto_id as number)
-            const precio = precioActualizado ?? (d.precio_unitario ?? 0)
+            const precioUnitario = d.precio_unitario ?? 0
+            // Usar el precio más bajo entre el manual y el calculado (si existe)
+            const precio = (precioActualizado && precioActualizado < precioUnitario) ? precioActualizado : precioUnitario
             return sum + (d.cantidad * precio)
         }, 0)
         return { subtotal, total: subtotal }
@@ -318,6 +336,9 @@ export default function ProformasCreate({
             peso: (producto as any).peso || 0,
             categoria: (producto as any).categoria || undefined,
             limite_venta: (producto as any).limite_venta || null,
+            // ✅ NUEVO: Guardar tipo_precio_id para que handleUpdateDetalle pueda usarlo al recalcular
+            tipo_precio_id: tipoPrecioRecomendado,
+            tipo_precio_nombre: precioRecomendado?.nombre,
         }
 
         const nuevosDetalles = [...detalles, nuevoDetalle]
@@ -351,7 +372,7 @@ export default function ProformasCreate({
         const itemsParaCalcular = nuevosDetalles.map(d => ({
             producto_id: d.producto_id,
             cantidad: d.cantidad,
-            tipo_precio_id: undefined
+            tipo_precio_id: d.tipo_precio_id  // ✅ CORREGIDO: Usar el tipo_precio_id del detalle para cálculos de rango
         }))
         calcularCarritoDebounced(itemsParaCalcular)
     }
@@ -398,6 +419,8 @@ export default function ProformasCreate({
             if (modo === 'editar' && proforma) {
                 // 📝 MODO EDICIÓN: Actualizar detalles y otros campos de proforma existente
                 const detallesPayload = {
+                    // ✅ Cliente (ahora actualizable en edición)
+                    cliente_id: clienteValue,
                     detalles: detalles.map(d => ({
                         producto_id: d.producto_id,
                         cantidad: d.cantidad,
@@ -412,6 +435,9 @@ export default function ProformasCreate({
                     canal: canal,
                     politica_pago: politicaPago,
                     observaciones: observaciones || undefined,
+                    // ✅ ACTUALIZACIÓN: Incluir estado y preventista en modo edición
+                    estado_inicial: estadoInicial,
+                    preventista_id: preventistaId,
                 }
 
                 const response = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {

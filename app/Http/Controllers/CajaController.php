@@ -106,7 +106,17 @@ class CajaController extends Controller
                     $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
                 }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
                 ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
-                ->get();
+                ->get()
+                // ✅ NUEVO: Filtrar movimientos - Excluir CREDITO si no están APROBADOS
+                ->filter(function($mov) {
+                    // Si es VENTA o CREDITO, solo incluir si están APROBADAS
+                    if (in_array($mov->tipoOperacion?->codigo, ['VENTA', 'CREDITO'])) {
+                        return $mov->venta?->estadoDocumento?->codigo === 'APROBADO';
+                    }
+                    // Otros tipos (PAGO, GASTOS, etc.) se incluyen siempre
+                    return true;
+                })
+                ->values(); // ✅ Reindexar array después de filter
         }
 
         // Obtener historial de aperturas del usuario destino
@@ -842,7 +852,17 @@ class CajaController extends Controller
                 $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
             }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
             ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
-            ->get();
+            ->get()
+            // ✅ NUEVO: Filtrar movimientos - Excluir CREDITO si no están APROBADOS
+            ->filter(function($mov) {
+                // Si es VENTA o CREDITO, solo incluir si están APROBADAS
+                if (in_array($mov->tipoOperacion?->codigo, ['VENTA', 'CREDITO'])) {
+                    return $mov->venta?->estadoDocumento?->codigo === 'APROBADO';
+                }
+                // Otros tipos (PAGO, GASTOS, etc.) se incluyen siempre
+                return true;
+            })
+            ->values(); // ✅ Reindexar array después de filter
 
         return Inertia::render('Cajas/Detalle', [
             'usuario'        => $usuarioDestino,

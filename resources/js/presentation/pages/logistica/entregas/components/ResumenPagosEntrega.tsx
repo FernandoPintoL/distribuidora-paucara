@@ -25,6 +25,9 @@ interface VentaSinRegistrar {
     venta_id: number;
     venta_numero: string;
     monto: number;
+    tipo_pago_id: number;
+    tipo_pago: string;
+    tipo_pago_codigo: string;
 }
 
 interface ResumenPagosData {
@@ -65,11 +68,17 @@ export default function ResumenPagosEntrega({ entregaId }: ResumenPagosEntregaPr
                     }
                 );
 
+                console.log('[ResumenPagos] Fetching resumen from API...', { entregaId, response });
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
 
                 const json = await response.json();
+
+                console.log('[ResumenPagos] 📊 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(json, null, 2));
+                console.log('[ResumenPagos] 💳 Pagos retornados:', json.data?.pagos);
+                console.log('[ResumenPagos] 📋 Sin registrar:', json.data?.sin_registrar);
 
                 if (json.success && json.data) {
                     setResumen(json.data);
@@ -152,7 +161,7 @@ export default function ResumenPagosEntrega({ entregaId }: ResumenPagosEntregaPr
                 <div className="space-y-2">
                     <h3 className={`text-lg font-semibold flex items-center gap-2 ${statusTextColor}`}>
                         <CreditCard className="w-5 h-5" />
-                        💳 Resumen de Pagos
+                        Resumen de Pagos
                     </h3>
                     <p className={`text-sm ${statusTextColor} opacity-75`}>
                         {resumen.numero_entrega}
@@ -269,8 +278,13 @@ export default function ResumenPagosEntrega({ entregaId }: ResumenPagosEntregaPr
                                 key={venta.venta_id}
                                 className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800"
                             >
-                                <div className="flex-1">
-                                    <p className="font-medium text-orange-900 dark:text-orange-200">{venta.venta_numero}</p>
+                                <div className="flex-1 flex items-center gap-3">
+                                    <div>
+                                        <p className="font-medium text-orange-900 dark:text-orange-200">{venta.venta_numero}</p>
+                                        <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+                                            💳 {venta.tipo_pago || 'N/A'}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="font-bold text-orange-900 dark:text-orange-200">

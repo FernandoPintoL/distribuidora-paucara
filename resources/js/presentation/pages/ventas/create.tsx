@@ -705,7 +705,10 @@ export default function VentaForm() {
             unidad_venta_id: unidadVentaInicial, // ✅ MODIFICADO: Usa primera conversión si es fraccionado
             // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend
             tipo_precio_id: tipoPrecioIdRecomendado,
-            tipo_precio_nombre: tipoPrecioNombreRecomendado
+            tipo_precio_nombre: tipoPrecioNombreRecomendado,
+            // ✅ CRÍTICO: Pasar propiedades de tipo_precio recomendado para que ProductosTable pueda usarlas en el select inicial
+            tipo_precio_id_recomendado: (producto as any).tipo_precio_id_recomendado,
+            tipo_precio_nombre_recomendado: (producto as any).tipo_precio_nombre_recomendado
         };
 
         console.log('📝 [addProductToDetail] Nuevo detalle creado:', {

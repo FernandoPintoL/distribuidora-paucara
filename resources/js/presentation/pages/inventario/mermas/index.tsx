@@ -25,9 +25,11 @@ import {
     AlertTriangle,
     Package,
     Calendar,
-    User
+    User,
+    Printer
 } from 'lucide-react';
 import { NotificationService } from '@/infrastructure/services/notification.service';
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 interface PageProps extends InertiaPageProps {
     mermas: {
@@ -72,6 +74,8 @@ export default function MermasIndex() {
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [modalTipoMermaOpen, setModalTipoMermaOpen] = useState(false);
     const [modalEstadoMermaOpen, setModalEstadoMermaOpen] = useState(false);
+    const [mermaParaImprimir, setMermaParaImprimir] = useState<MermaInventario | null>(null);
+    const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
 
     const breadcrumbs = [
         {
@@ -448,7 +452,7 @@ export default function MermasIndex() {
                                                         {merma.numero}
                                                     </div>
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {merma.motivo}
+                                                        {merma.observacion || '-'}
                                                     </div>
                                                 </div>
                                             </td>
@@ -460,10 +464,10 @@ export default function MermasIndex() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-gray-100">
-                                                    {merma.total_productos} productos
+                                                    {merma.cantidad_productos ?? 0} productos
                                                 </div>
                                                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {merma.total_cantidad} unidades
+                                                    {merma.movimientos?.reduce((sum: number, mov: any) => sum + Math.abs(mov.cantidad ?? 0), 0) ?? 0} unidades
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -472,11 +476,11 @@ export default function MermasIndex() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                                                     <Calendar className="w-4 h-4 mr-1" />
-                                                    {new Date(merma.fecha).toLocaleDateString()}
+                                                    {merma.created_at ? new Date(merma.created_at).toLocaleDateString() : '-'}
                                                 </div>
                                                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                                                     <User className="w-4 h-4 mr-1" />
-                                                    {merma.usuario?.name || 'Sistema'}
+                                                    {merma.user?.name || 'Sistema'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -487,6 +491,17 @@ export default function MermasIndex() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </Link>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setMermaParaImprimir(merma);
+                                                            setMostrarModalImpresion(true);
+                                                        }}
+                                                        className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
+                                                        title="Imprimir merma"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </button>
 
                                                     {merma.estado === 'PENDIENTE' && can('inventario.mermas.aprobar') && (
                                                         <button
@@ -547,6 +562,25 @@ export default function MermasIndex() {
                     )}
                 </div>
             </div>
+
+            {/* Modal de Impresión */}
+            {mermaParaImprimir && (
+                <OutputSelectionModal
+                    isOpen={mostrarModalImpresion}
+                    onClose={() => {
+                        setMostrarModalImpresion(false);
+                        setMermaParaImprimir(null);
+                    }}
+                    documentoId={mermaParaImprimir.id}
+                    tipoDocumento="merma"
+                    documentoInfo={{
+                        numero: mermaParaImprimir.numero,
+                        fecha: mermaParaImprimir.created_at
+                            ? new Date(mermaParaImprimir.created_at).toLocaleDateString()
+                            : undefined,
+                    }}
+                />
+            )}
 
             {/* Modales CRUD */}
             <TipoMermaCrudModal

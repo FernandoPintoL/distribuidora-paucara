@@ -30,6 +30,8 @@ export interface DetalleProducto {
     unidad_medida_nombre?: string; // ✅ NUEVO: Nombre de la unidad base
     tipo_precio_id?: number | string | null; // ✅ MODIFICADO: Permite null cuando cliente es GENERAL
     tipo_precio_nombre?: string | null; // ✅ MODIFICADO: Permite null cuando cliente es GENERAL
+    tipo_precio_id_recomendado?: number | string | null; // ✅ NUEVO: ID de tipo de precio recomendado del backend
+    tipo_precio_nombre_recomendado?: string | null; // ✅ NUEVO: Nombre de tipo de precio recomendado del backend
     producto?: {
         id: number | string;
         nombre: string;
@@ -146,25 +148,34 @@ export default function ProductosTable({
             }
         }
 
-        // ✅ NUEVO: Inicializar select de tipo de precio con "Precio Venta"
-        if (tipo === 'venta') {
-            const precios = ultimoDetalle.producto?.precios || [];
-            const preciosVenta = precios.filter(p => {
-                const nombre = (p.nombre || '').toLowerCase();
-                return !nombre.includes('costo') && !nombre.includes('cost');
-            });
-
-            // Buscar "Precio Venta" o usar el primero disponible
-            const precioVenta = preciosVenta.find(p =>
-                (p.nombre || '').toLowerCase().includes('venta')
-            ) || preciosVenta[0];
-
-            if (precioVenta && !selectedTipoPrecio[ultimoIndice]) {
-                console.log(`✅ [ProductosTable] Inicializando select tipo de precio con: ${precioVenta.nombre}`);
+        // ✅ NUEVO: Inicializar select de tipo de precio con tipo_precio_id_recomendado del backend, fallback a "Precio Venta"
+        if (tipo === 'venta' && !selectedTipoPrecio[ultimoIndice]) {
+            // ✅ CRÍTICO: Primero intentar usar el tipo_precio_id_recomendado que viene del backend
+            if (ultimoDetalle.tipo_precio_id_recomendado) {
+                console.log(`✅ [ProductosTable] Inicializando select con tipo_precio_id_recomendado del backend: ${ultimoDetalle.tipo_precio_id_recomendado} (${ultimoDetalle.tipo_precio_nombre_recomendado})`);
                 setSelectedTipoPrecio(prev => ({
                     ...prev,
-                    [ultimoIndice]: precioVenta.nombre || ''
+                    [ultimoIndice]: String(ultimoDetalle.tipo_precio_id_recomendado)
                 }));
+            } else {
+                // Fallback: Buscar "Precio Venta" o usar el primero disponible
+                const precios = ultimoDetalle.producto?.precios || [];
+                const preciosVenta = precios.filter(p => {
+                    const nombre = (p.nombre || '').toLowerCase();
+                    return !nombre.includes('costo') && !nombre.includes('cost');
+                });
+
+                const precioVenta = preciosVenta.find(p =>
+                    (p.nombre || '').toLowerCase().includes('venta')
+                ) || preciosVenta[0];
+
+                if (precioVenta) {
+                    console.log(`✅ [ProductosTable] Inicializando select con fallback - Precio Venta: ${precioVenta.nombre} (ID: ${precioVenta.tipo_precio_id})`);
+                    setSelectedTipoPrecio(prev => ({
+                        ...prev,
+                        [ultimoIndice]: String(precioVenta.tipo_precio_id)
+                    }));
+                }
             }
         }
     }, [detalles.length]); // Solo vigilar cambios en la cantidad de detalles
@@ -1131,8 +1142,8 @@ export default function ProductosTable({
                                                         ) : null;
                                                     }
 
-                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar tipo_precio_id del detalle o el primero de venta
-                                                    const valorInicial = selectedTipoPrecio[index] ?? (detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : preciosVenta[0]?.tipo_precio_id ? String(preciosVenta[0].tipo_precio_id) : '');
+                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar tipo_precio_id_recomendado del backend (NEW), luego tipo_precio_id del detalle o el primero de venta
+                                                    const valorInicial = selectedTipoPrecio[index] ?? (detalle.tipo_precio_id_recomendado ? String(detalle.tipo_precio_id_recomendado) : (detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : preciosVenta[0]?.tipo_precio_id ? String(preciosVenta[0].tipo_precio_id) : ''));
 
                                                     return (
                                                         <select

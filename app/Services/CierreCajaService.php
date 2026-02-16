@@ -869,10 +869,12 @@ class CierreCajaService
 
     /**
      * Calcular sumatoria de ventas APROBADAS a CRÉDITO
+     * ✅ FIXED: Ahora filtra por tipo_pago='CREDITO', no por tipo_operacion='CREDITO'
+     * Así coincide con calcularVentasAprobadasEfectivo
      */
     private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja)
     {
-        return $this->calcularVentasAprobadas($aperturaCaja, ['CREDITO']);
+        return $this->calcularVentasAprobadas($aperturaCaja, ['VENTA'], 'CREDITO');
     }
 
     /**

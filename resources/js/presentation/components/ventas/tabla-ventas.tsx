@@ -338,6 +338,9 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 💰 Caja
                             </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                🕐 Creada
+                            </th>
                             <th scope="col" className="px-6 py-3">
                                 <span className="sr-only">Acciones</span>
                             </th>
@@ -481,6 +484,29 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 >
                                                     ⚠ Sin Caja
                                                 </span>
+                                            )}
+                                        </div>
+                                    </td>
+
+                                    {/* ✅ NUEVO: Fecha de Creación */}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                                            {venta.created_at ? (
+                                                <>
+                                                    <div>{new Date(venta.created_at).toLocaleDateString('es-BO', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric'
+                                                    })}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {new Date(venta.created_at).toLocaleTimeString('es-BO', {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
                                             )}
                                         </div>
                                     </td>

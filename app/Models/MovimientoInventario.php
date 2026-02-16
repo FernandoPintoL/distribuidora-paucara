@@ -42,6 +42,8 @@ class MovimientoInventario extends Model
         'referencia_tipo',
         'referencia_id',
         'ip_dispositivo',
+        'ajuste_inventario_id',
+        'merma_inventario_id',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -125,6 +127,22 @@ class MovimientoInventario extends Model
             'stock_producto_id', // Local key en movimientos_inventario
             'almacen_id'         // Local key en stock_productos
         );
+    }
+
+    /**
+     * Relación con el ajuste de inventario (si aplica)
+     */
+    public function ajusteInventario(): BelongsTo
+    {
+        return $this->belongsTo(AjusteInventario::class, 'ajuste_inventario_id');
+    }
+
+    /**
+     * Relación con la merma de inventario (si aplica)
+     */
+    public function mermaInventario(): BelongsTo
+    {
+        return $this->belongsTo(MermaInventario::class, 'merma_inventario_id');
     }
 
     /**

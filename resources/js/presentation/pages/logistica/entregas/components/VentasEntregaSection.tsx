@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
-import { ChevronDown, ShoppingCart, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronDown, ShoppingCart, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle, Edit2 } from 'lucide-react';
 import { Badge } from '@/presentation/components/ui/badge';
+import { Button } from '@/presentation/components/ui/button';
 import type { VentaEntrega, Entrega } from '@/domain/entities/entregas';
+
+interface DesglosePago {
+    tipo_pago_id: number;
+    tipo_pago_nombre: string;
+    monto: number;
+    referencia?: string;
+}
 
 interface VentasEntregaSectionProps {
     entrega?: Entrega;
     ventas: VentaEntrega[];
     totalVentas?: number;
+    onCorregirPago?: (ventaId: number, ventaNumero: string, ventaTotal: number, desglose: DesglosePago[]) => void;
 }
 
 const getEstadoColor = (estado: string) => {
@@ -21,8 +30,20 @@ const getEstadoColor = (estado: string) => {
     return estadoMap[estado] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
 };
 
-export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaSectionProps) {
+const getTipoPagoColor = (codigo?: string) => {
+    const tipoPagoMap: Record<string, string> = {
+        'EFECTIVO': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+        'TRANSFERENCIA': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+        'CHEQUE': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+        'CREDITO': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+        'QR': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
+    };
+    return tipoPagoMap[codigo || ''] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
+};
+
+export default function VentasEntregaSection({ entrega, ventas, onCorregirPago }: VentasEntregaSectionProps) {
     console.log('VentasEntregaSection render with ventas:', ventas);
+    console.log('🔍 Verificando tipo_pago en ventas:', ventas.map(v => ({ id: v.id, tipo_pago: v.tipo_pago, numero: v.numero })));
     const [expandedVentaId, setExpandedVentaId] = useState<number | null>(null);
 
     if (!ventas || ventas.length === 0) {
@@ -106,6 +127,9 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                     Monto
                                 </th>
                                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                    Tipo de Pago
+                                </th>
+                                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
                                     Estado
                                 </th>
                                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white w-12">
@@ -154,6 +178,11 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
+                                                <Badge className={getTipoPagoColor(venta.tipo_pago?.codigo)}>
+                                                    💳 {venta.tipo_pago?.nombre || 'N/A'}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
                                                 <Badge className={getEstadoColor(venta.estado_logistica?.codigo || 'PROGRAMADO')}>
                                                     {venta.estado_logistica?.codigo || 'PROGRAMADO'}
                                                 </Badge>
@@ -178,7 +207,7 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                         {/* Fila expandible - Detalles de la venta */}
                                         {isExpanded && (
                                             <tr className="bg-gray-50 dark:bg-gray-800/20">
-                                                <td colSpan={7} className="px-6 py-4">
+                                                <td colSpan={8} className="px-6 py-4">
                                                     <div className="space-y-4">
                                                         {/* Información adicional */}
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -261,7 +290,7 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                                                                             </div>
                                                                                         </td>
                                                                                         <td className="px-4 py-2 text-center text-gray-900 dark:text-white font-medium">
-                                                                                            {detalle.cantidad}
+                                                                                            {Number(detalle.cantidad).toFixed(2)}
                                                                                         </td>
                                                                                         <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
                                                                                             Bs. {precio.toFixed(2)}
@@ -278,6 +307,32 @@ export default function VentasEntregaSection({ entrega, ventas }: VentasEntregaS
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* ✅ NUEVO: Botón para corregir pagos (solo si está entregada y confirmada) */}
+                                                        {venta.estado_logistica?.codigo === 'ENTREGADA' && onCorregirPago && (
+                                                            <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        const ventaTotal = typeof venta.total === 'string' ? parseFloat(venta.total) : venta.total || 0;
+                                                                        const desglose: DesglosePago[] = venta.desglose_pagos && Array.isArray(venta.desglose_pagos)
+                                                                            ? venta.desglose_pagos
+                                                                            : [];
+                                                                        onCorregirPago(
+                                                                            Number(venta.id),
+                                                                            venta.numero || '',
+                                                                            ventaTotal,
+                                                                            desglose
+                                                                        );
+                                                                    }}
+                                                                    className="gap-2"
+                                                                >
+                                                                    <Edit2 className="h-4 w-4" />
+                                                                    ✏️ Corregir Pagos
+                                                                </Button>
                                                             </div>
                                                         )}
                                                     </div>

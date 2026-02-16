@@ -80,6 +80,11 @@ export interface VentaEntrega {
     estado_logistico?: string;
     estado_logistico_id?: number;
     estado_logistica?: EstadoLogistico;
+    tipo_pago?: {
+        id: Id;
+        nombre: string;
+        codigo?: string;
+    };
     fecha_entrega_comprometida?: string;
     direccion_entrega?: string;
     direccion_cliente?: DireccionClienteEntrega;
@@ -302,6 +307,7 @@ export interface VentaConDetalles {
     direccionCliente?: DireccionClienteEntrega; // Dirección del cliente (FK)
     peso_estimado?: number;                 // Peso calculado de detalles (legacy)
     peso_total_estimado?: number;           // ✅ NUEVO: Peso total calculado al crear venta (en kg)
+    created_at?: string;                    // ✅ NUEVO: Fecha y hora de creación (Ej: "2026-02-12 14:30")
 
     // Detalles de los productos
     detalles: Array<{

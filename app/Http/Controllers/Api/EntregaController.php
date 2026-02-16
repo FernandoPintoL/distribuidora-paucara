@@ -85,16 +85,28 @@ class EntregaController extends Controller
             ]);
 
             // Obtener entregas asignadas al chofer (user actual)
-            // Parámetro fecha_asignacion es opcional - si NO se proporciona, NO filtra por fecha
+            // Parámetros opcionales:
+            // - fecha_asignacion: filtro de UN DÍA específico (legacy)
+            // - created_desde: rango desde (created_at) - si no se proporciona, usa hoy
+            // - created_hasta: rango hasta (created_at) - si no se proporciona, usa hoy
             $fechaFiltro = $request->fecha_asignacion;
             $search = $request->search;  // ✅ NUEVO: búsqueda case-insensitive
             $localidadId = $request->localidad_id;  // ✅ NUEVO: filtro por localidad
+
+            // ✅ NUEVO: Filtro por rango de created_at (fecha de creación)
+            $createdDesde = $request->created_desde ?? today()->toDateString();  // Por defecto: hoy
+            $createdHasta = $request->created_hasta ?? today()->toDateString();  // Por defecto: hoy
 
             // Seleccionar solo campos necesarios para la lista
             $entregas = Entrega::where('chofer_id', $user->id)
                 ->when($fechaFiltro, function ($q) use ($fechaFiltro) {
                     return $q->whereDate('fecha_asignacion', $fechaFiltro);  // ✅ FILTRA SOLO SI SE PROPORCIONA FECHA
                 })
+                // ✅ NUEVO: Filtro por rango de created_at (fecha de creación de la entrega)
+                ->whereBetween('created_at', [
+                    Carbon::parse($createdDesde)->startOfDay(),
+                    Carbon::parse($createdHasta)->endOfDay()
+                ])
                 ->when($estado, function ($q) use ($estado) {
                     return $q->where('estado', $estado);
                 })
@@ -146,10 +158,12 @@ class EntregaController extends Controller
             // DEBUG: Log cantidad de entregas encontradas CON filtro
             Log::info('📱 [misTrabjos] Entregas encontradas CON FILTRO', [
                 'user_id' => $user->id,
-                'fecha_filtro' => $fechaFiltro,
+                'fecha_asignacion_filtro' => $fechaFiltro,
+                'created_desde' => $createdDesde,  // ✅ NUEVO
+                'created_hasta' => $createdHasta,  // ✅ NUEVO
                 'estado_filtro' => $estado,
-                'search' => $search,  // ✅ NUEVO
-                'localidad_id' => $localidadId,  // ✅ NUEVO
+                'search' => $search,
+                'localidad_id' => $localidadId,
                 'cantidad' => count($entregas),
                 'entregas' => $entregas->pluck('id')->toArray(),
             ]);
@@ -849,7 +863,7 @@ class EntregaController extends Controller
     public function confirmarVentaEntregada(Request $request, $id, $venta_id)
     {
         try {
-            // ✅ MEJORADO: Soporta múltiples formas de pago
+            // ✅ MEJORADO: Soporta múltiples formas de pago + productos rechazados
             $validated = $request->validate([
                 'fotos' => 'nullable|array',
                 'fotos.*' => 'string',
@@ -872,6 +886,14 @@ class EntregaController extends Controller
                 // ✅ CAMBIO: Soporte para crédito como boolean (promesa de pago)
                 'es_credito' => 'nullable|boolean',
                 'tipo_confirmacion' => 'nullable|in:COMPLETA,CON_NOVEDAD',
+
+                // ✅ NUEVO: Productos rechazados/devueltos (devolución parcial)
+                'productos_rechazados' => 'nullable|array',
+                'productos_rechazados.*.producto_id' => 'required_with:productos_rechazados|integer',
+                'productos_rechazados.*.producto_nombre' => 'required_with:productos_rechazados|string|max:255',
+                'productos_rechazados.*.cantidad' => 'required_with:productos_rechazados|numeric|min:0',
+                'productos_rechazados.*.precio_unitario' => 'required_with:productos_rechazados|numeric|min:0',
+                'productos_rechazados.*.subtotal' => 'required_with:productos_rechazados|numeric|min:0',
             ]);
 
             $entrega = Entrega::with('estadoEntrega')->findOrFail($id);
@@ -944,6 +966,32 @@ class EntregaController extends Controller
                       ' | Pendiente: $' . $montoPendiente .
                       ' | Estado: ' . $estadoPago);
 
+            // ✅ NUEVO: Procesar productos rechazados (devolución parcial)
+            $productosDevueltos = null;
+            $montoDevuelto = 0;
+            $montoAceptado = $venta->total;
+
+            if (isset($validated['productos_rechazados']) && !empty($validated['productos_rechazados'])) {
+                $productosDevueltos = [];
+                foreach ($validated['productos_rechazados'] as $producto) {
+                    $productosDevueltos[] = [
+                        'producto_id' => (int) $producto['producto_id'],
+                        'producto_nombre' => $producto['producto_nombre'],
+                        'cantidad' => (float) $producto['cantidad'],
+                        'precio_unitario' => (float) $producto['precio_unitario'],
+                        'subtotal' => (float) $producto['subtotal'],
+                    ];
+                    $montoDevuelto += (float) $producto['subtotal'];
+                }
+                // Calcular lo que fue aceptado
+                $montoAceptado = $venta->total - $montoDevuelto;
+                $montoAceptado = max(0, $montoAceptado);  // No negativo
+
+                \Log::debug('📦 [DEVOLUCIÓN PARCIAL] Productos rechazados: ' . count($productosDevueltos) .
+                          ' | Monto devuelto: $' . $montoDevuelto .
+                          ' | Monto aceptado: $' . $montoAceptado);
+            }
+
             // ✅ SIMPLIFICADO: Guardar fotos opcionalmente
             $fotosUrls = [];
             if (!empty($validated['fotos'])) {
@@ -995,7 +1043,7 @@ class EntregaController extends Controller
                 }
             }
 
-            // ✅ MEJORADO: Guardar la confirmación con soporte para múltiples pagos
+            // ✅ MEJORADO: Guardar la confirmación con soporte para múltiples pagos + productos rechazados
             $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
                 [
                     'entrega_id' => $id,
@@ -1017,6 +1065,11 @@ class EntregaController extends Controller
                     'total_dinero_recibido' => $totalDineroRecibido, // Total en efectivo/transferencia
                     'monto_pendiente' => $montoPendiente,            // Dinero pendiente de cobro
                     'tipo_confirmacion' => $validated['tipo_confirmacion'] ?? 'COMPLETA',
+
+                    // ✅ NUEVO: Productos rechazados (devolución parcial)
+                    'productos_devueltos' => $productosDevueltos,    // Array JSON de productos rechazados
+                    'monto_devuelto' => $montoDevuelto > 0 ? $montoDevuelto : null,  // Total devuelto
+                    'monto_aceptado' => $montoAceptado,              // Total aceptado por cliente
 
                     // Backward compatibility: guardar también el primer pago en campos antiguos
                     'monto_recibido' => $totalDineroRecibido > 0 ? $totalDineroRecibido : null,
@@ -1041,6 +1094,9 @@ class EntregaController extends Controller
                 'total_dinero_recibido' => $totalDineroRecibido,
                 'monto_pendiente' => $montoPendiente,
                 'estado_pago' => $estadoPago,
+                'productos_devueltos' => count($productosDevueltos ?? []),
+                'monto_devuelto' => $montoDevuelto,
+                'monto_aceptado' => $montoAceptado,
             ]);
 
             // ✅ Recargar entrega con todas sus relaciones
@@ -2365,7 +2421,8 @@ class EntregaController extends Controller
     {
         try {
             $entrega = Entrega::with(['ventas' => function ($q) {
-                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago');
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago', 'tipo_pago_id')
+                  ->with('tipoPago:id,codigo,nombre');
             }])->findOrFail($id);
 
             // ✅ CRÍTICO: Filtrar SOLO ventas NO a crédito (excluir CREDITO del resumen)
@@ -2428,6 +2485,7 @@ class EntregaController extends Controller
                                     $resumen['pagos'][$existeIndex]['ventas'][] = [
                                         'venta_id' => $confirmacion->venta_id,
                                         'venta_numero' => $confirmacion->venta?->numero,
+                                        'venta_total' => (float) ($confirmacion->venta?->total ?? 0),
                                         'monto_recibido' => $montoPago,
                                         'referencia' => $pago['referencia'] ?? null,
                                         'tipo_entrega' => $confirmacion->tipo_entrega,
@@ -2444,6 +2502,7 @@ class EntregaController extends Controller
                                         'ventas' => [[
                                             'venta_id' => $confirmacion->venta_id,
                                             'venta_numero' => $confirmacion->venta?->numero,
+                                            'venta_total' => (float) ($confirmacion->venta?->total ?? 0),
                                             'monto_recibido' => $montoPago,
                                             'referencia' => $pago['referencia'] ?? null,
                                             'tipo_entrega' => $confirmacion->tipo_entrega,
@@ -2458,7 +2517,7 @@ class EntregaController extends Controller
                     }
                 } else {
                     // Procesar pago único (backward compatible)
-                    $tipoPago = $confirmacionesGrupo->first()->tipoPago;
+                    $tipoPago = $confirmacionesGrupo->first()?->tipoPago;
                     $totalPago = (float) $confirmacionesGrupo->sum('total_dinero_recibido');
                     if ($totalPago == 0) {
                         $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
@@ -2475,6 +2534,7 @@ class EntregaController extends Controller
                             return [
                                 'venta_id' => $c->venta_id,
                                 'venta_numero' => $c->venta?->numero,
+                                'venta_total' => (float) ($c->venta?->total ?? 0),
                                 'monto_recibido' => (float) ($c->total_dinero_recibido ?? $c->monto_recibido),
                                 'tipo_entrega' => $c->tipo_entrega,
                                 'tipo_novedad' => $c->tipo_novedad,
@@ -2499,6 +2559,9 @@ class EntregaController extends Controller
                             'venta_id' => $v->id,
                             'venta_numero' => $v->numero,
                             'monto' => (float) $v->total,
+                            'tipo_pago_id' => $v->tipo_pago_id,
+                            'tipo_pago' => $v->tipoPago?->nombre ?? 'N/A',
+                            'tipo_pago_codigo' => $v->tipoPago?->codigo ?? 'N/A',
                         ];
                     })->toArray()
                 );
@@ -2678,6 +2741,96 @@ class EntregaController extends Controller
     /**
      * Métodos auxiliares
      */
+
+    /**
+     * ✅ NUEVO: Corregir pagos en entrega ya confirmada
+     * PATCH /api/entregas/{entrega}/ventas/{venta}/corregir-pago
+     */
+    public function corregirPagoConfirmacion(Request $request, int $entregaId, int $ventaId)
+    {
+        try {
+            $request->validate([
+                'desglose_pagos' => 'required|array',
+                'desglose_pagos.*.tipo_pago_id' => 'required|integer|exists:tipos_pago,id',
+                'desglose_pagos.*.tipo_pago_nombre' => 'required|string',
+                'desglose_pagos.*.monto' => 'required|numeric|min:0',
+                'desglose_pagos.*.referencia' => 'nullable|string',
+                'observacion' => 'nullable|string|max:500',
+            ]);
+
+            $confirmacion = EntregaVentaConfirmacion::where('entrega_id', $entregaId)
+                ->where('venta_id', $ventaId)
+                ->firstOrFail();
+
+            $venta = Venta::findOrFail($ventaId);
+            $desglosePagos = $request->input('desglose_pagos');
+            $observacion = $request->input('observacion', '');
+
+            // Calcular nuevo total recibido
+            $totalRecibido = collect($desglosePagos)->sum('monto');
+
+            // Determinar nuevo estado_pago
+            $esCredito = collect($desglosePagos)->contains(fn($p) =>
+                str_contains(strtolower($p['tipo_pago_nombre']), 'crédito') ||
+                str_contains(strtolower($p['tipo_pago_nombre']), 'credito')
+            );
+
+            if ($totalRecibido >= $venta->total) {
+                $estadoPago = 'PAGADO';
+            } elseif ($esCredito && $totalRecibido == 0) {
+                $estadoPago = 'CREDITO';
+            } elseif ($totalRecibido > 0) {
+                $estadoPago = 'PARCIAL';
+            } else {
+                $estadoPago = 'NO_PAGADO';
+            }
+
+            $montoPendiente = max(0, $venta->total - $totalRecibido);
+
+            // Construir nuevo texto de observación con timestamp
+            $observacionNueva = $confirmacion->observaciones_logistica ?? '';
+            if ($observacion) {
+                $prefix = $observacionNueva ? ' | ' : '';
+                $observacionNueva .= $prefix . '[CORRECCIÓN ' . now()->format('d/m/Y H:i') . '] ' . $observacion;
+            }
+
+            // Actualizar confirmación
+            $confirmacion->update([
+                'desglose_pagos' => $desglosePagos,
+                'total_dinero_recibido' => $totalRecibido,
+                'monto_recibido' => $totalRecibido,
+                'estado_pago' => $estadoPago,
+                'monto_pendiente' => $montoPendiente,
+                'observaciones_logistica' => $observacionNueva,
+            ]);
+
+            // Log de auditoría
+            \Log::channel('default')->info('Pagos corregidos en entrega', [
+                'entrega_id' => $entregaId,
+                'venta_id' => $ventaId,
+                'total_anterior' => $totalRecibido,
+                'nuevo_estado' => $estadoPago,
+                'user_id' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pagos corregidos exitosamente',
+                'confirmacion' => $confirmacion->fresh(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Error al corregir pagos', [
+                'entrega_id' => $entregaId,
+                'venta_id' => $ventaId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al corregir pagos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 
     /**
      * Guardar archivo desde base64

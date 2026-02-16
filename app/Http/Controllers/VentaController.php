@@ -663,6 +663,26 @@ class VentaController extends Controller
                 );
             }
 
+            // ✅ NUEVO: Validación - No permitir anular si la CxC tiene pagos registrados
+            if ($venta->politica_pago === 'CREDITO' && $venta->cuentaPorCobrar) {
+                $cxc = $venta->cuentaPorCobrar;
+                $totalPagos = $cxc->pagos()->sum('monto');
+
+                if ($totalPagos > 0) {
+                    Log::warning('🔴 [ANULAR VENTA] CXC CON PAGOS REGISTRADOS', [
+                        'venta_id' => $venta->id,
+                        'cuenta_por_cobrar_id' => $cxc->id,
+                        'total_pagos' => $totalPagos,
+                        'monto_original' => $cxc->monto_original,
+                    ]);
+                    return $this->respondError(
+                        "No se puede anular esta venta porque su cuenta por cobrar tiene pagos registrados ($totalPagos). " .
+                        "Contacta con administración para reversar los pagos primero.",
+                        422
+                    );
+                }
+            }
+
             Log::info('🔴 [ANULAR VENTA] INICIANDO TRANSACCIÓN', [
                 'venta_id' => $venta->id,
             ]);
@@ -698,6 +718,30 @@ class VentaController extends Controller
                         ]);
                     } catch (\Exception $e) {
                         Log::warning('⚠️ No se pudo revertir movimiento de caja al anular venta', [
+                            'venta_id' => $venta->id,
+                            'error'    => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // 2️⃣.5️⃣ Anular Cuenta por Cobrar si la venta fue a crédito
+                if ($venta->politica_pago === 'CREDITO' && $venta->cuentaPorCobrar) {
+                    try {
+                        $cxc = $venta->cuentaPorCobrar;
+                        // ✅ NUEVO: Cambiar estado de CxC a 'anulado' cuando se anula la venta
+                        $cxc->update([
+                            'estado' => 'anulado',
+                            'observaciones' => ($cxc->observaciones ?? '') . "\n[ANULADO] Venta #{$venta->numero} anulada el " . now()->toDateTimeString(),
+                        ]);
+
+                        Log::info('✅ Cuenta por cobrar anulada automáticamente', [
+                            'venta_id'              => $venta->id,
+                            'cuenta_por_cobrar_id'  => $cxc->id,
+                            'monto_original'        => $cxc->monto_original,
+                            'motivo'                => 'Venta anulada',
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('⚠️ No se pudo anular cuenta por cobrar al anular venta', [
                             'venta_id' => $venta->id,
                             'error'    => $e->getMessage(),
                         ]);
@@ -1501,12 +1545,13 @@ class VentaController extends Controller
                 $query->where('estado_logistico', $filtros['estado_logistico']);
             }
 
-            // Filtro por rango de fechas (usando fecha_desde y fecha_hasta)
+            // Filtro por rango de fechas (usando created_at - fecha de creación)
+            // ✅ ACTUALIZADO: Cambió de 'fecha' a 'created_at' para consistencia con GET /ventas
             if (!empty($filtros['fecha_desde'])) {
-                $query->whereDate('fecha', '>=', $filtros['fecha_desde']);
+                $query->whereDate('created_at', '>=', $filtros['fecha_desde']);
             }
             if (!empty($filtros['fecha_hasta'])) {
-                $query->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+                $query->whereDate('created_at', '<=', $filtros['fecha_hasta']);
             }
 
             // Filtro por rango de montos

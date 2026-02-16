@@ -23,14 +23,14 @@ class ImpresionEntregaService
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
                     'cliente_id' => $venta->cliente_id,
-                    'cliente_nombre' => $venta->cliente->nombre,
+                    'cliente_nombre' => $venta->cliente?->nombre ?? 'Sin cliente',  // ✅ FIX: Null-safe operator
                     'producto_id' => $detalle->producto_id,
-                    'producto_nombre' => $detalle->producto->nombre,
-                    'codigo_producto' => $detalle->producto->codigo ?? '',
+                    'producto_nombre' => $detalle->producto?->nombre ?? 'Producto desconocido',  // ✅ FIX: Null-safe operator
+                    'codigo_producto' => $detalle->producto?->codigo ?? '',  // ✅ FIX: Null-safe operator
                     'cantidad' => $detalle->cantidad,
                     'precio_unitario' => $detalle->precio_unitario,
                     'subtotal' => $detalle->subtotal,
-                    'unidad_medida' => $detalle->producto->unidad?->nombre ?? 'UND',  // ✅ CORREGIDO: unidad (no unidadMedida)
+                    'unidad_medida' => $detalle->producto?->unidad?->nombre ?? 'UND',  // ✅ CORREGIDO: unidad (no unidadMedida)
                 ]);
             }
         }

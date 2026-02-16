@@ -62,6 +62,9 @@ export default function Create({
 }: Props) {
     console.log('Renderizando Create Entregas Unificado con props:');
     console.log('Modo:', modo);
+    console.log('Venta:', ventas);
+    console.log('Ventas Asignada', ventasAsignadas);
+    console.log('ventaPreseleccionada', ventaPreseleccionada);
     if (modo === 'editar') {
         console.log('Entrega:', entrega);
         console.log('Ventas Asignadas:', ventasAsignadas.length);

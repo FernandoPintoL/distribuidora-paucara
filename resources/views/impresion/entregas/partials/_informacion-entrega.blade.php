@@ -26,12 +26,12 @@
         <!-- Columna derecha -->
         <div style="font-size: 9px; box-sizing: border-box; width: 100%;">
             @if($entrega->chofer)
-                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Chofer:</strong> {{ $entrega->chofer->name ?? $entrega->chofer->nombre ?? 'S/N' }}</p>
-                @if($entrega->chofer->email)
-                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Email:</strong> {{ $entrega->chofer->email }}</p>
+                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Chofer:</strong> {{ $entrega->chofer?->name ?? $entrega->chofer?->nombre ?? 'S/N' }}</p>
+                @if($entrega->chofer?->email)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Email:</strong> {{ $entrega->chofer?->email }}</p>
                 @endif
-                @if($entrega->chofer->phone ?? false)
-                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Teléfono:</strong> {{ $entrega->chofer->phone }}</p>
+                @if($entrega->chofer?->phone ?? false)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Teléfono:</strong> {{ $entrega->chofer?->phone }}</p>
                 @endif
             @else
                 <p style="margin: 3px 0; box-sizing: border-box;"><strong>Chofer:</strong> Sin asignar</p>
@@ -39,28 +39,28 @@
 
             {{-- ✅ NUEVO: ENTREGADOR --}}
             @if($entrega->entregador)
-                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Entregador:</strong> {{ $entrega->entregador->name ?? $entrega->entregador->nombre ?? 'S/N' }}</p>
-                @if($entrega->entregador->email)
-                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Email:</strong> {{ $entrega->entregador->email }}</p>
+                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Entregador:</strong> {{ $entrega->entregador?->name ?? $entrega->entregador?->nombre ?? 'S/N' }}</p>
+                @if($entrega->entregador?->email)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Email:</strong> {{ $entrega->entregador?->email }}</p>
                 @endif
-                @if($entrega->entregador->phone ?? false)
-                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Teléfono:</strong> {{ $entrega->entregador->phone }}</p>
+                @if($entrega->entregador?->phone ?? false)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Teléfono:</strong> {{ $entrega->entregador?->phone }}</p>
                 @endif
             @endif
 
             @if($entrega->vehiculo)
-                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Vehículo:</strong> {{ $entrega->vehiculo->placa }}</p>
-                @if($entrega->vehiculo->marca)
-                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Marca/Modelo:</strong> {{ $entrega->vehiculo->marca }} {{ $entrega->vehiculo->modelo ?? '' }}</p>
+                <p style="margin: 3px 0; box-sizing: border-box;"><strong>Vehículo:</strong> {{ $entrega->vehiculo?->placa }}</p>
+                @if($entrega->vehiculo?->marca)
+                    <p style="margin: 3px 0; box-sizing: border-box;"><strong>Marca/Modelo:</strong> {{ $entrega->vehiculo?->marca }} {{ $entrega->vehiculo?->modelo ?? '' }}</p>
                 @endif
             @endif
             @if($entrega->peso_kg)
                 <p style="margin: 3px 0; box-sizing: border-box;"><strong>Peso Total Carga:</strong> {{ number_format($entrega->peso_kg, 2) }} kg</p>
             @endif
-            @if($entrega->vehiculo && $entrega->vehiculo->capacidad_kg)
+            @if($entrega->vehiculo && $entrega->vehiculo?->capacidad_kg)
                 @php
                     $pesoTotal = $entrega->peso_kg ?? 0;
-                    $capacidad = $entrega->vehiculo->capacidad_kg;
+                    $capacidad = $entrega->vehiculo?->capacidad_kg;
                     $porcentajeUso = ($pesoTotal / $capacidad) * 100;
                     $colorEstado = $porcentajeUso > 100 ? '#ff6b6b' : ($porcentajeUso > 80 ? '#ffd43b' : '#51cf66');
                 @endphp

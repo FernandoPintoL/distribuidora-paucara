@@ -33,10 +33,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/presentation/components/ui/select'
-import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw } from 'lucide-react'
+import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw, FileText, Pencil } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
-import { FormatoSelector } from '@/presentation/components/impresion'
-import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'  // ✅ NUEVO
+import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'
 
 // DOMAIN LAYER: Importar tipos desde domain
 import type { Id } from '@/domain/entities/shared'
@@ -442,6 +441,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     // ✅ NUEVO: Estado para el modal de selección de salida (OutputSelection)
     const [showOutputSelection, setShowOutputSelection] = useState(false)
     const [ventaParaImprimir, setVentaParaImprimir] = useState<any>(null)
+
+    // ✅ NUEVO: Estado para modal de selección de salida de proforma
+    const [showProformaOutputSelection, setShowProformaOutputSelection] = useState(false)
 
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(
@@ -1472,6 +1474,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                         ✏️ Actualizada: {new Date(proforma.updated_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
+
                                 {/* ✅ MEJORADO: Mostrar estado_logistica con icono + nombre (como en Index) */}
                                 {proforma.estado_logistica ? (
                                     <div className="w-fit flex items-center gap-2 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
@@ -1482,6 +1485,73 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                     <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
                                 )}
 
+                                <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
+
+                                    {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
+                                    {puedeSerEditada(proforma.estado) && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => actualizarDetallesProforma(true)}
+                                            className="border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                            title="Guardar los cambios realizados en los detalles sin aprobar la proforma"
+                                        >
+                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                            Guardar Cambios
+                                        </Button>
+                                    )}
+
+                                    {puedeAprobar && (
+                                        <Button
+                                            variant="default"
+                                            onClick={() => setShowAprobarDialog(true)}
+                                            className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
+                                        >
+                                            <Check className="mr-2 h-4 w-4" />
+                                            Aprobar
+                                        </Button>
+                                    )}
+
+                                    {puedeRechazar && (
+                                        <Button
+                                            variant="destructive"
+                                            onClick={() => setShowRechazarDialog(true)}
+                                        >
+                                            <X className="mr-2 h-4 w-4" />
+                                            Rechazar
+                                        </Button>
+                                    )}
+
+                                    {/* ✅ NUEVO: Botón para editar la proforma (solo disponible en estado PENDIENTE) */}
+                                    {proforma.estado === 'PENDIENTE' && (
+                                        <Button
+                                            onClick={() => window.location.href = `/proformas/${proforma.id}/edit`}
+                                            variant="outline"
+                                        >
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Editar
+                                        </Button>
+                                    )}
+
+                                    {puedeConvertir && (
+                                        <Button
+                                            onClick={() => setShowAprobarDialog(true)}
+                                            className="bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] text-white"
+                                        >
+                                            <ShoppingCart className="mr-2 h-4 w-4" />
+                                            Convertir a Venta
+                                        </Button>
+                                    )}
+
+                                    {/* ✅ NUEVO: Botón para abrir modal de selección de salida (impresión/descarga) */}
+                                    <Button
+                                        onClick={() => setShowProformaOutputSelection(true)}
+                                        variant="outline"
+                                    >
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Exportar
+                                    </Button>
+                                </div>
+
                                 {/* ✅ NUEVO: Mostrar información de venta cuando está convertida */}
                                 {proforma.estado === 'CONVERTIDA' && proforma.venta && (
                                     <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -1490,7 +1560,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                         </p>
                                         <div className="grid grid-cols-2 gap-3 text-sm">
                                             <div className="flex flex-col">
-                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">ID Venta</span>
+                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Folio: </span>
                                                 <span className="font-semibold text-green-900 dark:text-green-100">{proforma.venta.id}</span>
                                             </div>
                                             <div className="flex flex-col">
@@ -1633,80 +1703,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
 
-                        {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
-                        {puedeSerEditada(proforma.estado) && (
-                            <Button
-                                variant="outline"
-                                onClick={() => actualizarDetallesProforma(true)}
-                                className="border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                                title="Guardar los cambios realizados en los detalles sin aprobar la proforma"
-                            >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Guardar Cambios
-                            </Button>
-                        )}
-
-                        {puedeAprobar && (
-                            <Button
-                                variant="default"
-                                onClick={() => setShowAprobarDialog(true)}
-                                className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
-                            >
-                                <Check className="mr-2 h-4 w-4" />
-                                Aprobar
-                            </Button>
-                        )}
-
-                        {puedeRechazar && (
-                            <Button
-                                variant="destructive"
-                                onClick={() => setShowRechazarDialog(true)}
-                            >
-                                <X className="mr-2 h-4 w-4" />
-                                Rechazar
-                            </Button>
-                        )}
-
-                        {puedeConvertir && (
-                            <Button
-                                onClick={() => setShowAprobarDialog(true)}
-                                className="bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] text-white"
-                            >
-                                <ShoppingCart className="mr-2 h-4 w-4" />
-                                Convertir a Venta
-                            </Button>
-                        )}
-
-                        {/* ✅ NUEVO: Botón para ir a la siguiente proforma pendiente */}
-                        {/* {puedeSerEditada(proforma.estado) && (
-                            <Button
-                                onClick={handleSiguiente}
-                                disabled={loadingSiguiente}
-                                variant="outline"
-                                className="hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
-                                title="Ir a la siguiente proforma pendiente sin volver al dashboard"
-                            >
-                                {loadingSiguiente ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent mr-2"></div>
-                                        Cargando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ChevronRight className="mr-2 h-4 w-4" />
-                                        Siguiente
-                                    </>
-                                )}
-                            </Button>
-                        )} */}
-
-                        <FormatoSelector
-                            documentoId={proforma.id}
-                            tipoDocumento="proforma"
-                        />
-                    </div>
                 </div>
 
                 <div className="grid gap-[var(--space-lg)]">
@@ -2343,6 +2340,19 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     }}
                 />
             )}
+
+            {/* ✅ NUEVO: Modal para seleccionar formato de salida de proforma */}
+            <OutputSelectionModal
+                isOpen={showProformaOutputSelection}
+                onClose={() => setShowProformaOutputSelection(false)}
+                documentoId={proforma.id}
+                tipoDocumento="proforma"
+                documentoInfo={{
+                    numero: proforma.numero,
+                    fecha: proforma.fecha,
+                    monto: proforma.total,
+                }}
+            />
         </AppLayout>
     )
 }

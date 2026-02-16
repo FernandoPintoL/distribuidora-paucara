@@ -60,12 +60,16 @@ class EntregaController extends Controller
     /**
      * Listar entregas - Vista unificada (simple + dashboard)
      *
-     * PARÁMETROS:
+     * PARÁMETROS DE FILTRADO (TODO AL BACKEND):
      * - ?view=simple|dashboard (default: 'simple')
-     * - ?estado=... (filtro)
-     * - ?fecha_desde=... (filtro)
-     * - ?fecha_hasta=... (filtro)
-     * - ?search=... (búsqueda)
+     * - ?estado=... (filtro estado entrega)
+     * - ?fecha_desde=... (filtro fecha programada desde)
+     * - ?fecha_hasta=... (filtro fecha programada hasta)
+     * - ?chofer_id=... (filtro por chofer)
+     * - ?vehiculo_id=... (filtro por vehículo)
+     * - ?localidad_id=... (filtro por zona/localidad)
+     * - ?estado_logistica_id=... (filtro por estado logístico)
+     * - ?search=... (búsqueda general)
      * - ?per_page=15 (paginación)
      *
      * La vista dashboard carga stats vía hook (lazy load) para mejor performance
@@ -76,18 +80,47 @@ class EntregaController extends Controller
         $view    = $request->input('view', 'simple'); // Detectar vista solicitada
 
         $filtros = [
-            'estado'      => $request->input('estado'),
-            'fecha_desde' => $request->input('fecha_desde'),
-            'fecha_hasta' => $request->input('fecha_hasta'),
-            'search'      => $request->input('search'),
-            'view'        => $view, // ✅ NUEVO: Pasar vista actual al frontend
+            'estado'              => $request->input('estado'),
+            'fecha_desde'         => $request->input('fecha_desde'),
+            'fecha_hasta'         => $request->input('fecha_hasta'),
+            'chofer_id'           => $request->input('chofer_id'),
+            'vehiculo_id'         => $request->input('vehiculo_id'),
+            'localidad_id'        => $request->input('localidad_id'),
+            'estado_logistica_id' => $request->input('estado_logistica_id'),
+            'search'              => $request->input('search'),
+            'view'                => $view, // ✅ NUEVO: Pasar vista actual al frontend
         ];
+
+        // 🔍 DEBUG: Logging de parámetros recibidos
+        \Log::info('📋 [EntregaController::index] Parámetros recibidos:', [
+            'fecha_desde' => $filtros['fecha_desde'],
+            'fecha_hasta' => $filtros['fecha_hasta'],
+            'estado' => $filtros['estado'],
+            'todos_filtros' => $filtros,
+            'fecha_hoy' => today()->toDateString(),
+        ]);
 
         $entregas = \App\Models\Entrega::query()
             ->with(['ventas.cliente', 'vehiculo', 'chofer', 'entregador', 'localidad'])
+            // ✅ CORRECCIÓN: Si hay rango de fechas, filtrar por fecha_programada. Si no, mostrar solo HOY
+            ->when(
+                !$filtros['fecha_desde'] && !$filtros['fecha_hasta'],
+                fn($q) => $q->whereDate('created_at', today()),  // Default: solo entregas creadas HOY
+                fn($q) => $q  // Si hay fechas, continuar sin filtro de created_at
+            )
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
-            ->when($filtros['fecha_desde'], fn($q, $fecha) => $q->whereDate('fecha_programada', '>=', $fecha))
-            ->when($filtros['fecha_hasta'], fn($q, $fecha) => $q->whereDate('fecha_programada', '<=', $fecha))
+            ->when($filtros['fecha_desde'], function ($q, $fecha) {
+                \Log::info('📅 Filtrando por fecha_desde: ' . $fecha . ' (>= este valor)');
+                return $q->whereDate('fecha_programada', '>=', $fecha);
+            })
+            ->when($filtros['fecha_hasta'], function ($q, $fecha) {
+                \Log::info('📅 Filtrando por fecha_hasta: ' . $fecha . ' (<= este valor)');
+                return $q->whereDate('fecha_programada', '<=', $fecha);
+            })
+            ->when($filtros['chofer_id'], fn($q, $choferId) => $q->where('chofer_id', $choferId))
+            ->when($filtros['vehiculo_id'], fn($q, $vehiculoId) => $q->where('vehiculo_id', $vehiculoId))
+            ->when($filtros['localidad_id'], fn($q, $localidadId) => $q->where('zona_id', $localidadId))
+            ->when($filtros['estado_logistica_id'], fn($q, $estadoId) => $q->where('estado_entrega_id', $estadoId))
             ->when($filtros['search'], function ($q, $search) {
                 $searchLower = strtolower($search);
                 // ✅ CASE INSENSITIVE: Buscar en clientes de TODAS las ventas, número de venta, placa, chofer
@@ -120,8 +153,18 @@ class EntregaController extends Controller
                     );
                 });
             })
-            ->latest()
+            ->orderBy('created_at', 'desc') // ✅ Ordenar por fecha de creación (más nuevo primero)
             ->paginate($perPage);
+
+        // 🔍 DEBUG: Logging de resultados
+        \Log::info('📊 [EntregaController::index] Resultados de consulta:', [
+            'total_entregas_encontradas' => $entregas->total(),
+            'entregas_en_pagina' => $entregas->count(),
+            'pagina_actual' => $entregas->currentPage(),
+            'ultima_pagina' => $entregas->lastPage(),
+            'primera_entrega_fecha_programada' => $entregas->first()?->fecha_programada,
+            'sql_query' => (string) $entregas->getCollection()->getQueueableConnection(),
+        ]);
 
         // Cargar vehículos y choferes para optimización
         $vehiculos = Vehiculo::disponibles()
@@ -231,6 +274,8 @@ class EntregaController extends Controller
             ->whereNull('entrega_id')       // ✅ Phase 3: No tiene entrega principal asignada
             ->where('requiere_envio', true) // ✅ Solo ventas que requieren envío
             ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS (ID 3)
+            ->where('tipo_entrega', 'DELIVERY')    // ✅ NUEVO: Solo ventas DELIVERY
+            ->whereDate('created_at', today())     // ✅ NUEVO: Solo ventas creadas hoy
             ->whereNotNull('cliente_id')    // Debe tener cliente
             ->whereHas('detalles')          // Debe tener detalles de productos
             ->latest();
@@ -272,6 +317,7 @@ class EntregaController extends Controller
                     'peso_estimado'              => (float) ($venta->peso_total_estimado ?? 0), // Fallback para compatibilidad
                     'fecha_venta'                => $venta->fecha?->format('Y-m-d'),
                     'fecha'                      => $venta->fecha?->format('Y-m-d'),
+                    'created_at'                 => $venta->created_at?->format('Y-m-d H:i'), // ✅ NUEVO: Fecha y hora de creación
                     'estado'                     => $venta->estadoDocumento?->nombre ?? 'Sin estado',
                     'cliente'                    => [
                         'id'        => $venta->cliente?->id,
@@ -427,6 +473,7 @@ class EntregaController extends Controller
                     'ventana_entrega_fin'         => $venta->ventana_entrega_fin?->format('H:i'),
                     'cantidad_items'              => $venta->detalles?->count() ?? 0,
                     'detalles'                    => $venta->detalles?->toArray() ?? [],
+                    'created_at'                  => $venta->created_at?->format('Y-m-d H:i:s'),
                 ];
             });
 
@@ -445,6 +492,7 @@ class EntregaController extends Controller
             ->where('estado_documento_id', 3) // Solo APROBADAS
             ->whereNotNull('cliente_id')
             ->whereHas('detalles')
+            ->whereDate('created_at', today()) // ✅ NUEVO: Solo ventas creadas HOY por defecto
             ->latest();
 
         $ventasDisponiblesPaginated = $ventasDisponiblesQuery->paginate($perPage);
@@ -497,6 +545,7 @@ class EntregaController extends Controller
                     'ventana_entrega_fin'         => $venta->ventana_entrega_fin?->format('H:i'),
                     'cantidad_items'              => $venta->detalles?->count() ?? 0,
                     'detalles'                    => $venta->detalles?->toArray() ?? [],
+                    'created_at'                  => $venta->created_at?->format('Y-m-d H:i:s'),
                 ];
             });
 
@@ -871,6 +920,7 @@ class EntregaController extends Controller
         $entrega->load([
             'estadoEntrega', // ✅ NUEVO: Para acceder a estado_entrega_codigo
             'ventas.cliente',
+            'ventas.tipoPago',                 // ✅ NUEVO: Mostrar tipo de pago en la tabla
             'ventas.direccionCliente',         // ✅ NUEVO: Para coordenadas del mapa
             'ventas.estadoLogistica',          // ✅ NUEVO: Estado logístico de cada venta
             'ventas.detalles.producto.unidad', // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
@@ -923,6 +973,7 @@ class EntregaController extends Controller
 
         return Inertia::render('logistica/entregas/Show', [
             'entrega' => $entregaData,
+            'tiposPago' => \App\Models\TipoPago::where('activo', true)->get(),
         ]);
     }
 

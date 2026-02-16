@@ -24,6 +24,10 @@ export default function BatchVentaSelector({
     onSelectAll,
     onClearSelection,
 }: BatchVentaSelectorProps) {
+    console.log('Renderizando BatchVentaSelector');
+    console.log('Ventas disponibles:', ventas);
+    console.log('Ventas seleccionadas:', selectedIds);
+    console.log('Ventas asignadas:', ventasAsignadas);
     const [searchInputValue, setSearchInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [fechaDesde, setFechaDesde] = useState('');
@@ -36,6 +40,7 @@ export default function BatchVentaSelector({
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [hasSearched, setHasSearched] = useState(false);
+    const [isDateFilterExpanded, setIsDateFilterExpanded] = useState(false);
 
     // Función para aplicar búsqueda en BD
     const handleSearch = useCallback(async () => {
@@ -199,7 +204,7 @@ export default function BatchVentaSelector({
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                             <Input
-                                placeholder="ID, número, cliente, teléfono, NIT o localidad..."
+                                placeholder="Id, número, cliente, teléfono, NIT o localidad..."
                                 value={searchInputValue}
                                 onChange={(e) => setSearchInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
@@ -254,50 +259,73 @@ export default function BatchVentaSelector({
                     )}
                 </div>
 
-                {/* Filtros de Fecha */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-2">
+                {/* Filtros de Fecha - Collapsible */}
+                <button
+                    onClick={() => setIsDateFilterExpanded(!isDateFilterExpanded)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                        isDateFilterExpanded
+                            ? 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                             Filtrar por Fecha de Venta
                         </span>
+                        {(fechaDesde || fechaHasta) && (
+                            <Badge variant="secondary" className="text-xs">
+                                ✓ Activo
+                            </Badge>
+                        )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">
-                                Desde
-                            </label>
-                            <Input
-                                type="date"
-                                value={fechaDesde}
-                                onChange={(e) => setFechaDesde(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm h-9"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">
-                                Hasta
-                            </label>
-                            <Input
-                                type="date"
-                                value={fechaHasta}
-                                onChange={(e) => setFechaHasta(e.target.value)}
-                                className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm h-9"
-                            />
-                        </div>
-                    </div>
-                    {(fechaDesde || fechaHasta) && (
-                        <button
-                            onClick={() => {
-                                setFechaDesde('');
-                                setFechaHasta('');
-                            }}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2"
-                        >
-                            Limpiar filtros de fecha
-                        </button>
+                    {isDateFilterExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    ) : (
+                        <ChevronDown className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     )}
-                </div>
+                </button>
+
+                {/* Contenido del filtro de fechas - Solo visible si está expandido */}
+                {isDateFilterExpanded && (
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">
+                                    Desde
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={fechaDesde}
+                                    onChange={(e) => setFechaDesde(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm h-9"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">
+                                    Hasta
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={fechaHasta}
+                                    onChange={(e) => setFechaHasta(e.target.value)}
+                                    className="dark:bg-slate-800 dark:border-slate-600 dark:text-white text-sm h-9"
+                                />
+                            </div>
+                        </div>
+                        {(fechaDesde || fechaHasta) && (
+                            <button
+                                onClick={() => {
+                                    setFechaDesde('');
+                                    setFechaHasta('');
+                                }}
+                                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                ✕ Limpiar filtros de fechas
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Botones de acción */}
                 <div className="flex gap-2">
@@ -390,9 +418,9 @@ export default function BatchVentaSelector({
                                                                 <div className="h-4 w-4 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0" />
                                                             )}
                                                             <span className="font-mono font-semibold text-gray-900 dark:text-white min-w-fit">
-                                                                {venta.numero_venta}
+                                                                Folio: {venta.id}  | {venta.numero_venta}
                                                             </span>
-                                                            <span className="text-gray-600 dark:text-gray-400 truncate">
+                                                            <span className="text-gray-600 dark:text-gray-400">
                                                                 {venta.cliente.nombre}
                                                             </span>
                                                             {isNueva && <Badge variant="default" className="ml-auto text-xs bg-green-600">✨ Nueva</Badge>}
@@ -432,7 +460,7 @@ export default function BatchVentaSelector({
                                                             <div className="grid grid-cols-1 gap-1.5 mb-2">
                                                                 <div className="flex items-start justify-between gap-2">
                                                                     <h4 className="font-semibold text-gray-900 dark:text-white break-words flex-1">
-                                                                        {venta.numero_venta}
+                                                                        Folio: {venta.id} | {venta.numero_venta}
                                                                     </h4>
                                                                     <div className="flex gap-1 flex-shrink-0">
                                                                         {isNueva && <Badge className="text-xs bg-green-600 whitespace-nowrap">✨ Nueva</Badge>}
@@ -452,9 +480,16 @@ export default function BatchVentaSelector({
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex items-center justify-between">
-                                                                    <span className="text-xs">
-                                                                        Fecha: {venta.fecha_venta}
-                                                                    </span>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {/* <span className="text-xs text-gray-700 dark:text-gray-300">
+                                                                            📅 Venta: {venta.fecha_venta}
+                                                                        </span> */}
+                                                                        {venta.created_at && (
+                                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                                                                                🕐 Creada: {venta.created_at}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <span className="font-semibold text-gray-900 dark:text-white">
                                                                         Bs {venta.subtotal.toLocaleString('es-BO', {
                                                                             minimumFractionDigits: 2,
@@ -462,6 +497,16 @@ export default function BatchVentaSelector({
                                                                         })}
                                                                     </span>
                                                                 </div>
+                                                                {venta.fecha_entrega_comprometida && (
+                                                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
+                                                                        📅 Entrega comprometida: {new Date(venta.fecha_entrega_comprometida).toLocaleDateString('es-BO', {
+                                                                            weekday: 'short',
+                                                                            day: 'numeric',
+                                                                            month: 'short',
+                                                                            year: 'numeric'
+                                                                        })}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -475,34 +520,6 @@ export default function BatchVentaSelector({
                     })
                 )}
             </div>
-
-            {/* Resumen de selección */}
-            {/* {selectedIds.length > 0 && (
-                <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 p-3">
-                    <div className="text-sm space-y-2">
-                        <h4 className="font-semibold text-blue-900 dark:text-blue-200">Resumen de Selección</h4>
-                        <div className="grid grid-cols-3 gap-2 text-blue-800 dark:text-blue-300">
-                            <div>
-                                <span className="text-xs opacity-75">Ventas</span>
-                                <p className="font-semibold">{totalSeleccionado.cantidad}</p>
-                            </div>
-                            <div>
-                                <span className="text-xs opacity-75">Peso Total</span>
-                                <p className="font-semibold">{totalSeleccionado.peso.toFixed(1)} kg</p>
-                            </div>
-                            <div>
-                                <span className="text-xs opacity-75">Monto</span>
-                                <p className="font-semibold">
-                                    Bs {totalSeleccionado.monto.toLocaleString('es-BO', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-            )} */}
         </div>
     );
 }

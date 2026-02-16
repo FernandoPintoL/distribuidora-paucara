@@ -35,6 +35,10 @@ class EntregaVentaConfirmacion extends Model
         'total_dinero_recibido',    // Total de dinero en efectivo/transferencia recibido
         'monto_pendiente',          // Dinero pendiente si fue pago parcial o crédito
         'tipo_confirmacion',        // COMPLETA, CON_NOVEDAD
+        // ✅ FASE 4: Devoluciones Parciales (2026-02-15)
+        'productos_devueltos',      // JSON array de productos rechazados
+        'monto_devuelto',           // Total del monto devuelto
+        'monto_aceptado',           // Total del monto aceptado
     ];
 
     protected $casts = [
@@ -48,6 +52,10 @@ class EntregaVentaConfirmacion extends Model
         'desglose_pagos' => 'array',                // JSON array → PHP array
         'total_dinero_recibido' => 'decimal:2',     // Total dinero recibido
         'monto_pendiente' => 'decimal:2',           // Dinero pendiente
+        // ✅ NUEVA 2026-02-15: Casts para devoluciones parciales
+        'productos_devueltos' => 'array',           // JSON array → PHP array
+        'monto_devuelto' => 'decimal:2',            // Total devuelto con 2 decimales
+        'monto_aceptado' => 'decimal:2',            // Total aceptado con 2 decimales
     ];
 
     // ===== RELACIONES =====
@@ -190,5 +198,53 @@ class EntregaVentaConfirmacion extends Model
                 'montoFormato' => '$' . number_format($pago['monto'] ?? 0, 2),
             ];
         })->toArray();
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-15: ¿Hubo devolución parcial?
+     */
+    public function tuvoDevolucionParcial(): bool
+    {
+        return is_array($this->productos_devueltos) && count($this->productos_devueltos) > 0;
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-15: Contar productos devueltos
+     */
+    public function contarProductosDevueltos(): int
+    {
+        return is_array($this->productos_devueltos) ? count($this->productos_devueltos) : 0;
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-15: Obtener productos devueltos formateados
+     */
+    public function obtenerProductosDevueltosFormateado(): array
+    {
+        if (!is_array($this->productos_devueltos)) {
+            return [];
+        }
+
+        return collect($this->productos_devueltos)->map(function ($producto) {
+            return [
+                'nombre' => $producto['producto_nombre'] ?? 'Desconocido',
+                'cantidad' => $producto['cantidad'] ?? 0,
+                'precio_unitario' => $producto['precio_unitario'] ?? 0,
+                'subtotal' => $producto['subtotal'] ?? 0,
+                'subtotalFormato' => '$' . number_format($producto['subtotal'] ?? 0, 2),
+            ];
+        })->toArray();
+    }
+
+    /**
+     * ✅ NUEVA 2026-02-15: Obtener porcentaje devuelto
+     */
+    public function obtenerPorcentajeDevuelto(): float
+    {
+        if (!$this->venta || $this->venta->total == 0) {
+            return 0;
+        }
+
+        return round(($this->monto_devuelto / $this->venta->total) * 100, 2);
     }
 }

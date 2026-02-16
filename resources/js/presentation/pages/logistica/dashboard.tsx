@@ -110,6 +110,22 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [proformasRecientes]);
 
+    // ✅ NUEVO: Aplicar filtros por defecto (BORRADOR + PENDIENTE + APROBADA del día) cuando se abre el dashboard
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        // Solo establecer filtros por defecto si NO hay parámetros de URL
+        if (urlParams.toString() === '') {
+            // Navegar a la URL con los filtros por defecto sin hacer reload
+            // Solo pasamos fecha para el día actual - el estado usa el default del servidor (BORRADOR + PENDIENTE + APROBADA)
+            const today = new Date().toISOString().split('T')[0]; // formato: YYYY-MM-DD
+            router.visit(`/logistica/dashboard?fecha_vencimiento_desde=${today}&fecha_vencimiento_hasta=${today}`, {
+                replace: true,
+                preserveState: false,
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Verificar si proforma está vencida
     const estaVencida = (proforma: ProformaAppExterna): boolean => {
         if (!proforma.fecha_vencimiento) return false;
@@ -140,6 +156,11 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         router.visit(`/proformas/${proforma.id}`);
     };
 
+    // ✅ NUEVO: Editar proforma
+    const handleEditarProforma = (proforma: ProformaAppExterna) => {
+        router.visit(`/proformas/${proforma.id}/edit`);
+    };
+
     // Rechazar proforma - Abre el modal de rechazo específico
     const handleRechazarProforma = (proforma: ProformaAppExterna) => {
         abrirModalRechazo(proforma);
@@ -152,7 +173,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
 
             <div className="space-y-6 p-4 bg-white dark:bg-slate-950 min-h-screen">
                 {/* Estadísticas */}
-                <DashboardStats
+                {/* <DashboardStats
                     logisticaStats={logisticaStats}
                     proformaStats={proformaStats}
                     stats={dashboardMetricas || stats}
@@ -162,7 +183,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
                     dashboardLastUpdate={dashboardLastUpdate}
                     dashboardIsRefreshing={dashboardIsRefreshing}
                     refreshDashboard={refreshDashboard}
-                />
+                /> */}
 
                 {/* Sección de Proformas */}
                 <ProformasSection
@@ -205,6 +226,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
                     setFiltroHoraEntregaSolicitadaHasta={proformaFilters.setFiltroHoraEntregaSolicitadaHasta}
                     cambiarPagina={proformaFilters.cambiarPagina}
                     onVerProforma={handleVerProforma}
+                    onEditarProforma={handleEditarProforma}
                     onRechazarProforma={handleRechazarProforma}
                     getEstadoBadge={getEstadoBadge}
                     estaVencida={estaVencida}

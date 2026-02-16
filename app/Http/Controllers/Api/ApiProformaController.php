@@ -775,6 +775,7 @@ class ApiProformaController extends Controller
             'detalles.producto.marca',
             'direccionSolicitada',
             'direccionConfirmada',
+            'venta', // ✅ NUEVO: Cargar venta relacionada si está convertida
         ]);
 
         $query->orderBy('created_at', 'desc');
@@ -847,10 +848,19 @@ class ApiProformaController extends Controller
             ]);
         }
 
-        // Formato default (dashboard web)
+        // Formato default (dashboard web + app móvil)
+        // ✅ NUEVO: Mapear venta_id y venta_numero para app móvil
+        $data = $proformas->map(function ($proforma) {
+            $item = $proforma->toArray();
+            // Agregar información de venta si está convertida
+            $item['venta_id'] = $proforma->venta?->id;
+            $item['venta_numero'] = $proforma->venta?->numero;
+            return $item;
+        })->toArray();
+
         return response()->json([
             'success' => true,
-            'data' => $proformas->items(),
+            'data' => $data,
             'meta' => [
                 'current_page' => $proformas->currentPage(),
                 'last_page' => $proformas->lastPage(),
@@ -3740,6 +3750,8 @@ class ApiProformaController extends Controller
         $proforma->load('estadoLogistica');
 
         $request->validate([
+            // ✅ Cliente (ahora actualizable en edición)
+            'cliente_id' => 'nullable|exists:clientes,id',
             'detalles' => 'required|array|min:1',
             'detalles.*.producto_id' => 'required|exists:productos,id',
             'detalles.*.cantidad' => 'required|numeric|min:0.01',
@@ -3753,6 +3765,9 @@ class ApiProformaController extends Controller
             'canal' => 'nullable|in:PRESENCIAL,ONLINE,TELEFONO',
             'politica_pago' => 'nullable|in:CONTRA_ENTREGA,ANTICIPADO_100',
             'observaciones' => 'nullable|string|max:1000',
+            // ✅ NUEVO: Estado y preventista para edición completa
+            'estado_inicial' => 'nullable|in:BORRADOR,PENDIENTE',
+            'preventista_id' => 'nullable|exists:users,id',
         ]);
 
         try {
@@ -3822,17 +3837,32 @@ class ApiProformaController extends Controller
             ];
 
             // ✅ NUEVO: Agregar campos opcionales si están presentes en la request
-            $camposOpcionales = ['fecha', 'fecha_vencimiento', 'fecha_entrega_solicitada', 'tipo_entrega', 'canal', 'politica_pago', 'observaciones'];
+            $camposOpcionales = ['cliente_id', 'fecha', 'fecha_vencimiento', 'fecha_entrega_solicitada', 'tipo_entrega', 'canal', 'politica_pago', 'observaciones', 'preventista_id'];
             foreach ($camposOpcionales as $campo) {
                 if ($request->has($campo) && $request->input($campo) !== null) {
                     $updateData[$campo] = $request->input($campo);
                 }
             }
 
+            // ✅ NUEVO: Actualizar estado si se envía estado_inicial
+            if ($request->has('estado_inicial') && $request->input('estado_inicial') !== null) {
+                $nuevoEstado = $request->input('estado_inicial');
+                $estadoId = Proforma::obtenerIdEstado($nuevoEstado, 'proforma');
+                if ($estadoId && $proforma->estado !== $nuevoEstado) {
+                    $updateData['estado_proforma_id'] = $estadoId;
+
+                    // Log del cambio de estado
+                    Log::info("Proforma {$proforma->numero} estado actualizado: {$proforma->estado} → {$nuevoEstado}");
+                }
+            }
+
             $proforma->update($updateData);
 
-            // ✅ NUEVO: Ajustar reservaciones para que coincidan con los nuevos detalles
-            $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);
+            // ✅ NUEVO: Ajustar reservaciones solo si la proforma está en PENDIENTE o estado con reservas
+            // No ajustar si está en BORRADOR (sin reservas)
+            if ($proforma->estado !== 'BORRADOR') {
+                $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);
+            }
 
             // Recargar relaciones
             $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'estadoLogistica']);

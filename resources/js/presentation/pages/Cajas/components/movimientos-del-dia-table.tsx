@@ -76,7 +76,7 @@ const getTipoOperacionColor = (codigo: string): string => {
 };
 
 export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, cargandoDatos = false }: Props) {
-
+    console.log('MovimientosDelDiaTable - Props recibidos:', { cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago, ventasPorEstado, pagosPorTipoPago, gastosPorTipoPago, ventasTotales, ventasAnuladas, ventasCredito, cargandoDatos });
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');
     const [filtroFechaHasta, setFiltroFechaHasta] = useState<string>('');
@@ -394,94 +394,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         )}
                     </div>
                 </div>
-                {/* ✅ MEJORADO: Efectivo Esperado en Caja - Ahora con datos frescos del servidor */}
-                {/* {efectivoActual && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                                💰 Efectivo Esperado en Caja
-                            </h4>
-                            {cargandoDatos && (
-                                <span className="text-xs text-blue-600 dark:text-blue-400">Actualizando...</span>
-                            )}
-                        </div>
-                        <table className="w-full text-xs">
-                            <tbody>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">Apertura</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-gray-700 dark:text-gray-300">
-                                        {formatCurrency(efectivoActual.apertura)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-100 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/5">
-                                    <td className="py-1 px-2">
-                                        <strong>+ Ventas Efectivo</strong>
-                                    </td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                       +{formatCurrency(efectivoActual.ventas_efectivo)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2"><strong>+ Ventas en Efectivo + Transferencias</strong></td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoActual.ventas_efectivo)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">
-                                        <strong>+ Ventas a Crédito</strong>
-                                    </td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(ventasCredito)}
-                                    </td>
-                                </tr>
-
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2"><strong>+CXC Efectivo (Pagos de Crédito)</strong></td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoActual.pagos_credito)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">Devoluciones Venta</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
-                                        {formatCurrency(ventasAnuladas)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">Devoluciones Efectivo</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-gray-300">
-                                        {formatCurrency(ventasAnuladas)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">+ Entrada Efectivo</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-green-700 dark:text-green-300">
-                                        +{formatCurrency(efectivoActual.pagos_credito)}
-                                    </td>
-                                </tr>
-                                <tr className="border-b border-yellow-200 dark:border-yellow-700">
-                                    <td className="py-1 px-2">- Salida Efectivo</td>
-                                    <td className="text-right py-1 px-2 font-semibold text-red-700 dark:text-red-300">
-                                        -{formatCurrency(efectivoActual.total_egresos || efectivoActual.gastos || 0)}
-                                    </td>
-                                </tr>
-                                <tr className="bg-yellow-100 dark:bg-yellow-900/30">
-                                    <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200">=  Efectivo Esperado Caja</td>
-                                    <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
-                                        {formatCurrency(efectivoActual.total)}
-                                    </td>
-                                </tr>
-                                <tr className="bg-yellow-100 dark:bg-green-900/30">
-                                    <td className="py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200"><strong>VENTAS TOTALES</strong></td>
-                                    <td className="text-right py-1 px-2 font-bold text-yellow-900 dark:text-yellow-200 text-sm">
-                                        {formatCurrency(ventasTotales)}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                )} */}
 
                 {/* ✅ NUEVO: Filtros por tipo */}
                 <div className="mb-6 flex flex-wrap gap-2 mt-4">
@@ -821,6 +733,8 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                 const tipoOperacionMatch = movimientosHoy.find(m => m.tipo_operacion.nombre === tipo);
                                 const codigo = tipoOperacionMatch?.tipo_operacion.codigo || tipo.toUpperCase();
                                 const esIngreso = total > 0;
+
+                                console.log('Movimientos del día - Resumen por tipo:', { tipo, total, count, codigo, esIngreso });
 
                                 return (
                                     <div

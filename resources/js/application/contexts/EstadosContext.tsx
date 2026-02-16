@@ -61,7 +61,7 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
      * Inicializa los estados desde cache o API
      */
     const initializeEstados = useCallback(async () => {
-        console.log('[EstadosProvider] Initializing states...');
+        console.log('[EstadosProvider] ⏳ Initializing states... (setIsLoading → true)');
         setIsLoading(true);
         setError(null);
 
@@ -78,8 +78,9 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
                     getCacheSummary()
                 );
                 setEstados(cachedEstados);
-                setIsInitialized(true);
                 setIsLoading(false);
+                console.log('[EstadosProvider] ✅ setIsLoading(false) - from cache');
+                setIsInitialized(true);
                 return;
             }
 
@@ -88,11 +89,18 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
                 '[EstadosProvider] 📥 Cache miss, fetching from API...'
             );
             const allEstados = await estadosApiService.getAllEstados();
+            console.log('[EstadosProvider] 📥 API returned:', allEstados);
 
             // Actualizar cache con los nuevos datos
             updateMultipleCachedEstados(allEstados);
             setEstados(allEstados);
+            console.log('[EstadosProvider] ✅ setEstados() called');
+
+            setIsLoading(false);
+            console.log('[EstadosProvider] ✅ setIsLoading(false) - from API');
+
             setIsInitialized(true);
+            console.log('[EstadosProvider] ✅ setIsInitialized(true) - from API');
 
             console.log(
                 '[EstadosProvider] ✅ Initialized from API:',
@@ -178,8 +186,12 @@ export function EstadosProvider({ children }: EstadosProviderProps) {
      */
     useEffect(() => {
         // Solo inicializar una vez
+        console.log('[EstadosProvider] 🔄 useEffect ran, isInitialized:', isInitialized);
         if (!isInitialized) {
+            console.log('[EstadosProvider] 🔄 Calling initializeEstados()...');
             initializeEstados();
+        } else {
+            console.log('[EstadosProvider] 🔄 Already initialized, skipping...');
         }
     }, [isInitialized, initializeEstados]);
 

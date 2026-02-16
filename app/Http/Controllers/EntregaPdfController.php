@@ -134,7 +134,30 @@ class EntregaPdfController extends Controller
             $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
 
             // ✅ NUEVA 2026-02-12: Obtener resumen de pagos para la impresión
+            \Log::info('[EntregaPdfController::descargar] 🔄 Obteniendo resumen de pagos', [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+            ]);
+
             $resumenPagos = $this->obtenerResumenPagos($entrega);
+
+            \Log::info('[EntregaPdfController::descargar] ✅ Resumen de pagos obtenido', [
+                'entrega_id' => $entrega->id,
+                'resumen_es_null' => $resumenPagos === null,
+                'resumen_existe' => $resumenPagos !== null,
+                'estructura_resumen' => $resumenPagos ? json_encode([
+                    'keys' => array_keys($resumenPagos),
+                    'pagos_count' => count($resumenPagos['pagos'] ?? []),
+                    'pagos' => array_map(function($p) {
+                        return [
+                            'tipo_pago' => $p['tipo_pago'] ?? null,
+                            'tipo_pago_codigo' => $p['tipo_pago_codigo'] ?? null,
+                            'total' => $p['total'] ?? 0,
+                        ];
+                    }, $resumenPagos['pagos'] ?? []),
+                    'sin_registrar_count' => count($resumenPagos['sin_registrar'] ?? []),
+                ], JSON_UNESCAPED_UNICODE) : 'null',
+            ]);
 
             $data = [
                 'entrega' => $entrega,
@@ -236,7 +259,22 @@ class EntregaPdfController extends Controller
             $localidadesResumen = $localidadesService->obtenerLocalidadesResumen($entrega);
 
             // ✅ NUEVA 2026-02-12: Obtener resumen de pagos para la impresión
+            \Log::info('[EntregaPdfController::preview] 🔄 Obteniendo resumen de pagos', [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+            ]);
+
             $resumenPagos = $this->obtenerResumenPagos($entrega);
+
+            \Log::info('[EntregaPdfController::preview] ✅ Resumen de pagos obtenido', [
+                'entrega_id' => $entrega->id,
+                'resumen_es_null' => $resumenPagos === null,
+                'estructura_resumen' => $resumenPagos ? json_encode([
+                    'keys' => array_keys($resumenPagos),
+                    'pagos_count' => count($resumenPagos['pagos'] ?? []),
+                    'pagos_preview' => array_slice($resumenPagos['pagos'] ?? [], 0, 2),
+                ], JSON_UNESCAPED_UNICODE) : 'null',
+            ]);
 
             $data = [
                 'entrega' => $entrega,
@@ -254,6 +292,11 @@ class EntregaPdfController extends Controller
 
             // Crear PDF
             $viewName = $this->obtenerVistaEntrega($formato);
+            \Log::info('[EntregaPdfController::preview] 🎨 Cargando vista para PDF', [
+                'entrega_id' => $entrega->id,
+                'vista_name' => $viewName,
+                'formato' => $formato,
+            ]);
             $pdf = Pdf::loadView($viewName, $data);
 
             // Configurar papel y márgenes según formato
@@ -265,8 +308,19 @@ class EntregaPdfController extends Controller
             };
 
             // Retornar como stream (abre en navegador)
+            \Log::info('[EntregaPdfController::preview] 📤 PDF stream iniciado', [
+                'entrega_id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+            ]);
             return $pdf->stream("entrega-{$entrega->numero_entrega}.pdf");
         } catch (\Exception $e) {
+            \Log::error('[EntregaPdfController::preview] ❌ ERROR generando PDF', [
+                'entrega_id' => $entrega->id ?? 'unknown',
+                'error_mensaje' => $e->getMessage(),
+                'error_linea' => $e->getLine(),
+                'error_archivo' => $e->getFile(),
+                'error_trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error generando vista previa',
@@ -582,65 +636,177 @@ class EntregaPdfController extends Controller
     private function obtenerResumenPagos(Entrega $entrega): ?array
     {
         try {
-            // Obtener datos de confirmaciones de ventas de esta entrega
-            $confirmaciones = \App\Models\EntregaVentaConfirmacion::where('entrega_id', $entrega->id)
-                ->with([
-                    'venta.cliente',
-                    'tipoPago',
-                ])
+            // ✅ REFACTORIZADO 2026-02-16: Usar MISMA lógica que endpoint API para evitar discrepancias
+            // Cargar ventas con relaciones necesarias
+            $ventasCargas = $entrega->load(['ventas' => function ($q) {
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_pago', 'tipo_pago_id')
+                  ->with('tipoPago:id,codigo,nombre');
+            }])->ventas;
+
+            // Filtrar SOLO ventas NO a crédito (CRÍTICO: excluir CREDITO del resumen)
+            $ventasParaResumen = $ventasCargas->filter(function ($v) {
+                return $v->estado_pago !== 'CREDITO';
+            });
+
+            // Obtener todas las confirmaciones de las ventas NO crédito de esta entrega
+            $ventasIds = $ventasParaResumen->pluck('id')->toArray();
+
+            if (empty($ventasIds)) {
+                return null;
+            }
+
+            $confirmaciones = \App\Models\EntregaVentaConfirmacion::with('tipoPago')
+                ->whereIn('venta_id', $ventasIds)
                 ->get();
 
             if ($confirmaciones->isEmpty()) {
                 return null;
             }
 
-            // Agrupar por tipo de pago
-            $pagos = $confirmaciones->groupBy('tipo_pago_id')->map(function ($grupo) {
-                $tipoPagoData = $grupo->first();
-                return [
-                    'tipo_pago_id' => $tipoPagoData->tipo_pago_id,
-                    'tipo_pago' => $tipoPagoData->tipoPago?->nombre ?? 'Desconocido',
-                    'total' => (float) $grupo->sum('monto_recibido'),
-                    'cantidad_ventas' => $grupo->count(),
-                ];
-            })->values()->toArray();
-
-            // Calcular totales
-            $totalEsperado = (float) $entrega->ventas->sum('total');
-            $totalRecibido = (float) $confirmaciones->sum('monto_recibido');
-            $totalCredito = (float) $confirmaciones->sum('monto_pendiente');
-
-            // Ventas sin pago registrado
-            $ventasConfirmadas = $confirmaciones->pluck('venta_id')->toArray();
-            $ventasSinPago = $entrega->ventas
-                ->whereNotIn('id', $ventasConfirmadas)
-                ->map(function ($venta) {
-                    return [
-                        'venta_id' => $venta->id,
-                        'venta_numero' => $venta->numero,
-                        'monto' => (float) $venta->total,
-                    ];
-                })
-                ->values()
-                ->toArray();
-
-            return [
+            // Construir resumen con soporte para múltiples pagos (IGUAL QUE ENDPOINT API)
+            $resumen = [
                 'entrega_id' => $entrega->id,
                 'numero_entrega' => $entrega->numero_entrega,
-                'total_esperado' => $totalEsperado,
-                'pagos' => $pagos,
-                'sin_registrar' => $ventasSinPago,
-                'total_recibido' => $totalRecibido,
+                'total_esperado' => (float) $ventasParaResumen->sum('total'),  // ✅ Solo no-crédito
+                'pagos' => [],
+                'sin_registrar' => [],
+                'total_recibido' => 0,
+            ];
+
+            // Procesar confirmaciones agrupadas por tipo de pago
+            $porTipoPago = $confirmaciones->groupBy(function ($item) {
+                // Si tiene desglose_pagos (múltiples pagos), agrupar por cada tipo en el desglose
+                if (!empty($item->desglose_pagos)) {
+                    return 'multiple';
+                }
+                // Si tiene tipo_pago_id único, agrupar por eso
+                return $item->tipo_pago_id;
+            });
+
+            foreach ($porTipoPago as $grupoKey => $confirmacionesGrupo) {
+                if ($grupoKey === 'multiple') {
+                    // Procesar múltiples pagos por desglose
+                    foreach ($confirmacionesGrupo as $confirmacion) {
+                        if (!empty($confirmacion->desglose_pagos)) {
+                            foreach ($confirmacion->desglose_pagos as $pago) {
+                                $tipoPagoNombre = $pago['tipo_pago_nombre'] ?? 'Desconocido';
+                                $tipoPagoCodigo = $this->obtenerCodigoTipoPago($tipoPagoNombre);
+                                $montoPago = (float) ($pago['monto'] ?? 0);
+
+                                // Buscar si ya existe este tipo en el resumen
+                                $existeIndex = null;
+                                foreach ($resumen['pagos'] as $idx => $p) {
+                                    if ($p['tipo_pago'] === $tipoPagoNombre) {
+                                        $existeIndex = $idx;
+                                        break;
+                                    }
+                                }
+
+                                if ($existeIndex !== null) {
+                                    // Actualizar existente
+                                    $resumen['pagos'][$existeIndex]['total'] += $montoPago;
+                                    $resumen['pagos'][$existeIndex]['cantidad_ventas']++;
+                                } else {
+                                    // Crear nuevo tipo
+                                    $resumen['pagos'][] = [
+                                        'tipo_pago_id' => $pago['tipo_pago_id'] ?? null,
+                                        'tipo_pago' => $tipoPagoNombre,
+                                        'tipo_pago_codigo' => $tipoPagoCodigo,
+                                        'total' => $montoPago,
+                                        'cantidad_ventas' => 1,
+                                    ];
+                                }
+
+                                $resumen['total_recibido'] += $montoPago;
+                            }
+                        }
+                    }
+                } else {
+                    // Procesar pago único (backward compatible)
+                    // ✅ FIX: Usar null-safe operator para acceder a first() y tipoPago
+                    $tipoPago = $confirmacionesGrupo->first()?->tipoPago;
+                    $totalPago = (float) $confirmacionesGrupo->sum('total_dinero_recibido');
+                    if ($totalPago == 0) {
+                        $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
+                    }
+                    $cantidad = $confirmacionesGrupo->count();
+
+                    $resumen['pagos'][] = [
+                        'tipo_pago_id' => $grupoKey,
+                        'tipo_pago' => $tipoPago?->nombre ?? 'Sin especificar',
+                        'tipo_pago_codigo' => $tipoPago?->codigo ?? 'N/A',
+                        'total' => $totalPago,
+                        'cantidad_ventas' => $cantidad,
+                    ];
+
+                    $resumen['total_recibido'] += $totalPago;
+                }
+            }
+
+            // Ventas sin confirmación de pago (SOLO NO crédito)
+            $ventasConfirmadas = $confirmaciones->pluck('venta_id')->unique()->toArray();
+            $ventasSinPago = $ventasParaResumen->whereNotIn('id', $ventasConfirmadas);
+
+            if ($ventasSinPago->isNotEmpty()) {
+                $resumen['sin_registrar'] = array_values(
+                    $ventasSinPago->map(function ($v) {
+                        return [
+                            'venta_id' => $v->id,
+                            'venta_numero' => $v->numero,
+                            'monto' => (float) $v->total,
+                        ];
+                    })->toArray()
+                );
+            }
+
+            // Calcular totales
+            $totalEsperado = $resumen['total_esperado'];
+            $totalRecibido = $resumen['total_recibido'];
+            $totalCredito = (float) $entrega->ventas->where('estado_pago', 'CREDITO')->sum('total');
+
+            $resumenFinal = array_merge($resumen, [
                 'total_credito' => $totalCredito,
                 'diferencia' => max(0, $totalEsperado - $totalRecibido - $totalCredito),
                 'porcentaje_recibido' => $totalEsperado > 0 ? (int) (($totalRecibido / $totalEsperado) * 100) : 0,
-            ];
-        } catch (\Exception $e) {
-            \Log::warning('[EntregaPdfController::obtenerResumenPagos] Error', [
+            ]);
+
+            // 🔍 LOGGING DETALLADO: Validar estructura de datos antes de retornar
+            \Log::info('[EntregaPdfController::obtenerResumenPagos] ✅ Resumen generado', [
                 'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
+                'total_esperado' => $totalEsperado,
+                'total_recibido' => $totalRecibido,
+                'cantidad_pagos' => count($resumenFinal['pagos']),
+                'pagos_estructura' => json_encode($resumenFinal['pagos'], JSON_UNESCAPED_UNICODE),
+                'sin_registrar_count' => count($resumenFinal['sin_registrar']),
+            ]);
+
+            return $resumenFinal;
+        } catch (\Exception $e) {
+            \Log::error('[EntregaPdfController::obtenerResumenPagos] ❌ ERROR en obtenerResumenPagos', [
+                'entrega_id' => $entrega->id,
+                'error_mensaje' => $e->getMessage(),
+                'error_linea' => $e->getLine(),
+                'error_archivo' => $e->getFile(),
+                'error_trace' => $e->getTraceAsString(),
             ]);
             return null;
         }
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-16: Obtener código de tipo de pago por nombre
+     * (Reutilizado del endpoint API para consistencia)
+     */
+    private function obtenerCodigoTipoPago(?string $nombre): string
+    {
+        if (!$nombre) {
+            return 'N/A';
+        }
+
+        $codigo = \App\Models\TipoPago::where('nombre', 'like', "%{$nombre}%")
+            ->select('codigo')
+            ->first();
+
+        return $codigo?->codigo ?? 'N/A';
     }
 }

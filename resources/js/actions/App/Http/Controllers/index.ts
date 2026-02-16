@@ -5,6 +5,7 @@ import Auth from './Auth'
 import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
 import ComboController from './ComboController'
+import ProformaController from './ProformaController'
 import VentaController from './VentaController'
 import CompraController from './CompraController'
 import PrecioController from './PrecioController'
@@ -52,7 +53,6 @@ import ImpresionComprasController from './ImpresionComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
-import ProformaController from './ProformaController'
 import ReservaController from './ReservaController'
 import CajaController from './CajaController'
 import GastoController from './GastoController'
@@ -87,6 +87,7 @@ Auth,
 PermissionController,
 ProductoController,
 ComboController,
+ProformaController,
 VentaController,
 CompraController,
 PrecioController,
@@ -134,7 +135,6 @@ ImpresionComprasController,
 DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
-ProformaController,
 ReservaController,
 CajaController,
 GastoController,

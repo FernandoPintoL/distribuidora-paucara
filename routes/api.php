@@ -82,6 +82,10 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::get('/inventario/cargos-csv', [InventarioController::class, 'listarCargosCsv']);
     Route::get('/inventario/cargos-csv/{cargo}', [InventarioController::class, 'obtenerDetalleCargo']);
     Route::post('/inventario/cargos-csv/{cargo}/revertir', [InventarioController::class, 'revertirCargo']);
+    Route::post('/inventario/ajuste/preparar-impresion', [InventarioController::class, 'prepararImpresionAjustes']);
+
+    // Anular ajuste de inventario
+    Route::post('/inventario/ajuste/{ajuste}/anular', [InventarioController::class, 'anularAjuste']);
 });
 
 // ==========================================
@@ -306,6 +310,18 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ✅ NUEVO: Navegación entre proformas pendientes
     Route::get('/proformas/siguiente-pendiente', [ApiProformaController::class, 'obtenerSiguientePendiente']);
 
+    // ✅ NUEVO: PROFORMAS - Impresión / Descarga de PDFs
+    // Rutas de impresión ANTES de apiResource para evitar conflictos
+    Route::group(['prefix' => 'proformas'], function () {
+        // 🖨️ Descargar proforma como PDF (múltiples formatos)
+        Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])
+            ->name('api.proformas.imprimir');
+
+        // 🖨️ Vista previa de proforma en navegador
+        Route::get('/{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])
+            ->name('api.proformas.preview');
+    });
+
     // ==========================================
     // 📦 RESERVAS PROFORMA - GESTIÓN DE STOCK
     // ==========================================
@@ -446,6 +462,10 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::get('stock-producto/{producto}', [InventarioController::class, 'stockProducto']);
     Route::get('stock-filtrado', [InventarioController::class, 'apiStockFiltrado']);
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
+    // ✅ NUEVO: Endpoint mejorado para ajustes por tabla
+    Route::post('ajuste', [InventarioController::class, 'procesarAjusteTabla']);
+    // ✅ NUEVO: Búsqueda de productos por almacén
+    Route::get('productos-almacen/{almacen_id}', [InventarioController::class, 'buscarProductosAlmacen']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::get('movimientos-para-impresion', [InventarioController::class, 'movimientosParaImpresion']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);
@@ -870,6 +890,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::get('/{entrega}/localidades', [EntregaController::class, 'obtenerLocalidades'])
             ->middleware('permission:entregas.show')
             ->name('entregas.localidades');
+
+        // ✅ NUEVO: Corregir pagos en entregas ya confirmadas
+        Route::patch('/{entrega}/ventas/{venta}/corregir-pago', [EntregaController::class, 'corregirPagoConfirmacion'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.corregir-pago');
     });
 
     // ✅ PHASE 3: REPORTES DE CARGA (Gestión de cargas en vehículos)

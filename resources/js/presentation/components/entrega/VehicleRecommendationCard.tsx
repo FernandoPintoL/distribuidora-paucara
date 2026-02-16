@@ -65,12 +65,38 @@ export function VehicleRecommendationCard({
 
   // Determinar qué vehículo mostrar: recomendado o seleccionado
   const vehiculoActual = useMemo(() => {
-    // Si hay un vehículo seleccionado y es diferente del recomendado, buscar en disponibles
-    if (selectedVehiculoId && recomendado && selectedVehiculoId !== recomendado.id) {
-      return disponibles.find((v) => v.id === selectedVehiculoId) || recomendado;
+    // ✅ CORRECCIÓN: En edit mode, buscar en todosVehiculos cuando no hay recomendado
+    if (selectedVehiculoId) {
+      // 1️⃣ Buscar en disponibles (si hay recomendación)
+      if (disponibles.length > 0) {
+        const found = disponibles.find((v) => v.id === selectedVehiculoId);
+        if (found) return found;
+      }
+      // 2️⃣ Buscar en todosVehiculos (fallback para edit mode)
+      if (todosVehiculos.length > 0) {
+        const found = todosVehiculos.find((v) => v.id === selectedVehiculoId);
+        if (found) return found;
+      }
     }
+    // 3️⃣ Si no hay seleccionado, retornar recomendado
     return recomendado;
-  }, [selectedVehiculoId, recomendado, disponibles]);
+  }, [selectedVehiculoId, recomendado, disponibles, todosVehiculos]);
+
+  // Calcular dinámicamente el porcentaje de capacidad basado en pesoTotal
+  const capacidadDinamica = useMemo(() => {
+    if (!vehiculoActual) return { porcentaje: 0, pesoCalculado: 0 };
+
+    const capacidad = Number(vehiculoActual.capacidad_kg ?? 0);
+    const peso = Number(pesoTotal ?? 0);
+
+    if (capacidad === 0) return { porcentaje: 0, pesoCalculado: 0 };
+
+    const porcentaje = Math.min((peso / capacidad) * 100, 100);
+    return {
+      porcentaje: Math.round(porcentaje * 10) / 10, // 1 decimal
+      pesoCalculado: peso,
+    };
+  }, [pesoTotal, vehiculoActual?.capacidad_kg]);
 
   // Auto-seleccionar vehículo y chofer recomendado cuando se carga
   useEffect(() => {
@@ -89,7 +115,8 @@ export function VehicleRecommendationCard({
   // Pre-llenar datos en modo edición (cuando llegan del backend)
   useEffect(() => {
     // Si NO hay recomendación pero SÍ hay datos seleccionados del backend (edit mode)
-    if (!recomendado && selectedVehiculoId && !pesoTotal) {
+    // NO usar !pesoTotal porque cambia dinámicamente
+    if (!recomendado && selectedVehiculoId) {
       console.log('📝 MODO EDICIÓN: Pre-llenando datos del backend', {
         selectedVehiculoId,
         selectedChoferId,
@@ -107,12 +134,13 @@ export function VehicleRecommendationCard({
       }
 
       // Pre-seleccionar entregador si viene del backend
-      if (selectedEntregadorId) {
+      if (selectedEntregadorId && onSelectEntregador) {
         console.log('📝 Auto-seleccionando entregador:', selectedEntregadorId);
+        onSelectEntregador(selectedEntregadorId);
         setSeleccionarEntregadorManualmente(true);
       }
     }
-  }, [selectedVehiculoId, selectedChoferId, selectedEntregadorId, pesoTotal]);
+  }, [selectedVehiculoId, selectedChoferId, selectedEntregadorId]);
 
   // Generar opciones de choferes para SearchSelect
   const choferesOptions = useMemo(() => {
@@ -207,7 +235,8 @@ export function VehicleRecommendationCard({
   }
 
   // En modo edición, mostrar incluso si no hay recomendación
-  const hasBackendData = selectedVehiculoId && !pesoTotal;
+  // Si hay vehículo seleccionado, mostrar (sin depender de pesoTotal que cambia dinámicamente)
+  const hasBackendData = Boolean(selectedVehiculoId);
   if (!recomendado && !hasBackendData) {
     return null;
   }
@@ -296,6 +325,35 @@ export function VehicleRecommendationCard({
               <p className="text-base font-bold text-gray-900 dark:text-white">
                 {pesoTotal.toFixed(1)} kg
               </p>
+            </div>
+          </div>
+          {/* Barra de capacidad */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Uso de Capacidad
+              </span>
+              <div className="flex flex-col items-end gap-0.5">
+                {/* ✅ Mostrar porcentaje dinámico basado en pesoTotal actual */}
+                <span
+                  className={`text-sm font-bold ${getCapacityTextColor(
+                    capacidadDinamica.porcentaje
+                  )}`}
+                >
+                  {capacidadDinamica.porcentaje}%
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.round(capacidadDinamica.pesoCalculado)} / {Number(vehiculoActual?.capacidad_kg ?? 0)} kg
+                </span>
+              </div>
+            </div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all ${getCapacityColor(
+                  capacidadDinamica.porcentaje
+                )}`}
+                style={{ width: `${capacidadDinamica.porcentaje}%` }}
+              ></div>
             </div>
           </div>
 
@@ -400,89 +458,61 @@ export function VehicleRecommendationCard({
             )}
           </div>
 
-          {/* Barra de capacidad */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Uso de Capacidad
-              </span>
-              <div className="flex flex-col items-end gap-0.5">
-                {/* ✅ CORREGIDO: Mostrar porcentaje CON nuevas cargas, no el actual */}
-                <span
-                  className={`text-sm font-bold ${getCapacityTextColor(
-                    vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0
-                  )}`}
+          
+
+          {/* Sección Otras Opciones - Collapsible dentro del card */}
+          {(() => {
+            const vehiculosParaListado = disponibles.length > 0 ? disponibles : todosVehiculos;
+            return vehiculosParaListado.length > 1 ? (
+              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-slate-700">
+                <button
+                  onClick={() => setShowAllVehiculos(!showAllVehiculos)}
+                  className="w-full flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all"
                 >
-                  {vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0}%
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {Math.round(
-                    (Number(vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0) / 100) * Number(vehiculoActual?.capacidad_kg ?? 0)
-                  )}{' '}
-                  / {Number(vehiculoActual?.capacidad_kg ?? 0)} kg
-                </span>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <span className="text-gray-700 dark:text-gray-300">
+                      Otras opciones de vehiculos ({vehiculosParaListado.length})
+                    </span>
+                  </div>
+                  {showAllVehiculos ? (
+                    <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  )}
+                </button>
+
+                {/* Listado de otras opciones - dentro del card */}
+                {showAllVehiculos && (
+                  <div className="space-y-1.5">
+                    {vehiculosParaListado
+                      .filter((v) => v.id !== recomendado?.id) // Excluir recomendado
+                      .map((vehiculo) => (
+                        <VehicleOption
+                          key={vehiculo.id}
+                          vehiculo={vehiculo}
+                          isSelected={selectedVehiculoId === vehiculo.id}
+                          isRecommended={false}
+                          onSelect={() => {
+                            onSelectVehiculo(vehiculo.id);
+                            // Auto-seleccionar el chofer asignado del vehículo
+                            if (vehiculo.choferAsignado && onSelectChofer) {
+                              onSelectChofer(vehiculo.choferAsignado.id);
+                              // Resetear el estado de "Seleccionar manualmente"
+                              setSeleccionarChoferManualmente(false);
+                            }
+                          }}
+                        />
+                      ))}
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all ${getCapacityColor(
-                  vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0
-                )}`}
-                style={{ width: `${Math.min(vehiculoActual?.porcentaje_uso_con_nuevas_cargas ?? 0, 100)}%` }}
-              ></div>
-            </div>
-          </div>
+            ) : null;
+          })()}
 
         </div>
       </Card>
 
-      {/* Ver Todas las Opciones - Usar todosVehiculos si disponibles está vacío (edit mode) */}
-      {(() => {
-        const vehiculosParaListado = disponibles.length > 0 ? disponibles : todosVehiculos;
-        return vehiculosParaListado.length > 0 ? (
-          <div className="space-y-2">
-            <button
-              onClick={() => setShowAllVehiculos(!showAllVehiculos)}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700 transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Ver todas las opciones ({vehiculosParaListado.length} vehículos)
-                </span>
-              </div>
-              {showAllVehiculos ? (
-                <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              )}
-            </button>
-
-            {/* Listado de todas las opciones */}
-            {showAllVehiculos && (
-              <div className="space-y-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
-                {vehiculosParaListado.map((vehiculo) => (
-                <VehicleOption
-                  key={vehiculo.id}
-                  vehiculo={vehiculo}
-                  isSelected={selectedVehiculoId === vehiculo.id}
-                  isRecommended={recomendado ? vehiculo.id === recomendado.id : false}
-                  onSelect={() => {
-                    onSelectVehiculo(vehiculo.id);
-                    // Auto-seleccionar el chofer asignado del vehículo
-                    if (vehiculo.choferAsignado && onSelectChofer) {
-                      onSelectChofer(vehiculo.choferAsignado.id);
-                      // Resetear el estado de "Seleccionar manualmente"
-                      setSeleccionarChoferManualmente(false);
-                    }
-                  }}
-                />
-              ))}
-              </div>
-            )}
-          </div>
-        ) : null;
-      })()}
     </div>
   );
 }

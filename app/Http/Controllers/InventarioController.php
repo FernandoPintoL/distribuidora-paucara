@@ -7,9 +7,11 @@ use App\Http\Requests\StoreAjusteInventarioRequest;
 use App\Http\Requests\StoreMermaRequest;
 use App\Http\Requests\StoreTransferenciaInventarioRequest;
 use App\Models\Almacen;
+use App\Models\AjusteInventario;
 use App\Models\Categoria;
 use App\Models\DetalleTransferenciaInventario;
 use App\Models\EstadoMerma;
+use App\Models\MermaInventario;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
@@ -775,6 +777,8 @@ class InventarioController extends Controller
     public function ajusteForm(Request $request): Response
     {
         $almacenId = $request->integer('almacen_id');
+        $tipoAjuste = $request->string('tipo_ajuste'); // 'entrada', 'salida', o vacío para todos
+        $perPage = $request->integer('per_page', 15);
 
         $stockProductos = collect();
         if ($almacenId) {
@@ -785,12 +789,152 @@ class InventarioController extends Controller
                 ->get();
         }
 
+        // Obtener ajustes realizados desde tabla maestra AjusteInventario
+        $query = AjusteInventario::with([
+            'almacen:id,nombre',
+            'user:id,name',
+        ]);
+
+        // Filtrar por almacén si se proporciona
+        if ($almacenId) {
+            $query->where('almacen_id', $almacenId);
+        }
+
+        $ajustesInventario = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        // ✅ Transformar datos del ajuste maestro para presentación
+        $ajustesInventario->getCollection()->transform(function ($ajuste) {
+            return [
+                'id' => $ajuste->id,
+                'numero' => $ajuste->numero,
+                'almacen_id' => $ajuste->almacen_id,
+                'user_id' => $ajuste->user_id,
+                'cantidad_entradas' => $ajuste->cantidad_entradas,
+                'cantidad_salidas' => $ajuste->cantidad_salidas,
+                'cantidad_productos' => $ajuste->cantidad_productos,
+                'observacion' => $ajuste->observacion,
+                'estado' => $ajuste->estado,
+                'created_at' => $ajuste->created_at,
+                'updated_at' => $ajuste->updated_at,
+                // ✅ Relaciones explícitamente incluidas
+                'almacen' => $ajuste->almacen ? [
+                    'id' => $ajuste->almacen->id,
+                    'nombre' => $ajuste->almacen->nombre,
+                ] : null,
+                'user' => $ajuste->user ? [
+                    'id' => $ajuste->user->id,
+                    'name' => $ajuste->user->name,
+                ] : null,
+            ];
+        });
+
         $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('inventario/ajuste', [
             'almacenes'            => $almacenes,
             'stock_productos'      => $stockProductos,
             'almacen_seleccionado' => $almacenId,
+            'tipo_ajuste_filtro'   => $tipoAjuste,
+            'ajustes_inventario'   => $ajustesInventario,
+        ]);
+    }
+
+    /**
+     * Formulario de merma de inventario - Histórico
+     */
+    public function mermaForm(Request $request): Response
+    {
+        $almacenId = $request->integer('almacen_id');
+        $tipoMerma = $request->string('tipo_merma', ''); // Filtro por tipo de merma
+        $perPage   = $request->integer('per_page', 15);
+
+        $stockProductos = collect();
+        if ($almacenId) {
+            $stockProductos = StockProducto::where('almacen_id', $almacenId)
+                ->withoutTrashed()
+                ->with(['producto:id,nombre,sku,codigo_barras,codigo_qr', 'producto.codigosBarra', 'almacen:id,nombre'])
+                ->orderBy('cantidad_disponible', 'desc')
+                ->get();
+        }
+
+        // Obtener mermas realizadas desde tabla maestra MermaInventario
+        $query = MermaInventario::with([
+            'almacen:id,nombre',
+            'user:id,name',
+            'movimientos' => function ($q) {
+                $q->with(['stockProducto.producto:id,nombre,sku']);
+            },
+        ]);
+
+        // Filtrar por almacén si se proporciona
+        if ($almacenId) {
+            $query->where('almacen_id', $almacenId);
+        }
+
+        // Filtrar por tipo de merma si se proporciona
+        if ($tipoMerma) {
+            $query->where('tipo_merma', $tipoMerma);
+        }
+
+        $mermasInventario = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        // ✅ Transformar datos de la merma maestra para presentación
+        $mermasInventario->getCollection()->transform(function ($merma) {
+            if (!$merma) {
+                return null;
+            }
+
+            return [
+                'id'                  => $merma->id ?? null,
+                'numero'              => $merma->numero ?? 'SIN NÚMERO',
+                'almacen_id'          => $merma->almacen_id ?? null,
+                'user_id'             => $merma->user_id ?? null,
+                'tipo_merma'          => $merma->tipo_merma ?? 'SIN TIPO',
+                'cantidad_productos'  => $merma->cantidad_productos ?? 0,
+                'costo_total'         => (float) ($merma->costo_total ?? 0),
+                'observacion'         => $merma->observacion ?? null,
+                'estado'              => $merma->estado ?? 'procesado',
+                'created_at'          => $merma->created_at ? $merma->created_at->toIso8601String() : now()->toIso8601String(),
+                'updated_at'          => $merma->updated_at ? $merma->updated_at->toIso8601String() : now()->toIso8601String(),
+                // ✅ Relaciones explícitamente incluidas
+                'almacen'             => $merma->almacen ? [
+                    'id'    => $merma->almacen->id,
+                    'nombre' => $merma->almacen->nombre,
+                ] : null,
+                'user'                => $merma->user ? [
+                    'id'   => $merma->user->id,
+                    'name' => $merma->user->name,
+                ] : null,
+                // ✅ Movimientos asociados
+                'movimientos'         => $merma->movimientos ? $merma->movimientos->map(function ($mov) {
+                    return [
+                        'id'            => $mov->id ?? null,
+                        'cantidad'      => (float) ($mov->cantidad ?? 0),
+                        'numero_documento' => $mov->numero_documento ?? '-',
+                        'producto'      => $mov->stockProducto?->producto ? [
+                            'id'     => $mov->stockProducto->producto->id,
+                            'nombre' => $mov->stockProducto->producto->nombre,
+                            'sku'    => $mov->stockProducto->producto->sku,
+                        ] : null,
+                    ];
+                })->toArray() : [],
+            ];
+        })->filter(function ($item) {
+            return $item !== null;
+        });
+
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
+
+        return Inertia::render('inventario/merma', [
+            'almacenes'             => $almacenes,
+            'stock_productos'       => $stockProductos,
+            'almacen_seleccionado'  => $almacenId,
+            'tipo_merma_filtro'     => $tipoMerma,
+            'mermas_inventario'     => $mermasInventario,
         ]);
     }
 
@@ -800,10 +944,13 @@ class InventarioController extends Controller
     public function procesarAjuste(StoreAjusteInventarioRequest $request): RedirectResponse
     {
         try {
-            $movimientos = $this->procesarAjustesInventario($request->validated()['ajustes']);
+            $resultado = $this->procesarAjustesInventario($request->validated()['ajustes']);
+            $movimientos = $resultado['movimientos'];
+            $ajusteId = $resultado['ajuste_inventario_id'];
 
             return redirect()->route('inventario.ajuste.form')
-                ->with('success', 'Se procesaron ' . count($movimientos) . ' ajustes de inventario');
+                ->with('success', 'Se procesaron ' . count($movimientos) . ' ajustes de inventario')
+                ->with('ajuste_inventario_id', $ajusteId);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()
                 ->withInput()
@@ -826,13 +973,75 @@ class InventarioController extends Controller
     public function procesarAjusteApi(StoreAjusteInventarioRequest $request): JsonResponse
     {
         try {
-            $movimientos = $this->procesarAjustesInventario($request->validated()['ajustes']);
+            $resultado = $this->procesarAjustesInventario($request->validated()['ajustes']);
+            $movimientos = $resultado['movimientos'];
+            $ajusteId = $resultado['ajuste_inventario_id'];
 
             return ApiResponse::success(
-                $movimientos,
+                [
+                    'movimientos' => $movimientos,
+                    'ajuste_inventario_id' => $ajusteId,
+                ],
                 'Se procesaron ' . count($movimientos) . ' ajustes de inventario'
             );
         } catch (\Exception $e) {
+            return ApiResponse::error(
+                'Error al procesar ajustes: ' . $e->getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * API: Procesar ajuste de inventario desde tabla editable
+     * Ahora usa el método maestro-detalle con AjusteInventario cabecera
+     */
+    public function procesarAjusteTabla(Request $request): JsonResponse
+    {
+        try {
+            // Validar datos básicos
+            $validated = $request->validate([
+                'almacen_id' => 'required|integer|exists:almacenes,id',
+                'ajustes' => 'required|array|min:1',
+                'ajustes.*.stock_producto_id' => 'required|integer|exists:stock_productos,id',
+                'ajustes.*.nueva_cantidad' => 'required|numeric|min:0',
+                'ajustes.*.observacion' => 'nullable|string|max:500',
+                'ajustes.*.tipo_ajuste' => 'nullable|in:entrada,salida',
+                'ajustes.*.tipo_ajuste_inventario_id' => 'nullable|integer|exists:tipos_ajuste_inventario,id',
+            ], [
+                'almacen_id.required' => 'El almacén es requerido',
+                'almacen_id.exists' => 'El almacén no existe',
+                'ajustes.required' => 'Debes agregar al menos un ajuste',
+                'ajustes.min' => 'Debes agregar al menos un ajuste',
+                'ajustes.*.stock_producto_id.required' => 'El producto es requerido en todas las filas',
+                'ajustes.*.stock_producto_id.exists' => 'Uno o más productos no existen',
+                'ajustes.*.nueva_cantidad.required' => 'La cantidad es requerida',
+                'ajustes.*.nueva_cantidad.numeric' => 'La cantidad debe ser un número',
+                'ajustes.*.nueva_cantidad.min' => 'La cantidad no puede ser negativa',
+            ]);
+
+            // Usar el método privado que crea cabecera + detalles
+            $resultado = $this->procesarAjustesInventario($validated['ajustes']);
+
+            // El resultado ya contiene movimientos + ajuste_inventario_id
+            return ApiResponse::success(
+                [
+                    'movimientos' => $resultado['movimientos'],
+                    'ajuste_inventario_id' => $resultado['ajuste_inventario_id'],
+                ],
+                'Se procesaron ' . count($resultado['movimientos']) . ' ajustes de inventario exitosamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ApiResponse::error(
+                'Error en los datos: ' . json_encode($e->errors()),
+                422
+            );
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar ajuste de tabla:', [
+                'error' => $e->getMessage(),
+                'ajustes' => $request->input('ajustes'),
+            ]);
+
             return ApiResponse::error(
                 'Error al procesar ajustes: ' . $e->getMessage(),
                 500
@@ -850,18 +1059,45 @@ class InventarioController extends Controller
     private function procesarAjustesInventario(array $ajustes): array
     {
         $movimientos = [];
+        $ajusteInventarioId = null;
 
-        DB::transaction(function () use ($ajustes, &$movimientos) {
-            foreach ($ajustes as $ajuste) {
-                $stockProducto = StockProducto::findOrFail($ajuste['stock_producto_id']);
-                $observacion   = $ajuste['observacion'] ?? 'Ajuste masivo de inventario';
+        DB::transaction(function () use ($ajustes, &$movimientos, &$ajusteInventarioId) {
+            // Obtener el almacén del usuario
+            $almacenId = auth()->user()->empresa->almacen_id ?? 1;
+
+            // Contadores para el ajuste maestro
+            $cantidadEntradas = 0;
+            $cantidadSalidas = 0;
+            $cantidadProductos = count($ajustes);
+
+            // Crear el registro maestro de AjusteInventario (sin número aún)
+            $ajuste = AjusteInventario::create([
+                'numero' => 'TEMP',  // Temporal, se actualiza después de obtener el ID
+                'almacen_id' => $almacenId,
+                'user_id' => auth()->id(),
+                'cantidad_entradas' => 0, // Se actualiza después
+                'cantidad_salidas' => 0,  // Se actualiza después
+                'cantidad_productos' => $cantidadProductos,
+                'observacion' => 'Ajuste masivo de inventario',
+                'estado' => AjusteInventario::ESTADO_PROCESADO,
+            ]);
+
+            $ajusteInventarioId = $ajuste->id;
+
+            // Generar número usando el ID del registro recién creado
+            $numeroFinal = AjusteInventario::generarNumero($ajusteInventarioId);
+            $ajuste->update(['numero' => $numeroFinal]);
+
+            foreach ($ajustes as $ajusteItem) {
+                $stockProducto = StockProducto::findOrFail($ajusteItem['stock_producto_id']);
+                $observacion   = $ajusteItem['observacion'] ?? 'Ajuste masivo de inventario';
 
                 // Generar número de documento único para este ajuste
                 $numeroDocumento = $this->generarNumeroAjuste();
 
                 // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
                 // Esto permite registrar el tipo de ajuste y la observación
-                $diferencia = $ajuste['nueva_cantidad'] - $stockProducto->cantidad;
+                $diferencia = $ajusteItem['nueva_cantidad'] - $stockProducto->cantidad;
                 $tipo       = $diferencia >= 0 ?
                 MovimientoInventario::TIPO_ENTRADA_AJUSTE :
                 MovimientoInventario::TIPO_SALIDA_AJUSTE;
@@ -874,14 +1110,34 @@ class InventarioController extends Controller
                     $observacion,
                     $numeroDocumento,
                     null,
-                    $ajuste['tipo_ajuste_id'] ?? null
+                    $ajusteItem['tipo_ajuste_id'] ?? null
                 );
+
+                // Asociar el movimiento al ajuste maestro
+                $movimiento->update(['ajuste_inventario_id' => $ajusteInventarioId]);
+
+                // Contar entradas y salidas
+                if ($diferencia >= 0) {
+                    $cantidadEntradas += $diferencia;
+                } else {
+                    $cantidadSalidas += abs($diferencia);
+                }
 
                 $movimientos[] = $movimiento;
             }
+
+            // Actualizar el ajuste maestro con los totales reales
+            $ajuste->update([
+                'cantidad_entradas' => $cantidadEntradas,
+                'cantidad_salidas' => $cantidadSalidas,
+            ]);
         });
 
-        return $movimientos;
+        // Retornar tanto movimientos como ajuste_inventario_id
+        return [
+            'movimientos' => $movimientos,
+            'ajuste_inventario_id' => $ajusteInventarioId,
+        ];
     }
 
     /**
@@ -1169,25 +1425,40 @@ class InventarioController extends Controller
                 'total_productos' => count($data['productos']),
             ]);
 
-            $numeroMerma            = 'MERMA-' . now()->format('Ymd-His');
+            // PASO 1: Crear registro maestro en mermas_inventario (con número temporal)
+            $mermaInventario = MermaInventario::create([
+                'numero'              => 'TEMP',
+                'almacen_id'          => $data['almacen_id'],
+                'user_id'             => auth()->id(),
+                'tipo_merma'          => $data['tipo_merma'],
+                'cantidad_productos'  => count($data['productos']),
+                'costo_total'         => 0, // Se actualiza después
+                'observacion'         => $data['observaciones'] ?? null,
+                'estado'              => MermaInventario::ESTADO_PROCESADO,
+            ]);
+
+            Log::info('🟠 [REGISTRAR MERMA] Cabecera creada (temporal)', [
+                'merma_id' => $mermaInventario->id,
+                'almacen'  => $data['almacen_id'],
+            ]);
+
+            // PASO 2: Procesar cada producto
             $movimientosRegistrados = [];
             $costTotalMerma         = 0;
 
-            // Obtener el tipo de merma por su clave
-            $tipoMerma   = TipoMerma::where('clave', $data['tipo_merma'])->first();
-            $tipoMermaId = $tipoMerma?->id;
-
-            Log::info('🟠 [REGISTRAR MERMA] Tipo de merma encontrado', [
-                'tipo_merma'      => $data['tipo_merma'],
-                'tipo_merma_id'   => $tipoMermaId,
-            ]);
-
-            // Procesar cada producto
             foreach ($data['productos'] as $productoData) {
-                // Encontrar el stock del producto en el almacén
-                $stockProducto = StockProducto::where('producto_id', $productoData['producto_id'])
-                    ->where('almacen_id', $data['almacen_id'])
-                    ->first();
+                // Encontrar el stock del producto - Preferir stock_producto_id si está especificado
+                $stockProducto = null;
+
+                if (! empty($productoData['stock_producto_id'])) {
+                    $stockProducto = StockProducto::where('id', $productoData['stock_producto_id'])
+                        ->where('almacen_id', $data['almacen_id'])
+                        ->first();
+                } else {
+                    $stockProducto = StockProducto::where('producto_id', $productoData['producto_id'])
+                        ->where('almacen_id', $data['almacen_id'])
+                        ->first();
+                }
 
                 if (! $stockProducto) {
                     DB::rollBack();
@@ -1215,51 +1486,69 @@ class InventarioController extends Controller
                     );
                 }
 
-                // Registrar movimiento de inventario con tipo_merma_id
+                // Registrar movimiento de inventario
                 $movimiento = MovimientoInventario::registrar(
                     $stockProducto,
                     -$productoData['cantidad'],
                     MovimientoInventario::TIPO_SALIDA_MERMA,
                     $data['motivo'],
-                    $numeroMerma,
+                    'TEMP', // Se actualiza después
                     auth()->id(),
                     null,
-                    $tipoMermaId,
+                    null,
                     null,
                     'MERMA',
                     null
                 );
 
+                // PASO 3: Vincular movimiento con la merma maestra
+                $movimiento->update([
+                    'merma_inventario_id' => $mermaInventario->id,
+                    'numero_documento'    => 'TEMP', // Se actualiza después
+                ]);
+
                 $movimientosRegistrados[] = $movimiento;
 
                 // Calcular costo total de merma
-                $costoUnitario  = $productoData['costo_unitario'] ?? 0;
+                $costoUnitario   = $productoData['costo_unitario'] ?? 0;
                 $costTotalMerma += ($productoData['cantidad'] * $costoUnitario);
 
-                Log::info('✅ [REGISTRAR MERMA] Movimiento registrado', [
-                    'producto_id'    => $productoData['producto_id'],
-                    'cantidad'       => $productoData['cantidad'],
-                    'costo_unitario' => $costoUnitario,
-                    'tipo_merma_id'  => $tipoMermaId,
+                Log::info('✅ [REGISTRAR MERMA] Movimiento registrado y vinculado', [
+                    'producto_id'         => $productoData['producto_id'],
+                    'cantidad'            => $productoData['cantidad'],
+                    'merma_inventario_id' => $mermaInventario->id,
                 ]);
             }
+
+            // PASO 4: Actualizar número de la merma usando el ID
+            $numeroMerma = MermaInventario::generarNumero($mermaInventario->id);
+            $mermaInventario->update([
+                'numero'      => $numeroMerma,
+                'costo_total' => $costTotalMerma,
+            ]);
+
+            // PASO 5: Actualizar movimientos con número final
+            MovimientoInventario::where('merma_inventario_id', $mermaInventario->id)
+                ->update(['numero_documento' => $numeroMerma]);
 
             DB::commit();
 
             Log::info('🟢 [REGISTRAR MERMA] COMPLETADO', [
-                'numero_merma'      => $numeroMerma,
+                'merma_id'          => $mermaInventario->id,
+                'numero'            => $numeroMerma,
                 'total_movimientos' => count($movimientosRegistrados),
                 'costo_total'       => $costTotalMerma,
             ]);
 
             return ApiResponse::success(
                 [
-                    'numero_merma'       => $numeroMerma,
-                    'movimientos'        => MovimientoInventario::where('numero_documento', $numeroMerma)
+                    'merma_inventario_id' => $mermaInventario->id,
+                    'numero_merma'        => $numeroMerma,
+                    'movimientos'         => MovimientoInventario::where('merma_inventario_id', $mermaInventario->id)
                         ->with(['stockProducto.producto', 'stockProducto.almacen'])
                         ->get(),
-                    'costo_total'        => $costTotalMerma,
-                    'cantidad_productos' => count($movimientosRegistrados),
+                    'costo_total'         => $costTotalMerma,
+                    'cantidad_productos'  => count($movimientosRegistrados),
                 ],
                 'Merma registrada exitosamente'
             );
@@ -1408,23 +1697,103 @@ class InventarioController extends Controller
      */
     public function mermas(Request $request): Response
     {
-        $mermas = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
-            ->where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
-            ->orderByDesc('fecha')
-            ->paginate(15);
+        $almacenId = $request->integer('almacen_id', 0);
+        $tipoMerma = (string) $request->string('tipo_merma', '');
+        $perPage   = $request->integer('per_page', 15);
+
+        // 🔍 DEBUG: Verificar estado de la tabla
+        $totalMermasEnBD = MermaInventario::count();
+        Log::info('🔍 [MERMAS] DEBUG', [
+            'total_mermas_en_bd' => $totalMermasEnBD,
+            'filtro_almacen' => $almacenId,
+            'filtro_tipo' => $tipoMerma,
+            'tipo_merma_object_class' => class_exists(\Illuminate\Support\Stringable::class) ? 'Stringable' : 'string',
+        ]);
+
+        // Obtener mermas realizadas desde tabla maestra MermaInventario
+        $query = MermaInventario::with([
+            'almacen:id,nombre',
+            'user:id,name',
+            'movimientos' => function ($q) {
+                $q->with(['stockProducto.producto:id,nombre,sku']);
+            },
+        ]);
+
+        // Filtrar por almacén si se proporciona
+        if ($almacenId > 0) {
+            $query->where('almacen_id', $almacenId);
+        }
+
+        // Filtrar por tipo de merma si se proporciona (y no es vacío)
+        if (!empty($tipoMerma) && $tipoMerma !== '') {
+            $query->where('tipo_merma', $tipoMerma);
+        }
+
+        $mermasData = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        // ✅ Transformar datos de la merma maestra para presentación
+        $mermasData->getCollection()->transform(function ($merma) {
+            if (!$merma) {
+                return null;
+            }
+
+            return [
+                'id'                  => $merma->id ?? null,
+                'numero'              => $merma->numero ?? 'SIN NÚMERO',
+                'almacen_id'          => $merma->almacen_id ?? null,
+                'user_id'             => $merma->user_id ?? null,
+                'tipo_merma'          => $merma->tipo_merma ?? 'SIN TIPO',
+                'cantidad_productos'  => $merma->cantidad_productos ?? 0,
+                'costo_total'         => (float) ($merma->costo_total ?? 0),
+                'observacion'         => $merma->observacion ?? null,
+                'estado'              => $merma->estado ?? 'procesado',
+                'created_at'          => $merma->created_at ? $merma->created_at->toIso8601String() : now()->toIso8601String(),
+                'updated_at'          => $merma->updated_at ? $merma->updated_at->toIso8601String() : now()->toIso8601String(),
+                'almacen'             => $merma->almacen ? [
+                    'id'    => $merma->almacen->id,
+                    'nombre' => $merma->almacen->nombre,
+                ] : null,
+                'user'                => $merma->user ? [
+                    'id'   => $merma->user->id,
+                    'name' => $merma->user->name,
+                ] : null,
+                'movimientos'         => $merma->movimientos ? $merma->movimientos->map(function ($mov) {
+                    return [
+                        'id'            => $mov->id ?? null,
+                        'cantidad'      => (float) ($mov->cantidad ?? 0),
+                        'numero_documento' => $mov->numero_documento ?? '-',
+                        'producto'      => $mov->stockProducto?->producto ? [
+                            'id'     => $mov->stockProducto->producto->id,
+                            'nombre' => $mov->stockProducto->producto->nombre,
+                            'sku'    => $mov->stockProducto->producto->sku,
+                        ] : null,
+                    ];
+                })->toArray() : [],
+            ];
+        })->filter(function ($item) {
+            return $item !== null;
+        });
+
+        // Obtener almacenes para filtro
+        $almacenes = Almacen::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         // Calcular estadísticas de mermas
         $estadisticas = [
-            'total_mermas'     => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
-            'total_pendientes' => 0, // No existe la columna estado en movimientos_inventario
-            'total_aprobadas'  => MovimientoInventario::where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)->count(),
-            'total_rechazadas' => 0, // No existe la columna estado en movimientos_inventario
-            'costo_total_mes'  => 0, // Temporalmente 0, se puede calcular con JOIN a precios_producto más adelante
+            'total_mermas'     => MermaInventario::count(),
+            'total_pendientes' => MermaInventario::where('estado', MermaInventario::ESTADO_PENDIENTE)->count(),
+            'total_aprobadas'  => MermaInventario::where('estado', MermaInventario::ESTADO_PROCESADO)->count(),
+            'total_rechazadas' => 0, // No hay estado rechazado aún
+            'costo_total_mes'  => MermaInventario::whereMonth('created_at', now()->month)->sum('costo_total'),
         ];
 
         return Inertia::render('inventario/mermas/index', [
-            'mermas'       => $mermas,
-            'estadisticas' => $estadisticas,
+            'mermas'                => $mermasData,
+            'almacenes'             => $almacenes,
+            'almacen_seleccionado'  => $almacenId,
+            'tipo_merma_filtro'     => $tipoMerma,
+            'estadisticas'          => $estadisticas,
         ]);
     }
 
@@ -1667,57 +2036,151 @@ class InventarioController extends Controller
     /**
      * Ver detalle de merma
      */
-    public function verMerma($id): Response
+    /**
+     * Ver detalle de una merma (master-detail pattern)
+     */
+    public function verMerma(MermaInventario $merma): Response
     {
-        $movimiento = MovimientoInventario::with([
-            'stockProducto.producto.categoria',
-            'stockProducto.almacen',
+        // Cargar movimientos relacionados con eager loading
+        // Importante: Cargar producto directamente de stockProducto para obtener SKU
+        $merma->load([
+            'movimientos' => function ($query) {
+                $query->with([
+                    'stockProducto' => function ($sq) {
+                        $sq->with([
+                            'producto' => function ($pq) {
+                                // Cargar precios con su tipo para obtener el precio COSTO
+                                $pq->with([
+                                    'precios' => function ($prq) {
+                                        $prq->with('tipoPrecio');
+                                    },
+                                ]);
+                            },
+                            'almacen',
+                        ]);
+                    },
+                    'user',
+                ]);
+            },
+            'almacen',
             'user',
-            'tipoMerma',
-            'estadoMerma',
-        ])
-            ->where('tipo', MovimientoInventario::TIPO_SALIDA_MERMA)
-            ->findOrFail($id);
+        ]);
 
-        // Calcular valor de la merma (cantidad * precio promedio)
-        $valorTotal = abs($movimiento->cantidad) * ($movimiento->stockProducto->precio_promedio ?? 0);
+        // Logging para debugging
+        Log::info('🔍 [VerMerma] Cargando merma ID: ' . $merma->id);
+        Log::info('🔍 [VerMerma] Total movimientos: ' . $merma->movimientos->count());
 
-        $merma = [
-            'id'               => $movimiento->id,
-            'codigo'           => $movimiento->numero_documento ?? 'MER-' . str_pad($movimiento->id, 6, '0', STR_PAD_LEFT),
-            'producto'         => [
-                'id'        => $movimiento->stockProducto->producto->id,
-                'nombre'    => $movimiento->stockProducto->producto->nombre,
-                'categoria' => $movimiento->stockProducto->producto->categoria->nombre ?? 'Sin categoría',
+        // Transformar movimientos (detalles) para la vista
+        $detalles = $merma->movimientos->map(function ($movimiento, $index) {
+            $producto = $movimiento->stockProducto?->producto;
+            $stockProducto = $movimiento->stockProducto;
+
+            // Obtener precio COSTO desde precios_producto
+            $precioCosto = 0;
+            if ($producto) {
+                // Buscar el precio de tipo COSTO
+                $precioCostoObj = $producto->obtenerPrecio('COSTO');
+                if ($precioCostoObj) {
+                    $precioCosto = (float) $precioCostoObj->precio;
+                } elseif ($producto->precio_compra) {
+                    // Fallback a precio_compra si existe
+                    $precioCosto = (float) $producto->precio_compra;
+                } elseif ($producto->precio_venta) {
+                    // Último fallback a precio_venta
+                    $precioCosto = (float) $producto->precio_venta;
+                }
+            }
+
+            // Logging para debugging
+            Log::info("✅ [VerMerma Detalle $index] Producto: " . $producto?->nombre);
+            Log::info("✅ [VerMerma Detalle $index] SKU: " . $producto?->sku);
+            Log::info("✅ [VerMerma Detalle $index] Precio COSTO: " . $precioCosto);
+
+            $cantidadAbs = abs($movimiento->cantidad);
+            $costoTotal = $cantidadAbs * $precioCosto;
+
+            return [
+                'id'                => $movimiento->id,
+                'merma_id'          => $movimiento->merma_inventario_id,
+                'producto_id'       => $producto?->id ?? 0,
+                'cantidad'          => $cantidadAbs,
+                'costo_unitario'    => (float) $precioCosto,
+                'costo_total'       => (float) $costoTotal,
+                'lote'              => $movimiento->numero_documento ?? null,
+                'fecha_vencimiento' => null,
+                'observaciones'     => $movimiento->observacion,
+                // Relación producto con toda la información
+                'producto'          => [
+                    'id'     => $producto?->id ?? 0,
+                    'nombre' => $producto?->nombre ?? 'Producto desconocido',
+                    'sku'    => $producto?->sku ?? 'SIN-SKU',
+                    'codigo' => $producto?->codigo ?? null,
+                ],
+                // Información adicional
+                'stock_anterior'    => $movimiento->cantidad_anterior ?? 0,
+                'stock_posterior'   => $movimiento->cantidad_posterior ?? 0,
+            ];
+        })->toArray();
+
+        // Calcular totales
+        $totalCosto = 0;
+        $totalCantidad = 0;
+        foreach ($merma->movimientos as $mov) {
+            $totalCantidad += abs($mov->cantidad);
+
+            $producto = $mov->stockProducto?->producto;
+            $precioCosto = 0;
+
+            if ($producto) {
+                // Obtener precio COSTO desde precios_producto
+                $precioCostoObj = $producto->obtenerPrecio('COSTO');
+                if ($precioCostoObj) {
+                    $precioCosto = (float) $precioCostoObj->precio;
+                } elseif ($producto->precio_compra) {
+                    $precioCosto = (float) $producto->precio_compra;
+                } elseif ($producto->precio_venta) {
+                    $precioCosto = (float) $producto->precio_venta;
+                }
+            }
+
+            $totalCosto += abs($mov->cantidad) * $precioCosto;
+        }
+
+        Log::info("🔍 [VerMerma] Total cantidad: $totalCantidad, Total costo: $totalCosto");
+
+        // Transformar respuesta para match con interfaz TypeScript
+        $mermaTransformada = [
+            'id'                  => $merma->id,
+            'numero'              => $merma->numero,
+            'fecha'               => $merma->created_at ? $merma->created_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+            'almacen_id'          => $merma->almacen_id,
+            'tipo_merma'          => (string) $merma->tipo_merma,
+            'motivo'              => $merma->observacion ?? '',
+            'observaciones'       => $merma->observacion ?? '',
+            'total_productos'     => $merma->cantidad_productos ?? count($detalles),
+            'total_cantidad'      => (int) $totalCantidad,
+            'total_costo'         => (float) $totalCosto,
+            'usuario_id'          => $merma->user_id,
+            'estado'              => strtoupper($merma->estado ?? 'PENDIENTE'),
+            'fecha_aprobacion'    => null,
+            'aprobado_por_id'     => null,
+            // Relaciones
+            'almacen'             => [
+                'id'     => $merma->almacen?->id ?? null,
+                'nombre' => $merma->almacen?->nombre ?? 'Sin almacén',
             ],
-            'almacen'          => [
-                'id'     => $movimiento->stockProducto->almacen->id,
-                'nombre' => $movimiento->stockProducto->almacen->nombre,
+            'usuario'             => [
+                'id'   => $merma->user?->id ?? 0,
+                'name' => $merma->user?->name ?? 'Sistema',
             ],
-            'cantidad'         => abs($movimiento->cantidad),
-            'tipo_merma'       => $movimiento->tipoMerma ? [
-                'id'     => $movimiento->tipoMerma->id,
-                'nombre' => $movimiento->tipoMerma->label,
-            ] : null,
-            'estado_merma'     => $movimiento->estadoMerma ? [
-                'id'     => $movimiento->estadoMerma->id,
-                'nombre' => $movimiento->estadoMerma->label,
-            ] : null,
-            'fecha_registro'   => $movimiento->fecha->format('Y-m-d H:i:s'),
-            'observaciones'    => $movimiento->observacion,
-            'usuario'          => [
-                'name' => $movimiento->user->name ?? 'Sistema',
-            ],
-            'stock_anterior'   => $movimiento->cantidad_anterior,
-            'stock_posterior'  => $movimiento->cantidad_posterior,
-            'valor_unitario'   => $movimiento->stockProducto->precio_promedio ?? 0,
-            'valor_total'      => $valorTotal,
-            'anulado'          => $movimiento->anulado ?? false,
-            'motivo_anulacion' => $movimiento->motivo_anulacion,
+            'aprobado_por'        => null,
+            'detalles'            => $detalles,
         ];
 
+        Log::info("✅ [VerMerma] Merma transformada con " . count($detalles) . " detalles");
+
         return Inertia::render('inventario/mermas/ver', [
-            'merma' => $merma,
+            'merma' => $mermaTransformada,
         ]);
     }
 
@@ -2585,6 +3048,569 @@ class InventarioController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener stock filtrado: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Buscar productos por almacén con términos de búsqueda
+     * Prioriza búsqueda por SKU (ID.SKU), luego nombre
+     * GET /api/inventario/productos-almacen/{almacen_id}?q=search_term
+     */
+    public function buscarProductosAlmacen(Request $request, $almacenId): JsonResponse
+    {
+        try {
+            $searchTerm = $request->input('q', '');
+            $limit = (int) $request->input('limit', 10);
+
+            // Validar almacén
+            $almacen = Almacen::findOrFail($almacenId);
+
+            if (empty($searchTerm)) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'total' => 0,
+                ]);
+            }
+
+            // Obtener productos con stock disponible
+            $stockProductos = StockProducto::where('almacen_id', $almacenId)
+                ->where('cantidad_disponible', '>', 0)
+                ->with(['producto:id,nombre,sku,codigo_barras', 'producto.codigosBarra'])
+                ->get();
+
+            // Priorizar búsqueda: primero SKU exacto/parcial, luego nombre
+            $resultados = $stockProductos->sort(function ($a, $b) use ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $skuA = strtolower($a->producto->sku ?? '');
+                $skuB = strtolower($b->producto->sku ?? '');
+                $nombreA = strtolower($a->producto->nombre ?? '');
+                $nombreB = strtolower($b->producto->nombre ?? '');
+
+                // Prioridad 1: SKU coincidencia exacta
+                if ($skuA === $searchLower && $skuB !== $searchLower) return -1;
+                if ($skuA !== $searchLower && $skuB === $searchLower) return 1;
+
+                // Prioridad 2: SKU comienza con término
+                $startsA = strpos($skuA, $searchLower) === 0 ? 1 : 0;
+                $startsB = strpos($skuB, $searchLower) === 0 ? 1 : 0;
+                if ($startsA !== $startsB) return $startsB - $startsA;
+
+                // Prioridad 3: SKU contiene término
+                $containsA = strpos($skuA, $searchLower) !== false ? 1 : 0;
+                $containsB = strpos($skuB, $searchLower) !== false ? 1 : 0;
+                if ($containsA !== $containsB) return $containsB - $containsA;
+
+                // Prioridad 4: Nombre comienza con término
+                $startsNameA = strpos($nombreA, $searchLower) === 0 ? 1 : 0;
+                $startsNameB = strpos($nombreB, $searchLower) === 0 ? 1 : 0;
+                if ($startsNameA !== $startsNameB) return $startsNameB - $startsNameA;
+
+                // Prioridad 5: Nombre contiene término
+                $containsNameA = strpos($nombreA, $searchLower) !== false ? 1 : 0;
+                $containsNameB = strpos($nombreB, $searchLower) !== false ? 1 : 0;
+                return $containsNameB - $containsNameA;
+            })
+            ->filter(function ($sp) use ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $sku = strtolower($sp->producto->sku ?? '');
+                $nombre = strtolower($sp->producto->nombre ?? '');
+
+                return strpos($sku, $searchLower) !== false ||
+                       strpos($nombre, $searchLower) !== false;
+            })
+            ->take($limit)
+            ->values();
+
+            $data = $resultados->map(function ($sp) {
+                return [
+                    'id' => $sp->id,
+                    'stock_producto_id' => $sp->id,
+                    'nombre' => $sp->producto->nombre,
+                    'sku' => $sp->producto->sku,
+                    'codigo_barras' => $sp->producto->codigo_barras,
+                    'cantidad_disponible' => $sp->cantidad_disponible,
+                    'cantidad_actual' => $sp->cantidad,
+                    'lote' => $sp->lote,  // ✅ Incluir lote
+                    'producto' => $sp->producto,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data->toArray(),
+                'total' => $data->count(),
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Almacén no encontrado',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error en buscarProductosAlmacen', [
+                'error' => $e->getMessage(),
+                'almacen_id' => $almacenId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar productos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Imprimir ajustes de inventario en formato A4
+     * GET /inventario/ajuste/imprimir?formato=A4&accion=stream|download
+     */
+    public function imprimirAjustes(Request $request)
+    {
+        try {
+            $ajusteId = (int) $request->query('ajuste_id', 0);
+            $ajustes = [];
+
+            if ($ajusteId > 0) {
+                // Imprimir ajuste específico por ID (histórico)
+                $ajuste = AjusteInventario::with([
+                    'movimientos.stockProducto.producto',
+                    'movimientos.stockProducto.almacen',
+                    'almacen',
+                    'user'
+                ])->findOrFail($ajusteId);
+
+                // Convertir movimientos a formato de ajustes para la plantilla
+                $ajustes = $ajuste->movimientos->map(function ($movimiento) {
+                    return [
+                        'numero_documento' => $movimiento->numero_documento ?? '-',
+                        'fecha' => $movimiento->created_at ?? $movimiento->fecha,
+                        'producto_nombre' => $movimiento->stockProducto->producto->nombre ?? 'N/A',
+                        'producto_sku' => $movimiento->stockProducto->producto->sku ?? 'N/A',
+                        'almacen_nombre' => $movimiento->stockProducto->almacen->nombre ?? 'N/A',
+                        'tipo_operacion' => $movimiento->tipo,
+                        'tipo_ajuste_label' => $this->mapearTipoMovimiento($movimiento->tipo),
+                        'cantidad' => $movimiento->cantidad,
+                        'cantidad_anterior' => $movimiento->cantidad_anterior ?? 0,
+                        'cantidad_posterior' => $movimiento->cantidad_posterior ?? 0,
+                        'observacion' => $movimiento->observacion,
+                        'usuario' => $movimiento->user->name ?? 'Sistema',
+                    ];
+                })->toArray();
+
+                // Datos del ajuste maestro
+                $cabecera = [
+                    'id' => $ajuste->id,
+                    'numero' => $ajuste->numero,
+                    'almacen_nombre' => $ajuste->almacen->nombre ?? 'N/A',
+                    'usuario' => $ajuste->user->name ?? 'Sistema',
+                    'fecha_creacion' => $ajuste->created_at,
+                    'cantidad_productos' => $ajuste->cantidad_productos ?? 0,
+                    'cantidad_entradas' => $ajuste->cantidad_entradas ?? 0,
+                    'cantidad_salidas' => $ajuste->cantidad_salidas ?? 0,
+                    'observacion' => $ajuste->observacion,
+                    'estado' => $ajuste->estado ?? 'procesado',
+                ];
+
+                $almacenFiltro = $ajuste->almacen->nombre ?? 'Todos';
+                $tipoAjusteFiltro = null;
+            } else {
+                // Obtener datos de sesión (para impresión inmediata después de procesar)
+                $ajustes = session('ajustes_impresion', []);
+                $almacenFiltro = session('almacen_filtro_impresion', null);
+                $tipoAjusteFiltro = session('tipo_ajuste_filtro_impresion', null);
+                $cabecera = session('cabecera_impresion', null);
+
+                if (empty($ajustes)) {
+                    return back()->with('error', 'No hay ajustes para imprimir. Por favor, prepara los datos primero.');
+                }
+            }
+
+            // Preparar datos para la vista
+            $datos = [
+                'cabecera'              => $cabecera ?? [],
+                'ajustes'               => collect($ajustes),
+                'almacenFiltro'         => $almacenFiltro ?? 'Todos',
+                'tipoAjusteFiltro'      => $tipoAjusteFiltro,
+                'fecha_generacion'      => now()->format('d/m/Y H:i'),
+                'usuario'               => auth()->user()->name ?? 'Sistema',
+                'empresa'               => auth()->user()->empresa ?? config('app.name'),
+            ];
+
+            // Generar PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('impresion.inventario.ajustes-a4', $datos);
+            $pdf->setPaper('A4', 'portrait');
+
+            // Determinar acción (stream o download)
+            $accion = $request->input('accion', 'stream');
+            $nombreArchivo = 'ajustes_inventario_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+            if ($accion === 'download') {
+                return $pdf->download($nombreArchivo);
+            } else {
+                return $pdf->stream($nombreArchivo);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ [InventarioController::imprimirAjustes] Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * API: Preparar ajustes para impresión
+     * POST /api/inventario/ajuste/preparar-impresion
+     */
+    public function prepararImpresionAjustes(Request $request)
+    {
+        try {
+            $ajustes = $request->input('ajustes', []);
+            $almacenFiltro = $request->input('almacen_filtro');
+            $tipoAjusteFiltro = $request->input('tipo_ajuste_filtro');
+            $cabecera = $request->input('cabecera');
+
+            if (empty($ajustes)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay ajustes para imprimir',
+                ], 422);
+            }
+
+            // Normalizar estructura de ajustes para asegurar campos correctos
+            $ajustesNormalizados = array_map(function ($ajuste) {
+                // Asegurar que los campos tengan los nombres esperados por la plantilla
+                return [
+                    'numero_documento' => $ajuste['numero_documento'] ?? '-',
+                    'fecha' => $ajuste['fecha'] ?? $ajuste['created_at'] ?? now()->format('Y-m-d'),
+                    'producto_nombre' => $ajuste['producto_nombre'] ?? $ajuste['nombre'] ?? 'N/A',
+                    'producto_sku' => $ajuste['producto_sku'] ?? $ajuste['sku'] ?? 'N/A',
+                    'almacen_nombre' => $ajuste['almacen_nombre'] ?? $ajuste['almacen'] ?? 'Sin almacén',
+                    'tipo_operacion' => $ajuste['tipo_operacion'] ?? $ajuste['tipo'] ?? 'AJUSTE',
+                    'tipo_ajuste_label' => $this->mapearTipoMovimiento($ajuste['tipo_operacion'] ?? $ajuste['tipo'] ?? 'AJUSTE'),
+                    'cantidad' => (float)($ajuste['cantidad'] ?? 0),
+                    'cantidad_anterior' => (float)($ajuste['cantidad_anterior'] ?? 0),
+                    'cantidad_posterior' => (float)($ajuste['cantidad_posterior'] ?? 0),
+                    'observacion' => $ajuste['observacion'] ?? '-',
+                    'usuario' => $ajuste['usuario'] ?? auth()->user()->name ?? 'Sistema',
+                ];
+            }, $ajustes);
+
+            // Normalizar cabecera si existe
+            $cabeceraFormato = [];
+            if ($cabecera && is_array($cabecera)) {
+                $cabeceraFormato = [
+                    'id' => $cabecera['id'] ?? 'N/A',
+                    'numero' => $cabecera['numero'] ?? 'N/A',
+                    'almacen_nombre' => $cabecera['almacen_nombre'] ?? $almacenFiltro ?? 'N/A',
+                    'usuario' => $cabecera['usuario'] ?? auth()->user()->name ?? 'Sistema',
+                    'fecha_creacion' => $cabecera['fecha_creacion'] ?? now(),
+                    'cantidad_productos' => $cabecera['cantidad_productos'] ?? 0,
+                    'cantidad_entradas' => $cabecera['cantidad_entradas'] ?? 0,
+                    'cantidad_salidas' => $cabecera['cantidad_salidas'] ?? 0,
+                    'observacion' => $cabecera['observacion'] ?? '',
+                    'estado' => $cabecera['estado'] ?? 'procesado',
+                ];
+            }
+
+            // Guardar en sesión
+            session([
+                'ajustes_impresion'                => $ajustesNormalizados,
+                'almacen_filtro_impresion'         => $almacenFiltro,
+                'tipo_ajuste_filtro_impresion'     => $tipoAjusteFiltro,
+                'cabecera_impresion'               => $cabeceraFormato,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ajustes preparados para impresión',
+                'cantidad_ajustes' => count($ajustesNormalizados),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [InventarioController::prepararImpresionAjustes] Error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al preparar impresión: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Anular un ajuste de inventario y revertir todos sus movimientos
+     * POST /api/inventario/ajuste/{id}/anular
+     */
+    public function anularAjuste(Request $request, AjusteInventario $ajuste): JsonResponse
+    {
+        try {
+            // 1. Validar que solo admin pueda anular
+            if (!auth()->user()->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sin permisos para anular ajustes',
+                ], 403);
+            }
+
+            // 2. No anular si ya está anulado
+            if ($ajuste->estado === AjusteInventario::ESTADO_ANULADO) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El ajuste ya está anulado',
+                ], 422);
+            }
+
+            $motivo = $request->input('motivo', '');
+
+            DB::transaction(function () use ($ajuste, $motivo) {
+                // 3. Cargar movimientos con relaciones
+                $ajuste->load('movimientos.stockProducto');
+
+                foreach ($ajuste->movimientos as $movimiento) {
+                    $stockProducto = $movimiento->stockProducto;
+                    $cantidadAnterior = $stockProducto->cantidad;
+
+                    // Determinar tipo inverso y cantidad inversa
+                    if ($movimiento->tipo === MovimientoInventario::TIPO_ENTRADA_AJUSTE) {
+                        // Si fue entrada, crear salida inversa
+                        $tipoInverso = MovimientoInventario::TIPO_SALIDA_AJUSTE;
+                        $cantidadInversa = -abs($movimiento->cantidad);
+                        $stockProducto->decrement('cantidad', abs($movimiento->cantidad));
+                    } else {
+                        // Si fue salida, crear entrada inversa
+                        $tipoInverso = MovimientoInventario::TIPO_ENTRADA_AJUSTE;
+                        $cantidadInversa = abs($movimiento->cantidad);
+                        $stockProducto->increment('cantidad', abs($movimiento->cantidad));
+                    }
+
+                    $cantidadPosterior = $stockProducto->fresh()->cantidad;
+
+                    // Registrar movimiento inverso
+                    MovimientoInventario::create([
+                        'stock_producto_id' => $stockProducto->id,
+                        'tipo' => $tipoInverso,
+                        'cantidad' => $cantidadInversa,
+                        'cantidad_anterior' => $cantidadAnterior,
+                        'cantidad_posterior' => $cantidadPosterior,
+                        'numero_documento' => $ajuste->numero . '-REV',
+                        'observacion' => 'Reversión de ajuste ' . $ajuste->numero . ($motivo ? ": $motivo" : ''),
+                        'user_id' => auth()->id(),
+                        'ajuste_inventario_id' => $ajuste->id,
+                    ]);
+                }
+
+                // 4. Actualizar el ajuste maestro
+                $ajuste->update([
+                    'estado' => AjusteInventario::ESTADO_ANULADO,
+                    'motivo_anulacion' => $motivo,
+                    'user_anulacion_id' => auth()->id(),
+                    'fecha_anulacion' => now(),
+                    'observacion' => ($ajuste->observacion ? $ajuste->observacion . ' | ' : '') .
+                        '[ANULADO] por: ' . auth()->user()->name . ' - ' . now()->format('d/m/Y H:i') .
+                        ($motivo ? " - Motivo: $motivo" : ''),
+                ]);
+
+                Log::info('✅ [InventarioController::anularAjuste] Ajuste anulado exitosamente', [
+                    'ajuste_id' => $ajuste->id,
+                    'ajuste_numero' => $ajuste->numero,
+                    'user_id' => auth()->id(),
+                    'motivo' => $motivo,
+                    'movimientos_revertidos' => $ajuste->movimientos->count(),
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ajuste anulado exitosamente',
+                'data' => [
+                    'ajuste_id' => $ajuste->id,
+                    'numero' => $ajuste->numero,
+                    'estado' => $ajuste->fresh()->estado,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [InventarioController::anularAjuste] Error al anular ajuste', [
+                'error' => $e->getMessage(),
+                'ajuste_id' => $ajuste->id ?? null,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al anular ajuste: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Imprimir merma de inventario
+     */
+    public function imprimirMerma(Request $request, $id): Response | \Symfony\Component\HttpFoundation\Response
+    {
+        // Obtener merma por ID
+        $merma = MermaInventario::find($id);
+
+        if (!$merma) {
+            abort(404, 'Merma no encontrada');
+        }
+
+        // Cargar relaciones
+        $merma->load([
+            'movimientos' => function ($query) {
+                $query->with([
+                    'stockProducto' => function ($sq) {
+                        $sq->with([
+                            'producto' => function ($pq) {
+                                // Cargar precios con su tipo para obtener el precio COSTO
+                                $pq->with([
+                                    'precios' => function ($prq) {
+                                        $prq->with('tipoPrecio');
+                                    },
+                                ]);
+                            },
+                            'almacen',
+                        ]);
+                    },
+                    'user',
+                ]);
+            },
+            'almacen',
+            'user',
+        ]);
+
+        // Transformar movimientos a detalles con costos
+        $detalles = $merma->movimientos->map(function ($movimiento) {
+            $producto = $movimiento->stockProducto?->producto;
+            $stockProducto = $movimiento->stockProducto;
+
+            // Obtener precio COSTO desde precios_producto
+            $precioCosto = 0;
+            if ($producto) {
+                // Buscar el precio de tipo COSTO
+                $precioCostoObj = $producto->obtenerPrecio('COSTO');
+                if ($precioCostoObj) {
+                    $precioCosto = (float) $precioCostoObj->precio;
+                } elseif ($producto->precio_compra) {
+                    // Fallback a precio_compra si existe
+                    $precioCosto = (float) $producto->precio_compra;
+                } elseif ($producto->precio_venta) {
+                    // Último fallback a precio_venta
+                    $precioCosto = (float) $producto->precio_venta;
+                }
+            }
+
+            $cantidadAbs = abs($movimiento->cantidad);
+            $costoTotal = $cantidadAbs * $precioCosto;
+
+            \Log::debug('✅ [ImprimirMerma] Precio COSTO Obtenido', [
+                'producto_id' => $producto?->id,
+                'producto_nombre' => $producto?->nombre,
+                'precio_costo_tabla' => $precioCosto,
+                'cantidad' => $cantidadAbs,
+                'costo_total' => $costoTotal,
+            ]);
+
+            return [
+                'id' => $movimiento->id,
+                'cantidad' => $cantidadAbs,
+                'costo_unitario' => (float) $precioCosto,
+                'costo_total' => (float) $costoTotal,
+                'lote' => $movimiento->numero_documento ?? null,
+                'producto' => [
+                    'id' => $producto?->id ?? 0,
+                    'nombre' => $producto?->nombre ?? 'Producto desconocido',
+                    'sku' => $producto?->sku ?? 'SIN-SKU',
+                    'codigo' => $producto?->codigo ?? null,
+                ],
+            ];
+        })->toArray();
+
+        // Calcular totales
+        $totalCosto = 0;
+        $totalCantidad = 0;
+        foreach ($merma->movimientos as $mov) {
+            $totalCantidad += abs($mov->cantidad);
+
+            $producto = $mov->stockProducto?->producto;
+            $precioCosto = 0;
+
+            if ($producto) {
+                // Obtener precio COSTO desde precios_producto
+                $precioCostoObj = $producto->obtenerPrecio('COSTO');
+                if ($precioCostoObj) {
+                    $precioCosto = (float) $precioCostoObj->precio;
+                } elseif ($producto->precio_compra) {
+                    $precioCosto = (float) $producto->precio_compra;
+                } elseif ($producto->precio_venta) {
+                    $precioCosto = (float) $producto->precio_venta;
+                }
+            }
+
+            $totalCosto += abs($mov->cantidad) * $precioCosto;
+        }
+
+        // Transformar merma para la vista
+        $mermaTransformada = [
+            'id' => $merma->id,
+            'numero' => $merma->numero,
+            'fecha' => $merma->created_at,
+            'almacen' => [
+                'id' => $merma->almacen?->id ?? null,
+                'nombre' => $merma->almacen?->nombre ?? 'Sin almacén',
+            ],
+            'usuario' => [
+                'id' => $merma->user?->id ?? 0,
+                'name' => $merma->user?->name ?? 'Sistema',
+            ],
+            'tipo_merma' => (string) $merma->tipo_merma,
+            'motivo' => $merma->observacion ?? '',
+            'observaciones' => $merma->observacion ?? '',
+            'total_productos' => $merma->cantidad_productos ?? count($detalles),
+            'total_cantidad' => (int) $totalCantidad,
+            'total_costo' => (float) $totalCosto,
+            'estado' => strtoupper($merma->estado ?? 'PENDIENTE'),
+            'detalles' => $detalles,
+        ];
+
+        // Determinar formato
+        $formato = $request->input('formato', 'A4');
+        $accion = $request->input('accion', 'stream');
+
+        // Seleccionar view según formato
+        $viewMap = [
+            'A4' => 'impresion.inventario.mermas-a4',
+            'TICKET_80' => 'impresion.inventario.mermas-ticket-80',
+            'TICKET_58' => 'impresion.inventario.mermas-ticket-58',
+        ];
+
+        $view = $viewMap[$formato] ?? $viewMap['A4'];
+
+        // Renderizar y generar PDF
+        try {
+            // Obtener empresa para mostrar en el documento
+            $empresa = auth()->user()->empresa ?? \App\Models\Empresa::first();
+
+            $html = view($view, [
+                'merma' => $mermaTransformada,
+                'empresa' => $empresa,
+            ])->render();
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+
+            if ($accion === 'download') {
+                return $pdf->download("merma-{$merma->numero}.pdf");
+            }
+
+            return $pdf->stream();
+        } catch (\Exception $e) {
+            Log::error('❌ [ImprimirMerma] Error al generar PDF', [
+                'error' => $e->getMessage(),
+                'merma_id' => $id,
+            ]);
+
+            abort(500, 'Error al generar documento de impresión');
         }
     }
 }
