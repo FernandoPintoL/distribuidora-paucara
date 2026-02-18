@@ -3020,8 +3020,8 @@ class InventarioController extends Controller
                 if ($stock->fecha_vencimiento) {
                     $fechaParsed = \Carbon\Carbon::parse($stock->fecha_vencimiento);
                     if (! $stockAgrupado[$clave]['fecha_vencimiento_proximo'] ||
-                        $fechaParsed < \Carbon\Carbon::parse($stockAgrupado[$clave]['fecha_vencimiento_proximo'])) {
-                        $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed->format('d/m/Y');
+                        $fechaParsed < $stockAgrupado[$clave]['fecha_vencimiento_proximo']) {
+                        $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed;
                     }
                 }
             }
@@ -3039,6 +3039,14 @@ class InventarioController extends Controller
                     default         => (int) $b['cantidad'] <=> (int) $a['cantidad'],
                 };
             });
+
+            // Formatear fechas de vencimiento antes de devolver
+            $stockProductos = array_map(function ($item) {
+                if ($item['fecha_vencimiento_proximo'] instanceof \Carbon\Carbon) {
+                    $item['fecha_vencimiento_proximo'] = $item['fecha_vencimiento_proximo']->format('d/m/Y');
+                }
+                return $item;
+            }, $stockProductos);
 
             return response()->json([
                 'success' => true,

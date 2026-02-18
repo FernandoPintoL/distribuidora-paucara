@@ -15,7 +15,7 @@ return new class extends Migration
             // ✅ NUEVO: Campos para soporte de tipos de precio y combos (2026-02-17)
             if (!Schema::hasColumn('detalle_proformas', 'tipo_precio_id')) {
                 $table->unsignedBigInteger('tipo_precio_id')->nullable()->after('descuento');
-                $table->foreign('tipo_precio_id')->references('id')->on('tipo_precios')->onDelete('set null');
+                $table->foreign('tipo_precio_id')->references('id')->on('tipos_precio')->onDelete('set null');
             }
 
             if (!Schema::hasColumn('detalle_proformas', 'tipo_precio_nombre')) {
