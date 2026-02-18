@@ -68,11 +68,16 @@ interface ProductosTableProps {
     errors?: Record<string, string>;
     showLoteFields?: boolean; // Para mostrar campos de lote y fecha de vencimiento en compras
     almacen_id?: number; // ✅ NUEVO: Almacén para búsqueda API
+    cliente_id?: number | null; // ✅ NUEVO: Cliente para filtrar tipos_precio (LICORERIA vs VENTA)
+    manuallySelectedTipoPrecio?: Record<number, boolean>; // ✅ NUEVO: Track cuáles fueron selecciones manuales del usuario
     isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
     readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)
     onUpdateDetailUnidadConPrecio?: (index: number, unidadId: number, precio: number) => void; // ✅ NUEVO: Actualizar unidad y precio juntos
     onManualTipoPrecioChange?: (index: number) => void; // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
     onComboItemsChange?: (detailIndex: number, items: any[]) => void; // ✅ NUEVO: Notificar cuando cambian los items opcionales del combo
+    default_tipo_precio_id?: number | string; // ✅ NUEVO: ID del tipo de precio por defecto (fallback cuando no hay tipo asignado)
+    carritoCalculado?: any; // ✅ NUEVO (2026-02-17): Datos de rangos aplicados para actualizar precios automáticamente
+    onDetallesActualizados?: (detalles: DetalleProducto[]) => void; // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles por cambios de rangos
 }
 
 export default function ProductosTable({
@@ -82,25 +87,22 @@ export default function ProductosTable({
     onUpdateDetail,
     onRemoveDetail,
     almacen_id,
+    cliente_id, // ✅ NUEVO: Cliente para filtrar tipos_precio
+    manuallySelectedTipoPrecio = {}, // ✅ NUEVO: Track cuáles fueron selecciones manuales
     isCalculatingPrices = false, // ✅ NUEVO: Indicador de carga
     readOnly = false, // ✅ NUEVO: Modo solo lectura
     tipo = 'compra', // ✅ NUEVO: Tipo de documento (compra o venta)
     onUpdateDetailUnidadConPrecio, // ✅ NUEVO: Actualizar unidad y precio juntos
     onManualTipoPrecioChange, // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
-    onComboItemsChange // ✅ NUEVO: Notificar cambios en items opcionales del combo
+    onComboItemsChange, // ✅ NUEVO: Notificar cambios en items opcionales del combo
+    default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto (fallback)
+    carritoCalculado, // ✅ NUEVO (2026-02-17): Datos de rangos para actualizar precios
+    onDetallesActualizados // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles
 }: ProductosTableProps) {
+    
     // ✅ DEBUG: Loguear props recibidos
-    /* console.log('📋 ProductosTable - Props recibidos:', {
-        productosCount: productos?.length || 0,
-        detallesCount: detalles?.length || 0,
-        isCalculatingPrices,
-        detalles: detalles.map(d => ({
-            producto_id: d.producto_id,
-            nombre: d.producto?.nombre,
-            cantidad: d.cantidad,
-            precio_unitario: d.precio_unitario
-        }))
-    }); */
+    console.log('📋 ProductosTable - Props recibidos:', productos);
+    console.log('Detalles recibidos:', detalles);
     const [productSearch, setProductSearch] = useState('');
     const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -114,7 +116,7 @@ export default function ProductosTable({
     const [selectedTipoPrecio, setSelectedTipoPrecio] = useState<Record<number, number>>({});
     // ✅ Estado para controlar qué combos están expandidos
     const [expandedCombos, setExpandedCombos] = useState<Record<number, boolean>>({});
-    // ✅ NUEVO: Mapa de combo_items actualizados por índice (se mantiene aunque detalles cambien)
+    // ✅ NUEVO: Mapa de combo_items actualizados por COMBO_ID (no por índice) para evitar conflictos
     const [comboItemsMap, setComboItemsMap] = useState<Record<number, Array<any>>>({});
 
     // ✅ NUEVO: useEffect para expandir automáticamente combos recién agregados
@@ -124,12 +126,17 @@ export default function ProductosTable({
         const ultimoDetalle = detalles[detalles.length - 1];
         const ultimoIndice = detalles.length - 1;
 
+        // ✅ CRÍTICO: Usar INDEX (no comboId) para expandedCombos para consistencia con renderización
+        // En la línea 1406, renderiza usa expandedCombos[index], así que debe ser consistente
+        const comboId = ultimoDetalle?.producto?.id;
+
         // Verificar si el último detalle agregado es un combo
-        if (ultimoDetalle?.producto && (ultimoDetalle.producto as any).es_combo) {
+        if (ultimoDetalle?.producto && (ultimoDetalle.producto as any).es_combo && comboId) {
             const tieneComponentes = ((ultimoDetalle.producto as any).combo_items?.length || 0) > 0;
 
+            // ✅ FIJO (2026-02-18): Usar ultimoIndice para expandedCombos (no comboId)
             if (tieneComponentes && !expandedCombos[ultimoIndice]) {
-                console.log(`✅ [ProductosTable] Expandiendo automáticamente combo: ${ultimoDetalle.producto.nombre} (índice: ${ultimoIndice})`);
+                console.log(`✅ [ProductosTable] Expandiendo automáticamente combo: ${ultimoDetalle.producto.nombre} (index: ${ultimoIndice}, comboId: ${comboId})`);
                 setExpandedCombos(prev => ({
                     ...prev,
                     [ultimoIndice]: true
@@ -141,9 +148,10 @@ export default function ProductosTable({
                     incluido: item.es_obligatorio === true // Solo marcar obligatorios inicialmente
                 }));
 
+                // ✅ CRÍTICO: Guardar con comboId, no con índice
                 setComboItemsMap(prev => ({
                     ...prev,
-                    [ultimoIndice]: comboItems
+                    [comboId]: comboItems
                 }));
             }
         }
@@ -179,6 +187,120 @@ export default function ProductosTable({
             }
         }
     }, [detalles.length]); // Solo vigilar cambios en la cantidad de detalles
+
+    // ✅ NUEVO (2026-02-17): useEffect para inicializar combos expandidos desde el backend
+    // Maneja combos pre-existentes que llegan con expanded: true (ej: desde proforma Show.tsx)
+    useEffect(() => {
+        if (detalles.length === 0) return;
+
+        const newExpandedCombos: Record<number, boolean> = { ...expandedCombos };
+        const newComboItemsMap: Record<number, Array<any>> = { ...comboItemsMap };
+        let hasChanges = false;
+
+        detalles.forEach((detalle, index) => {
+            const producto = detalle.producto as any;
+            if (!producto) return;
+
+            const esCombo = producto.es_combo === true;
+            const comboItems = producto.combo_items || [];
+            const tieneComponentes = comboItems.length > 0;
+
+            // ✅ CRÍTICO (2026-02-18): Usar campo 'expanded' del backend si está presente
+            // El backend (ProformaResponseDTO) envía expanded: true para combos que deben mostrarse expandidos
+            const deberiaEstarExpandido = (detalle as any).expanded === true || tieneComponentes;
+
+            // ✅ Expandir todos los combos que tengan componentes
+            if (esCombo && tieneComponentes) {
+                const comboId = producto.id;
+
+                // ✅ CRÍTICO: Usar INDEX para expandedCombos (es lo que espera ProductosTable)
+                // pero usar comboId para comboItemsMap (para evitar colisiones si hay múltiples detalles con el mismo producto)
+                if (!expandedCombos[index] && deberiaEstarExpandido) {
+                    console.log(`✅ [ProductosTable] Inicializando combo expandido desde backend: ${producto.nombre} (index: ${index}, comboId: ${comboId}, expanded field: ${(detalle as any).expanded})`);
+                    newExpandedCombos[index] = true;
+                    hasChanges = true;
+
+                    // ✅ Inicializar combo_items desde el detalle (usar comboId para la clave)
+                    if (!comboItemsMap[comboId]) {
+                        const comboItemsSeleccionados = (detalle as any).combo_items_seleccionados || [];
+                        const inicializados = comboItemsSeleccionados.length > 0
+                            ? comboItemsSeleccionados
+                            : comboItems.map((item: any) => ({
+                                ...item,
+                                incluido: item.es_obligatorio === true // Solo obligatorios inicialmente
+                            }));
+
+                        newComboItemsMap[comboId] = inicializados;
+                        console.log(`✅ [ProductosTable] Inicializados combo_items para: ${producto.nombre}`, inicializados);
+                    }
+                }
+            }
+        });
+
+        // ✅ Actualizar estados solo si hay cambios
+        if (hasChanges) {
+            setExpandedCombos(newExpandedCombos);
+            setComboItemsMap(newComboItemsMap);
+        }
+    }, [detalles.length, detalles.map(d => d.producto?.id).join('')]); // ✅ FIXED: Solo vigilar cambios en detalles, no en expandedCombos/comboItemsMap (causa bucles)
+
+    // ✅ NUEVO (2026-02-17): useEffect para actualizar precios cuando cambian rangos aplicables
+    // Centraliza la lógica que estaba en create.tsx para reutilizarla en Show/Edit de proformas
+    useEffect(() => {
+        if (!carritoCalculado || detalles.length === 0) {
+            return;
+        }
+
+        const detallesActualizados = detalles.map((detalle, index) => {
+            const detalleRango = carritoCalculado?.detalles?.find(
+                (dr: any) => dr.producto_id === detalle.producto_id
+            );
+
+            // ✅ Solo actualizar si:
+            // 1. Hay detalleRango disponible
+            // 2. El tipo_precio_nombre del rango es diferente AL ACTUAL
+            // 3. El rango devolvió un tipo_precio_nombre (NO es null) - si es null, mantener el actual
+            // 4. NO ha sido seleccionado manualmente por el usuario
+            if (
+                detalleRango &&
+                detalleRango.tipo_precio_nombre !== null &&  // ✅ NUEVO (2026-02-17): Solo actualizar si hay tipo_precio válido
+                detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre &&
+                !manuallySelectedTipoPrecio[index] // No actualizar si fue seleccionado manualmente
+            ) {
+                console.log(`🏷️ [ProductosTable - useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
+                    precio_anterior: detalle.precio_unitario,
+                    precio_nuevo: detalleRango.precio_unitario,
+                    subtotal_anterior: detalle.subtotal,
+                    subtotal_nuevo: detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario),
+                    unidad_venta_id_preservada: detalle.unidad_venta_id,
+                    fue_manual: manuallySelectedTipoPrecio[index] ? 'SÍ (IGNORADO)' : 'NO'
+                });
+
+                // ✅ Actualizar precio_unitario y subtotal junto con tipo_precio
+                const nuevoSubtotal = detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario);
+
+                return {
+                    ...detalle,
+                    tipo_precio_id: detalleRango.tipo_precio_id,
+                    tipo_precio_nombre: detalleRango.tipo_precio_nombre,
+                    precio_unitario: detalleRango.precio_unitario ?? detalle.precio_unitario,
+                    subtotal: nuevoSubtotal
+                };
+            }
+
+            return detalle;
+        });
+
+        // ✅ Verificar si hubo cambios reales
+        const huboCambios = detallesActualizados.some((det, idx) =>
+            JSON.stringify(det) !== JSON.stringify(detalles[idx])
+        );
+
+        if (huboCambios && onDetallesActualizados) {
+            console.log('✅ [ProductosTable] Detalles actualizados por cambio de rangos, notificando al padre');
+            onDetallesActualizados(detallesActualizados);
+        }
+    }, [carritoCalculado, detalles, manuallySelectedTipoPrecio, onDetallesActualizados]);
 
     // ✅ NUEVO: Estado para modal de cascada de precios
     const [modalCascadaState, setModalCascadaState] = useState<{
@@ -238,13 +360,19 @@ export default function ProductosTable({
                 params.append('almacen_id', almacen_id.toString());
             }
 
+            // ✅ NUEVO: Pasar cliente_id para filtrar tipos_precio (LICORERIA vs VENTA)
+            if (cliente_id) {
+                params.append('cliente_id', cliente_id.toString());
+            }
+
             const url = `/api/productos/buscar?${params.toString()}`;
             console.log('🔍 [ProductosTable] Buscando productos con endpoint:', url);
             console.log('📋 [ProductosTable] Parámetros:', {
                 q: term,
                 limite: '10',
                 tipo: tipo,
-                almacen_id: almacen_id || 'sin especificar'
+                almacen_id: almacen_id || 'sin especificar',
+                cliente_id: cliente_id || 'sin especificar'
             });
 
             const response = await fetch(url);
@@ -366,6 +494,11 @@ export default function ProductosTable({
 
                 if (almacen_id) {
                     params.append('almacen_id', almacen_id.toString());
+                }
+
+                // ✅ NUEVO: Pasar cliente_id para filtrar tipos_precio (LICORERIA vs VENTA)
+                if (cliente_id) {
+                    params.append('cliente_id', cliente_id.toString());
                 }
 
                 const url = `/api/productos/buscar?${params.toString()}`;
@@ -490,31 +623,44 @@ export default function ProductosTable({
                 console.log(`📊 Cantidad del combo: ${cantidadAnterior} → ${cantidadNueva}`);
 
                 // ✅ Obtener items actuales del mapa (si existen, preservan selecciones del usuario)
-                const itemsActualesDelMapa = comboItemsMap[index] || null;
+                const comboId = (detalles[index].producto as any)?.id;
+                const itemsActualesDelMapa = comboId ? comboItemsMap[comboId] : null;
                 const comboItems = ((detalles[index].producto as any).combo_items || []) as Array<any>;
                 console.log(`🎁 Componentes del combo encontrados: ${comboItems.length}`, comboItems.map(item => ({ nombre: item.producto_nombre, cantidadOriginal: item.cantidad })));
 
-                // ✅ CRÍTICO: Preservar el estado "incluido" que el usuario marcó
+                // ✅ CRÍTICO: Preservar TANTO el estado "incluido" como las cantidades editadas manualmente
                 // Mapear items originales con sus selecciones guardadas
                 const comboItemsActualizados = comboItems.map((item, itemIdx) => {
                     const cantidadComponenteOriginal = item.cantidad; // Cantidad original en el combo (ej: 2, 1, etc)
                     const cantidadComponenteNueva = cantidadNueva * cantidadComponenteOriginal; // Cantidad final = combo_qty × componente_original_qty
 
-                    // ✅ IMPORTANTE: Preservar el valor "incluido" del usuario (si existe en el mapa)
+                    // ✅ IMPORTANTE: Preservar TANTO el valor "incluido" como la cantidad editada manualmente
                     const incluidoDelUsuario = itemsActualesDelMapa?.[itemIdx]?.incluido;
+                    const cantidadEditadaManualmente = itemsActualesDelMapa?.[itemIdx]?.cantidad;
                     const incluido = incluidoDelUsuario !== undefined ? incluidoDelUsuario : (item.es_obligatorio !== false);
+
+                    // ✅ Si el usuario editó manualmente la cantidad, mantener esa edición (escala proporcionalmente)
+                    // De lo contrario, usar la cantidad calculada
+                    let cantidadFinal = cantidadComponenteNueva;
+                    if (cantidadEditadaManualmente !== undefined && cantidadEditadaManualmente !== null) {
+                        // Si hay una cantidad editada, usar la proporción: cantidad_editada / cantidad_anterior
+                        const cantidadAnteriorDelItem = itemsActualesDelMapa?.[itemIdx]?.cantidad || cantidadComponenteNueva;
+                        const proporcion = cantidadAnteriorDelItem > 0 ? (cantidadEditadaManualmente / cantidadAnteriorDelItem) : 1;
+                        cantidadFinal = cantidadComponenteNueva * proporcion;
+                    }
 
                     console.log(`  ✏️  Actualizando componente: ${item.producto_nombre}`, {
                         cantidadOriginal: cantidadComponenteOriginal,
                         cantidadDelCombo: cantidadNueva,
-                        cantidadFinal: cantidadComponenteNueva,
+                        cantidadFinal: cantidadFinal,
+                        cantidadEditadaManualmente: cantidadEditadaManualmente,
                         incluido: incluido,
                         preservadoDelMapa: incluidoDelUsuario !== undefined
                     });
 
                     return {
                         ...item,
-                        cantidad: cantidadComponenteNueva,
+                        cantidad: cantidadFinal,
                         incluido: incluido  // ✅ Preservar selección del usuario
                     };
                 });
@@ -523,10 +669,13 @@ export default function ProductosTable({
                     comboItemsActualizados.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad, incluido: i.incluido })));
 
                 // ✅ CRÍTICO: Guardar combo_items en mapa (persisten aunque detalles cambien)
-                setComboItemsMap(prev => ({
-                    ...prev,
-                    [index]: comboItemsActualizados
-                }));
+                // Usar comboId en lugar de index para evitar colisiones entre diferentes combos
+                if (comboId) {
+                    setComboItemsMap(prev => ({
+                        ...prev,
+                        [comboId]: comboItemsActualizados
+                    }));
+                }
 
                 // ✅ IMPORTANTE: Llamar a onUpdateDetail UNA SOLA VEZ para actualizar cantidad del combo
                 onUpdateDetail(index, field, value);
@@ -1142,8 +1291,29 @@ export default function ProductosTable({
                                                         ) : null;
                                                     }
 
-                                                    // ✅ Obtener el valor inicial: si selectedTipoPrecio está seteado, usar ese, sino usar tipo_precio_id_recomendado del backend (NEW), luego tipo_precio_id del detalle o el primero de venta
-                                                    const valorInicial = selectedTipoPrecio[index] ?? (detalle.tipo_precio_id_recomendado ? String(detalle.tipo_precio_id_recomendado) : (detalle.tipo_precio_id ? String(detalle.tipo_precio_id) : preciosVenta[0]?.tipo_precio_id ? String(preciosVenta[0].tipo_precio_id) : ''));
+                                                    // ✅ Obtener el valor inicial: Orden de prioridad MEJORADO (2026-02-17 v2):
+                                                    // 1. selectedTipoPrecio (SOLO si fue seleccionado manualmente por usuario en esta sesión)
+                                                    // 2. detalle.tipo_precio_id (el valor ACTUAL - puede cambiar por rango)
+                                                    // 3. detalle.tipo_precio_id_recomendado (recomendación inicial basada en cliente)
+                                                    // 4. default_tipo_precio_id (prop del componente - centralizado)
+                                                    // 5. preciosVenta[0] (primer tipo de precio disponible)
+                                                    //
+                                                    // CRÍTICO: Usar tipo_precio_id (no recomendado) porque se actualiza cuando rango aplica
+                                                    const valorInicial = (manuallySelectedTipoPrecio?.[index] && selectedTipoPrecio[index])
+                                                        ? selectedTipoPrecio[index]
+                                                        : (
+                                                            detalle.tipo_precio_id
+                                                                ? String(detalle.tipo_precio_id)
+                                                                : (
+                                                                    detalle.tipo_precio_id_recomendado
+                                                                        ? String(detalle.tipo_precio_id_recomendado)
+                                                                        : (
+                                                                            default_tipo_precio_id
+                                                                                ? String(default_tipo_precio_id)
+                                                                                : (preciosVenta[0]?.tipo_precio_id ? String(preciosVenta[0].tipo_precio_id) : '')
+                                                                        )
+                                                                )
+                                                        );
 
                                                     return (
                                                         <select
@@ -1241,11 +1411,38 @@ export default function ProductosTable({
                                 // Si es combo, envolver en Fragment con componentes
                                 if (esCombo && expandedCombos[index]) {
                                     // ✅ CRÍTICO: Usar combo_items del mapa si existen, sino usar los originales
-                                    const itemsAMostrar = comboItemsMap[index] || ((productoInfo as any).combo_items || []);
+                                    // Usar comboId (producto.id) en lugar de index para evitar colisiones
+                                    const comboIdDisplay = (productoInfo as any)?.id;
+                                    // ✅ FIJO (2026-02-18): Fallback correcto para modo Show (desde backend)
+                                    // Orden de prioridad:
+                                    // 1. comboItemsMap[comboIdDisplay] - items seleccionados en Create
+                                    // 2. detalle.combo_items_seleccionados - items guardados en proforma existente (modo Show)
+                                    // 3. productoInfo.combo_items - items de búsqueda de API
+                                    const itemsAMostrar = comboItemsMap[comboIdDisplay]
+                                        || (detalles[index] as any).combo_items_seleccionados
+                                        || ((productoInfo as any).combo_items || []);
+
+                                    // ✅ NUEVO: Obtener información referencial de grupo_opcional
+                                    const grupoOpcional = (detalles[index] as any)?.grupo_opcional;
+                                    const cantidadALlevar = grupoOpcional?.cantidad_a_llevar;
 
                                     return (
                                         <Fragment key={`combo-${index}`}>
                                             {content}
+
+                                            {/* ✅ INFORMACIÓN REFERENCIAL: Cantidad de productos opcionales a elegir */}
+                                            {cantidadALlevar && (
+                                                <tr className="bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-400">
+                                                    <td colSpan={tipo === 'compra' ? 4 : 5} className="px-4 py-3">
+                                                        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                                                            <span className="text-lg">ℹ️</span>
+                                                            <span className="font-medium">Referencia:</span>
+                                                            <span>Seleccionar <strong>{cantidadALlevar}</strong> producto{cantidadALlevar !== 1 ? 's' : ''} opcional{cantidadALlevar !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+
                                             {/* Mostrar componentes del combo */}
                                             {itemsAMostrar.map((item: any, itemIndex: number) => (
                                                 <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${item.incluido === false ? 'bg-gray-100 dark:bg-gray-800/50 opacity-60' : 'bg-purple-50 dark:bg-purple-900/10'} border-purple-400`}>
@@ -1259,10 +1456,13 @@ export default function ProductosTable({
                                                                     onChange={(e) => {
                                                                         const nuevosItems = [...itemsAMostrar];
                                                                         nuevosItems[itemIndex].incluido = e.target.checked;
-                                                                        setComboItemsMap(prev => ({
-                                                                            ...prev,
-                                                                            [index]: nuevosItems
-                                                                        }));
+                                                                        // ✅ CRÍTICO: Usar comboIdDisplay en lugar de index para mantener consistencia
+                                                                        if (comboIdDisplay) {
+                                                                            setComboItemsMap(prev => ({
+                                                                                ...prev,
+                                                                                [comboIdDisplay]: nuevosItems
+                                                                            }));
+                                                                        }
                                                                         // ✅ NUEVO: Notificar al parent component sobre los cambios en items opcionales
                                                                         onComboItemsChange?.(index, nuevosItems);
                                                                         console.log(`✅ Producto opcional ${item.producto_nombre}: ${e.target.checked ? 'INCLUIDO' : 'EXCLUIDO'}`);
@@ -1288,6 +1488,9 @@ export default function ProductosTable({
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                             SKU: {item.producto_sku}
                                                         </div>
+                                                        
+                                                    </td>
+                                                    <td>
                                                         {/* Stock del producto */}
                                                         <div className="text-xs text-gray-600 dark:text-gray-300 mt-1 flex items-center gap-1">
                                                             <span className="text-purple-600 dark:text-purple-400">📦</span>
@@ -1298,8 +1501,28 @@ export default function ProductosTable({
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-medium">
-                                                        {item.cantidad}
+                                                    <td className="px-4 py-2 whitespace-nowrap">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={item.cantidad || 0}
+                                                            onChange={(e) => {
+                                                                const nuevaCantidad = parseFloat(e.target.value) || 0;
+                                                                const nuevosItems = [...itemsAMostrar];
+                                                                nuevosItems[itemIndex].cantidad = nuevaCantidad;
+                                                                // ✅ CRÍTICO: Usar comboIdDisplay en lugar de index para mantener consistencia
+                                                                if (comboIdDisplay) {
+                                                                    setComboItemsMap(prev => ({
+                                                                        ...prev,
+                                                                        [comboIdDisplay]: nuevosItems
+                                                                    }));
+                                                                }
+                                                                onComboItemsChange?.(index, nuevosItems);
+                                                                console.log(`✏️ Cantidad actualizada para ${item.producto_nombre}: ${nuevaCantidad}`);
+                                                            }}
+                                                            className="w-16 px-2 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-300 font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                        />
                                                     </td>
                                                     {tipo === 'venta' && (
                                                         <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300">
@@ -1309,18 +1532,18 @@ export default function ProductosTable({
                                                     {tipo === 'compra' && (
                                                         <>
                                                             <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
-                                                                {(item.precio_unitario || 0).toFixed(2)}
+                                                                {formatCurrencyWith2Decimals(item.precio_unitario || 0)}
                                                             </td>
                                                             <td colSpan={2}></td>
                                                         </>
                                                     )}
                                                     {tipo === 'venta' && (
                                                         <td className="px-4 py-2 whitespace-nowrap text-xs text-purple-700 dark:text-purple-300 font-mono">
-                                                            {(item.precio_unitario || 0).toFixed(2)}
+                                                            {formatCurrencyWith2Decimals(item.precio_unitario || 0)}
                                                         </td>
                                                     )}
                                                     <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-purple-700 dark:text-purple-300">
-                                                        {((item.cantidad || 0) * (item.precio_unitario || 0)).toFixed(2)}
+                                                        {formatCurrencyWith2Decimals((item.cantidad || 0) * (item.precio_unitario || 0))}
                                                     </td>
                                                     <td className="px-4 py-2 whitespace-nowrap"></td>
                                                 </tr>

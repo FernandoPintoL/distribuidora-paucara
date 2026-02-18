@@ -9,12 +9,12 @@ import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
 import ApiProformaController from './ApiProformaController'
 import ReservaProformaController from './ReservaProformaController'
+import EntregaController from './EntregaController'
 import ApiVentaController from './ApiVentaController'
 import TipoOperacionController from './TipoOperacionController'
 import PrecioRangoProductoController from './PrecioRangoProductoController'
 import GeocodingController from './GeocodingController'
 import RutaApiController from './RutaApiController'
-import EntregaController from './EntregaController'
 import ChoferCajaController from './ChoferCajaController'
 import TrackingController from './TrackingController'
 import EncargadoController from './EncargadoController'
@@ -38,12 +38,12 @@ TipoMermaController,
 EstadoMermaController,
 ApiProformaController,
 ReservaProformaController,
+EntregaController,
 ApiVentaController,
 TipoOperacionController,
 PrecioRangoProductoController,
 GeocodingController,
 RutaApiController,
-EntregaController,
 ChoferCajaController,
 TrackingController,
 EncargadoController,

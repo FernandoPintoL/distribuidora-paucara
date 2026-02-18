@@ -473,15 +473,29 @@ class Proforma extends Model
 
         // ✅ USAR SERVICIO DE DISTRIBUCIÓN PARA RESERVAR STOCK (FIFO automático)
         try {
+            $stockService = new \App\Services\Stock\StockService();
             $distribucionService = new \App\Services\Reservas\ReservaDistribucionService();
 
-            foreach ($this->detalles as $detalle) {
+            // ✅ COMBOS: Convertir detalles a array para expandir combos (OPCIÓN 2 - solo componentes)
+            $detallesArray = $this->detalles->map(fn($d) => [
+                'producto_id' => $d->producto_id,
+                'cantidad' => $d->cantidad,
+                'combo_items_seleccionados' => $d->combo_items_seleccionados, // Pasar items si existen
+            ])->toArray();
+
+            // Expandir combos a sus componentes
+            $detallesExpandidos = $stockService->expandirCombos($detallesArray);
+
+            foreach ($detallesExpandidos as $detalle) {
+                $productoId = $detalle['producto_id'];
+                $cantidad = $detalle['cantidad'];
+
                 // Usar el servicio para distribuir automáticamente entre lotes
                 // El servicio obtiene el almacén internamente de la empresa del usuario autenticado
                 $resultado = $distribucionService->distribuirReserva(
                     $this,
-                    $detalle->producto_id,
-                    $detalle->cantidad,
+                    $productoId,
+                    $cantidad,
                     3  // 3 días de vencimiento
                 );
 
@@ -489,8 +503,8 @@ class Proforma extends Model
                 if (!$resultado['success']) {
                     \Illuminate\Support\Facades\Log::warning('Stock insuficiente para reservar producto', [
                         'proforma_id' => $this->id,
-                        'producto_id' => $detalle->producto_id,
-                        'cantidad_requerida' => $detalle->cantidad,
+                        'producto_id' => $productoId,
+                        'cantidad_requerida' => $cantidad,
                         'error' => $resultado['error'],
                     ]);
                     throw new \Exception($resultado['error']);
@@ -498,8 +512,8 @@ class Proforma extends Model
 
                 \Illuminate\Support\Facades\Log::info('✅ Producto reservado con distribución FIFO', [
                     'proforma_id' => $this->id,
-                    'producto_id' => $detalle->producto_id,
-                    'cantidad_solicitada' => $detalle->cantidad,
+                    'producto_id' => $productoId,
+                    'cantidad_solicitada' => $cantidad,
                     'cantidad_reservada' => $resultado['resumen']['cantidad_reservada'],
                     'cantidad_lotes' => $resultado['resumen']['cantidad_lotes'],
                 ]);

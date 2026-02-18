@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
 export const show = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
 show.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ show.url = (args: { venta: number | { id: number } } | [venta: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
 show.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -58,7 +58,7 @@ show.get = (args: { venta: number | { id: number } } | [venta: number | { id: nu
 })
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
 show.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -68,7 +68,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
 
     /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
     const showForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -78,7 +78,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
 
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
         showForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -87,7 +87,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
         })
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::show
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:31
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:32
  * @route '/api/ventas/{venta}/logistica'
  */
         showForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

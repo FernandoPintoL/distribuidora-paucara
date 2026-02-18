@@ -345,6 +345,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // 💳 GESTIÓN DE PAGOS EN VENTAS
     Route::prefix('app/ventas')->group(function () {
         Route::post('/{venta}/pagos', [VentaController::class, 'registrarPago'])->name('api.ventas.registrar-pago');
+        Route::get('/{ventaId}/entrega', [\App\Http\Controllers\Api\EntregaController::class, 'obtenerEntregaPorVenta'])->name('api.ventas.obtener-entrega');  // ✅ NUEVO (2026-02-17): Obtener entrega para Flutter app
     });
 
     // DEPRECATED: Seguimiento de envíos desde la app
@@ -994,6 +995,10 @@ Route::group(['prefix' => 'proveedores'], function () {
 // ==========================================
 Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::prefix('image-backup')->group(function () {
+        // ========== DIAGNÓSTICO ==========
+        // Diagnosticar problemas con backups (DEBUGGING)
+        Route::get('/diagnostico/disk-space', [ImageBackupController::class, 'diagnoseDiskSpace']);
+
         // ========== BACKUPS COMPLETOS ==========
         // Crear backup (completo o selectivo)
         Route::post('/create', [ImageBackupController::class, 'createBackup']);

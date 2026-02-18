@@ -652,11 +652,12 @@ class Venta extends Model
 
                 // ✅ CORREGIDO: Actualizar stock usando UPDATE atómico
                 // Usar parámetros vinculados para evitar inyección SQL y asegurar que cantidad_disponible se actualiza
+                // ✅ CORREGIDO (2026-02-16): Cast a (float) para preservar decimales en productos fraccionados
                 $affected = DB::table('stock_productos')
                     ->where('id', $stockProducto->id)
                     ->update([
-                        'cantidad' => DB::raw("cantidad + " . (int)$cantidadADevolver),
-                        'cantidad_disponible' => DB::raw("cantidad_disponible + " . (int)$cantidadADevolver),
+                        'cantidad' => DB::raw("cantidad + " . (float)$cantidadADevolver),
+                        'cantidad_disponible' => DB::raw("cantidad_disponible + " . (float)$cantidadADevolver),
                         'fecha_actualizacion' => DB::raw('CURRENT_TIMESTAMP'),
                     ]);
 

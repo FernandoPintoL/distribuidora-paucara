@@ -21,6 +21,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -2422,7 +2423,13 @@ class EntregaController extends Controller
         try {
             $entrega = Entrega::with(['ventas' => function ($q) {
                 $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago', 'tipo_pago_id')
-                  ->with('tipoPago:id,codigo,nombre');
+                  ->with('tipoPago:id,codigo,nombre')
+                  ->with(['detalles' => function ($d) {  // ✅ NUEVO: Incluir detalles de productos
+                      $d->select('id', 'venta_id', 'producto_id', 'cantidad', 'precio_unitario', 'subtotal')
+                        ->with(['producto' => function ($p) {
+                            $p->select('id', 'nombre')->with('codigoPrincipal:id,codigo');
+                        }]);
+                  }]);
             }])->findOrFail($id);
 
             // ✅ CRÍTICO: Filtrar SOLO ventas NO a crédito (excluir CREDITO del resumen)
@@ -2434,9 +2441,19 @@ class EntregaController extends Controller
             // Obtener todas las confirmaciones de las ventas NO crédito de esta entrega
             $ventasIds = $ventasParaResumen->pluck('id')->toArray();
 
-            $confirmaciones = EntregaVentaConfirmacion::with('tipoPago')
-                ->whereIn('venta_id', $ventasIds)
-                ->get();
+            // ✅ ACTUALIZADO 2026-02-17: Incluir TODOS los campos de entregas_venta_confirmaciones
+            // NOTE: 'referencia' no es columna directa, está dentro de desglose_pagos JSON
+            $confirmaciones = EntregaVentaConfirmacion::select(
+                'id', 'entrega_id', 'venta_id', 'tipo_pago_id', 'monto_recibido',
+                'fotos', 'firma_digital_url', 'observaciones_logistica',  // ✅ NUEVO: campos de confirmación
+                'tipo_entrega', 'tipo_novedad', 'desglose_pagos',
+                'total_dinero_recibido', 'monto_pendiente', 'tipo_confirmacion',
+                'productos_devueltos', 'monto_devuelto', 'monto_aceptado',  // ✅ NUEVO 2026-02-18: campos de devolución
+                'created_at'
+            )
+            ->with('tipoPago:id,codigo,nombre')
+            ->whereIn('venta_id', $ventasIds)
+            ->get();
 
             // Construir resumen con soporte para múltiples pagos
             // ✅ NOTA: total_esperado SOLO incluye ventas NO crédito
@@ -2490,6 +2507,23 @@ class EntregaController extends Controller
                                         'referencia' => $pago['referencia'] ?? null,
                                         'tipo_entrega' => $confirmacion->tipo_entrega,
                                         'tipo_novedad' => $confirmacion->tipo_novedad,
+                                        // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
+                                        'fotos' => json_decode($confirmacion->fotos, true) ?? [],
+                                        'firma_digital_url' => $confirmacion->firma_digital_url,
+                                        'observaciones_logistica' => $confirmacion->observaciones_logistica,
+                                        'detalles' => $confirmacion->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
+                                            'id' => $d->id,
+                                            'producto_id' => $d->producto_id,
+                                            'producto_nombre' => $d->producto?->nombre,
+                                            'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
+                                            'cantidad' => (float) $d->cantidad,
+                                            'precio_unitario' => (float) $d->precio_unitario,
+                                            'subtotal' => (float) $d->subtotal,
+                                        ])->toArray() ?? [],
+                                            // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
+                                            'productos_devueltos' => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
+                                            'monto_devuelto' => (float) ($confirmacion->monto_devuelto ?? 0),
+                                            'monto_aceptado' => (float) ($confirmacion->monto_aceptado ?? 0),
                                     ];
                                 } else {
                                     // Crear nuevo tipo
@@ -2507,6 +2541,24 @@ class EntregaController extends Controller
                                             'referencia' => $pago['referencia'] ?? null,
                                             'tipo_entrega' => $confirmacion->tipo_entrega,
                                             'tipo_novedad' => $confirmacion->tipo_novedad,
+                                            // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
+                                            // NOTE: fotos is already cast as array in model, so just use it directly
+                                            'fotos' => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
+                                            'firma_digital_url' => $confirmacion->firma_digital_url,
+                                            'observaciones_logistica' => $confirmacion->observaciones_logistica,
+                                            'detalles' => $confirmacion->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
+                                                'id' => $d->id,
+                                                'producto_id' => $d->producto_id,
+                                                'producto_nombre' => $d->producto?->nombre,
+                                                'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
+                                                'cantidad' => (float) $d->cantidad,
+                                                'precio_unitario' => (float) $d->precio_unitario,
+                                                'subtotal' => (float) $d->subtotal,
+                                            ])->toArray() ?? [],
+                                            // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
+                                            'productos_devueltos' => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
+                                            'monto_devuelto' => (float) ($confirmacion->monto_devuelto ?? 0),
+                                            'monto_aceptado' => (float) ($confirmacion->monto_aceptado ?? 0),
                                         ]],
                                     ];
                                 }
@@ -2538,6 +2590,24 @@ class EntregaController extends Controller
                                 'monto_recibido' => (float) ($c->total_dinero_recibido ?? $c->monto_recibido),
                                 'tipo_entrega' => $c->tipo_entrega,
                                 'tipo_novedad' => $c->tipo_novedad,
+                                // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
+                                // NOTE: fotos is already cast as array in model, so just use it directly
+                                'fotos' => is_array($c->fotos) ? $c->fotos : [],
+                                'firma_digital_url' => $c->firma_digital_url,
+                                'observaciones_logistica' => $c->observaciones_logistica,
+                                'detalles' => $c->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
+                                    'id' => $d->id,
+                                    'producto_id' => $d->producto_id,
+                                    'producto_nombre' => $d->producto?->nombre,
+                                    'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
+                                    'cantidad' => (float) $d->cantidad,
+                                    'precio_unitario' => (float) $d->precio_unitario,
+                                    'subtotal' => (float) $d->subtotal,
+                                ])->toArray() ?? [],
+                                // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
+                                'productos_devueltos' => $this->parseProductosDevueltos($c->productos_devueltos),
+                                'monto_devuelto' => (float) ($c->monto_devuelto ?? 0),
+                                'monto_aceptado' => (float) ($c->monto_aceptado ?? 0),
                             ];
                         })->toArray(),
                     ];
@@ -2604,6 +2674,27 @@ class EntregaController extends Controller
         if (str_contains($nombre, 'CRÉDITO')) return 'CREDITO';
 
         return 'OTRO';
+    }
+
+    /// ✅ NUEVA 2026-02-18: Helper para parsear productos devueltos (JSON) a array
+    private function parseProductosDevueltos($productosDevueltosJson): array
+    {
+        if (empty($productosDevueltosJson)) {
+            return [];
+        }
+
+        // Si es string (JSON), decodificar
+        if (is_string($productosDevueltosJson)) {
+            $productos = json_decode($productosDevueltosJson, true);
+            return is_array($productos) ? $productos : [];
+        }
+
+        // Si ya es array, retornar directamente
+        if (is_array($productosDevueltosJson)) {
+            return $productosDevueltosJson;
+        }
+
+        return [];
     }
 
     /**
@@ -2833,12 +2924,147 @@ class EntregaController extends Controller
     }
 
     /**
-     * Guardar archivo desde base64
+     * GET /api/ventas/{ventaId}/entrega
+     * Obtener detalles de la entrega asociada a una venta (2026-02-17)
+     *
+     * Usado por: Flutter app venta_detalle_screen para mostrar info de entrega
+     */
+    public function obtenerEntregaPorVenta($ventaId)
+    {
+        try {
+            $venta = Venta::find($ventaId);
+
+            if (!$venta) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Venta no encontrada',
+                ], 404);
+            }
+
+            // Buscar entrega que contenga esta venta
+            $entrega = Entrega::whereHas('ventas', function ($q) use ($ventaId) {
+                $q->where('ventas.id', $ventaId);
+            })
+            ->with([
+                'chofer',
+                'vehiculo',
+                'estadoEntrega',
+                'ventas.cliente',
+                'ventas.tipoPago',
+                'ventas.detalles.producto',
+            ])
+            ->first();
+
+            // Si no hay entrega asignada, retornar null
+            if (!$entrega) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'Venta sin entrega asignada',
+                ]);
+            }
+
+            // Construir respuesta con datos de entrega
+            $data = [
+                'id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+                'estado' => $entrega->estado,
+                'estado_codigo' => $entrega->estadoEntregaCodigo,
+                'estado_nombre' => $entrega->estadoEntregaNombre,
+                'estado_color' => $entrega->estadoEntregaColor,
+                'estado_icono' => $entrega->estadoEntregaIcono,
+                'fecha_asignacion' => $entrega->fecha_asignacion?->format('Y-m-d H:i'),
+                'fecha_inicio' => $entrega->fecha_inicio?->format('Y-m-d H:i'),
+                'fecha_entrega' => $entrega->fecha_entrega?->format('Y-m-d H:i'),
+                'observaciones' => $entrega->observaciones,
+                'motivo_novedad' => $entrega->motivo_novedad,
+                'chofer' => $entrega->chofer ? [
+                    'id' => $entrega->chofer->id,
+                    'nombre' => $entrega->chofer->name,
+                    'telefono' => $entrega->chofer->phone,
+                ] : null,
+                'vehiculo' => $entrega->vehiculo ? [
+                    'id' => $entrega->vehiculo->id,
+                    'placa' => $entrega->vehiculo->placa,
+                    'marca' => $entrega->vehiculo->marca,
+                    'modelo' => $entrega->vehiculo->modelo,
+                ] : null,
+                'cantidad_ventas' => $entrega->ventas->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+
+        } catch (\Throwable $e) {
+            \Log::error('Error al obtener entrega por venta', [
+                'venta_id' => $ventaId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener información de entrega',
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ MEJORADO: Guardar archivo desde Base64 en almacenamiento real
+     *
+     * Soporta:
+     * - Storage local (storage/app/public/)
+     * - S3 AWS (configuración en .env)
+     *
+     * @param string $base64 - Contenido en Base64
+     * @param string $carpeta - Carpeta destino (entregas, firmas, novedades)
+     * @return string - URL del archivo guardado
      */
     private function guardarArchivoBase64(string $base64, string $carpeta): string
     {
-        // Por ahora retornamos una URL placeholder
-        // En producción, esto guardaría en S3 o storage local
-        return "placeholder://{$carpeta}/" . uniqid() . '.jpg';
+        try {
+            // Decodificar Base64
+            $imagenDecodificada = base64_decode(
+                preg_replace('#^data:image/\w+;base64,#i', '', $base64),
+                true
+            );
+
+            if ($imagenDecodificada === false) {
+                Log::warning('❌ Error decodificando Base64 en guardarArchivoBase64', [
+                    'carpeta' => $carpeta,
+                    'base64_length' => strlen($base64),
+                ]);
+                return '';
+            }
+
+            // Generar nombre único
+            $timestamp = now()->format('YmdHis');
+            $random = substr(md5($base64), 0, 8);
+            $nombreArchivo = "{$carpeta}/{$timestamp}_{$random}.jpg";
+
+            // Guardar en storage
+            \Storage::disk('public')->put($nombreArchivo, $imagenDecodificada);
+
+            // Retornar URL completa
+            $url = \Storage::disk('public')->url($nombreArchivo);
+
+            Log::info('✅ Archivo guardado correctamente', [
+                'carpeta' => $carpeta,
+                'nombre' => $nombreArchivo,
+                'url' => $url,
+                'tamaño_bytes' => strlen($imagenDecodificada),
+            ]);
+
+            return $url;
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error guardando archivo Base64', [
+                'carpeta' => $carpeta,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return '';
+        }
     }
 }

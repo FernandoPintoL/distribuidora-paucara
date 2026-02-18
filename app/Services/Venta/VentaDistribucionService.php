@@ -31,6 +31,96 @@ use Exception;
 class VentaDistribucionService
 {
     /**
+     * ✅ NUEVO (2026-02-16): Verificar si una cantidad es número entero
+     * Útil para productos NO fraccionados que deben rechazar decimales
+     */
+    private function esCantidadEntero(float $cantidad): bool
+    {
+        return $cantidad == floor($cantidad);
+    }
+
+    /**
+     * ✅ NUEVO (2026-02-16): Obtener cantidad real a consumir del stock
+     * Aplica conversiones de unidad si el producto se vende en unidad diferente a almacenamiento
+     *
+     * FLUJO:
+     * 1. Si producto NO es fraccionado y cantidad tiene decimales → ERROR
+     * 2. Si hay conversión de unidad → convertir a unidad de almacenamiento
+     * 3. Devolver cantidad a consumir (en unidad de almacenamiento)
+     *
+     * @param Producto $producto Producto a consumir
+     * @param float $cantidadSolicitada Cantidad solicitada (en unidad de venta)
+     * @param int|null $unidadVentaId ID de unidad de venta (null = usar unidad base del producto)
+     * @return array ['cantidad_consumir' => float, 'conversion_aplicada' => bool, 'factor' => float|null]
+     * @throws Exception Si producto no permite decimales pero cantidad tiene decimales
+     */
+    private function obtenerCantidadAConsumir(
+        Producto $producto,
+        float $cantidadSolicitada,
+        ?int $unidadVentaId = null
+    ): array {
+        // 🔷 PASO 1: Validar que decimales sean permitidos si aplican
+        if (!$producto->es_fraccionado && !$this->esCantidadEntero($cantidadSolicitada)) {
+            throw new Exception(
+                "El producto '{$producto->nombre}' no permite cantidades fraccionadas. " .
+                "Solicitado: {$cantidadSolicitada}"
+            );
+        }
+
+        // 🔷 PASO 2: Si no hay unidad de venta especificada, usar unidad nativa del producto
+        $unidadVentaId = $unidadVentaId ?? $producto->unidad_medida_id;
+
+        // 🔷 PASO 3: Si vende en unidad igual a la de almacenamiento, no hay conversión
+        if ($unidadVentaId === $producto->unidad_medida_id) {
+            return [
+                'cantidad_consumir' => $cantidadSolicitada,
+                'conversion_aplicada' => false,
+                'factor' => null,
+            ];
+        }
+
+        // 🔷 PASO 4: Buscar conversión activa de esta unidad a unidad de almacenamiento
+        $conversion = $producto->conversiones()
+            ->where('unidad_destino_id', $unidadVentaId)
+            ->where('activo', true)
+            ->first();
+
+        // Si NO hay conversión pero se solicita en unidad diferente → ERROR
+        if (!$conversion) {
+            Log::error('❌ [VentaDistribucionService] Conversión no encontrada', [
+                'producto_id' => $producto->id,
+                'producto_nombre' => $producto->nombre,
+                'unidad_venta_id' => $unidadVentaId,
+                'unidad_almacenamiento_id' => $producto->unidad_medida_id,
+            ]);
+
+            throw new Exception(
+                "No existe conversión configurada para el producto '{$producto->nombre}' " .
+                "de la unidad de venta a la unidad de almacenamiento"
+            );
+        }
+
+        // 🔷 PASO 5: Convertir cantidad de unidad de venta a unidad de almacenamiento
+        $cantidadAConsumir = $conversion->convertirABase($cantidadSolicitada);
+
+        Log::debug('🔄 [VentaDistribucionService] Conversión aplicada', [
+            'producto_id' => $producto->id,
+            'producto_nombre' => $producto->nombre,
+            'cantidad_solicitada' => $cantidadSolicitada,
+            'unidad_venta' => $conversion->unidadDestino?->nombre ?? 'ID:' . $unidadVentaId,
+            'cantidad_consumir' => $cantidadAConsumir,
+            'unidad_almacenamiento' => $conversion->unidadBase?->nombre ?? 'ID:' . $producto->unidad_medida_id,
+            'factor_conversion' => $conversion->factor_conversion,
+        ]);
+
+        return [
+            'cantidad_consumir' => $cantidadAConsumir,
+            'conversion_aplicada' => true,
+            'factor' => (float) $conversion->factor_conversion,
+        ];
+    }
+
+    /**
      * Consumir stock para una venta usando FIFO
      *
      * FLUJO:
@@ -67,7 +157,10 @@ class VentaDistribucionService
         return DB::transaction(function () use ($detalles, $numeroVenta, $almacenId, $permitirStockNegativo, &$movimientos) {
             foreach ($detalles as $item) {
                 $productoId = $item['producto_id'] ?? $item['id'];
-                $cantidad = (int) ($item['cantidad'] ?? 0);
+                // ✅ CAMBIO (2026-02-16): Permitir decimales en lugar de truncar a entero
+                $cantidad = (float) ($item['cantidad'] ?? 0);
+                // ✅ NUEVO: Obtener unidad de venta desde el item (si existe)
+                $unidadVentaId = $item['unidad_medida_id'] ?? null;
 
                 if ($cantidad <= 0) {
                     Log::warning('⚠️ [VentaDistribucionService] Cantidad inválida', [
@@ -83,6 +176,22 @@ class VentaDistribucionService
                     throw new Exception("Producto ID {$productoId} no encontrado");
                 }
 
+                // ✅ NUEVO (2026-02-16): Obtener cantidad real a consumir (aplicando conversiones si aplican)
+                try {
+                    $resultadoConversion = $this->obtenerCantidadAConsumir($producto, $cantidad, $unidadVentaId);
+                    $cantidadAConsumir = $resultadoConversion['cantidad_consumir'];
+                    $conversionAplicada = $resultadoConversion['conversion_aplicada'];
+                    $factorConversion = $resultadoConversion['factor'];
+                } catch (Exception $e) {
+                    Log::error('❌ [VentaDistribucionService] Error al obtener cantidad a consumir', [
+                        'producto_id' => $productoId,
+                        'cantidad_solicitada' => $cantidad,
+                        'unidad_venta_id' => $unidadVentaId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    throw $e;
+                }
+
                 // 2. Obtener stocks disponibles con FIFO (vencimiento cercano primero)
                 // ✅ FIFO: ordenar por fecha_vencimiento ASC (vence primero), luego id (creado primero)
                 $stocks = StockProducto::where('producto_id', $productoId)
@@ -93,33 +202,38 @@ class VentaDistribucionService
                     ->lockForUpdate()                       // ← Lock pesimista
                     ->get();
 
-                // 3. Validar stock disponible
+                // 3. Validar stock disponible (en unidad de almacenamiento)
                 $stockTotal = $stocks->sum('cantidad_disponible');
-                if (!$permitirStockNegativo && $stockTotal < $cantidad) {
+                if (!$permitirStockNegativo && $stockTotal < $cantidadAConsumir) {
                     Log::error('❌ [VentaDistribucionService] Stock insuficiente', [
                         'producto_id' => $productoId,
-                        'cantidad_necesaria' => $cantidad,
+                        'cantidad_solicitada' => $cantidad,
+                        'cantidad_a_consumir' => $cantidadAConsumir,
+                        'unidad_venta' => $unidadVentaId,
                         'stock_disponible' => $stockTotal,
                         'numero_venta' => $numeroVenta,
+                        'conversion_aplicada' => $conversionAplicada,
                     ]);
                     throw new Exception(
                         "Stock insuficiente para producto ID {$productoId}: " .
-                        "Disponible: {$stockTotal}, Necesario: {$cantidad}"
+                        "Disponible: {$stockTotal}, Necesario: {$cantidadAConsumir}"
                     );
                 }
 
                 // Log si es CREDITO (stock negativo permitido)
-                if ($permitirStockNegativo && $stockTotal < $cantidad) {
+                if ($permitirStockNegativo && $stockTotal < $cantidadAConsumir) {
                     Log::info('ℹ️ [VentaDistribucionService] Stock negativo permitido (CREDITO)', [
                         'producto_id' => $productoId,
-                        'cantidad_necesaria' => $cantidad,
+                        'cantidad_solicitada' => $cantidad,
+                        'cantidad_a_consumir' => $cantidadAConsumir,
                         'stock_disponible' => $stockTotal,
                         'numero_venta' => $numeroVenta,
+                        'conversion_aplicada' => $conversionAplicada,
                     ]);
                 }
 
                 // 4. Consumir stock según FIFO
-                $cantidadRestante = $cantidad;
+                $cantidadRestante = $cantidadAConsumir;
 
                 foreach ($stocks as $stock) {
                     if ($cantidadRestante <= 0) {
@@ -142,10 +256,10 @@ class VentaDistribucionService
                     $cantidadPosterior = $stock->cantidad;
                     $cantidadDisponiblePosterior = $stock->cantidad_disponible;
 
-                    // Registrar movimiento SALIDA_VENTA con valores ANTES/DESPUÉS
+                    // ✅ NUEVO (2026-02-16): Registrar movimiento con información de conversión
                     $movimiento = MovimientoInventario::create([
                         'stock_producto_id' => $stock->id,
-                        'cantidad' => -$cantidadTomar,  // ← NEGATIVO (salida)
+                        'cantidad' => -$cantidadTomar,  // ← NEGATIVO (salida) EN UNIDAD ALMACENAMIENTO
                         'cantidad_anterior' => $cantidadAnterior,
                         'cantidad_posterior' => $cantidadPosterior,
                         'tipo' => MovimientoInventario::TIPO_SALIDA_VENTA,
@@ -155,8 +269,13 @@ class VentaDistribucionService
                             'venta_numero' => $numeroVenta,
                             'producto_id' => $productoId,
                             'lote' => $stock->lote,
-                            'cantidad_anterior' => $cantidadAnterior,
-                            'cantidad_posterior' => $cantidadPosterior,
+                            'cantidad_solicitada' => $cantidad,                      // ← Cantidad en unidad de venta
+                            'unidad_solicitud_id' => $unidadVentaId,                 // ← ID de unidad de venta
+                            'cantidad_consumida' => $cantidadAConsumir,              // ← Cantidad en unidad almacenamiento
+                            'conversion_aplicada' => $conversionAplicada,            // ← Si se aplicó conversión
+                            'factor_conversion' => $factorConversion,                // ← Factor usado
+                            'cantidad_anterior' => $cantidadAnterior,               // ← Stock ANTES
+                            'cantidad_posterior' => $cantidadPosterior,             // ← Stock DESPUÉS
                             'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                             'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                         ]),
@@ -365,9 +484,37 @@ class VentaDistribucionService
 
         foreach ($detalles as $item) {
             $productoId = $item['producto_id'] ?? $item['id'];
-            $cantidad = (int) ($item['cantidad'] ?? 0);
+            // ✅ CAMBIO (2026-02-16): Permitir decimales en lugar de truncar a entero
+            $cantidad = (float) ($item['cantidad'] ?? 0);
+            // ✅ NUEVO: Obtener unidad de venta desde el item (si existe)
+            $unidadVentaId = $item['unidad_medida_id'] ?? null;
 
             if ($cantidad <= 0) {
+                continue;
+            }
+
+            // ✅ NUEVO (2026-02-16): Obtener cantidad real a consumir (con conversión si aplica)
+            $producto = Producto::find($productoId);
+            if (!$producto) {
+                $errores[] = [
+                    'producto_id' => $productoId,
+                    'cantidad_necesaria' => $cantidad,
+                    'stock_disponible' => 0,
+                    'error' => 'Producto no encontrado',
+                ];
+                continue;
+            }
+
+            try {
+                $resultadoConversion = $this->obtenerCantidadAConsumir($producto, $cantidad, $unidadVentaId);
+                $cantidadAValidar = $resultadoConversion['cantidad_consumir'];
+            } catch (Exception $e) {
+                $errores[] = [
+                    'producto_id' => $productoId,
+                    'cantidad_necesaria' => $cantidad,
+                    'stock_disponible' => 0,
+                    'error' => $e->getMessage(),
+                ];
                 continue;
             }
 
@@ -375,16 +522,17 @@ class VentaDistribucionService
                 ->where('almacen_id', $almacenId)
                 ->sum('cantidad_disponible');
 
-            if ($stockTotal < $cantidad) {
+            if ($stockTotal < $cantidadAValidar) {
                 $errores[] = [
                     'producto_id' => $productoId,
-                    'cantidad_necesaria' => $cantidad,
+                    'cantidad_necesaria' => $cantidadAValidar,
                     'stock_disponible' => $stockTotal,
                 ];
 
                 Log::warning('⚠️ [VentaDistribucionService] Stock insuficiente', [
                     'producto_id' => $productoId,
-                    'cantidad_necesaria' => $cantidad,
+                    'cantidad_solicitada' => $cantidad,
+                    'cantidad_a_validar' => $cantidadAValidar,
                     'stock_disponible' => $stockTotal,
                 ]);
             }
@@ -421,7 +569,8 @@ class VentaDistribucionService
             ->map(function ($item) {
                 return [
                     'producto_id' => $item->producto_id,
-                    'disponible' => (int) $item->disponible,
+                    // ✅ CAMBIO (2026-02-16): Retornar como float para soportar productos fraccionados
+                    'disponible' => (float) $item->disponible,
                 ];
             })
             ->toArray();

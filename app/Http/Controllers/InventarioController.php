@@ -182,9 +182,17 @@ class InventarioController extends Controller
             // Actualizar próximo vencimiento (el más cercano)
             if ($stock->fecha_vencimiento) {
                 $fechaParsed = \Carbon\Carbon::parse($stock->fecha_vencimiento);
-                if (! $stockAgrupado[$clave]['fecha_vencimiento_proximo'] ||
-                    $fechaParsed < \Carbon\Carbon::parse($stockAgrupado[$clave]['fecha_vencimiento_proximo'])) {
+
+                // ✅ CORREGIDO (2026-02-17): Inicializar si no existe + usar createFromFormat para parsear fechas formateadas
+                if (!isset($stockAgrupado[$clave]['fecha_vencimiento_proximo'])) {
                     $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed->format('d/m/Y');
+                } else {
+                    // Usar createFromFormat para parsear fechas en formato d/m/Y (no parse que falla con este formato)
+                    $fechaProximoParsed = \Carbon\Carbon::createFromFormat('d/m/Y', $stockAgrupado[$clave]['fecha_vencimiento_proximo']);
+
+                    if ($fechaParsed < $fechaProximoParsed) {
+                        $stockAgrupado[$clave]['fecha_vencimiento_proximo'] = $fechaParsed->format('d/m/Y');
+                    }
                 }
             }
         }

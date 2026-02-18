@@ -53,6 +53,37 @@ class ProformaService
     ) {}
 
     /**
+     * ✅ NUEVO: Obtener ID del tipo de precio por defecto (VENTA)
+     *
+     * Centraliza la lógica para obtener el tipo_precio_id por defecto
+     * que se usa cuando:
+     * - Creando una nueva proforma (create)
+     * - Editando una proforma (edit)
+     * - Mostrando detalles (show)
+     *
+     * Si un detalle_proforma NO tiene tipo_precio_id asignado,
+     * se usa este default para pre-seleccionar el tipo de precio en el frontend
+     *
+     * @return int ID del tipo_precio con codigo='VENTA', o 1 como fallback
+     */
+    public function obtenerIdTipoPrecioDefault(): int
+    {
+        // Obtener el tipo_precio con codigo 'VENTA'
+        $tipoPrecioVenta = \App\Models\TipoPrecio::porCodigo('VENTA');
+
+        if ($tipoPrecioVenta) {
+            return $tipoPrecioVenta->id;
+        }
+
+        // Fallback: retornar el primer tipo_precio activo
+        $tipoPrecioFallback = \App\Models\TipoPrecio::activos()
+            ->orderBy('orden', 'asc')
+            ->first();
+
+        return $tipoPrecioFallback?->id ?? 1;
+    }
+
+    /**
      * Listar proformas con filtros
      */
     public function listar(int $perPage = 15, array $filtros = [])
@@ -134,8 +165,13 @@ class ProformaService
         // 3. Validar stock ANTES de transacción
         // 🔧 Usar almacén del usuario autenticado (consistencia con convertirAVenta)
         $almacenId  = auth()->user()?->empresa?->almacen_id ?? 2;
+
+        // ✅ COMBO: Expandir combos a sus componentes ANTES de validar (OPCIÓN 2 - stock de componentes solo)
+        // $dto->detalles se preserva sin cambios para DetalleProforma
+        $detallesParaValidacion = $this->stockService->expandirCombos($dto->detalles);
+
         $validacion = $this->stockService->validarDisponible(
-            $dto->detalles,
+            $detallesParaValidacion,
             $almacenId
         );
 
@@ -178,12 +214,40 @@ class ProformaService
 
             // 3.3 Crear detalles
             foreach ($dto->detalles as $detalle) {
+                // ✅ NUEVO: Preparar combo_items_seleccionados (mismo patrón que VentaService)
+                $comboItemsSeleccionados = null;
+                if (isset($detalle['combo_items_seleccionados']) && is_array($detalle['combo_items_seleccionados'])) {
+                    // Filtrar solo items que están incluidos (incluido = true)
+                    $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function($item) {
+                        return ($item['incluido'] ?? false) === true;
+                    });
+                    // Reindexar array después de filter
+                    $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
+
+                    Log::debug('📦 [ProformaService::crear] Items del combo seleccionados', [
+                        'producto_id' => $detalle['producto_id'],
+                        'cantidad_items_seleccionados' => count($comboItemsSeleccionados),
+                        'total_items' => count($detalle['combo_items_seleccionados']),
+                    ]);
+                }
+
                 DetalleProforma::create([
                     'proforma_id'     => $proforma->id,
                     'producto_id'     => $detalle['producto_id'],
                     'cantidad'        => $detalle['cantidad'],
                     'precio_unitario' => $detalle['precio_unitario'],
                     'subtotal'        => $detalle['cantidad'] * $detalle['precio_unitario'],
+                    'unidad_medida_id' => $detalle['unidad_medida_id'] ?? null,
+                    // ✅ NUEVO: Agregar campos faltantes para coincidencia con DetalleVenta
+                    'tipo_precio_id' => $detalle['tipo_precio_id'] ?? null,
+                    'tipo_precio_nombre' => $detalle['tipo_precio_nombre'] ?? null,
+                    'combo_items_seleccionados' => $comboItemsSeleccionados ? array_map(function($item) {
+                        return [
+                            'combo_item_id' => $item['combo_item_id'] ?? null,
+                            'producto_id' => $item['producto_id'] ?? null,
+                            'incluido' => $item['incluido'] ?? false,
+                        ];
+                    }, $comboItemsSeleccionados) : null,
                 ]);
             }
 
@@ -691,6 +755,11 @@ class ProformaService
             'detalles.producto.unidad',
             // ✅ NUEVO: Cargar precios del PRODUCTO para select de tipos de precio (con su relación tipoPrecio)
             'detalles.producto.precios.tipoPrecio',
+            // ✅ CRÍTICO (2026-02-17): Cargar comboItems para mostrar componentes del combo en ProductosTable
+            'detalles.producto.comboItems.producto',
+            'detalles.producto.comboItems.producto.unidad', // ✅ NUEVO (2026-02-18): Cargar unidad para comboItems (unidad_medida_nombre)
+            'detalles.producto.comboItems.producto.stock', // ✅ NUEVO (2026-02-18): Cargar stock para comboItems (stock_disponible, stock_total)
+            'detalles.producto.comboItems.tipoPrecio', // ← NUEVO: para tipo_precio_nombre
             // ✅ SIMPLIFICADO: Cargar reservas_proforma de esta proforma
             'reservas',
             'cliente',

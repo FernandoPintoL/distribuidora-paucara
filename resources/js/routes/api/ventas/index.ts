@@ -74,6 +74,103 @@ registrarPago.post = (args: { venta: string | number } | [venta: string | number
     
     registrarPago.form = registrarPagoForm
 /**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+export const obtenerEntrega = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerEntrega.url(args, options),
+    method: 'get',
+})
+
+obtenerEntrega.definition = {
+    methods: ["get","head"],
+    url: '/api/app/ventas/{ventaId}/entrega',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+obtenerEntrega.url = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { ventaId: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    ventaId: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        ventaId: args.ventaId,
+                }
+
+    return obtenerEntrega.definition.url
+            .replace('{ventaId}', parsedArgs.ventaId.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+obtenerEntrega.get = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerEntrega.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+obtenerEntrega.head = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerEntrega.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+    const obtenerEntregaForm = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerEntrega.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+        obtenerEntregaForm.get = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEntrega.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::obtenerEntrega
+ * @see app/Http/Controllers/Api/EntregaController.php:2932
+ * @route '/api/app/ventas/{ventaId}/entrega'
+ */
+        obtenerEntregaForm.head = (args: { ventaId: string | number } | [ventaId: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerEntrega.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerEntrega.form = obtenerEntregaForm
+/**
 * @see \App\Http\Controllers\VentaController::imprimir
  * @see app/Http/Controllers/VentaController.php:1108
  * @route '/api/ventas/{venta}/imprimir'
@@ -937,6 +1034,7 @@ destroy.delete = (args: { venta: string | number } | [venta: string | number ] |
     destroy.form = destroyForm
 const ventas = {
     registrarPago,
+obtenerEntrega,
 imprimir,
 preview,
 confirmarPickupCliente,

@@ -150,7 +150,16 @@ class ApiProformaController extends Controller
 
             foreach ($requestData['productos'] as $item) {
                 $producto = Producto::with('stock')->findOrFail($item['producto_id']);
-                $cantidad = (int) $item['cantidad'];
+                // ✅ CORREGIDO (2026-02-16): Cambiar (int) a (float) para preservar decimales en productos fraccionados
+                $cantidad = (float) $item['cantidad'];
+
+                // ✅ NUEVO (2026-02-16): Validar que solo productos fraccionados pueden tener decimales
+                if (!$producto->es_fraccionado && (float)$cantidad != floor((float)$cantidad)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El producto '{$producto->nombre}' no permite cantidades fraccionadas. Solo se pueden vender unidades completas.",
+                    ], 422);
+                }
 
                 // ✅ NUEVO: CALCULAR PRECIO EN BACKEND, considerando rangos de cantidad
                 // El precio NO viene del cliente, se calcula en backend por seguridad
@@ -178,11 +187,33 @@ class ApiProformaController extends Controller
                 $subtotalItem = $cantidad * $precioUnitario;
                 $subtotal += $subtotalItem;
 
+                // ✅ NUEVO (2026-02-16): Procesar combo_items_seleccionados
+                $comboItemsSeleccionados = null;
+                if (isset($item['combo_items_seleccionados']) && is_array($item['combo_items_seleccionados'])) {
+                    // Filtrar solo items que están incluidos (incluido = true)
+                    $comboItemsSeleccionados = array_filter($item['combo_items_seleccionados'], function($itemCombo) {
+                        return ($itemCombo['incluido'] ?? false) === true;
+                    });
+                    // Reindexar array después de filter
+                    $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
+                    // Mapear a formato estándar
+                    $comboItemsSeleccionados = array_map(function($itemCombo) {
+                        return [
+                            'combo_item_id' => $itemCombo['combo_item_id'] ?? null,
+                            'producto_id' => $itemCombo['producto_id'] ?? null,
+                            'incluido' => $itemCombo['incluido'] ?? false,
+                        ];
+                    }, $comboItemsSeleccionados);
+                }
+
                 $productosValidados[] = [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
                     'precio_unitario' => $precioUnitario,
                     'subtotal' => $subtotalItem,
+                    'tipo_precio_id' => $item['tipo_precio_id'] ?? null,                    // ✅ NUEVO (2026-02-16)
+                    'tipo_precio_nombre' => $item['tipo_precio_nombre'] ?? null,            // ✅ NUEVO (2026-02-16)
+                    'combo_items_seleccionados' => $comboItemsSeleccionados,               // ✅ NUEVO (2026-02-16)
                 ];
 
                 // ✅ Guardar detalles del rango para auditoría
@@ -463,11 +494,33 @@ class ApiProformaController extends Controller
                     $subtotalItem = $cantidad * $precioUnitario;
                     $subtotal += $subtotalItem;
 
+                    // ✅ NUEVO (2026-02-16): Procesar combo_items_seleccionados
+                    $comboItemsSeleccionados = null;
+                    if (isset($item['combo_items_seleccionados']) && is_array($item['combo_items_seleccionados'])) {
+                        // Filtrar solo items que están incluidos (incluido = true)
+                        $comboItemsSeleccionados = array_filter($item['combo_items_seleccionados'], function($itemCombo) {
+                            return ($itemCombo['incluido'] ?? false) === true;
+                        });
+                        // Reindexar array después de filter
+                        $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
+                        // Mapear a formato estándar
+                        $comboItemsSeleccionados = array_map(function($itemCombo) {
+                            return [
+                                'combo_item_id' => $itemCombo['combo_item_id'] ?? null,
+                                'producto_id' => $itemCombo['producto_id'] ?? null,
+                                'incluido' => $itemCombo['incluido'] ?? false,
+                            ];
+                        }, $comboItemsSeleccionados);
+                    }
+
                     $productosValidados[] = [
                         'producto_id' => $producto->id,
                         'cantidad' => $cantidad,
                         'precio_unitario' => $precioUnitario,
                         'subtotal' => $subtotalItem,
+                        'tipo_precio_id' => $item['tipo_precio_id'] ?? null,                    // ✅ NUEVO (2026-02-16)
+                        'tipo_precio_nombre' => $item['tipo_precio_nombre'] ?? null,            // ✅ NUEVO (2026-02-16)
+                        'combo_items_seleccionados' => $comboItemsSeleccionados,               // ✅ NUEVO (2026-02-16)
                     ];
                 }
 
@@ -487,6 +540,9 @@ class ApiProformaController extends Controller
                         'cantidad' => $detalle->cantidad,
                         'precio_unitario' => $detalle->precio_unitario,
                         'subtotal' => $detalle->subtotal,
+                        'tipo_precio_id' => $detalle->tipo_precio_id,                        // ✅ PRESERVAR (2026-02-16)
+                        'tipo_precio_nombre' => $detalle->tipo_precio_nombre,                // ✅ PRESERVAR (2026-02-16)
+                        'combo_items_seleccionados' => $detalle->combo_items_seleccionados, // ✅ PRESERVAR (2026-02-16)
                     ];
                 }
             }
@@ -2712,11 +2768,27 @@ class ApiProformaController extends Controller
 
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {
+                    // ✅ NUEVO: Copiar combo_items_seleccionados si existen (mismo procesamiento que VentaService)
+                    $comboItemsSeleccionados = null;
+                    if ($detalleProforma->combo_items_seleccionados && is_array($detalleProforma->combo_items_seleccionados)) {
+                        $comboItemsSeleccionados = array_map(function($item) {
+                            return [
+                                'combo_item_id' => $item['combo_item_id'] ?? null,
+                                'producto_id' => $item['producto_id'] ?? null,
+                                'incluido' => $item['incluido'] ?? false,
+                            ];
+                        }, $detalleProforma->combo_items_seleccionados);
+                    }
+
                     $venta->detalles()->create([
                         'producto_id' => $detalleProforma->producto_id,
                         'cantidad' => $detalleProforma->cantidad,
                         'precio_unitario' => $detalleProforma->precio_unitario,
                         'subtotal' => $detalleProforma->subtotal,
+                        // ✅ NUEVO: Copiar campos faltantes desde detalle de proforma
+                        'tipo_precio_id' => $detalleProforma->tipo_precio_id,
+                        'tipo_precio_nombre' => $detalleProforma->tipo_precio_nombre,
+                        'combo_items_seleccionados' => $comboItemsSeleccionados,
                     ]);
                 }
 
@@ -3812,6 +3884,11 @@ class ApiProformaController extends Controller
                     'precio_unitario' => $precio_unitario,
                     'descuento' => 0,
                     'subtotal' => $subtotal,
+                    'unidad_medida_id' => $detalleData['unidad_medida_id'] ?? null,
+                    // ✅ NUEVO: Agregar campos faltantes para coincidencia con DetalleVenta
+                    'tipo_precio_id' => $detalleData['tipo_precio_id'] ?? null,
+                    'tipo_precio_nombre' => $detalleData['tipo_precio_nombre'] ?? null,
+                    'combo_items_seleccionados' => $detalleData['combo_items_seleccionados'] ?? null,
                 ];
             }
 
@@ -3824,9 +3901,30 @@ class ApiProformaController extends Controller
             // Eliminar detalles antiguos
             $proforma->detalles()->delete();
 
-            // Crear nuevos detalles
+            // Crear nuevos detalles (con procesamiento de combo_items_seleccionados)
             foreach ($detallesGuardados as $detalle) {
-                $proforma->detalles()->create($detalle);
+                // ✅ NUEVO: Preparar combo_items_seleccionados (mismo patrón que VentaService)
+                $comboItemsSeleccionados = null;
+                if (isset($detalle['combo_items_seleccionados']) && is_array($detalle['combo_items_seleccionados'])) {
+                    // Filtrar solo items que están incluidos (incluido = true)
+                    $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function($item) {
+                        return ($item['incluido'] ?? false) === true;
+                    });
+                    // Reindexar array después de filter
+                    $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
+                }
+
+                // Crear detalle con combo items procesados
+                $detalleData = $detalle;
+                $detalleData['combo_items_seleccionados'] = $comboItemsSeleccionados ? array_map(function($item) {
+                    return [
+                        'combo_item_id' => $item['combo_item_id'] ?? null,
+                        'producto_id' => $item['producto_id'] ?? null,
+                        'incluido' => $item['incluido'] ?? false,
+                    ];
+                }, $comboItemsSeleccionados) : null;
+
+                $proforma->detalles()->create($detalleData);
             }
 
             // Actualizar la proforma con los nuevos totales y campos adicionales opcionales

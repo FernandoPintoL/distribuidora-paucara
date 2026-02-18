@@ -565,9 +565,9 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                   value={data.sku}
                   onChange={(e) => setData('sku', e.target.value)}
                   placeholder="Ej: COMBO-001"
-                  className={errors.sku ? 'border-red-500' : ''}
+                  className={errors.sku ? 'border-red-500 dark:border-red-600 dark:bg-red-950/20' : 'dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100'}
                 />
-                {errors.sku && <p className="text-red-500 text-sm mt-1">{errors.sku}</p>}
+                {errors.sku && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.sku}</p>}
               </div>
 
               <div>
@@ -577,9 +577,9 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                   value={data.nombre}
                   onChange={(e) => setData('nombre', e.target.value)}
                   placeholder="Ej: Pack Premium"
-                  className={errors.nombre ? 'border-red-500' : ''}
+                  className={errors.nombre ? 'border-red-500 dark:border-red-600 dark:bg-red-950/20' : 'dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100'}
                 />
-                {errors.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
+                {errors.nombre && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.nombre}</p>}
               </div>
 
               <div>
@@ -590,10 +590,10 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                   onChange={(e) => setData('descripcion', e.target.value)}
                   placeholder="Descripción del combo..."
                   rows={3}
-                  className={errors.descripcion ? 'border-red-500' : ''}
+                  className={errors.descripcion ? 'border-red-500 dark:border-red-600 dark:bg-red-950/20' : 'dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100'}
                 />
                 {errors.descripcion && (
-                  <p className="text-red-500 text-sm mt-1">{errors.descripcion}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.descripcion}</p>
                 )}
               </div>
 
@@ -606,10 +606,10 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                   value={data.precio_venta}
                   onChange={(e) => setData('precio_venta', e.target.value ? parseFloat(e.target.value) : 0)}
                   placeholder="0.00"
-                  className={errors.precio_venta ? 'border-red-500' : ''}
+                  className={errors.precio_venta ? 'border-red-500 dark:border-red-600 dark:bg-red-950/20' : 'dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100'}
                 />
                 {errors.precio_venta && (
-                  <p className="text-red-500 text-sm mt-1">{errors.precio_venta}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.precio_venta}</p>
                 )}
               </div>
             </CardContent>
@@ -727,6 +727,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                             setCantidad(parseFloat(val) || 0);
                           }
                         }}
+                        className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                       />
                     </div>
 
@@ -746,6 +747,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                             setPrecioUnitario(parseFloat(val) || 0);
                           }
                         }}
+                        className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                       />
                     </div>
                   </div>
@@ -808,6 +810,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                         min="1"
                         value={cantidadALlevar}
                         onChange={(e) => setCantidadALlevar(parseInt(e.target.value) || 1)}
+                        className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Mínimo: 1 producto
@@ -826,6 +829,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                           const val = e.target.value;
                           setPrecioGrupo(val === '' ? 0 : parseFloat(val) || 0);
                         }}
+                        className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Precio fijo para todos los productos del grupo
@@ -833,7 +837,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                     </div>
                   </div>
 
-                  <div className="mt-4 p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos en el grupo:</p>
                     <div className="flex flex-wrap gap-2">
                       {productosOpcionales.map((item) => (
@@ -879,8 +883,8 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div>
-                                  <div className="font-medium text-sm">{item.producto_nombre}</div>
-                                  <div className="text-xs text-gray-500">{item.producto_sku}</div>
+                                  <div className="font-medium text-sm dark:text-gray-100">{item.producto_nombre}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">{item.producto_sku}</div>
                                 </div>
                                 {!esObligatorio && (
                                   <Badge variant="outline" className="text-blue-600 dark:text-blue-400">
@@ -890,10 +894,10 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <div className="text-sm font-medium">
+                              <div className="text-sm font-medium dark:text-gray-100">
                                 {stockData[item.producto_id]?.stock_disponible ?? item.stock_disponible ?? '-'}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 / {stockData[item.producto_id]?.stock_total ?? item.stock_total ?? '-'}
                               </div>
                             </TableCell>
@@ -911,7 +915,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                                     handleUpdateCantidad(item.producto_id, parseFloat(val) || 0);
                                   }
                                 }}
-                                className="w-20 px-2 py-1 text-sm"
+                                className="w-20 px-2 py-1 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                               />
                             </TableCell>
                             <TableCell className='text-center'>
@@ -928,10 +932,10 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                                     handleUpdatePrecioUnitario(item.producto_id, parseFloat(val) || 0);
                                   }
                                 }}
-                                className="w-24 px-2 py-1 text-sm"
+                                className="w-24 px-2 py-1 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
                               />
                             </TableCell>
-                            <TableCell className={`text-center font-medium ${sumaACosto ? 'text-green-600 dark:text-green-400' : 'text-gray-400 line-through'}`}>
+                            <TableCell className={`text-center font-medium ${sumaACosto ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500 line-through'}`}>
                               Bs {(parseFloat(item.precio_unitario.toString()) * cantidad).toFixed(2)}
                             </TableCell>
                             <TableCell>
@@ -974,7 +978,7 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveItem(item.producto_id)}
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                               >
                                 <Trash2 size={18} />
                               </Button>
@@ -998,9 +1002,9 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 {/* Costo obligatorios */}
-                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="text-gray-600 dark:text-gray-400">Costo Obligatorios:</span>
-                  <span className="font-semibold dark:text-gray-100">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
                     Bs {items.reduce((sum, item) => {
                       const esObligatorio = item.es_obligatorio !== false;
                       const cantidad = parseFloat(item.cantidad.toString());
@@ -1015,22 +1019,22 @@ export default function ComboForm({ combo, tipos_precio }: FormProps) {
 
                 {/* Costo grupo opcional */}
                 {productosOpcionales.length > 0 && (
-                  <div className="flex justify-between items-center py-2 border-b dark:border-gray-700">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                     <span className="text-gray-600 dark:text-gray-400">
                       Costo Grupo Opcional ({cantidadALlevar} × Bs {precioGrupo.toFixed(2)}):
                     </span>
-                    <span className="font-semibold dark:text-gray-100">Bs {(cantidadALlevar * precioGrupo).toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">Bs {(cantidadALlevar * precioGrupo).toFixed(2)}</span>
                   </div>
                 )}
 
                 {/* Costo total */}
-                <div className="flex justify-between items-center py-2 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-2 rounded">
-                  <span className="text-gray-600 dark:text-gray-400 font-medium">Costo Total Calculado:</span>
-                  <span className="font-bold text-lg dark:text-gray-100">Bs {totalCosto.toFixed(2)}</span>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-2 rounded">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Costo Total Calculado:</span>
+                  <span className="font-bold text-lg text-gray-900 dark:text-gray-100">Bs {totalCosto.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 bg-blue-50 dark:bg-blue-900/20 px-2 rounded border border-blue-200 dark:border-blue-800">
-                  <span className="text-gray-600 dark:text-gray-400 font-medium">Precio de Venta (Auto):</span>
-                  <span className="font-bold text-lg dark:text-gray-100">Bs {typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Precio de Venta (Auto):</span>
+                  <span className="font-bold text-lg text-blue-700 dark:text-blue-400">Bs {typeof data.precio_venta === 'number' ? data.precio_venta.toFixed(2) : parseFloat(data.precio_venta.toString() || '0').toFixed(2)}</span>
                 </div>
                 {/* <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">Margen de Ganancia:</span>

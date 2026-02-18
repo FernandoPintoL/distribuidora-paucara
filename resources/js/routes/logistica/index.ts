@@ -4,7 +4,7 @@ import entregas from './entregas'
 import reportes from './reportes'
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
 export const estadisticas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -19,7 +19,7 @@ estadisticas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
 estadisticas.url = (options?: RouteQueryOptions) => {
@@ -28,7 +28,7 @@ estadisticas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
 estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -37,7 +37,7 @@ estadisticas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
 estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -47,7 +47,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
     const estadisticasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -57,7 +57,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
         estadisticasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -66,7 +66,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::estadisticas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:140
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:178
  * @route '/api/logistica/estadisticas'
  */
         estadisticasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ estadisticas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     estadisticas.form = estadisticasForm
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::resincronizar
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:172
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:210
  * @route '/api/logistica/resincronizar'
  */
 export const resincronizar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -97,7 +97,7 @@ resincronizar.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::resincronizar
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:172
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:210
  * @route '/api/logistica/resincronizar'
  */
 resincronizar.url = (options?: RouteQueryOptions) => {
@@ -106,7 +106,7 @@ resincronizar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::resincronizar
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:172
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:210
  * @route '/api/logistica/resincronizar'
  */
 resincronizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -116,7 +116,7 @@ resincronizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
     /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::resincronizar
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:172
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:210
  * @route '/api/logistica/resincronizar'
  */
     const resincronizarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -126,7 +126,7 @@ resincronizar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::resincronizar
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:172
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:210
  * @route '/api/logistica/resincronizar'
  */
         resincronizarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

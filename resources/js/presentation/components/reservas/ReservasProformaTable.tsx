@@ -300,6 +300,25 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                                  focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
+                                {/* ✅ NUEVO (2026-02-12): Filtro por Producto - Búsqueda flexible */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        📦 Producto (ID, SKU o Nombre)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: 123 o LAC-001 o Lactose"
+                                        value={filterInputs.producto_busqueda}
+                                        onChange={(e) => handleFilterChange('producto_busqueda', e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
+                                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                                                 placeholder-gray-500 dark:placeholder-gray-400
+                                                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Busca por ID (prioridad), SKU o nombre (case insensitive)
+                                    </p>
+                                </div>
 
                                 {/* Estado */}
                                 <div>
@@ -320,25 +339,7 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                     </select>
                                 </div>
 
-                                {/* ✅ NUEVO (2026-02-12): Filtro por Producto - Búsqueda flexible */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        📦 Producto (ID, SKU o Nombre)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: 123 o LAC-001 o Lactose"
-                                        value={filterInputs.producto_busqueda}
-                                        onChange={(e) => handleFilterChange('producto_busqueda', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
-                                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                                 placeholder-gray-500 dark:placeholder-gray-400
-                                                 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        Busca por ID (prioridad), SKU o nombre (case insensitive)
-                                    </p>
-                                </div>
+                                
 
                                 {/* Vencimiento */}
                                 <div>
@@ -544,9 +545,9 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                         <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
                                             Cantidad
                                         </th>
-                                        <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
+                                        {/* <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
                                             Valor
-                                        </th>
+                                        </th> */}
                                         <th className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
                                             Vencimiento
                                         </th>
@@ -566,10 +567,12 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                         >
                                             <td className="px-4 py-3">
                                                 <div className="font-medium text-gray-900 dark:text-white">
-                                                   {reserva.id} | {reserva.proforma_numero} | {reserva.proforma_id}
+                                                    <p>Folio Reserva: {reserva.id}</p>
+                                                    <p>Folio Proforma: {reserva.proforma_id}</p>
+                                                    {reserva.proforma_numero}
                                                 </div>
                                                 <div className="text-xs text-gray-500">
-                                                    {formatDate(reserva.created_at)}
+                                                    Creada: {formatDate(reserva.created_at)}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
@@ -594,11 +597,11 @@ export default function ReservasProformaTable({ onFiltersChange }: ReservasProfo
                                                     {reserva.cantidad_reservada.toFixed(2)}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right">
+                                            {/* <td className="px-4 py-3 text-right">
                                                 <div className="font-medium text-gray-900 dark:text-white">
                                                     {formatCurrency(reserva.valor_reservado)}
                                                 </div>
-                                            </td>
+                                            </td> */}
                                             <td className="px-4 py-3 text-center">
                                                 <div className="flex flex-col gap-1 items-center">
                                                     {getVencimientoBadge(reserva)}

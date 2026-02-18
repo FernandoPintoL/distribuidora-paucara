@@ -5,7 +5,7 @@ import stock from './stock'
 import detalles from './detalles'
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
 export const entregas = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -20,7 +20,7 @@ entregas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
 entregas.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -53,7 +53,7 @@ entregas.url = (args: { venta: number | { id: number } } | [venta: number | { id
 
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
 entregas.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -62,7 +62,7 @@ entregas.get = (args: { venta: number | { id: number } } | [venta: number | { id
 })
 /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
 entregas.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -72,7 +72,7 @@ entregas.head = (args: { venta: number | { id: number } } | [venta: number | { i
 
     /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
     const entregasForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -82,7 +82,7 @@ entregas.head = (args: { venta: number | { id: number } } | [venta: number | { i
 
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
         entregasForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -91,7 +91,7 @@ entregas.head = (args: { venta: number | { id: number } } | [venta: number | { i
         })
             /**
 * @see \App\Http\Controllers\Api\VentaLogisticaController::entregas
- * @see app/Http/Controllers/Api/VentaLogisticaController.php:70
+ * @see app/Http/Controllers/Api/VentaLogisticaController.php:71
  * @route '/api/ventas/{venta}/entregas'
  */
         entregasForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

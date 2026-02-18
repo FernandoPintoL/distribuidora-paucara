@@ -930,6 +930,14 @@ class EntregaController extends Controller
             'localidad',
             'reportes',        // Reportes asociados (Many-to-Many)
             'reporteEntregas', // Pivot con metadata (orden, incluida_en_carga, notas)
+            'confirmacionesVentas.venta.cliente',  // ✅ FIXED (2026-02-17): Eager load venta y cliente para ConfirmacionesEntregaSection
+        ]);
+
+        // 🔍 DEBUG: Verificar si confirmacionesVentas se cargó
+        \Illuminate\Support\Facades\Log::info('📦 [ENTREGA SHOW DEBUG] Confirmaciones Cargadas', [
+            'entrega_id' => $entrega->id,
+            'confirmacionesVentas_count' => $entrega->confirmacionesVentas->count(),
+            'confirmacionesVentas_data' => $entrega->confirmacionesVentas->toArray(),
         ]);
 
         // 🔍 DEBUG: Verificar si es API request
@@ -970,6 +978,10 @@ class EntregaController extends Controller
         $entregaData['estado_entrega_nombre'] = $entrega->estado_entrega_nombre;
         $entregaData['estado_entrega_color']  = $entrega->estado_entrega_color;
         $entregaData['estado_entrega_icono']  = $entrega->estado_entrega_icono;
+
+        // ✅ CRITICAL FIX (2026-02-17): toArray() no incluye automáticamente relaciones cargadas
+        // Agregar explícitamente las confirmacionesVentas que fueron cargadas con load()
+        $entregaData['confirmacionesVentas'] = $entrega->confirmacionesVentas->toArray();
 
         return Inertia::render('logistica/entregas/Show', [
             'entrega' => $entregaData,

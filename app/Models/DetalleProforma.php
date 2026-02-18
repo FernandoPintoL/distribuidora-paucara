@@ -17,6 +17,9 @@ class DetalleProforma extends Model
         'descuento',
         'subtotal',
         'unidad_medida_id',
+        'tipo_precio_id',               // ✅ NUEVO: ID del tipo de precio seleccionado
+        'tipo_precio_nombre',            // ✅ NUEVO: Nombre del tipo de precio (referencia rápida)
+        'combo_items_seleccionados',     // ✅ NUEVO: Items del combo seleccionados (JSON)
     ];
 
     protected function casts(): array
@@ -26,6 +29,7 @@ class DetalleProforma extends Model
             'precio_unitario' => 'decimal:2',
             'descuento' => 'decimal:2',
             'subtotal' => 'decimal:2',
+            'combo_items_seleccionados' => 'array',  // ✅ NUEVO: Castear JSON a array
         ];
     }
 
@@ -43,5 +47,11 @@ class DetalleProforma extends Model
     public function unidadMedida()
     {
         return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
+    }
+
+    // ✅ NUEVO: Relación con TipoPrecio
+    public function tipoPrecio()
+    {
+        return $this->belongsTo(TipoPrecio::class, 'tipo_precio_id');
     }
 }

@@ -251,15 +251,28 @@ class StoreVentaRequest extends FormRequest
                 }
             }
 
-            // NUEVO: Validar conversiones de unidad para productos fraccionados
+            // ✅ NUEVO (2026-02-16): Validar cantidades fraccionadas solo si producto permite
             if (isset($data['detalles']) && is_array($data['detalles'])) {
                 foreach ($data['detalles'] as $index => $detalle) {
                     $producto = \App\Models\Producto::find($detalle['producto_id'] ?? null);
+                    $cantidad = $detalle['cantidad'] ?? 0;
 
                     if ($producto) {
+                        // 🔷 VALIDACIÓN 1: Rechazar decimales si NO es fraccionado
+                        if (!$producto->es_fraccionado) {
+                            // Verificar si cantidad tiene decimales
+                            if ((float) $cantidad != floor((float) $cantidad)) {
+                                $validator->errors()->add(
+                                    "detalles.{$index}.cantidad",
+                                    "El producto '{$producto->nombre}' no permite cantidades fraccionadas. " .
+                                    "Solo se pueden vender unidades completas."
+                                );
+                            }
+                        }
+
                         $unidadId = $detalle['unidad_medida_id'] ?? $producto->unidad_medida_id;
 
-                        // Si NO es fraccionado y la unidad es diferente a la base
+                        // 🔷 VALIDACIÓN 2: Si NO es fraccionado y la unidad es diferente a la base
                         if (!$producto->es_fraccionado && $unidadId != $producto->unidad_medida_id) {
                             $validator->errors()->add(
                                 "detalles.{$index}.unidad_medida_id",
@@ -267,7 +280,7 @@ class StoreVentaRequest extends FormRequest
                             );
                         }
 
-                        // Si ES fraccionado, validar que existe conversión
+                        // 🔷 VALIDACIÓN 3: Si ES fraccionado, validar que existe conversión
                         if ($producto->es_fraccionado && $unidadId != $producto->unidad_medida_id) {
                             $existe = \App\Models\ConversionUnidadProducto::where('producto_id', $producto->id)
                                 ->where(function($q) use ($unidadId, $producto) {

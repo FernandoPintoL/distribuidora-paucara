@@ -945,7 +945,8 @@ export function ProformasSection({
                                                 <span>{proforma.estado_logistica?.nombre || proforma.estado}</span>
                                             </div>
                                             <div className="text-xs font-mono text-gray-600 dark:text-gray-400">
-                                                Folio: {proforma.id} | {proforma.numero}
+                                                <p>Folio: {proforma.id}</p>
+                                                 {proforma.numero}
                                             </div>
                                         </div>
                                     </td>

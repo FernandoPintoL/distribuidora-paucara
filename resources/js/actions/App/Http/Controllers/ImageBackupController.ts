@@ -1,5 +1,83 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+export const diagnoseDiskSpace = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: diagnoseDiskSpace.url(options),
+    method: 'get',
+})
+
+diagnoseDiskSpace.definition = {
+    methods: ["get","head"],
+    url: '/api/image-backup/diagnostico/disk-space',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+diagnoseDiskSpace.url = (options?: RouteQueryOptions) => {
+    return diagnoseDiskSpace.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+diagnoseDiskSpace.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: diagnoseDiskSpace.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+diagnoseDiskSpace.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: diagnoseDiskSpace.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+    const diagnoseDiskSpaceForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: diagnoseDiskSpace.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+        diagnoseDiskSpaceForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: diagnoseDiskSpace.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ImageBackupController::diagnoseDiskSpace
+ * @see app/Http/Controllers/ImageBackupController.php:558
+ * @route '/api/image-backup/diagnostico/disk-space'
+ */
+        diagnoseDiskSpaceForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: diagnoseDiskSpace.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    diagnoseDiskSpace.form = diagnoseDiskSpaceForm
+/**
 * @see \App\Http\Controllers\ImageBackupController::createBackup
  * @see app/Http/Controllers/ImageBackupController.php:26
  * @route '/api/image-backup/create'
@@ -1139,6 +1217,6 @@ deleteBackup.delete = (args: { backupName: string | number } | [backupName: stri
         })
     
     deleteBackup.form = deleteBackupForm
-const ImageBackupController = { createBackup, restoreBackup, listBackups, downloadBackup, getFolderSizes, createFolderBackup, downloadFolderBackup, restoreFolderBackup, uploadBackup, getDiskSpace, startChunkedUpload, uploadChunk, finishChunkedUpload, getChunkedUploadStatus, cancelChunkedUpload, getBackupInfo, deleteBackup }
+const ImageBackupController = { diagnoseDiskSpace, createBackup, restoreBackup, listBackups, downloadBackup, getFolderSizes, createFolderBackup, downloadFolderBackup, restoreFolderBackup, uploadBackup, getDiskSpace, startChunkedUpload, uploadChunk, finishChunkedUpload, getChunkedUploadStatus, cancelChunkedUpload, getBackupInfo, deleteBackup }
 
 export default ImageBackupController

@@ -90,10 +90,9 @@ class PrecioRangoProductoService
 
             $precioInfo = $this->calcularPrecioCompleto($producto, $cantidad, $empresaId);
 
-            // 🔑 OPCIÓN 1: Respetar tipo_precio_id del request o del rango
-            // 1️⃣ Si hay rango aplicado → usar tipo_precio_id del rango
-            // 2️⃣ Si no hay rango pero viene tipo_precio_id en request → respetarlo
-            // 3️⃣ Si no hay rango ni tipo_precio_id → devolver null (no sobrescribir la selección del frontend)
+            // 🔑 OPCIÓN 2: SOLO respetar tipo_precio_id cuando hay rango aplicado
+            // Si NO hay rango → devolver null para forzar frontend a usar tipo_recomendado
+            // Esto garantiza que cantidad↓ por debajo de rango mínimo → revierte a precio default
             if ($precioInfo['rango_aplicado']) {
                 $tipoPrecioId     = $precioInfo['rango_aplicado']['tipo_precio_id'];
                 $tipoPrecioNombre = $precioInfo['rango_aplicado']['tipo_precio_nombre'];
@@ -105,30 +104,17 @@ class PrecioRangoProductoService
                     'tipo_precio_nombre' => $tipoPrecioNombre,
                     'precio_unitario' => $precioInfo['precio_unitario'],
                 ]);
-            } elseif ($tipoPrecioIdDelRequest) {
-                // ✅ NUEVO: Si viene tipo_precio_id en request, respetarlo
-                $tipoPrecioId     = $tipoPrecioIdDelRequest;
-
-                // Obtener el nombre del tipo de precio
-                $tipoPrecio = TipoPrecio::find($tipoPrecioId);
-                $tipoPrecioNombre = $tipoPrecio?->nombre ?? null;
-
-                Log::info('✅ [calcularCarrito] Usando tipo_precio_id del request', [
-                    'producto_id' => $producto->id,
-                    'cantidad' => $cantidad,
-                    'tipo_precio_id' => $tipoPrecioId,
-                    'tipo_precio_nombre' => $tipoPrecioNombre,
-                    'precio_unitario' => $precioInfo['precio_unitario'],
-                ]);
             } else {
-                // ✅ NUEVO: Si no hay rango ni tipo_precio_id en request, devolver null
-                // Esto respeta que el frontend mantenga su selección original
+                // ✅ FIX (2026-02-17): Sin rango → SIEMPRE devolver null
+                // No respetamos tipo_precio_id del request si no hay rango que lo justifique
+                // Frontend usará tipo_precio_id_recomendado (cliente-appropriate default)
                 $tipoPrecioId     = null;
                 $tipoPrecioNombre = null;
 
-                Log::info('ℹ️ [calcularCarrito] Sin rango y sin tipo_precio_id en request - devolviendo null', [
+                Log::info('⚠️ [calcularCarrito] Sin rango aplicado - devolviendo null (revertir a tipo_recomendado)', [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
+                    'tipo_precio_id_del_request' => $tipoPrecioIdDelRequest,
                     'precio_unitario' => $precioInfo['precio_unitario'],
                 ]);
             }

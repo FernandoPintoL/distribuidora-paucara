@@ -81,25 +81,45 @@ class StockService
                 continue;
             }
 
-            // Si no se especificó unidad, usar la unidad base del producto
-            if (!$unidadMedidaId) {
-                $unidadMedidaId = $producto->unidad_medida_id;
-            }
+            // ✅ COMBOS se venden por unidad (sin conversión)
+            if ($producto->es_combo) {
+                // Los combos usan cantidad tal cual (vendidos como 1 combo, 2 combos, etc)
+                $cantidadSolicitadaBase = $cantidadSolicitada;
+            } else {
+                // ✅ PRODUCTOS NORMALES: Convertir a unidad base
+                // Si no se especificó unidad, usar la unidad base del producto
+                if (!$unidadMedidaId) {
+                    $unidadMedidaId = $producto->unidad_medida_id;
+                }
 
-            // Convertir cantidad a unidad base si es necesario
-            try {
-                $cantidadSolicitadaBase = $producto->convertirAUnidadBase($cantidadSolicitada, $unidadMedidaId);
-            } catch (\Exception $e) {
-                $errores[] = "Producto '{$producto->nombre}': Error de conversión - {$e->getMessage()}";
-                $resultados[] = [
-                    'producto_id'         => $productoId,
-                    'unidad_medida_id'    => $unidadMedidaId,
-                    'cantidad_solicitada' => $cantidadSolicitada,
-                    'stock_disponible'    => 0,
-                    'suficiente'          => false,
-                    'error'               => 'Error de conversión de unidad',
-                ];
-                continue;
+                // Validar que la unidad esté configurada
+                if (!$unidadMedidaId) {
+                    $errores[] = "Producto '{$producto->nombre}': No tiene unidad de medida configurada en la BD";
+                    $resultados[] = [
+                        'producto_id'         => $productoId,
+                        'cantidad_solicitada' => $cantidadSolicitada,
+                        'stock_disponible'    => 0,
+                        'suficiente'          => false,
+                        'error'               => 'Producto sin unidad de medida configurada',
+                    ];
+                    continue;
+                }
+
+                // Convertir cantidad a unidad base
+                try {
+                    $cantidadSolicitadaBase = $producto->convertirAUnidadBase($cantidadSolicitada, $unidadMedidaId);
+                } catch (\Exception $e) {
+                    $errores[] = "Producto '{$producto->nombre}': Error de conversión - {$e->getMessage()}";
+                    $resultados[] = [
+                        'producto_id'         => $productoId,
+                        'unidad_medida_id'    => $unidadMedidaId,
+                        'cantidad_solicitada' => $cantidadSolicitada,
+                        'stock_disponible'    => 0,
+                        'suficiente'          => false,
+                        'error'               => 'Error de conversión de unidad',
+                    ];
+                    continue;
+                }
             }
 
             $stockDisponibleBase = $this->obtenerDisponible($productoId, $almacenId);

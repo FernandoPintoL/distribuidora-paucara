@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Venta;
+use App\Models\Entrega;
 use App\Services\Logistica\SincronizacionVentaEntregaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -70,15 +71,22 @@ class VentaLogisticaController extends Controller
     public function entregas(Venta $venta): JsonResponse
     {
         try {
-            $entregas = $venta->entregas()
-                ->select('id', 'numero_entrega', 'estado', 'fecha_programada', 'chofer_id', 'vehiculo_id')
+            // ✅ FIXED: Usar entregas_venta_confirmaciones para obtener entregas de la venta
+            // Una entrega tiene MUCHAS ventas, no es relación many-to-many
+            $entregas = Entrega::whereHas('confirmacionesVentas', function ($query) use ($venta) {
+                $query->where('venta_id', $venta->id);
+            })
+                ->select('entregas.id', 'entregas.numero_entrega', 'entregas.estado', 'entregas.fecha_programada', 'entregas.chofer_id', 'entregas.vehiculo_id', 'entregas.created_at')
                 ->with([
-                    'chofer:id,nombre',
+                    'chofer:id,name',  // ✅ FIXED: La columna es 'name', no 'nombre'
                     'vehiculo:id,placa,marca,modelo',
-                    'reporteCarga:id,numero_reporte,estado',
                     'historialEstados:id,entrega_id,estado_anterior,estado_nuevo,comentario,created_at',
+                    'confirmacionesVentas' => function ($query) use ($venta) {
+                        // Solo cargar confirmaciones de ESTA venta específica
+                        $query->where('venta_id', $venta->id);
+                    },
                 ])
-                ->orderBy('created_at', 'desc')
+                ->orderBy('entregas.created_at', 'desc')
                 ->get();
 
             return response()->json([
@@ -94,24 +102,54 @@ class VentaLogisticaController extends Controller
                             'fecha_programada' => $entrega->fecha_programada,
                             'chofer' => [
                                 'id' => $entrega->chofer?->id,
-                                'nombre' => $entrega->chofer?->nombre ?? 'Sin asignar',
+                                'nombre' => $entrega->chofer?->name ?? 'Sin asignar',  // ✅ FIXED: 'name' not 'nombre'
                             ],
                             'vehiculo' => [
                                 'id' => $entrega->vehiculo?->id,
                                 'placa' => $entrega->vehiculo?->placa ?? 'Sin asignar',
                                 'descripcion' => $entrega->vehiculo ? "{$entrega->vehiculo->marca} {$entrega->vehiculo->modelo}" : 'N/A',
                             ],
-                            'reporte_carga' => $entrega->reporteCarga ? [
-                                'id' => $entrega->reporteCarga->id,
-                                'numero' => $entrega->reporteCarga->numero_reporte,
-                                'estado' => $entrega->reporteCarga->estado,
-                            ] : null,
                             'historial_estados' => $entrega->historialEstados->map(function ($h) {
                                 return [
                                     'estado_anterior' => $h->estado_anterior,
                                     'estado_nuevo' => $h->estado_nuevo,
                                     'comentario' => $h->comentario,
                                     'fecha' => $h->created_at->format('Y-m-d H:i:s'),
+                                ];
+                            }),
+                            // ✅ NUEVO: Incluir confirmaciones de venta con fotos y productos devueltos
+                            'confirmacionesVentas' => $entrega->confirmacionesVentas->map(function ($conf) {
+                                // Parsear fotos si es JSON string
+                                $fotos = [];
+                                if ($conf->fotos) {
+                                    if (is_string($conf->fotos)) {
+                                        $fotos = json_decode($conf->fotos, true) ?? [];
+                                    } elseif (is_array($conf->fotos)) {
+                                        $fotos = $conf->fotos;
+                                    }
+                                }
+
+                                // ✅ NUEVO 2026-02-17: Incluir productos devueltos para DEVOLUCION_PARCIAL
+                                $productosDevueltos = [];
+                                if ($conf->productos_devueltos) {
+                                    if (is_string($conf->productos_devueltos)) {
+                                        $productosDevueltos = json_decode($conf->productos_devueltos, true) ?? [];
+                                    } elseif (is_array($conf->productos_devueltos)) {
+                                        $productosDevueltos = $conf->productos_devueltos;
+                                    }
+                                }
+
+                                return [
+                                    'id' => $conf->id,
+                                    'venta_id' => $conf->venta_id,
+                                    'fotos' => $fotos,
+                                    'firma_digital_url' => $conf->firma_digital_url,
+                                    'observaciones_logistica' => $conf->observaciones_logistica,
+                                    'tipo_entrega' => $conf->tipo_entrega,
+                                    'tipo_novedad' => $conf->tipo_novedad,
+                                    'productos_devueltos' => $productosDevueltos,  // ✅ NUEVO: Productos devueltos en DEVOLUCION_PARCIAL
+                                    'monto_devuelto' => $conf->monto_devuelto,      // ✅ NUEVO: Monto total devuelto
+                                    'monto_aceptado' => $conf->monto_aceptado,      // ✅ NUEVO: Monto aceptado
                                 ];
                             }),
                         ];

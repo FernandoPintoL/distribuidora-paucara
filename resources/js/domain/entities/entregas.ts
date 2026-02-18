@@ -139,6 +139,69 @@ export interface ReporteCargaEntregaPivot {
 /**
  * Entrega principal - Modelo consolidado
  */
+// ✅ NUEVO 2026-02-17: Confirmaciones de Entregas de Ventas
+export interface DesglosePagoConfirmacion {
+    tipo_pago_id?: number;
+    tipo_pago_nombre?: string;
+    monto: number;
+    referencia?: string;
+}
+
+export interface ProductoDevueltoConfirmacion {
+    producto_id: number;
+    producto_nombre: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+}
+
+export interface EntregaVentaConfirmacion {
+    id: Id;
+    entrega_id: Id;
+    venta_id: Id;
+
+    // Tipo de entrega
+    tipo_entrega?: string;              // COMPLETA o NOVEDAD
+    tipo_novedad?: string;              // CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADO
+    tuvo_problema?: boolean;
+
+    // Observaciones y problemas
+    observaciones_logistica?: string;
+    motivo_rechazo?: string;
+
+    // Validación en punto de entrega
+    tienda_abierta?: boolean;
+    cliente_presente?: boolean;
+
+    // Información de pago
+    estado_pago?: string;               // PAGADO, PARCIAL, CREDITO, NO_PAGADO
+    desglose_pagos?: DesglosePagoConfirmacion[];
+    total_dinero_recibido?: number;
+    monto_pendiente?: number;
+    tipo_confirmacion?: string;         // COMPLETA, CON_NOVEDAD
+
+    // Devoluciones parciales
+    productos_devueltos?: ProductoDevueltoConfirmacion[];
+    monto_devuelto?: number;
+    monto_aceptado?: number;
+
+    // Evidencia
+    firma_digital_url?: string;
+    fotos?: string[];
+    foto_comprobante?: string;
+
+    // Auditoría
+    confirmado_por?: Id;
+    confirmado_en?: string;
+
+    // Relaciones
+    venta?: VentaEntrega;
+
+    // Timestamps
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Entrega extends BaseEntity {
     id: Id;
     numero_entrega?: string;
@@ -183,6 +246,9 @@ export interface Entrega extends BaseEntity {
     firma_cliente?: string;
     receptor_nombre?: string;
     receptor_documento?: string;
+
+    // ✅ NUEVO 2026-02-17: Confirmaciones de entregas (reportes del chofer)
+    confirmacionesVentas?: EntregaVentaConfirmacion[];
 
     // Relaciones
     venta?: VentaEntrega;

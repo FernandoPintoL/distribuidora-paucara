@@ -1469,6 +1469,7 @@ class ProductoController extends Controller
         $limite        = $request->integer('limite', 10);
         $tipoBusqueda  = $request->string('tipo_busqueda', 'parcial'); // ✅ exacta o parcial
         $tipo          = $request->string('tipo', 'venta'); // ✅ 'venta' o 'compra'
+        $clienteId     = $request->integer('cliente_id', null); // ✅ NUEVO: Cliente para filtrar tipos_precio
 
         // Obtener almacén: desde request > empresa autenticada > empresa principal > config
         // Prioridad: 1) parámetro explícito, 2) empresa del usuario, 3) empresa principal, 4) config
@@ -1489,6 +1490,7 @@ class ProductoController extends Controller
             'tipo_busqueda'  => $tipoBusqueda,
             'tipo'           => $tipo,
             'almacen_id'     => $almacenId,
+            'cliente_id'     => $clienteId ?? 'sin especificar', // ✅ NUEVO: Log cliente_id
             'limite'         => $limite,
         ]);
 
@@ -1501,7 +1503,7 @@ class ProductoController extends Controller
 
         // ✅ Función auxiliar para construir la query base
         // Incluye es_combo para permitir búsqueda automática sin parámetro adicional
-        $construirQueryBase = function($query) use ($userEmpresaId, $almacenId, $tipo) {
+        $construirQueryBase = function($query) use ($userEmpresaId, $almacenId, $tipo, $clienteId) {
             return $query
                 ->select([
                     'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
@@ -1515,10 +1517,15 @@ class ProductoController extends Controller
                         $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
                     });
                 })
-                ->when($tipo === 'venta', function ($q) {
-                    return $q->whereHas('precios', function ($pq) {
-                        $pq->where('activo', true)->whereHas('tipoPrecio', function ($tq) {
-                            $tq->where('codigo', 'VENTA');
+                ->when($tipo === 'venta', function ($q) use ($clienteId) {
+                    return $q->whereHas('precios', function ($pq) use ($clienteId) {
+                        // ✅ NUEVO: Filtrar por tipo_precio según el cliente
+                        // Si cliente_id = 32 (CLIENTE GENERAL) → mostrar LICORERIA
+                        // Si es otro cliente → mostrar VENTA
+                        $tipoPrecioCode = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
+
+                        $pq->where('activo', true)->whereHas('tipoPrecio', function ($tq) use ($tipoPrecioCode) {
+                            $tq->where('codigo', $tipoPrecioCode);
                         });
                     });
                 });
@@ -1536,7 +1543,7 @@ class ProductoController extends Controller
         // Si encontró por ID, retornar inmediatamente
         if ($productoPorId && $productoPorId->count() > 0) {
             Log::info('✅ Producto encontrado por ID: ' . $q);
-            return $this->mapearProductos($productoPorId, $almacenId, $tipo);
+            return $this->mapearProductos($productoPorId, $almacenId, $tipo, $clienteId);
         }
 
         // ✅ PRIORIDAD 2 - Buscar por SKU exacto (case-insensitive)
@@ -1573,7 +1580,7 @@ class ProductoController extends Controller
 
         if ($productoPorSku && $productoPorSku->count() > 0) {
             Log::info('✅ Producto encontrado por SKU: ' . $q);
-            return $this->mapearProductos($productoPorSku, $almacenId, $tipo);
+            return $this->mapearProductos($productoPorSku, $almacenId, $tipo, $clienteId);
         }
 
         // ✅ PRIORIDAD 3 - Búsqueda normal (por nombre, código_barras, descripción, etc)
@@ -1601,13 +1608,13 @@ class ProductoController extends Controller
             ->limit($limite)
             ->get();
 
-        return $this->mapearProductos($productos, $almacenId, $tipo);
+        return $this->mapearProductos($productos, $almacenId, $tipo, $clienteId);
     }
 
     /**
      * ✅ NUEVO: Método auxiliar para mapear productos con todas sus relaciones
      */
-    private function mapearProductos($productos, $almacenId, $tipo): JsonResponse
+    private function mapearProductos($productos, $almacenId, $tipo, $clienteId = null): JsonResponse
     {
         // Cargar relaciones necesarias
         $productosConRelaciones = $productos
@@ -1643,8 +1650,13 @@ class ProductoController extends Controller
                             'tipoPrecio:id,nombre,codigo'
                         ]);
                 },
+                // ✅ NUEVO: Cargar comboGrupos con sus items (para grupo_opcional referencial)
+                'comboGrupos' => function ($q) {
+                    $q->select('id', 'combo_id', 'nombre_grupo', 'cantidad_a_llevar', 'precio_grupo')
+                        ->with('items.producto:id,nombre,sku');
+                },
             ])
-            ->map(function ($producto) use ($almacenId, $tipo) {
+            ->map(function ($producto) use ($almacenId, $tipo, $clienteId) {
                 $codigosTexto = $producto->codigosBarra->pluck('codigo')->toArray();
 
                 // ✅ MEJORADO: Calcular stock consolidado considerando múltiples lotes
@@ -1695,6 +1707,14 @@ class ProductoController extends Controller
                 $capacidad = $producto->es_combo
                     ? ProductoStockService::obtenerStockProducto($producto->id, $almacenId)['capacidad']
                     : null;
+
+                // ✅ NUEVO (2026-02-18): Para COMBOS, usar capacidad como stock_disponible (sincronizar con ProformaResponseDTO)
+                // Los combos NO son productos físicos - solo tienen capacidad de manufactura
+                if ($producto->es_combo) {
+                    $cantidadTotal = (int) ($capacidad ?? 0);          // Usar capacidad como total
+                    $cantidadDisponible = (int) ($capacidad ?? 0);     // Usar capacidad como disponible
+                    $cantidadReservada = 0;                            // Combos no se reservan
+                }
 
                 // ✅ MEJORADO: Buscar precio de venta con múltiples estrategias
                 $precioVentaObj = null;
@@ -1750,13 +1770,18 @@ class ProductoController extends Controller
 
                 $precioCosto = $precioCostoObj?->precio ?? 0;
 
-                // ✅ NUEVO: Obtener tipo_precio_id recomendado
+                // ✅ NUEVO: Obtener tipo_precio_id recomendado según el cliente
                 $tipoPrecioIdRecomendado = null;
                 $tipoPrecioNombreRecomendado = null;
 
-                // Estrategia 1: Buscar por tipoPrecio->codigo === 'VENTA'
+                // ✅ NUEVO (2026-02-17): Determinar qué tipo de precio buscar según cliente_id
+                // Si cliente_id = 32 (CLIENTE GENERAL) → buscar LICORERIA
+                // Si otro cliente → buscar VENTA
+                $tipoPrecioPrincipal = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
+
+                // Estrategia 1: Buscar por tipoPrecio->codigo === $tipoPrecioPrincipal
                 foreach ($producto->precios as $precio) {
-                    if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'VENTA') {
+                    if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === $tipoPrecioPrincipal) {
                         $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
                         // ✅ CONSISTENCIA: Usar tipo_precio.nombre para evitar nombres genéricos
                         $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
@@ -1764,11 +1789,12 @@ class ProductoController extends Controller
                     }
                 }
 
-                // Estrategia 2: Si no encontró por código, buscar por nombre que contenga 'VENTA' (case-insensitive)
+                // Estrategia 2: Si no encontró por código, buscar por nombre que contenga el tipo principal (case-insensitive)
                 if (!$tipoPrecioIdRecomendado) {
+                    $buscarEnNombre = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
                     foreach ($producto->precios as $precio) {
                         $nombre = strtoupper($precio->nombre ?? '');
-                        if (strpos($nombre, 'VENTA') !== false && strpos($nombre, 'COSTO') === false) {
+                        if (strpos($nombre, $buscarEnNombre) !== false && strpos($nombre, 'COSTO') === false) {
                             $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
                             // ✅ CONSISTENCIA: Usar tipo_precio.nombre si está disponible
                             $tipoPrecioNombreRecomendado = $precio->tipoPrecio ? $precio->tipoPrecio->nombre : $precio->nombre;
@@ -1777,7 +1803,18 @@ class ProductoController extends Controller
                     }
                 }
 
-                // ✅ NUEVO: Estrategia 3 para COMBOS - Si aún no encontró, buscar LICORERIA
+                // ✅ NUEVO: Estrategia 3 - Fallback a VENTA si no encontró el principal
+                if (!$tipoPrecioIdRecomendado) {
+                    foreach ($producto->precios as $precio) {
+                        if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'VENTA') {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
+                            break;
+                        }
+                    }
+                }
+
+                // ✅ NUEVO: Estrategia 4 para COMBOS - Si aún no encontró, buscar LICORERIA
                 if (!$tipoPrecioIdRecomendado && $producto->es_combo) {
                     foreach ($producto->precios as $precio) {
                         if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'LICORERIA') {
@@ -1802,6 +1839,8 @@ class ProductoController extends Controller
 
                 // Log para debugging
                 Log::info("🏷️ mapearProductos - Producto {$producto->id} ({$producto->nombre})", [
+                    'cliente_id' => $clienteId,
+                    'tipo_precio_buscado' => $tipoPrecioPrincipal,
                     'tipoPrecioIdRecomendado' => $tipoPrecioIdRecomendado,
                     'tipoPrecioNombreRecomendado' => $tipoPrecioNombreRecomendado,
                     'precios_count' => $producto->precios->count(),
@@ -1915,6 +1954,21 @@ class ProductoController extends Controller
                         ->values()
                         ->all(),
                     'combo_items'      => $comboItems,
+                    // ✅ NUEVO (2026-02-18): combo_items_seleccionados para compatibilidad con ProformaResponseDTO
+                    // Para productos nuevos (sin proforma), inicia vacío. El usuario seleccionará qué items llevar en ProductosTable
+                    'combo_items_seleccionados' => [],
+                    // ✅ NUEVO: Información referencial del grupo opcional (cantidad_a_llevar)
+                    'grupo_opcional'   => $producto->comboGrupos->isNotEmpty() ? [
+                        'nombre_grupo'       => $producto->comboGrupos->first()->nombre_grupo,
+                        'cantidad_a_llevar'  => $producto->comboGrupos->first()->cantidad_a_llevar,
+                        'precio_grupo'       => (float) $producto->comboGrupos->first()->precio_grupo,
+                        'productos'          => $producto->comboGrupos->first()->items->pluck('producto_id')->toArray(),
+                        'productos_detalle'  => $producto->comboGrupos->first()->items->map(fn($item) => [
+                            'producto_id'   => $item->producto_id,
+                            'producto_nombre' => $item->producto?->nombre,
+                            'producto_sku'  => $item->producto?->sku,
+                        ])->toArray(),
+                    ] : null,
                 ];
             });
 

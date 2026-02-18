@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -455,23 +455,27 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
             precio_unitario: typeof d.precio_unitario === 'string' ? parseFloat(d.precio_unitario) : (d.precio_unitario || 0),
             // ✅ Asegurar que subtotal es número
             subtotal: typeof d.subtotal === 'string' ? parseFloat(d.subtotal) : (d.subtotal || 0),
-            // ✅ NUEVO: Construir objeto producto para ProductosTable (con datos disponibles en el detalle)
-            producto: {
-                id: d.producto_id,
-                nombre: d.producto_nombre,
-                sku: d.sku || null,
-                codigo: d.sku || null,
-                peso: d.peso || 0,
-                stock_disponible: d.stock_disponible || 0,  // ← CRÍTICO para ProductosTable
-                stock_total: d.stock_total || 0,
-                stock_reservado: d.stock_reservado || 0,
-                precio_venta: d.precio_unitario || 0,
-                precio_costo: d.precio_unitario || 0,
-                categoria: d.categoria || null,
-                limite_venta: d.limite_venta || null,
-                // ✅ NUEVO: Array de precios para select de tipos de precio en ProductosTable
-                precios: Array.isArray(d.precios) ? d.precios : [],
-            }
+            // ✅ CRÍTICO: Usar d.producto directamente del backend EN LUGAR de reconstruirlo
+            // El backend retorna toda la estructura con es_combo y combo_items dentro de producto
+            // Si reconstruimos, perdemos esos campos críticos
+            producto: d.producto && typeof d.producto === 'object'
+                ? d.producto  // ← USAR DIRECTAMENTE: tiene sku, es_combo, combo_items, etc.
+                : {
+                    // FALLBACK: Por si no viniera producto del backend (compatibilidad)
+                    id: d.producto_id,
+                    nombre: d.producto_nombre,
+                    sku: d.sku || null,
+                    codigo: d.sku || null,
+                    peso: d.peso || 0,
+                    stock_disponible: d.stock_disponible || 0,
+                    stock_total: d.stock_total || 0,
+                    stock_reservado: d.stock_reservado || 0,
+                    precio_venta: d.precio_unitario || 0,
+                    precio_costo: d.precio_unitario || 0,
+                    categoria: d.categoria || null,
+                    limite_venta: d.limite_venta || null,
+                    precios: Array.isArray(d.precios) ? d.precios : [],
+                }
         }))
     )
     const [preciosEditadosManualmente, setPreciosEditadosManualmente] = useState<Set<number>>(new Set())
@@ -495,6 +499,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     const {
         calcularCarritoDebounced,
         getPrecioActualizado,
+        carritoCalculado,  // ✅ NUEVO (2026-02-17): Extraer datos calculados para ProductosTable
         loading: isCalculandoRangos,
         error: errorRangos
     } = usePrecioRangoCarrito(400)
@@ -596,7 +601,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 return detallesActualizados
             })
         }
-    }, [isCalculandoRangos, errorRangos, getPrecioActualizado, preciosEditadosManualmente])
+    }, [isCalculandoRangos, errorRangos, preciosEditadosManualmente]) // ✅ FIX (2026-02-18): Remover getPrecioActualizado - se recrea en cada render causando loop infinito
 
     // Sincronizar datos de coordinación cuando la proforma cambia
     // ✅ CRÍTICO: No actualizar si estamos en el flujo de aprobación + conversión
@@ -813,6 +818,24 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     const handleTotalsChange = (detalles: any[]) => {
         // Handler opcional si ProductosTable notifica cambios de totales
     }
+
+    // ✅ CRITICAL FIX (2026-02-18): Memorizar callback para evitar loop infinito
+    // El callback se pasaba como prop inline a ProductosTable, causando que se recreara en cada render
+    // Esto hacía que el useEffect de ProductosTable se disparara infinitamente
+    const handleDetallesActualizadosPorRangos = useCallback((nuevosDetalles: any) => {
+        console.log('🔄 [proformas/Show.tsx] ProductosTable notificó cambios en detalles por rangos');
+        setEditableDetalles(nuevosDetalles);
+    }, []); // ✅ EMPTY deps: Callback nunca cambia, perfectamente seguro
+
+    // ✅ FIX (2026-02-18): Extraer productos de editableDetalles para pasarlos a ProductosTable
+    // Esto permite que ProductosTable acceda a los combo_items, sku, stock y otras propiedades
+    // que son necesarias para mostrar correctamente los productos combo
+    const productosParaTabla = useMemo(() => {
+        return editableDetalles
+            .filter(d => d.producto) // Asegurar que existe producto
+            .map(d => d.producto)
+            .filter((p, idx, arr) => arr.findIndex(item => item?.id === p?.id) === idx); // Eliminar duplicados por id
+    }, [editableDetalles]);
 
     // Calcular total en tiempo real (usando precios actualizados por rango)
     const calcularTotales = () => {
@@ -1742,8 +1765,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                             <CardContent className="space-y-4">
                                 <Separator />
 
+                                {/* ✅ FIX (2026-02-18): Pasar productos extraídos de editableDetalles + callback memoizado */}
                                 <ProductosTable
-                                    productos={[]}
+                                    productos={productosParaTabla}
                                     detalles={editableDetalles as DetalleProducto[]}
                                     onAddProduct={handleAgregarProducto}
                                     onUpdateDetail={handleUpdateDetalle}
@@ -1754,6 +1778,8 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                     isCalculatingPrices={isCalculandoRangos}
                                     readOnly={!puedeSerEditada(proforma.estado)}
                                     errors={undefined}
+                                    carritoCalculado={carritoCalculado}
+                                    onDetallesActualizados={handleDetallesActualizadosPorRangos}
                                 />
 
                                 {/* Resumen de Totales en Tiempo Real */}

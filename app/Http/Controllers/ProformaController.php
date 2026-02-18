@@ -81,6 +81,9 @@ class ProformaController extends Controller
         // ✅ NUEVO: Obtener ID del almacén de la empresa autenticada
         $almacen_id_empresa = auth()->user()->empresa->almacen_id ?? 1;
 
+        // ✅ NUEVO: Obtener tipo_precio por defecto (VENTA)
+        $default_tipo_precio_id = $this->proformaService->obtenerIdTipoPrecioDefault();
+
         return Inertia::render('proformas/Create', [
             'clientes'              => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
             'productos'             => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
@@ -89,6 +92,7 @@ class ProformaController extends Controller
                 $query->where('name', 'preventista');
             })->select('id', 'name', 'email')->get(),
             'almacen_id_empresa'    => $almacen_id_empresa, // ✅ NUEVO: Almacén principal de la empresa
+            'default_tipo_precio_id' => $default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto para ProductosTable
         ]);
     }
 
@@ -100,6 +104,9 @@ class ProformaController extends Controller
         // Obtener ID del almacén de la empresa autenticada
         $almacen_id_empresa = auth()->user()->empresa->almacen_id ?? 1;
 
+        // ✅ NUEVO: Obtener tipo_precio por defecto (VENTA)
+        $default_tipo_precio_id = $this->proformaService->obtenerIdTipoPrecioDefault();
+
         // Cargar relaciones necesarias
         $proforma->load([
             'cliente',
@@ -110,6 +117,9 @@ class ProformaController extends Controller
             'detalles.producto.conversiones',
             'detalles.producto.codigoPrincipal',
             'detalles.producto.precios.tipoPrecio', // ✅ NUEVO: Cargar tipos de precios
+            // NUEVO: Cargar combo relations para combos en modo editar
+            'detalles.producto.comboItems.producto',       // ← NUEVO
+            'detalles.producto.comboItems.tipoPrecio',     // ← NUEVO
             'preventista',
             'usuarioCreador',
             'estadoLogistica'
@@ -118,29 +128,25 @@ class ProformaController extends Controller
         // Mapear detalles al formato esperado por el frontend
         $detallesProforma = $proforma->detalles->map(function ($detalle) use ($almacen_id_empresa) {
             $producto = $detalle->producto;
+            $esCombo = (bool) ($producto->es_combo ?? false);
 
-            // ✅ CRÍTICO: SUMAR TODOS LOS LOTES del producto (no solo el primero)
-            // Filtrar por almacén si es necesario
-            $stocks = $producto->stock()
-                ->where('almacen_id', $almacen_id_empresa)
-                ->get();
+            // Usar ProductoStockService (igual que ProformaResponseDTO) para consistencia
+            $stockInfo = \App\Services\ProductoStockService::obtenerStockProducto($producto->id, $almacen_id_empresa);
 
-            // Si no hay stock en almacén principal, obtener de todos los almacenes
-            if ($stocks->isEmpty()) {
-                $stocks = $producto->stock()->get();
+            if ($esCombo) {
+                $cantidadDisponibleTotal = (int) ($stockInfo['capacidad'] ?? 0);
+                $cantidadTotal = (int) ($stockInfo['capacidad'] ?? 0);
+            } else {
+                $cantidadDisponibleTotal = (int) $stockInfo['stock_disponible'];
+                $cantidadTotal = (int) $stockInfo['stock_total'];
             }
 
-            // SUMAR todos los lotes
-            $cantidadDisponibleTotal = (int) ($stocks->sum('cantidad_disponible') ?? 0);
-            $cantidadTotal = (int) ($stocks->sum('cantidad') ?? 0);
-
-            // DEBUG LOG
             \Log::debug('📦 Stock Query Debug', [
                 'producto_id' => $producto->id,
                 'producto_nombre' => $producto->nombre,
-                'almacen_id_buscado' => $almacen_id_empresa,
-                'cantidad_lotes' => $stocks->count(),
-                'stock_disponible_total' => $cantidadDisponibleTotal,
+                'es_combo' => $esCombo,
+                'almacen_id' => $almacen_id_empresa,
+                'stock_disponible' => $cantidadDisponibleTotal,
                 'stock_total' => $cantidadTotal,
             ]);
 
@@ -194,6 +200,56 @@ class ProformaController extends Controller
                             'precio' => (float) $p->precio,
                         ])->toArray()
                         : [],
+
+                    // ✅ NUEVO: Campos de combo
+                    'es_combo'               => $esCombo,
+                    'combo_items'            => ($esCombo && $producto->relationLoaded('comboItems') && $producto->comboItems->isNotEmpty())
+                        ? (function() use ($producto, $almacen_id_empresa) {
+                            $capacidadInfo = null;
+                            if ($almacen_id_empresa) {
+                                try {
+                                    $capacidadInfo = \App\Services\ComboStockService::calcularCapacidadConDetalles(
+                                        $producto->id,
+                                        $almacen_id_empresa
+                                    );
+                                } catch (\Exception $e) { /* no bloquear */ }
+                            }
+
+                            return $producto->comboItems->map(function($item) use ($capacidadInfo, $almacen_id_empresa) {
+                                $detalleCapacidad = null;
+                                if ($capacidadInfo) {
+                                    $detalleCapacidad = collect($capacidadInfo['detalles'] ?? [])
+                                        ->firstWhere('producto_id', $item->producto_id);
+                                }
+                                $stockItem = $almacen_id_empresa ? $item->producto?->stock()
+                                    ->where('almacen_id', $almacen_id_empresa)->first() : null;
+
+                                return [
+                                    'id'                    => $item->id,
+                                    'combo_id'              => $item->combo_id ?? $producto->id,
+                                    'producto_id'           => $item->producto_id,
+                                    'producto_nombre'       => $item->producto?->nombre ?? 'N/A',
+                                    'producto_sku'          => $item->producto?->sku ?? null,
+                                    'producto_codigo_barras'=> $item->producto?->codigo_barras ?? null,
+                                    'cantidad'              => (float) $item->cantidad,
+                                    'precio_unitario'       => (float) ($item->precio_unitario ?? 0),
+                                    'tipo_precio_id'        => $item->tipo_precio_id ?? null,
+                                    'tipo_precio_nombre'    => $item->relationLoaded('tipoPrecio') ? ($item->tipoPrecio?->nombre ?? null) : null,
+                                    'unidad_medida_id'      => $item->producto?->unidad_medida_id ?? null,
+                                    'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
+                                    'stock_disponible'      => (int) ($stockItem?->cantidad_disponible ?? 0),
+                                    'stock_total'           => (int) ($stockItem?->cantidad ?? 0),
+                                    'es_obligatorio'        => (bool) $item->es_obligatorio,
+                                    'es_cuello_botella'     => (bool) ($detalleCapacidad['es_cuello_botella'] ?? false),
+                                    'combos_posibles'       => (int) ($detalleCapacidad['combos_posibles'] ?? 0),
+                                ];
+                            })->values()->toArray();
+                        })()
+                        : [],
+                    'combo_items_seleccionados' => \App\DTOs\Venta\ProformaResponseDTO::buildComboItemsSeleccionados(
+                        $detalle->combo_items_seleccionados ?? [],
+                        $producto->relationLoaded('comboItems') ? $producto->comboItems : collect([])
+                    ),
                 ],
 
                 // ✅ Información adicional para compatibilidad
@@ -203,6 +259,23 @@ class ProformaController extends Controller
                 'conversiones_count'     => (int) ($producto->conversiones?->count() ?? 0),
                 'es_fraccionado'         => (bool) ($producto->es_fraccionado ?? false),
                 'precio_venta'           => (float) $detalle->precio_unitario,
+
+                // ✅ NUEVO: Campos combo a nivel de detalle (compatibilidad con ProductosTable)
+                'es_combo'                  => $esCombo,
+                'combo_items'               => ($esCombo && $producto->relationLoaded('comboItems'))
+                    ? $producto->comboItems->map(fn($item) => [
+                        'id' => $item->id, 'producto_id' => $item->producto_id,
+                        'producto_nombre' => $item->producto?->nombre ?? 'N/A',
+                        'producto_sku' => $item->producto?->sku ?? null,
+                        'cantidad' => (float) $item->cantidad,
+                        'es_obligatorio' => (bool) $item->es_obligatorio,
+                    ])->toArray()
+                    : [],
+                'combo_items_seleccionados' => \App\DTOs\Venta\ProformaResponseDTO::buildComboItemsSeleccionados(
+                    $detalle->combo_items_seleccionados ?? [],
+                    $producto->relationLoaded('comboItems') ? $producto->comboItems : collect([])
+                ),
+                'expanded'                  => $esCombo,
             ];
         })->toArray();
 
@@ -273,6 +346,7 @@ class ProformaController extends Controller
                 $query->where('name', 'preventista');
             })->select('id', 'name', 'email')->get(),
             'almacen_id_empresa'    => $almacen_id_empresa,
+            'default_tipo_precio_id' => $default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto para ProductosTable
         ]);
     }
 
@@ -353,11 +427,15 @@ class ProformaController extends Controller
             // ✅ NUEVO: Devolver tipos de precios disponibles
             $tiposPrecio = TipoPrecio::getOptions();
 
+            // ✅ NUEVO: Obtener tipo_precio por defecto (VENTA)
+            $default_tipo_precio_id = $this->proformaService->obtenerIdTipoPrecioDefault();
+
             return $this->respondShow(
                 data: $proformaDTO,
                 inertiaComponent: 'proformas/Show',
                 inertiaProps: [
                     'tiposPrecio' => $tiposPrecio,
+                    'default_tipo_precio_id' => $default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto
                 ]
             );
 

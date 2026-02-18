@@ -9,6 +9,7 @@ import EntregaFlujoCarga from './components/EntregaFlujoCarga';
 import VentasEntregaSection from './components/VentasEntregaSection';
 import ProductosAgrupados from './components/ProductosAgrupados';
 import ResumenPagosEntrega from './components/ResumenPagosEntrega';
+import ConfirmacionesEntregaSection from './components/ConfirmacionesEntregaSection';
 import { CorregirPagoModal } from './components/CorregirPagoModal';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
@@ -61,7 +62,12 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
     // ✅ DEBUG: Ver qué datos llegan del backend
     useEffect(() => {
         console.log('📦 [ENTREGA RECIBIDA DEL BACKEND]', initialEntrega);
-    }, []);
+        /* console.log('🔍 [DEBUG] confirmacionesVentas:', {
+            existe: !!initialEntrega?.confirmacionesVentas,
+            cantidad: initialEntrega?.confirmacionesVentas?.length ?? 0,
+            datos: initialEntrega?.confirmacionesVentas,
+        }); */
+    }, [initialEntrega]);
 
     // Hooks para sincronización en tiempo real
     const { isConnected, on, off } = useWebSocket();
@@ -100,7 +106,7 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
     }, [on, off, isConnected, entrega.id]);
 
     // WebSocket listener para actualizaciones de ubicación en tiempo real
-    useEffect(() => {
+    /* useEffect(() => {
         if (!isConnected) return;
 
         const channel = `entrega.${entrega.id}`;
@@ -123,10 +129,10 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
         return () => {
             off(`${channel}:ubicacion.actualizada`, handleUbicacionActualizada);
         };
-    }, [on, off, isConnected, entrega.id]);
+    }, [on, off, isConnected, entrega.id]); */
 
     // Monitor de conexión WebSocket
-    useEffect(() => {
+    /* useEffect(() => {
         const handleConnect = () => {
             console.log('[SHOW] WebSocket conectado');
             setIsLive(true);
@@ -150,7 +156,7 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
         } else {
             setIsLive(false);
         }
-    }, [on, off, isConnected]);
+    }, [on, off, isConnected]); */
 
     // ✅ NUEVO: Handler para marcar entrega como listo para entrega
     const handleMarcarListoParaEntrega = async () => {
@@ -323,7 +329,7 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
         }
     };
 
-    console.log('Entrega data:', entrega.numero_entrega);
+    // console.log('Entrega data:', entrega.numero_entrega);
     // const cliente: ClienteEntrega | undefined = entrega.venta?.cliente || entrega.proforma?.cliente;
     const numero: string = String(entrega.proforma?.numero || entrega.venta?.numero || entrega.numero || `#${entrega.id}`);
 
@@ -511,6 +517,14 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                 {/* ✅ NUEVA 2026-02-12: Resumen de Pagos */}
                 {entrega.id && (
                     <ResumenPagosEntrega entregaId={entrega.id} />
+                )}
+
+                {/* ✅ NUEVA 2026-02-17: Reportes del Chofer - Confirmaciones de Entregas */}
+                {entrega.confirmacionesVentas && entrega.confirmacionesVentas.length > 0 && (
+                    <ConfirmacionesEntregaSection
+                        confirmaciones={entrega.confirmacionesVentas}
+                        ventasEnEntrega={entrega.ventas}
+                    />
                 )}
 
                 {/* Historial de Cambios de Estado */}

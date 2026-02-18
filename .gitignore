@@ -32,9 +32,18 @@ yarn-error.log
 nul
 
 # EXCEPCIÓN: Permitir subir las carpetas de almacenamiento
+#!/storage/app/public/
 !/storage/app/public/productos/
 !/storage/app/public/productos/**
 !/storage/app/public/empresas/
 !/storage/app/public/empresas/**
 !/storage/app/public/clientes/
 !/storage/app/public/clientes/**
+!/storage/app/public/proveedores/
+!/storage/app/public/proveedores/**
+!/storage/app/public/fotos_lugar/
+!/storage/app/public/fotos_lugar/**
+!/storage/app/public/backups/
+!/storage/app/public/backups/**
+!/storage/app/backups/
+!/storage/app/backups/**

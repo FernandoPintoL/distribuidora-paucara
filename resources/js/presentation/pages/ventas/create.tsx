@@ -511,7 +511,10 @@ export default function VentaForm() {
     // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre si NO ha sido seleccionado manualmente
     // ✅ NO cambia el precio unitario, subtotal ni unidad_venta_id
     // ✅ RESPETA: Las selecciones manuales del usuario no son sobrescritas
-    useEffect(() => {
+    // ✅ COMENTADO (2026-02-17): Esta lógica ahora está centralizada en ProductosTable.tsx
+    // El componente ProductosTable detecta cambios en carritoCalculado y actualiza los detalles automáticamente
+    // Luego notifica al padre mediante el callback onDetallesActualizados
+    /* useEffect(() => {
         if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
             return;
         }
@@ -529,14 +532,23 @@ export default function VentaForm() {
                     !manuallySelectedTipoPrecio[index] // No actualizar si fue seleccionado manualmente
                 ) {
                     console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
+                        precio_anterior: detalle.precio_unitario,
+                        precio_nuevo: detalleRango.precio_unitario,
+                        subtotal_anterior: detalle.subtotal,
+                        subtotal_nuevo: detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario),
                         unidad_venta_id_preservada: detalle.unidad_venta_id,
                         fue_manual: manuallySelectedTipoPrecio[index] ? 'SÍ (IGNORADO)' : 'NO'
                     });
 
+                    // ✅ CORREGIDO (2026-02-17): Actualizar precio_unitario y subtotal junto con tipo_precio
+                    const nuevoSubtotal = detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario);
+
                     return {
                         ...detalle,
                         tipo_precio_id: detalleRango.tipo_precio_id,
-                        tipo_precio_nombre: detalleRango.tipo_precio_nombre
+                        tipo_precio_nombre: detalleRango.tipo_precio_nombre,
+                        precio_unitario: detalleRango.precio_unitario ?? detalle.precio_unitario, // ✅ NUEVO: Actualizar precio
+                        subtotal: nuevoSubtotal // ✅ NUEVO: Recalcular subtotal con nuevo precio
                         // ✅ PRESERVADO: NO se modifica unidad_venta_id
                     };
                 }
@@ -548,7 +560,7 @@ export default function VentaForm() {
                 return detalle;
             })
         );
-    }, [precioRango.carritoCalculado, manuallySelectedTipoPrecio]);
+    }, [precioRango.carritoCalculado, manuallySelectedTipoPrecio]); */
 
 
     // Función para manejar la creación de cliente
@@ -664,19 +676,16 @@ export default function VentaForm() {
             ? conversiones[0].unidad_destino_id
             : (producto as any).unidad_medida_id;
 
-        // ✅ NUEVO: Calcular precio según la unidad de venta inicial
-        let precioUnitarioInicial = producto.precio_venta || 0;
-        if (esProductoFraccionado && conversiones.length > 0) {
-            const conversion = conversiones[0];
-            if (conversion.factor_conversion > 0) {
-                precioUnitarioInicial = (producto.precio_venta || 0) / conversion.factor_conversion;
-            }
-        }
-
-        // ✅ MODIFICADO: Usar tipo_precio_id que viene del backend, fallback a LICORERIA si no viene
+        // ✅ MODIFICADO (2026-02-17): Usar tipo_precio_id que viene del backend PRIMERO
         // El backend devuelve tipo_precio_id_recomendado basado en el código VENTA
         const tipoPrecioIdRecomendado = (producto as any).tipo_precio_id_recomendado || tipoPrecioLicoreriId;
         const tipoPrecioNombreRecomendado = (producto as any).tipo_precio_nombre_recomendado || 'LICORERIA';
+
+        // ✅ NUEVO (2026-02-17): Obtener el precio específico del tipo_precio_recomendado ANTES de usarlo
+        // En lugar de usar precio_venta genérico, buscar el precio específico del tipo_precio_id
+        let precioDelTipoPrecio = (producto as any).precios?.find(
+            (p: any) => p.tipo_precio_id === tipoPrecioIdRecomendado
+        )?.precio;
 
         // ✅ DEBUG: Loguear los IDs de precios disponibles para verificar coincidencias
         const preciosConIds = (producto as any).precios?.map((p: any) => ({
@@ -689,6 +698,23 @@ export default function VentaForm() {
             tipoPrecioNombreRecomendado,
             preciosDisponibles: preciosConIds
         });
+
+        console.log(`💰 [addProductToDetail] Precio del tipo_precio ${tipoPrecioIdRecomendado}:`, {
+            tipoPrecioId: tipoPrecioIdRecomendado,
+            precioEncontrado: precioDelTipoPrecio,
+            precioVentaGenerico: producto.precio_venta
+        });
+
+        // ✅ NUEVO (2026-02-17): Calcular precio según la unidad de venta inicial
+        // Usar el precio específico del tipo_precio_recomendado, no el genérico precio_venta
+        const precioBase = precioDelTipoPrecio || producto.precio_venta || 0;
+        let precioUnitarioInicial = precioBase;
+        if (esProductoFraccionado && conversiones.length > 0) {
+            const conversion = conversiones[0];
+            if (conversion.factor_conversion > 0) {
+                precioUnitarioInicial = precioBase / conversion.factor_conversion;
+            }
+        }
 
         const newDetail: DetalleProducto = {
             producto_id: producto.id,
@@ -1497,6 +1523,8 @@ export default function VentaForm() {
                         errors={errors}
                         showLoteFields={false}
                         almacen_id={almacen_id_empresa} // ✅ MODIFICADO: Pasar almacén de la empresa
+                        cliente_id={clienteSeleccionado?.id || null} // ✅ NUEVO: Pasar cliente para filtrar tipos_precio
+                        manuallySelectedTipoPrecio={manuallySelectedTipoPrecio} // ✅ NUEVO: Pasar estado de selecciones manuales
                         isCalculatingPrices={precioRango.loading} // ✅ NUEVO: Mostrar indicador de carga
                         onUpdateDetailUnidadConPrecio={updateDetailUnidadConPrecio} // ✅ NUEVO: Actualizar unidad y precio juntos
                         onManualTipoPrecioChange={(index) => {
@@ -1514,6 +1542,12 @@ export default function VentaForm() {
                             }));
                             console.log(`🔄 [create.tsx] Items del combo actualizado (índice ${detailIndex}):`, items);
                         }} // ✅ NUEVO: Notificar cambios en items opcionales
+                        carritoCalculado={precioRango.carritoCalculado} // ✅ NUEVO (2026-02-17): Pasar datos de rangos al componente
+                        onDetallesActualizados={(nuevosDetalles) => {
+                            // ✅ NUEVO (2026-02-17): Callback cuando ProductosTable actualiza detalles por cambios de rangos
+                            console.log('🔄 [create.tsx] ProductosTable notificó cambios en detalles por rangos');
+                            setDetallesWithProducts(nuevosDetalles);
+                        }} // ✅ NUEVO (2026-02-17): Notificar cuando rangos hacen cambios automáticos
                     />
                 </div>
                 {/* Totales */}

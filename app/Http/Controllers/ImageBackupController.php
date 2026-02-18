@@ -553,6 +553,122 @@ class ImageBackupController extends Controller
     }
 
     /**
+     * Diagnóstico de problemas con backups - SOLO EN PRODUCCIÓN PARA DEBUGGING
+     */
+    public function diagnoseDiskSpace(): JsonResponse
+    {
+        try {
+            $diagnostics = [
+                'php_info' => [
+                    'version' => phpversion(),
+                    'memory_limit' => ini_get('memory_limit'),
+                    'max_execution_time' => ini_get('max_execution_time'),
+                    'upload_max_filesize' => ini_get('upload_max_filesize'),
+                    'post_max_size' => ini_get('post_max_size'),
+                ],
+                'ziparchive' => [
+                    'available' => extension_loaded('zip'),
+                    'version' => phpversion('zip'),
+                ],
+                'storage_paths' => [
+                    'storage_path' => storage_path(),
+                    'app_path' => storage_path('app'),
+                    'public_path' => storage_path('app/public'),
+                    'backup_dir' => storage_path('app/backups/images'),
+                ],
+                'directory_checks' => [],
+                'permissions' => [],
+                'disk_space' => [
+                    'free_space' => disk_free_space('/'),
+                    'free_space_formatted' => $this->formatBytes(disk_free_space('/') ?: 0),
+                    'total_space' => disk_total_space('/'),
+                    'total_space_formatted' => $this->formatBytes(disk_total_space('/') ?: 0),
+                    'used_percent' => disk_total_space('/') ? round((1 - (disk_free_space('/') / disk_total_space('/'))) * 100, 2) : 'N/A',
+                ],
+                'errors' => [],
+            ];
+
+            // Verificar directorios
+            $dirs = [
+                'storage' => storage_path(),
+                'storage/app' => storage_path('app'),
+                'storage/app/public' => storage_path('app/public'),
+                'storage/app/backups' => storage_path('app/backups'),
+                'storage/app/backups/images' => storage_path('app/backups/images'),
+            ];
+
+            foreach ($dirs as $name => $path) {
+                $exists = is_dir($path);
+                $readable = is_readable($path);
+                $writable = is_writable($path);
+
+                $diagnostics['directory_checks'][$name] = [
+                    'path' => $path,
+                    'exists' => $exists,
+                    'readable' => $readable,
+                    'writable' => $writable,
+                ];
+
+                if (!$exists) {
+                    $diagnostics['errors'][] = "⛔ Directorio no existe: $name ($path)";
+                } elseif (!$readable) {
+                    $diagnostics['errors'][] = "⛔ No se puede leer: $name";
+                } elseif (!$writable) {
+                    $diagnostics['errors'][] = "⛔ No se puede escribir en: $name";
+                }
+            }
+
+            // Verificar permisos de archivo
+            if (is_dir(storage_path('app/public'))) {
+                $perms = fileperms(storage_path('app/public'));
+                $diagnostics['permissions']['app/public'] = [
+                    'numeric' => substr(sprintf('%o', $perms), -4),
+                    'owner' => function_exists('posix_getpwuid') ? posix_getpwuid(fileowner(storage_path('app/public')))['name'] : 'N/A',
+                    'group' => function_exists('posix_getgrgid') ? posix_getgrgid(filegroup(storage_path('app/public')))['name'] : 'N/A',
+                ];
+            }
+
+            // Intentar crear archivo de prueba
+            $testDir = storage_path('app/backups/images');
+            if (!is_dir($testDir)) {
+                @mkdir($testDir, 0755, true);
+            }
+
+            $testFile = $testDir . DIRECTORY_SEPARATOR . 'test_' . time() . '.txt';
+            $testResult = @file_put_contents($testFile, 'test');
+
+            if ($testResult !== false) {
+                $diagnostics['write_test'] = [
+                    'success' => true,
+                    'message' => 'Se puede crear archivos en backup dir',
+                    'test_file' => basename($testFile),
+                ];
+                @unlink($testFile);
+            } else {
+                $diagnostics['errors'][] = "⛔ No se puede crear archivos en: $testDir";
+                $diagnostics['write_test'] = [
+                    'success' => false,
+                    'message' => 'No se puede escribir en directorio de backup',
+                    'test_file' => $testFile,
+                ];
+            }
+
+            return response()->json([
+                'success' => empty($diagnostics['errors']),
+                'message' => empty($diagnostics['errors']) ? '✅ Todo parece estar OK' : '⛔ Se encontraron problemas',
+                'data' => $diagnostics
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al diagnosticar: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
      * Formatear bytes a string legible (helper para JSON)
      */
     protected function formatBytes(int $bytes, int $precision = 2): string

@@ -135,6 +135,7 @@ interface Props {
     proforma?: ProformaData  // ✅ NUEVO: Datos de proforma en modo edición
     detallesProforma?: ProformaDetalleLocal[]  // ✅ NUEVO: Detalles precargados
     direccionesCliente?: Array<{ id: number; direccion: string; localidad_id: number }>  // ✅ NUEVO: Direcciones del cliente
+    default_tipo_precio_id?: number | string  // ✅ NUEVO: ID del tipo de precio por defecto (VENTA)
 }
 
 export default function ProformasCreate({
@@ -146,7 +147,8 @@ export default function ProformasCreate({
     modo = 'crear',
     proforma,
     detallesProforma = [],
-    direccionesCliente = []
+    direccionesCliente = [],
+    default_tipo_precio_id = 1  // ✅ NUEVO: Tipo precio por defecto (fallback a 1)
 }: Props) {
     console.log('🚀 ProformasCreate renderizado con props:', { clientes, productosIniciales, almacenes, preventistas, almacen_id_empresa, modo, proforma, detallesProforma, direccionesCliente });
 
@@ -289,6 +291,7 @@ export default function ProformasCreate({
     const {
         calcularCarritoDebounced,
         getPrecioActualizado,
+        carritoCalculado,  // ✅ NUEVO (2026-02-17): Extraer datos calculados para ProductosTable
         loading: isCalculandoRangos,
         error: errorRangos
     } = usePrecioRangoCarrito(400)
@@ -388,6 +391,32 @@ export default function ProformasCreate({
         setDetalles(detalles as any)
     }
 
+    // ✅ NUEVO (2026-02-18): Handler para cuando el usuario selecciona/deselecciona items opcionales del combo
+    const handleComboItemsChange = (detailIndex: number, items: any[]) => {
+        console.log(`🎁 [Create.tsx] Combo items cambiaron en detalle ${detailIndex}:`, items);
+
+        // Actualizar el detalles array con los combo_items_seleccionados
+        const nuevosDetalles = [...detalles];
+
+        if (nuevosDetalles[detailIndex]) {
+            // ✅ CRÍTICO: Guardar los items seleccionados en combo_items_seleccionados
+            nuevosDetalles[detailIndex] = {
+                ...nuevosDetalles[detailIndex],
+                combo_items_seleccionados: items.map(item => ({
+                    id: item.id,
+                    producto_id: item.producto_id,
+                    producto_nombre: item.producto_nombre,
+                    cantidad: item.cantidad,
+                    es_obligatorio: item.es_obligatorio,
+                    incluido: item.incluido
+                }))
+            } as any;
+
+            console.log(`✅ [Create.tsx] Detalle ${detailIndex} actualizado con combo_items:`, nuevosDetalles[detailIndex]);
+            setDetalles(nuevosDetalles);
+        }
+    }
+
     const handleSeleccionarCliente = (cliente: Cliente) => {
         setClienteValue(cliente.id)
         setClienteDisplay(cliente.nombre)
@@ -418,15 +447,27 @@ export default function ProformasCreate({
             // ✅ NUEVO: Diferencia entre crear y editar
             if (modo === 'editar' && proforma) {
                 // 📝 MODO EDICIÓN: Actualizar detalles y otros campos de proforma existente
+
+                // 🔍 DEBUG: Mostrar estado actual de detalles antes del mapeo
+                console.log('📝 [EDICIÓN] Estado actual de detalles:', JSON.stringify(detalles, null, 2));
+
                 const detallesPayload = {
                     // ✅ Cliente (ahora actualizable en edición)
                     cliente_id: clienteValue,
-                    detalles: detalles.map(d => ({
-                        producto_id: d.producto_id,
-                        cantidad: d.cantidad,
-                        precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario,
-                        subtotal: d.cantidad * (getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario)
-                    })),
+                    detalles: detalles.map((d, index) => {
+                        const detalle = {
+                            producto_id: d.producto_id,
+                            cantidad: d.cantidad,
+                            precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario,
+                            subtotal: d.cantidad * (getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario),
+                            // ✅ NUEVO: Incluir campos de combo que ya vienen en detalles
+                            tipo_precio_id: d.tipo_precio_id,
+                            tipo_precio_nombre: d.tipo_precio_nombre,
+                            combo_items_seleccionados: (d as any).combo_items_seleccionados || [],
+                        };
+                        console.log(`📝 [EDICIÓN] Detalle ${index} (Producto ${d.producto_id}):`, detalle);
+                        return detalle;
+                    }),
                     // ✅ NUEVO: Incluir campos adicionales opcionales para edición completa
                     fecha: fecha || undefined,
                     fecha_vencimiento: fechaVencimiento || undefined,
@@ -440,6 +481,9 @@ export default function ProformasCreate({
                     preventista_id: preventistaId,
                 }
 
+                // 🔍 DEBUG: Mostrar payload completo antes de enviar
+                console.log('📤 [EDICIÓN] Payload COMPLETO que se enviará:', JSON.stringify(detallesPayload, null, 2));
+
                 const response = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
                     method: 'POST',
                     headers: {
@@ -451,9 +495,12 @@ export default function ProformasCreate({
                     body: JSON.stringify(detallesPayload),
                 })
 
+                // 🔍 DEBUG: Mostrar respuesta del servidor
+                const responseData = await response.json();
+                console.log('📨 [EDICIÓN] Respuesta del servidor:', responseData);
+
                 if (!response.ok) {
-                    const error = await response.json()
-                    throw new Error(error.message || 'Error al actualizar proforma')
+                    throw new Error(responseData.message || 'Error al actualizar proforma')
                 }
 
                 toast.success('✅ Proforma actualizada exitosamente')
@@ -464,6 +511,10 @@ export default function ProformasCreate({
                 }, 1000)
             } else {
                 // ✅ MODO CREACIÓN: Crear nueva proforma
+
+                // 🔍 DEBUG: Mostrar estado actual de detalles antes del mapeo
+                console.log('✨ [CREACIÓN] Estado actual de detalles:', JSON.stringify(detalles, null, 2));
+
                 const payload = {
                     cliente_id: clienteValue,
                     fecha,
@@ -474,17 +525,28 @@ export default function ProformasCreate({
                     tipo_entrega: tipoEntrega,
                     politica_pago: politicaPago,
                     observaciones,
-                    detalles: detalles.map(d => ({
-                        producto_id: d.producto_id,
-                        cantidad: d.cantidad,
-                        precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario
-                    })),
+                    detalles: detalles.map((d, index) => {
+                        const detalle = {
+                            producto_id: d.producto_id,
+                            cantidad: d.cantidad,
+                            precio_unitario: getPrecioActualizado(d.producto_id as number) ?? d.precio_unitario,
+                            // ✅ NUEVO: Incluir campos de combo que ya vienen en detalles
+                            tipo_precio_id: d.tipo_precio_id,
+                            tipo_precio_nombre: d.tipo_precio_nombre,
+                            combo_items_seleccionados: (d as any).combo_items_seleccionados || [],
+                        };
+                        console.log(`✨ [CREACIÓN] Detalle ${index} (Producto ${d.producto_id}):`, detalle);
+                        return detalle;
+                    }),
                     subtotal: totales.subtotal,
                     impuesto: 0,
                     total: totales.total,
                     estado_inicial: estadoInicial,  // ✅ NUEVO: BORRADOR o PENDIENTE
                     preventista_id: preventistaId,  // ✅ NUEVO: Preventista asignado
                 }
+
+                // 🔍 DEBUG: Mostrar payload completo antes de enviar
+                console.log('📤 [CREACIÓN] Payload COMPLETO que se enviará:', JSON.stringify(payload, null, 2));
 
                 const response = await fetch('/proformas', {
                     method: 'POST',
@@ -497,12 +559,14 @@ export default function ProformasCreate({
                     body: JSON.stringify(payload),
                 })
 
+                // 🔍 DEBUG: Mostrar respuesta del servidor
+                const data = await response.json();
+                console.log('📨 [CREACIÓN] Respuesta del servidor:', data);
+
                 if (!response.ok) {
-                    const error = await response.json()
-                    throw new Error(error.message || 'Error al crear proforma')
+                    throw new Error(data.message || 'Error al crear proforma')
                 }
 
-                const data = await response.json()
                 toast.success('✅ Proforma creada exitosamente')
 
                 // Redirigir a la proforma
@@ -512,7 +576,7 @@ export default function ProformasCreate({
             }
 
         } catch (error) {
-            console.error('Error:', error)
+            console.error('❌ [ERROR] Error en handleCrearProforma:', error)
             toast.error(error instanceof Error ? error.message : modo === 'editar' ? 'Error al actualizar proforma' : 'Error al crear proforma')
         } finally {
             setIsSubmitting(false)
@@ -739,7 +803,7 @@ export default function ProformasCreate({
                     </div>
 
                     {/* Información adicional */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4 mb-2">
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4 mb-2 mt-4">
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
                                 <Label htmlFor="fecha" className="text-sm">Fecha</Label>
@@ -788,17 +852,24 @@ export default function ProformasCreate({
                                 onUpdateDetail={handleUpdateDetalle}
                                 onRemoveDetail={handleRemoveDetalle}
                                 onTotalsChange={handleTotalsChange}
+                                onComboItemsChange={handleComboItemsChange}
                                 tipo="venta"
                                 almacen_id={almacenIdSeguro}
                                 isCalculatingPrices={isCalculandoRangos}
                                 errors={undefined}
+                                default_tipo_precio_id={default_tipo_precio_id}
+                                carritoCalculado={carritoCalculado}
+                                onDetallesActualizados={(nuevosDetalles) => {
+                                    console.log('🔄 [proformas/Create.tsx] ProductosTable notificó cambios en detalles por rangos');
+                                    setDetalles(nuevosDetalles);
+                                }}
                             />
                         </CardContent>
                     </Card>
 
                     {/* Card Resumen */}
                     {detalles.length > 0 && (
-                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 mt-2">
                             <CardHeader>
                                 <CardTitle className="text-lg">📊 Resumen</CardTitle>
                             </CardHeader>
