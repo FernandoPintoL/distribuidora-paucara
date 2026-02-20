@@ -171,6 +171,9 @@ class ImageBackupService
                 'clientes' => 0,
                 'proveedores' => 0,
                 'productos' => 0,
+                'empresas' => 0,
+                'entregas' => 0,
+                'visitas' => 0,
                 'fotos_lugar' => 0,
                 'otros' => 0,
                 'errores' => []
@@ -187,6 +190,15 @@ class ImageBackupService
                 }
                 if (in_array('productos', $tables)) {
                     $stats['productos'] = $this->backupFolder($zip, $publicStoragePath, 'productos');
+                }
+                if (in_array('empresas', $tables)) {
+                    $stats['empresas'] = $this->backupFolder($zip, $publicStoragePath, 'empresas');
+                }
+                if (in_array('entregas', $tables)) {
+                    $stats['entregas'] = $this->backupFolder($zip, $publicStoragePath, 'entregas');
+                }
+                if (in_array('visitas', $tables)) {
+                    $stats['visitas'] = $this->backupFolder($zip, $publicStoragePath, 'visitas');
                 }
                 if (in_array('fotos_lugar', $tables)) {
                     $stats['fotos_lugar'] = $this->backupFolder($zip, $publicStoragePath, 'clientes/*/fotos_lugar');
@@ -406,6 +418,14 @@ class ImageBackupService
                 try {
                     $fileContents = $zip->getFromIndex($i);
                     $targetPath = $filename;
+
+                    // ✅ SEGURIDAD: Validar path traversal
+                    if (str_contains($targetPath, '..') || str_starts_with($targetPath, '/')) {
+                        $error = "Path inválido detectado en backup: $filename";
+                        Log::warning($error);
+                        $stats['errores'][] = $error;
+                        continue;
+                    }
 
                     // Verificar si el archivo ya existe
                     if ($skipExisting && Storage::disk($this->publicDisk)->exists($targetPath)) {
@@ -682,6 +702,14 @@ class ImageBackupService
                 try {
                     $fileContents = $zip->getFromIndex($i);
                     $targetPath = $filename;
+
+                    // ✅ SEGURIDAD: Validar path traversal
+                    if (str_contains($targetPath, '..') || str_starts_with($targetPath, '/')) {
+                        $error = "Path inválido detectado en backup: $filename";
+                        Log::warning($error);
+                        $stats['errores'][] = $error;
+                        continue;
+                    }
 
                     // Verificar si el archivo ya existe
                     if ($skipExisting && Storage::disk($this->publicDisk)->exists($targetPath)) {
