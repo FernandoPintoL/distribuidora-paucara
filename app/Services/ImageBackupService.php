@@ -67,6 +67,9 @@ class ImageBackupService
                 'clientes_fotos' => 0,
                 'proveedores_fotos' => 0,
                 'productos_imagenes' => 0,
+                'empresas_datos' => 0,
+                'entregas_fotos' => 0,
+                'visitas_fotos' => 0,
                 'fotos_lugar_cliente' => 0,
                 'otros_archivos' => 0,
                 'errores' => []
@@ -79,6 +82,9 @@ class ImageBackupService
                 $stats['clientes_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'clientes');
                 $stats['proveedores_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'proveedores');
                 $stats['productos_imagenes'] = $this->backupFolder($zip, $publicStoragePath, 'productos');
+                $stats['empresas_datos'] = $this->backupFolder($zip, $publicStoragePath, 'empresas');
+                $stats['entregas_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'entregas');
+                $stats['visitas_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'visitas');
                 $stats['fotos_lugar_cliente'] = $this->backupFolder($zip, $publicStoragePath, 'clientes/*/fotos_lugar');
                 $stats['otros_archivos'] = $this->backupOtherFolders($zip, $publicStoragePath);
             }
@@ -346,7 +352,7 @@ class ImageBackupService
     protected function backupOtherFolders(ZipArchive $zip, string $publicPath): int
     {
         $count = 0;
-        $knownFolders = ['clientes', 'proveedores', 'productos'];
+        $knownFolders = ['clientes', 'proveedores', 'productos', 'empresas', 'entregas', 'visitas'];
 
         if (is_dir($publicPath)) {
             $items = scandir($publicPath);

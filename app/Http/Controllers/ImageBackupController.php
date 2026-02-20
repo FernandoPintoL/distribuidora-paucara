@@ -28,7 +28,7 @@ class ImageBackupController extends Controller
         try {
             $request->validate([
                 'tables' => 'array|nullable',
-                'tables.*' => 'in:clientes,proveedores,productos,fotos_lugar'
+                'tables.*' => 'in:clientes,proveedores,productos,empresas,entregas,visitas,fotos_lugar'
             ]);
 
             $tables = $request->input('tables', []);
@@ -228,7 +228,7 @@ class ImageBackupController extends Controller
     {
         try {
             $request->validate([
-                'folder_name' => 'required|string|in:clientes,proveedores,productos'
+                'folder_name' => 'required|string|in:clientes,proveedores,productos,empresas,entregas,visitas'
             ]);
 
             $folderName = $request->input('folder_name');
@@ -254,7 +254,7 @@ class ImageBackupController extends Controller
     {
         try {
             $request->validate([
-                'folder_name' => 'required|string|in:clientes,proveedores,productos'
+                'folder_name' => 'required|string|in:clientes,proveedores,productos,empresas,entregas,visitas'
             ]);
 
             $folderName = $request->input('folder_name');
@@ -297,7 +297,7 @@ class ImageBackupController extends Controller
         try {
             $request->validate([
                 'backup_name' => 'required|string',
-                'folder_name' => 'required|string|in:clientes,proveedores,productos',
+                'folder_name' => 'required|string|in:clientes,proveedores,productos,empresas,entregas,visitas',
                 'skip_existing' => 'boolean'
             ]);
 
