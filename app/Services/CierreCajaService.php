@@ -875,13 +875,44 @@ class CierreCajaService
     }
 
     /**
-     * Calcular sumatoria de ventas APROBADAS a CRÉDITO
-     * ✅ FIXED: Ahora filtra por tipo_pago='CREDITO', no por tipo_operacion='CREDITO'
-     * Así coincide con calcularVentasAprobadasEfectivo
+     * ✅ REFACTORIZADO (2026-02-20): Calcular sumatoria de ventas APROBADAS a CRÉDITO
+     *
+     * Filtra por politica_pago='CREDITO' (no por tipos_pago que son métodos de pago)
+     *
+     * Diferencia importante:
+     * - tipos_pago: Métodos de pago (Efectivo, Transferencia, Cheque) → cómo pagó
+     * - politica_pago: Política de pago (Contra Entrega, Crédito, etc.) → condiciones
      */
-    private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja)
+    private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja): float
     {
-        return $this->calcularVentasAprobadas($aperturaCaja, ['VENTA'], 'CREDITO');
+        try {
+            // ✅ Filtra por politica_pago='CREDITO' en la tabla ventas (no tipos_pago)
+            $total = DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VENTA')                    // ✅ VENTA (no CREDITO)
+                ->where('ventas.politica_pago', 'CREDITO')                        // ✅ POLÍTICA de pago (no tipo_pago)
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)        // ✅ APROBADAS
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                ->sum('ventas.total');
+
+            Log::info('💳 [calcularVentasAprobadasCredito]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'caja_id' => $aperturaCaja->caja_id,
+                'total_credito' => $total,
+                'source' => 'politica_pago (correcto)',
+            ]);
+
+            return (float) $total;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasAprobadasCredito]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
     }
 
     /**
@@ -890,7 +921,10 @@ class CierreCajaService
      * Suma TODAS las ventas APROBADAS con politica_pago='CREDITO'
      * que pertenezcan a esta caja (pagadas o pendientes)
      *
-     * ✅ ACTUALIZADO (2026-02-20): Removido filtro usuario_id para que admins vean todos los datos
+     * ✅ REFACTORIZADO (2026-02-20):
+     * - Usa movimientos_caja como tabla principal
+     * - Filtra por caja_id + politica_pago='CREDITO' + estado='APROBADO'
+     * - Permite que admins vean todas las cajas sin restricción de usuario
      *
      * @param AperturaCaja $aperturaCaja
      * @return float Suma total de ventas a crédito de la caja
@@ -898,25 +932,28 @@ class CierreCajaService
     public function calcularVentasCreditoDeCaja(AperturaCaja $aperturaCaja): float
     {
         try {
-            // Query de ventas que pertenecen a ESTA CAJA con política CRÉDITO
-            // ✅ Solo filtra por caja_id (admins pueden ver cualquier caja)
-            $total = DB::table('ventas')
+            // ✅ Usar movimientos_caja como tabla principal
+            // Busca movimientos de esta caja que sean ventas a crédito aprobadas
+            $total = DB::table('movimientos_caja')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-                ->where('ventas.caja_id', $aperturaCaja->caja_id)  // ✅ Ventas de esta caja
-                ->where('ventas.politica_pago', 'CREDITO')  // ✅ Política de pago = CRÉDITO
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)  // ✅ Movimientos de esta caja
+                ->where('ventas.politica_pago', 'CREDITO')                  // ✅ Política CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)  // ✅ Solo aprobadas
-                ->sum('ventas.total');
+                ->sum('ventas.total');                                      // ✅ Suma totales de ventas
 
             Log::info('💳 [calcularVentasCreditoDeCaja]:', [
                 'apertura_id' => $aperturaCaja->id,
                 'caja_id' => $aperturaCaja->caja_id,
                 'total_credito' => $total,
+                'source' => 'movimientos_caja',
             ]);
 
             return (float) $total;
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasCreditoDeCaja]:', [
                 'apertura_id' => $aperturaCaja->id,
+                'caja_id' => $aperturaCaja->caja_id,
                 'error' => $e->getMessage(),
             ]);
             return 0;

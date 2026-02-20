@@ -250,7 +250,7 @@ export function CajaEstadoCard({
                                     📊 REFERENCIAL: Total Ventas Aprobadas
                                 </label>
                                 <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                    {formatCurrency((datosActualizados?.sumatoria_ventas_total || 0) + (ventasCreditoTotales || 0))}
+                                    {formatCurrency((datosActualizados?.sumatoria_ventas_total || 0))}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     Efectivo + Transferencia + Crédito Aprobadas (de esta caja)

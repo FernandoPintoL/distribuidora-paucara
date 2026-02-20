@@ -180,13 +180,14 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
     };
 
     // Totales de ingresos y egresos (desde servidor)
-    const ventasEnEfectivo = datosCierre?.sumatoria_ventas_total || 0;
+    const ventasTotales = datosCierre?.sumatoria_ventas_total || 0;
+    const ventasEnEfectivo = datosCierre?.sumatoria_ventas_efectivo || 0;
     const ventasCredito = datosCierre?.sumatoria_ventas_credito || 0;
     const pagosDeCredito = datosCierre?.monto_pagos_creditos || 0;
     const gastosTotales = datosCierre?.sumatoria_gastos || 0;
 
     // ✅ CORREGIDO: Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
-    const ingresos = ventasEnEfectivo + pagosDeCredito;
+    const ingresos = ventasTotales + pagosDeCredito;
     const egresos = datosCierre?.total_egresos || 0;
 
     // ✅ DEBUG: Log de cómo se calcula Total Ingresos

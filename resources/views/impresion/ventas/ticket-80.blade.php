@@ -7,9 +7,9 @@
 <div class="separador"></div>
 
 {{-- ==================== INFO DEL DOCUMENTO ==================== --}}
-<div class="documento-titulo">{{ $documento->tipoDocumento->nombre ?? 'Folio: ' }} N°{{ $documento->id }}</div>
-<div class="documento-numero">{{ $documento->numero }}</div>
-<div class="center" style="margin-top: 3px;">
+<div class="documento-titulo" style="font-size:12px;">{{ $documento->tipoDocumento->nombre ?? 'Folio: ' }} N°{{ $documento->id }}</div>
+<div class="documento-numero" style="font-size:12px;">{{ $documento->numero }}</div>
+<div class="center" style="margin-top: 3px; font-size:12px">
     <p style="margin: 2px 0;"><strong>Creado:</strong> {{ $documento->created_at->format('d/m/Y H:i') }}</p>
     <p style="margin: 2px 0;"><strong>Emisión:</strong> {{ now()->format('d/m/Y H:i') }}</p>
 </div>
@@ -17,7 +17,7 @@
 <div class="separador"></div>
 
 {{-- ==================== INFO DEL CLIENTE ==================== --}}
-<div class="documento-info">
+<div class="documento-info" style="font-size:13px;">
     <p><strong>Cliente:</strong> {{ $documento->cliente->nombre }}</p>
     <p><strong>Cód. Cliente:</strong> #{{ $documento->cliente->id }} | {{ $documento->cliente->codigo_cliente }}</p>
     @if($documento->cliente->nit)
@@ -66,7 +66,7 @@
     Politica Pago: {{ $documento->politica_pago ?? 'CONTRA_ENTREGA' }}
 </div>
 
-<div class="center" style="margin-top: 5px; font-weight: bold;">
+<div class="center" style="margin-top: 5px; font-weight: bold; font-size: 13px;">
     @if($documento->estado_pago === 'PAGADA')
     <span>PAGADA</span>
     @elseif($documento->estado_pago === 'PARCIAL')
@@ -92,7 +92,7 @@
 
 {{-- ==================== INFORMACIÓN DE CAJA Y ALMACÉN ==================== --}}
 @if($documento->movimientoCaja)
-<div class="documento-info">
+<div class="documento-info" style="font-size:13px;">
     @if($documento->movimientoCaja->caja)
     <p><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</p>
     @endif

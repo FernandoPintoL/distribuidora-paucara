@@ -212,6 +212,11 @@ export default function ProformasCreate({
             peso: d.peso || d.producto?.peso || 0,
             categoria: d.categoria || d.producto?.categoria || null,
             limite_venta: d.limite_venta || d.producto?.limite_venta || null,
+            // ✅ NUEVO (2026-02-20): Propiedades necesarias para combos en ProductosTable
+            es_combo: d.es_combo || (d.producto?.es_combo ?? false),
+            combo_items: d.combo_items || [],
+            combo_items_seleccionados: d.combo_items_seleccionados || [],
+            expanded: d.expanded || false,
         }))
     }
 
@@ -392,28 +397,33 @@ export default function ProformasCreate({
     }
 
     // ✅ NUEVO (2026-02-18): Handler para cuando el usuario selecciona/deselecciona items opcionales del combo
+    // Sincronizado con Show.tsx para mantener consistencia en ProductosTable
     const handleComboItemsChange = (detailIndex: number, items: any[]) => {
         console.log(`🎁 [Create.tsx] Combo items cambiaron en detalle ${detailIndex}:`, items);
 
-        // Actualizar el detalles array con los combo_items_seleccionados
         const nuevosDetalles = [...detalles];
+        const detalle = nuevosDetalles[detailIndex];
 
-        if (nuevosDetalles[detailIndex]) {
-            // ✅ CRÍTICO: Guardar los items seleccionados en combo_items_seleccionados
-            nuevosDetalles[detailIndex] = {
-                ...nuevosDetalles[detailIndex],
-                combo_items_seleccionados: items.map(item => ({
+        if (detalle && (detalle.producto as any)?.es_combo) {
+            // ✅ Convertir items actualizados a combo_items_seleccionados
+            // Solo incluir los que tienen _isChecked = true
+            const comboItemsSeleccionados = items
+                .filter((item: any) => item._isChecked === true)
+                .map((item: any) => ({
                     id: item.id,
+                    combo_item_id: item.id,
                     producto_id: item.producto_id,
                     producto_nombre: item.producto_nombre,
                     cantidad: item.cantidad,
                     es_obligatorio: item.es_obligatorio,
-                    incluido: item.incluido
-                }))
-            } as any;
+                    incluido: true
+                }));
 
-            console.log(`✅ [Create.tsx] Detalle ${detailIndex} actualizado con combo_items:`, nuevosDetalles[detailIndex]);
+            // Actualizar el detalle con los nuevos combo_items_seleccionados
+            detalle.combo_items_seleccionados = comboItemsSeleccionados;
             setDetalles(nuevosDetalles);
+
+            console.log(`✅ [Create.tsx] combo_items_seleccionados actualizado con ${comboItemsSeleccionados.length} items`);
         }
     }
 

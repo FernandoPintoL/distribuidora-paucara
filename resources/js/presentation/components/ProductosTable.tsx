@@ -973,9 +973,14 @@ export default function ProductosTable({
 
                                                 if (esComboCampo) {
                                                     return (
-                                                        <div className="text-xs">
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-semibold">
-                                                                📦 {capacidad ?? 0}
+                                                        <div className="text-xs space-y-1">
+                                                            {/* Stock disponible/total del combo */}
+                                                            {/* <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-semibold">
+                                                                📊 {stockDisponible}/{stockTotal}
+                                                            </div> */}
+                                                            {/* Capacidad de combos */}
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-semibold ml-1">
+                                                                📦 {stockDisponible ?? 0}
                                                             </span>
                                                             <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                                                                 {capacidad !== null && capacidad !== undefined ? 'combos' : '—'}
@@ -1413,18 +1418,54 @@ export default function ProductosTable({
                                     // ✅ CRÍTICO: Usar combo_items del mapa si existen, sino usar los originales
                                     // Usar comboId (producto.id) en lugar de index para evitar colisiones
                                     const comboIdDisplay = (productoInfo as any)?.id;
-                                    // ✅ FIJO (2026-02-18): Fallback correcto para modo Show (desde backend)
-                                    // Orden de prioridad:
-                                    // 1. comboItemsMap[comboIdDisplay] - items seleccionados en Create
-                                    // 2. detalle.combo_items_seleccionados - items guardados en proforma existente (modo Show)
-                                    // 3. productoInfo.combo_items - items de búsqueda de API
-                                    const itemsAMostrar = comboItemsMap[comboIdDisplay]
-                                        || (detalles[index] as any).combo_items_seleccionados
-                                        || ((productoInfo as any).combo_items || []);
+
+                                    // ✅ SIMPLIFICADO (2026-02-20): Mostrar TODOS los items del combo
+                                    // Estrategia: Priorizar productoInfo.combo_items (tiene stock completo)
+                                    const detalleActual = detalles[index] as any;
+
+                                    // TODOS los items disponibles en el combo
+                                    // ✅ CRÍTICO: Usar productoInfo.combo_items PRIMERO (tiene stock_disponible, stock_total, etc.)
+                                    // Solo usar detalleActual.combo_items como fallback
+                                    const todosLosItems = ((productoInfo as any).combo_items || detalleActual?.combo_items || []);
+
+                                    // Items que el usuario seleccionó (guardados en proforma)
+                                    const idsSeleccionados = new Set(
+                                        (detalleActual?.combo_items_seleccionados || [])
+                                            .map((item: any) => item.id)
+                                    );
+
+                                    // ✅ NUEVO (2026-02-20): Obtener items actualizados de comboItemsMap si existen
+                                    // Esto refleja cambios de cantidad cuando el usuario modifica la cantidad del combo
+                                    const itemsDelMapa = comboIdDisplay ? comboItemsMap[comboIdDisplay] : null;
+
+                                    // Mapear items para agregar flag "checked" y cantidad actualizada
+                                    const itemsAMostrar = todosLosItems.map((item: any) => {
+                                        // Si existe en el mapa (usuario editó), usar esa cantidad; si no, usar la del backend
+                                        const itemDelMapa = itemsDelMapa?.find((i: any) => i.id === item.id);
+                                        const cantidadActualizada = itemDelMapa?.cantidad ?? item.cantidad;
+
+                                        return {
+                                            ...item,
+                                            cantidad: cantidadActualizada, // ✅ Usar cantidad actualizada
+                                            _isChecked: idsSeleccionados.has(item.id) // Flag para saber si está seleccionado
+                                        };
+                                    });
 
                                     // ✅ NUEVO: Obtener información referencial de grupo_opcional
                                     const grupoOpcional = (detalles[index] as any)?.grupo_opcional;
                                     const cantidadALlevar = grupoOpcional?.cantidad_a_llevar;
+
+                                    // ✅ Contar items seleccionados vs totales
+                                    const itemsSeleccionados = itemsAMostrar.filter((i: any) => i._isChecked === true);
+                                    const totalItems = itemsAMostrar.length;
+
+                                    // ✅ DEBUG: Verificar stock del combo
+                                    console.log(`📦 [ProductosTable] Stock del combo ${(productoInfo as any)?.nombre}:`, {
+                                        stock_disponible: (productoInfo as any)?.stock_disponible,
+                                        stock_total: (productoInfo as any)?.stock_total,
+                                        stock_reservado: (productoInfo as any)?.stock_reservado,
+                                        productoInfo: productoInfo
+                                    });
 
                                     return (
                                         <Fragment key={`combo-${index}`}>
@@ -1443,36 +1484,67 @@ export default function ProductosTable({
                                                 </tr>
                                             )}
 
-                                            {/* Mostrar componentes del combo */}
+                                            {/* ✅ NUEVO (2026-02-20): Header mostrando resumen de selección + stock */}
+                                            <tr className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400">
+                                                <td colSpan={tipo === 'compra' ? 4 : 5} className="px-4 py-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <span className="text-amber-600 dark:text-amber-400 font-medium">📦 Componentes:</span>
+                                                            <span className="text-amber-700 dark:text-amber-300">
+                                                                <strong className="text-green-600 dark:text-green-400">{itemsSeleccionados.length} seleccionados</strong>
+                                                                {' '}/ {totalItems} disponibles
+                                                            </span>
+                                                        </div>
+                                                        {/* ✅ NUEVO (2026-02-20): Stock del combo */}
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <span className="text-amber-600 dark:text-amber-400">📊</span>
+                                                            <span className="text-amber-700 dark:text-amber-300">
+                                                                Stock: <strong className="text-blue-600 dark:text-blue-400">
+                                                                    {(productoInfo as any)?.stock_disponible ?? '-'}
+                                                                </strong>
+                                                                {' '}/ <strong className="text-gray-600 dark:text-gray-400">
+                                                                    {(productoInfo as any)?.stock_total ?? '-'}
+                                                                </strong>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            {/* Mostrar TODOS los componentes del combo */}
                                             {itemsAMostrar.map((item: any, itemIndex: number) => (
-                                                <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${item.incluido === false ? 'bg-gray-100 dark:bg-gray-800/50 opacity-60' : 'bg-purple-50 dark:bg-purple-900/10'} border-purple-400`}>
+                                                <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${
+                                                    item._isChecked === true
+                                                        ? 'bg-green-50 dark:bg-green-900/10 border-green-400'
+                                                        : 'bg-gray-100 dark:bg-gray-800/50 opacity-60 border-gray-300'
+                                                }`}>
                                                     <td className="px-4 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
-                                                            {/* ✅ NUEVO: Checkbox para productos opcionales (es_obligatorio = false) */}
+                                                            {/* ✅ SIMPLIFICADO (2026-02-20): Checkbox para todos los items, editable si proforma es PENDIENTE */}
                                                             {item.es_obligatorio === false ? (
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={item.incluido !== false}
+                                                                    checked={item._isChecked === true}
+                                                                    disabled={readOnly}  // Habilitar si proforma es editable
                                                                     onChange={(e) => {
                                                                         const nuevosItems = [...itemsAMostrar];
-                                                                        nuevosItems[itemIndex].incluido = e.target.checked;
-                                                                        // ✅ CRÍTICO: Usar comboIdDisplay en lugar de index para mantener consistencia
+                                                                        nuevosItems[itemIndex]._isChecked = e.target.checked;
+                                                                        // Notificar al parent component sobre los cambios
                                                                         if (comboIdDisplay) {
                                                                             setComboItemsMap(prev => ({
                                                                                 ...prev,
                                                                                 [comboIdDisplay]: nuevosItems
                                                                             }));
                                                                         }
-                                                                        // ✅ NUEVO: Notificar al parent component sobre los cambios en items opcionales
                                                                         onComboItemsChange?.(index, nuevosItems);
-                                                                        console.log(`✅ Producto opcional ${item.producto_nombre}: ${e.target.checked ? 'INCLUIDO' : 'EXCLUIDO'}`);
+                                                                        console.log(`✏️ Combo item ${item.producto_nombre}: ${e.target.checked ? 'HABILITADO' : 'DESHABILITADO'}`);
                                                                     }}
-                                                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer accent-purple-600"
-                                                                    title="Marcar para incluir en la venta / desmarcar para excluir"
+                                                                    className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer accent-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    title={readOnly ? (item._isChecked ? "Producto seleccionado (solo lectura)" : "Producto no seleccionado (solo lectura)") : (item._isChecked ? "Click para deseleccionar" : "Click para seleccionar")}
                                                                 />
                                                             ) : (
                                                                 <div className="w-4 h-4 flex items-center justify-center">
-                                                                    <span className="text-purple-600 dark:text-purple-400 text-lg">✓</span>
+                                                                    <span className="text-green-600 dark:text-green-400 text-lg">✓</span>
                                                                 </div>
                                                             )}
                                                             <div className="w-4 h-4 flex items-center justify-center">
@@ -1506,12 +1578,13 @@ export default function ProductosTable({
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
+                                                            disabled={readOnly}
                                                             value={item.cantidad || 0}
                                                             onChange={(e) => {
                                                                 const nuevaCantidad = parseFloat(e.target.value) || 0;
                                                                 const nuevosItems = [...itemsAMostrar];
                                                                 nuevosItems[itemIndex].cantidad = nuevaCantidad;
-                                                                // ✅ CRÍTICO: Usar comboIdDisplay en lugar de index para mantener consistencia
+                                                                // Usar comboIdDisplay para mantener consistencia
                                                                 if (comboIdDisplay) {
                                                                     setComboItemsMap(prev => ({
                                                                         ...prev,
@@ -1521,7 +1594,7 @@ export default function ProductosTable({
                                                                 onComboItemsChange?.(index, nuevosItems);
                                                                 console.log(`✏️ Cantidad actualizada para ${item.producto_nombre}: ${nuevaCantidad}`);
                                                             }}
-                                                            className="w-16 px-2 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-300 font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                            className="w-16 px-2 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-300 font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                                                         />
                                                     </td>
                                                     {tipo === 'venta' && (

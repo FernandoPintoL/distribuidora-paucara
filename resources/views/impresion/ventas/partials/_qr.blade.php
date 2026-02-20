@@ -1,5 +1,5 @@
 {{-- Código QR con enlace público a la venta --}}
-<div class="qr-container">
+<div class="qr-container" style="font-size=12px;">
     @php
         // Obtener o crear token de acceso público
         $accessToken = $documento->accessToken;
@@ -22,7 +22,7 @@
     @endphp
 
     @if($qrImage)
-    <div class="qr-box">
+    <div class="qr-box" style="font-size=13px;">
         <img src="{{ $qrImage }}" alt="QR Code" class="qr-code">
         <p class="qr-label">{{ $documento->numero }}</p>
     </div>

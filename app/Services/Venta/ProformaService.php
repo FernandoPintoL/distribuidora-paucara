@@ -512,10 +512,13 @@ class ProformaService
             }
 
             // Preparar datos para crear venta
+            // ✅ IMPORTANTE: Incluir combo_items_seleccionados para que expandirCombos()
+            //    solo reduzca stock de los items seleccionados por el cliente
             $detalles = $proforma->detalles->map(fn($det) => [
-                'producto_id'     => $det->producto_id,
-                'cantidad'        => $det->cantidad,
-                'precio_unitario' => $det->precio_unitario,
+                'producto_id'              => $det->producto_id,
+                'cantidad'                 => $det->cantidad,
+                'precio_unitario'          => $det->precio_unitario,
+                'combo_items_seleccionados' => $det->combo_items_seleccionados, // ← Items seleccionados del combo
             ])->toArray();
 
             // ✅ NUEVO: Calcular peso total desde detalles

@@ -229,23 +229,28 @@ class ApiProformaController extends Controller
                 $subtotalItem = $cantidad * $precioUnitario;
                 $subtotal += $subtotalItem;
 
-                // ✅ NUEVO (2026-02-16): Procesar combo_items_seleccionados
+                // ✅ ACTUALIZADO (2026-02-20): Procesar combo_items_seleccionados desde Flutter
                 $comboItemsSeleccionados = null;
                 if (isset($item['combo_items_seleccionados']) && is_array($item['combo_items_seleccionados'])) {
-                    // Filtrar solo items que están incluidos (incluido = true)
-                    $comboItemsSeleccionados = array_filter($item['combo_items_seleccionados'], function($itemCombo) {
-                        return ($itemCombo['incluido'] ?? false) === true;
-                    });
-                    // Reindexar array después de filter
-                    $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
-                    // Mapear a formato estándar
+                    // Los items ya vienen seleccionados desde la app (sin necesidad de filtro)
                     $comboItemsSeleccionados = array_map(function($itemCombo) {
+                        // ✅ CORREGIDO: Procesar cantidad (puede ser int o float)
+                        $cantidad = $itemCombo['cantidad'] ?? 1;
+                        if (is_string($cantidad)) {
+                            $cantidad = (float) $cantidad;
+                        }
+
                         return [
                             'combo_item_id' => $itemCombo['combo_item_id'] ?? null,
                             'producto_id' => $itemCombo['producto_id'] ?? null,
-                            'incluido' => $itemCombo['incluido'] ?? false,
+                            'cantidad' => $cantidad,
                         ];
-                    }, $comboItemsSeleccionados);
+                    }, $item['combo_items_seleccionados']);
+
+                    \Log::info('✅ Combo items procesados desde Flutter', [
+                        'cantidad_items' => count($comboItemsSeleccionados),
+                        'items' => $comboItemsSeleccionados,
+                    ]);
                 }
 
                 $productosValidados[] = [

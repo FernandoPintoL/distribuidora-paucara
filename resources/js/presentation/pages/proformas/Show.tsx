@@ -447,20 +447,31 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
 
     // Estados para edición de detalles
     const [editableDetalles, setEditableDetalles] = useState(
-        proforma.detalles.map(d => ({
-            ...d,
-            // ✅ Convertir cantidad de string a number si es necesario
-            cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad) : (d.cantidad || 1),
-            // ✅ Asegurar que precio_unitario es número
-            precio_unitario: typeof d.precio_unitario === 'string' ? parseFloat(d.precio_unitario) : (d.precio_unitario || 0),
-            // ✅ Asegurar que subtotal es número
-            subtotal: typeof d.subtotal === 'string' ? parseFloat(d.subtotal) : (d.subtotal || 0),
-            // ✅ CRÍTICO: Usar d.producto directamente del backend EN LUGAR de reconstruirlo
-            // El backend retorna toda la estructura con es_combo y combo_items dentro de producto
-            // Si reconstruimos, perdemos esos campos críticos
-            producto: d.producto && typeof d.producto === 'object'
-                ? d.producto  // ← USAR DIRECTAMENTE: tiene sku, es_combo, combo_items, etc.
-                : {
+        proforma.detalles.map(d => {
+            // ✅ DEBUG: Verificar que el stock llega correctamente
+            console.log(`✅ [Show.tsx InitState] Detalle ${d.producto_id}:`, {
+                producto_id: d.producto_id,
+                producto_nombre: d.producto_nombre,
+                tiene_producto: !!d.producto,
+                stock_disponible_en_detalle: d.stock_disponible,
+                stock_disponible_en_producto: (d.producto as any)?.stock_disponible,
+                stock_total_en_producto: (d.producto as any)?.stock_total
+            });
+
+            return {
+                ...d,
+                // ✅ Convertir cantidad de string a number si es necesario
+                cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad) : (d.cantidad || 1),
+                // ✅ Asegurar que precio_unitario es número
+                precio_unitario: typeof d.precio_unitario === 'string' ? parseFloat(d.precio_unitario) : (d.precio_unitario || 0),
+                // ✅ Asegurar que subtotal es número
+                subtotal: typeof d.subtotal === 'string' ? parseFloat(d.subtotal) : (d.subtotal || 0),
+                // ✅ CRÍTICO: Usar d.producto directamente del backend EN LUGAR de reconstruirlo
+                // El backend retorna toda la estructura con es_combo y combo_items dentro de producto
+                // Si reconstruimos, perdemos esos campos críticos
+                producto: d.producto && typeof d.producto === 'object'
+                    ? d.producto  // ← USAR DIRECTAMENTE: tiene sku, es_combo, combo_items, etc.
+                    : {
                     // FALLBACK: Por si no viniera producto del backend (compatibilidad)
                     id: d.producto_id,
                     nombre: d.producto_nombre,
@@ -476,7 +487,8 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     limite_venta: d.limite_venta || null,
                     precios: Array.isArray(d.precios) ? d.precios : [],
                 }
-        }))
+            };
+        })
     )
     const [preciosEditadosManualmente, setPreciosEditadosManualmente] = useState<Set<number>>(new Set())
     const [showAgregarProductoDialog, setShowAgregarProductoDialog] = useState(false)
@@ -818,6 +830,36 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     const handleTotalsChange = (detalles: any[]) => {
         // Handler opcional si ProductosTable notifica cambios de totales
     }
+
+    // ✅ NUEVO (2026-02-20): Handler para cambios en items opcionales del combo
+    const handleComboItemsChange = useCallback((detailIndex: number, updatedItems: any[]) => {
+        console.log(`📦 [Show.tsx] Combo items cambiaron en índice ${detailIndex}:`, updatedItems);
+
+        const nuevosDetalles = [...editableDetalles];
+        const detalle = nuevosDetalles[detailIndex];
+
+        if (detalle && (detalle.producto as any)?.es_combo) {
+            // Convertir items actualizados a combo_items_seleccionados
+            // Solo incluir los que tienen _isChecked = true
+            const comboItemsSeleccionados = updatedItems
+                .filter((item: any) => item._isChecked === true)
+                .map((item: any) => ({
+                    id: item.id,
+                    combo_item_id: item.id,
+                    producto_id: item.producto_id,
+                    producto_nombre: item.producto_nombre,
+                    cantidad: item.cantidad,
+                    es_obligatorio: item.es_obligatorio,
+                    incluido: true
+                }));
+
+            // Actualizar el detalle con los nuevos combo_items_seleccionados
+            detalle.combo_items_seleccionados = comboItemsSeleccionados;
+
+            setEditableDetalles(nuevosDetalles);
+            console.log(`✅ combo_items_seleccionados actualizado con ${comboItemsSeleccionados.length} items`);
+        }
+    }, [editableDetalles]);
 
     // ✅ CRITICAL FIX (2026-02-18): Memorizar callback para evitar loop infinito
     // El callback se pasaba como prop inline a ProductosTable, causando que se recreara en cada render
@@ -1773,6 +1815,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                     onUpdateDetail={handleUpdateDetalle}
                                     onRemoveDetail={handleRemoveDetalle}
                                     onTotalsChange={handleTotalsChange}
+                                    onComboItemsChange={handleComboItemsChange}
                                     tipo="venta"
                                     almacen_id={almacenIdSeguro}
                                     isCalculatingPrices={isCalculandoRangos}

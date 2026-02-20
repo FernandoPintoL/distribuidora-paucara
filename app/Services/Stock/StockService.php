@@ -460,23 +460,41 @@ class StockService
             $cantidad   = (float) $item['cantidad'];
 
             if (isset($combos[$productoId])) {
-                // ✅ NUEVO: Verificar si hay items seleccionados específicos para este combo
+                // ✅ ACTUALIZADO (2026-02-20): Procesar items seleccionados desde Flutter
                 $comboItemsSeleccionados = $item['combo_items_seleccionados'] ?? null;
 
                 if ($comboItemsSeleccionados && is_array($comboItemsSeleccionados) && count($comboItemsSeleccionados) > 0) {
-                    // Si hay items seleccionados, solo expandir esos que estén marcados como incluido=true
-                    // Crear mapa para búsqueda rápida, filtrando solo items con incluido=true
-                    $idsSeleccionados = array_map(fn($s) => $s['producto_id'],
-                        array_filter($comboItemsSeleccionados, fn($item) => ($item['incluido'] ?? false) === true)
-                    );
+                    // ✅ CORREGIDO: Usar items seleccionados directamente (vienen de la app ya validados)
+                    // Crear mapa para búsqueda rápida: producto_id => cantidad_seleccionada
+                    $cantidadesSeleccionadas = [];
+                    foreach ($comboItemsSeleccionados as $seleccionado) {
+                        $seleccionado['producto_id'] = $seleccionado['producto_id'] ?? null;
+                        $seleccionado['cantidad'] = $seleccionado['cantidad'] ?? 1;
 
-                    foreach ($combos[$productoId]->comboItems as $comboItem) {
-                        // ✅ SOLO si el item está en la lista de seleccionados Y está marcado como incluido=true
-                        if (in_array($comboItem->producto_id, $idsSeleccionados)) {
-                            $id = $comboItem->producto_id;
-                            $expandido[$id] = ($expandido[$id] ?? 0) + ((float) $comboItem->cantidad * $cantidad);
+                        if ($seleccionado['producto_id']) {
+                            // Usar la cantidad especificada en combo_items_seleccionados (puede ser diferente de la del combo)
+                            $cantidadesSeleccionadas[$seleccionado['producto_id']] = (float) $seleccionado['cantidad'];
                         }
                     }
+
+                    foreach ($combos[$productoId]->comboItems as $comboItem) {
+                        $id = $comboItem->producto_id;
+
+                        // ✅ CORREGIDO: SOLO descontar si está en los items seleccionados
+                        if (isset($cantidadesSeleccionadas[$id])) {
+                            // Usar cantidad del combo_items_seleccionados (cantidad modificada por el usuario)
+                            $cantidadItem = $cantidadesSeleccionadas[$id];
+                            $expandido[$id] = ($expandido[$id] ?? 0) + ($cantidadItem * $cantidad);
+                        }
+                        // Si NO está en seleccionados, NO agregar nada (ignorar completamente)
+                    }
+
+                    \Log::info('✅ Combo expandido con items seleccionados', [
+                        'combo_id' => $productoId,
+                        'cantidad_combos' => $cantidad,
+                        'items_seleccionados' => count($comboItemsSeleccionados),
+                        'expandido' => $expandido,
+                    ]);
                 } else {
                     // Si NO hay items seleccionados, expandir TODOS los items del combo
                     // (compatibilidad con combos que no tengan items seleccionados explícitamente)

@@ -67,65 +67,74 @@
     </table>
 
 @elseif($formato === 'ticket-80')
-    {{-- FORMATO TICKET 80mm --}}
-    <table class="items">
-        @foreach($documento->detalles as $detalle)
-        {{-- ✅ NUEVO: Detectar si es combo --}}
-        @php
-            $esCombo = $detalle->producto->es_combo === true || $detalle->producto->es_combo === 1;
-            $comboItems = $detalle->combo_items_seleccionados ?? [];
-            $itemsSeleccionados = array_filter($comboItems, fn($item) => $item['incluido'] ?? false);
-        @endphp
+    {{-- FORMATO TICKET 80mm: Tabla con columnas: Cantidad | Nombre | Precio Unit. | Subtotal --}}
+    <table class="items" style="width: 100%; border-collapse: collapse;">
+        {{-- ✅ ENCABEZADO DE LA TABLA --}}
+        <thead>
+            <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; font-size: 11px;">
+                <th style="width: 12%; text-align: center; padding: 2px 0;">CANT.</th>
+                <th style="width: 50%; text-align: left; padding: 2px 4px;">NOMBRE</th>
+                <th style="width: 18%; text-align: right; padding: 2px 0;">P.UNIT.</th>
+                <th style="width: 20%; text-align: right; padding: 2px 2px;">SUBTOTAL</th>
+            </tr>
+        </thead>
 
-        <tr>
-            <td colspan="3" class="item-nombre">
-                @if($esCombo) 📦 @endif
-                {{ $detalle->producto->nombre }}
-            </td>
-        </tr>
-        @if($detalle->producto->codigo)
-        <tr>
-            <td colspan="3" class="item-detalle">Código: {{ $detalle->producto->codigo }}</td>
-        </tr>
-        @endif
-        <tr>
-            <td style="width: 50%;">
-                {{ number_format($detalle->cantidad, 2) }} x {{ number_format($detalle->precio_unitario, 2) }}
-            </td>
-            <td style="width: 10%;"></td>
-            <td style="width: 40%; text-align: right;">
-                <strong>{{ number_format($detalle->subtotal, 2) }}</strong>
-            </td>
-        </tr>
+        {{-- ✅ CUERPO DE LA TABLA --}}
+        <tbody>
+            @foreach($documento->detalles as $detalle)
+            {{-- Detectar si es combo --}}
+            @php
+                $esCombo = $detalle->producto->es_combo === true || $detalle->producto->es_combo === 1;
+                $comboItems = $detalle->combo_items_seleccionados ?? [];
+                $itemsSeleccionados = array_filter($comboItems, fn($item) => $item['incluido'] ?? false);
+            @endphp
 
-        {{-- ✅ NUEVO: Mostrar items del combo si existen --}}
-        @if($esCombo && count($itemsSeleccionados) > 0)
-            <tr>
-                <td colspan="3" style="padding-left: 10px; color: #666;">
-                    Combo items ({{ count($itemsSeleccionados) }}):
+            {{-- FILA DE PRODUCTO --}}
+            <tr style="border-bottom: 1px dotted #ccc;">
+                <td style="width: 12%; text-align: center; padding: 2px 0; font-size: 12px;">
+                    {{ number_format($detalle->cantidad, 0) }}
+                </td>
+                <td style="width: 50%; text-align: left; padding: 2px 4px; font-size: 12px;">
+                    <strong>@if($esCombo) 📦 @endif {{ $detalle->producto->nombre }}</strong>
+                    @if($detalle->producto->codigo)
+                        <br><small style="color: #999; font-size: 8px;">{{ $detalle->producto->codigo }}</small>
+                    @endif
+                </td>
+                <td style="width: 18%; text-align: right; padding: 2px 0; font-size: 12px;">
+                    {{ number_format($detalle->precio_unitario, 2) }}
+                </td>
+                <td style="width: 20%; text-align: right; padding: 2px 2px; font-size: 12px; font-weight: bold;">
+                    {{ number_format($detalle->subtotal, 2) }}
                 </td>
             </tr>
-            @foreach($itemsSeleccionados as $item)
-                @php
-                    // Intentar obtener el nombre del producto del item
-                    $itemProducto = $documento->detalles
-                        ->flatMap(fn($d) => $d->producto->comboItems ?? [])
-                        ->firstWhere('producto_id', $item['producto_id'])
-                        ?->producto;
-                @endphp
+
+            {{-- ITEMS DEL COMBO SI EXISTEN --}}
+            @if($esCombo && count($itemsSeleccionados) > 0)
                 <tr>
-                    <td colspan="3" style="padding-left: 18px;">
-                        └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
-                        @if($item['cantidad'] ?? false)
-                            ({{ $item['cantidad'] }} u)
-                        @endif
+                    <td colspan="4" style="padding: 2px 4px; font-size: 8px; color: #666;">
+                        <strong>Componentes ({{ count($itemsSeleccionados) }}):</strong>
                     </td>
                 </tr>
-            @endforeach
-        @endif
+                @foreach($itemsSeleccionados as $item)
+                    @php
+                        $itemProducto = $documento->detalles
+                            ->flatMap(fn($d) => $d->producto->comboItems ?? [])
+                            ->firstWhere('producto_id', $item['producto_id'])
+                            ?->producto;
+                    @endphp
+                    <tr>
+                        <td colspan="4" style="padding: 1px 12px; font-size: 8px; color: #666;">
+                            └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
+                            @if($item['cantidad'] ?? false)
+                                ({{ $item['cantidad'] }} u)
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            @endif
 
-        <tr><td colspan="3" style="height: 3px;"></td></tr>
-        @endforeach
+            @endforeach
+        </tbody>
     </table>
 
 @elseif($formato === 'ticket-58')
