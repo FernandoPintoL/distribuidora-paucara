@@ -878,30 +878,36 @@ class CierreCajaService
     }
 
     /**
-     * ✅ NUEVO: Calcular TODAS las ventas a crédito (acumuladas del usuario)
-     * Sin restricción de fecha - muestra el total de TODAS las ventas con politica_pago='CREDITO'
-     * Útil para ver el monto total de crédito otorgado al usuario en su histórico
+     * ✅ NUEVO: Calcular TODAS las ventas a crédito de UNA CAJA
+     *
+     * Suma TODAS las ventas APROBADAS con politica_pago='CREDITO'
+     * que pertenezcan a esta caja (pagadas o pendientes)
+     *
+     * @param AperturaCaja $aperturaCaja
+     * @return float Suma total de ventas a crédito de la caja
      */
-    public function calcularVentasCreditoTotales($userId): float
+    public function calcularVentasCreditoDeCaja(AperturaCaja $aperturaCaja): float
     {
         try {
-            // Query directa a tabla ventas sin filtro de apertura_caja
+            // Query de ventas que pertenecen a ESTA CAJA con política CRÉDITO
             $total = DB::table('ventas')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-                ->where('ventas.usuario_id', $userId)
-                ->where('ventas.politica_pago', 'CREDITO')  // ✅ Filtra por política de pago
+                ->where('ventas.caja_id', $aperturaCaja->caja_id)  // ✅ Ventas de esta caja
+                ->where('ventas.usuario_id', $aperturaCaja->user_id)  // ✅ Ventas de este usuario
+                ->where('ventas.politica_pago', 'CREDITO')  // ✅ Política de pago = CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)  // ✅ Solo aprobadas
                 ->sum('ventas.total');
 
-            Log::info('💳 [calcularVentasCreditoTotales]:', [
-                'usuario_id' => $userId,
+            Log::info('💳 [calcularVentasCreditoDeCaja]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'caja_id' => $aperturaCaja->caja_id,
                 'total_credito' => $total,
             ]);
 
             return (float) $total;
         } catch (\Exception $e) {
-            Log::error('❌ [calcularVentasCreditoTotales]:', [
-                'usuario_id' => $userId,
+            Log::error('❌ [calcularVentasCreditoDeCaja]:', [
+                'apertura_id' => $aperturaCaja->id,
                 'error' => $e->getMessage(),
             ]);
             return 0;

@@ -168,8 +168,8 @@ class CajaController extends Controller
             $ventasAnuladas = (float) $datosCalculados['datosReferenciales']['anulaciones'];
             $pagosCredito = (float) $datosCalculados['detalleEfectivo']['pagos_credito'];
 
-            // ✅ NUEVO: Calcular TODAS las ventas a crédito (histórico del usuario)
-            $ventasCreditoTotales = (float) $this->cierreCajaService->calcularVentasCreditoTotales($usuarioDestino->id);
+            // ✅ NUEVO: Calcular TODAS las ventas a crédito DE ESTA CAJA (pagadas + pendientes)
+            $ventasCreditoTotales = (float) $this->cierreCajaService->calcularVentasCreditoDeCaja($cajaAbiertaHoy);
 
             // ✅ CORREGIDO (2026-02-11): Usar sumatorias individuales en lugar de salidas_reales
             // Calcular ingresos y egresos (sin contar créditos, compras, anuladas)
