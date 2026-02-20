@@ -878,6 +878,37 @@ class CierreCajaService
     }
 
     /**
+     * ✅ NUEVO: Calcular TODAS las ventas a crédito (acumuladas del usuario)
+     * Sin restricción de fecha - muestra el total de TODAS las ventas con politica_pago='CREDITO'
+     * Útil para ver el monto total de crédito otorgado al usuario en su histórico
+     */
+    public function calcularVentasCreditoTotales($userId): float
+    {
+        try {
+            // Query directa a tabla ventas sin filtro de apertura_caja
+            $total = DB::table('ventas')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('ventas.usuario_id', $userId)
+                ->where('ventas.politica_pago', 'CREDITO')  // ✅ Filtra por política de pago
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)  // ✅ Solo aprobadas
+                ->sum('ventas.total');
+
+            Log::info('💳 [calcularVentasCreditoTotales]:', [
+                'usuario_id' => $userId,
+                'total_credito' => $total,
+            ]);
+
+            return (float) $total;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasCreditoTotales]:', [
+                'usuario_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
+    }
+
+    /**
      * Calcular sumatoria de ventas anuladas
      * ✅ Usa estados_documento.codigo para mayor seguridad
      */

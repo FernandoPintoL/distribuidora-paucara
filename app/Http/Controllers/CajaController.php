@@ -168,6 +168,9 @@ class CajaController extends Controller
             $ventasAnuladas = (float) $datosCalculados['datosReferenciales']['anulaciones'];
             $pagosCredito = (float) $datosCalculados['detalleEfectivo']['pagos_credito'];
 
+            // ✅ NUEVO: Calcular TODAS las ventas a crédito (histórico del usuario)
+            $ventasCreditoTotales = (float) $this->cierreCajaService->calcularVentasCreditoTotales($usuarioDestino->id);
+
             // ✅ CORREGIDO (2026-02-11): Usar sumatorias individuales en lugar de salidas_reales
             // Calcular ingresos y egresos (sin contar créditos, compras, anuladas)
             $sumatorialGastos = (float) ($datosCalculados['sumatorialGastos'] ?? 0);
@@ -212,6 +215,7 @@ class CajaController extends Controller
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
                 'ventasAnuladas'        => $ventasAnuladas,        // Suma separada de anuladas (referencial)
                 'pagosCredito'          => $pagosCredito,          // Suma de pagos de CxC
+                'ventasCreditoTotales'  => $ventasCreditoTotales,  // ✅ NUEVO: TODAS las ventas a crédito (histórico)
                 'totalSalidas'          => $totalEgresos,          // Suma TODAS las salidas (GASTOS + SUELDOS + ANTICIPOS)
                 'totalIngresos'         => $totalIngresos,         // Ventas + Pagos CxC
                 'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO
@@ -251,6 +255,7 @@ class CajaController extends Controller
             'ventasTotales'             => $datosResumen ? $datosResumen['totalVentas'] ?? 0 : 0,
             'ventasAnuladas'            => $datosResumen ? $datosResumen['ventasAnuladas'] ?? 0 : 0,
             'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
+            'ventasCreditoTotales'      => $datosResumen ? $datosResumen['ventasCreditoTotales'] ?? 0 : 0,  // ✅ NUEVO
         ]);
     }
 
