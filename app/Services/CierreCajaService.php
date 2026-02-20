@@ -890,6 +890,8 @@ class CierreCajaService
      * Suma TODAS las ventas APROBADAS con politica_pago='CREDITO'
      * que pertenezcan a esta caja (pagadas o pendientes)
      *
+     * ✅ ACTUALIZADO (2026-02-20): Removido filtro usuario_id para que admins vean todos los datos
+     *
      * @param AperturaCaja $aperturaCaja
      * @return float Suma total de ventas a crédito de la caja
      */
@@ -897,10 +899,10 @@ class CierreCajaService
     {
         try {
             // Query de ventas que pertenecen a ESTA CAJA con política CRÉDITO
+            // ✅ Solo filtra por caja_id (admins pueden ver cualquier caja)
             $total = DB::table('ventas')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('ventas.caja_id', $aperturaCaja->caja_id)  // ✅ Ventas de esta caja
-                ->where('ventas.usuario_id', $aperturaCaja->user_id)  // ✅ Ventas de este usuario
                 ->where('ventas.politica_pago', 'CREDITO')  // ✅ Política de pago = CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)  // ✅ Solo aprobadas
                 ->sum('ventas.total');
