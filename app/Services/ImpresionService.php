@@ -256,7 +256,7 @@ class ImpresionService
                 'A4' => 'impresion.envios.hoja-completa',
             ],
             'cierre_caja' => [
-                'A4' => 'impresion.cajas.cierre-diario-a4',
+                'A4' => 'impresion.cajas.cierre-caja-a4',
                 'TICKET_80' => 'impresion.cajas.cierre-caja-ticket-80',
                 'TICKET_58' => 'impresion.cajas.cierre-caja-ticket-58',
             ],

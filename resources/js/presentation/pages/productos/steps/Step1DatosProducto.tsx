@@ -4,7 +4,7 @@ import SearchSelect from '@/presentation/components/ui/search-select';
 import InputSearch from '@/presentation/components/ui/input-search';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import NotificationService from '@/infrastructure/services/notification.service';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface Option { value: number | string; label: string; description?: string }
 
@@ -37,7 +37,7 @@ export interface Step1Props {
   es_farmacia?: boolean; // ✨ NUEVO - Indica si la empresa es farmacia
 }
 
-export default function Step1DatosProducto({
+function Step1DatosProducto({
   data,
   errors,
   categoriasOptions,
@@ -546,17 +546,18 @@ export default function Step1DatosProducto({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 gap-4 mt-4">
             <div className="space-y-1">
               <Label htmlFor="principio_activo" className="flex items-center gap-2">
                 <span className="text-blue-600 dark:text-blue-400">⚗️</span> Principio Activo
               </Label>
-              <Input
+              <textarea
                 id="principio_activo"
                 value={data.principio_activo ?? ''}
                 onChange={e => setData('principio_activo', e.target.value || null)}
                 placeholder="Ej: Ibuprofeno, Paracetamol, Amoxicilina"
-                className={getInputClassName('principio_activo')}
+                className={`w-full px-3 py-2 rounded-md border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getInputClassName('principio_activo')}`}
+                rows={3}
               />
               {errors.principio_activo && <div className="text-red-500 text-sm mt-1">⚠️ {errors.principio_activo}</div>}
               <div className="text-xs text-muted-foreground mt-1">
@@ -568,12 +569,13 @@ export default function Step1DatosProducto({
               <Label htmlFor="uso_de_medicacion" className="flex items-center gap-2">
                 <span className="text-blue-600 dark:text-blue-400">📋</span> Uso / Indicaciones
               </Label>
-              <Input
+              <textarea
                 id="uso_de_medicacion"
                 value={data.uso_de_medicacion ?? ''}
                 onChange={e => setData('uso_de_medicacion', e.target.value || null)}
                 placeholder="Ej: Dolor, fiebre, inflamación / Infecciones bacterianas"
-                className={getInputClassName('uso_de_medicacion')}
+                className={`w-full px-3 py-2 rounded-md border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getInputClassName('uso_de_medicacion')}`}
+                rows={3}
               />
               {errors.uso_de_medicacion && <div className="text-red-500 text-sm mt-1">⚠️ {errors.uso_de_medicacion}</div>}
               <div className="text-xs text-muted-foreground mt-1">
@@ -586,3 +588,5 @@ export default function Step1DatosProducto({
     </div>
   );
 }
+
+export default Step1DatosProducto;

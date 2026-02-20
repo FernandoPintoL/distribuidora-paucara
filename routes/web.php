@@ -470,6 +470,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('cierre.imprimir')
             ->middleware('permission:cajas.cerrar');
 
+        Route::get('/{aperturaCaja}/cierre/exportar-excel', [\App\Http\Controllers\CajaController::class, 'exportarExcelCierre'])
+            ->where('aperturaCaja', '[0-9]+')
+            ->name('cierre.exportar-excel')
+            ->middleware('permission:cajas.cerrar');
+
         Route::get('/{aperturaCaja}/datos-cierre', [\App\Http\Controllers\CajaController::class, 'obtenerDatosCierre'])
             ->where('aperturaCaja', '[0-9]+')
             ->name('datos-cierre')

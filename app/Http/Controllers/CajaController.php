@@ -1653,7 +1653,7 @@ class CajaController extends Controller
      * Imprimir cierre de caja en diferentes formatos
      *
      * ✅ NUEVO: Genera impresión de cierre de caja
-     * - Formatos: TICKET_58, TICKET_80
+     * - Formatos: A4, TICKET_58, TICKET_80
      * - Acciones: download (PDF), stream (vista previa)
      */
     public function imprimirCierre(AperturaCaja $aperturaCaja, Request $request)
@@ -1661,7 +1661,7 @@ class CajaController extends Controller
         $this->authorize('cajas.cerrar');
 
         $formato = $request->query('formato', 'TICKET_80');
-        $accion  = $request->query('accion', 'download');
+        $accion  = $request->query('accion', 'stream');
         $fuente  = $request->query('fuente', 'consolas');
 
         // Validar que la caja tenga cierre
@@ -1682,6 +1682,56 @@ class CajaController extends Controller
         }
 
         return $pdf->download('cierre-caja-' . $aperturaCaja->id . '.pdf');
+    }
+
+    /**
+     * ✅ NUEVO: Exportar cierre de caja a Excel
+     * - GET /cajas/{aperturaCaja}/cierre/exportar-excel
+     */
+    public function exportarExcelCierre(AperturaCaja $aperturaCaja)
+    {
+        $this->authorize('cajas.cerrar');
+
+        \Log::info('📊 [CajaController::exportarExcelCierre] Exportando cierre de caja a Excel', [
+            'apertura_id' => $aperturaCaja->id,
+            'caja_id'     => $aperturaCaja->caja_id,
+            'user_id'     => auth()->id(),
+        ]);
+
+        try {
+            // Validar que la caja tenga cierre
+            if (!$aperturaCaja->cierre) {
+                return back()->withErrors(['error' => 'Esta caja aún no ha sido cerrada']);
+            }
+
+            // Usar CierreCajaService para obtener todos los datos
+            $cierreCajaService = new CierreCajaService();
+            $datos = $cierreCajaService->calcularDatos($aperturaCaja);
+
+            // Obtener usuario
+            $usuario = $aperturaCaja->usuario ?? auth()->user();
+
+            // Preparar datos para Excel
+            $datosExcel = [
+                'apertura' => $aperturaCaja,
+                'cierre' => $aperturaCaja->cierre,
+                'usuario' => $usuario,
+                'caja' => $aperturaCaja->caja,
+                'datos' => $datos,
+            ];
+
+            // Usar ExcelExportService para generar el archivo
+            $excelFile = $this->excelExportService->exportarCierreCaja($datosExcel);
+
+            return $excelFile ?? back()->with('error', 'Error al generar archivo Excel');
+        } catch (\Exception $e) {
+            \Log::error('❌ [CajaController::exportarExcelCierre] Error', [
+                'error'        => $e->getMessage(),
+                'apertura_id'  => $aperturaCaja->id,
+                'trace'        => $e->getTraceAsString(),
+            ]);
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
     }
 
     /**

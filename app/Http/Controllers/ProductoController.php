@@ -316,6 +316,8 @@ class ProductoController extends Controller
                 'proveedor_id'     => $data['proveedor_id'] ?? null,
                 'empresa_id'       => auth()->user()?->empresa_id, // ✨ NUEVO: Asignar empresa del usuario autenticado
                 'limite_venta'     => $data['limite_venta'] ?? null, // ✨ NUEVO
+                'principio_activo' => $data['principio_activo'] ?? null, // ✨ NUEVO - Campo para farmacias
+                'uso_de_medicacion' => $data['uso_de_medicacion'] ?? null, // ✨ NUEVO - Campo para farmacias
             ]);
 
             // Gestionar códigos de barra usando la nueva tabla
@@ -678,6 +680,8 @@ class ProductoController extends Controller
                 'stock_minimo'     => $data['stock_minimo'] ?? $producto->stock_minimo,
                 'stock_maximo'     => $data['stock_maximo'] ?? $producto->stock_maximo,
                 'limite_venta'     => $data['limite_venta'] ?? $producto->limite_venta, // ✨ NUEVO
+                'principio_activo' => $data['principio_activo'] ?? $producto->principio_activo, // ✨ NUEVO - Campo para farmacias
+                'uso_de_medicacion' => $data['uso_de_medicacion'] ?? $producto->uso_de_medicacion, // ✨ NUEVO - Campo para farmacias
                 'activo'           => $data['activo'] ?? $producto->activo,
             ]);
 
@@ -1047,118 +1051,269 @@ class ProductoController extends Controller
             'empresa_id' => $empresa->id,
         ]);
 
-        $productos   = Producto::with([
+        // 🔍 DEBUG: Construir query base para testear ILIKE
+        $searchTerm = (string) $q; // Convertir Stringable a string
+
+        $query = Producto::with([
             'categoria:id,nombre',
             'marca:id,nombre',
             'proveedor:id,nombre,razon_social',
             'unidad:id,nombre',
-            'imagenes:id,producto_id,url,es_principal,orden', // Cargar imágenes del producto
-            'precios'      => function ($q) {
-                // Cargar SOLO precios activos con relación a tipo de precio
-                $q->where('activo', true)
+            'imagenes:id,producto_id,url,es_principal,orden',
+            'precios'      => function ($precioQuery) {
+                $precioQuery->where('activo', true)
                     ->select('id', 'producto_id', 'tipo_precio_id', 'nombre', 'precio', 'es_precio_base', 'margen_ganancia', 'porcentaje_ganancia')
                     ->with('tipoPrecio:id,nombre,codigo');
             },
-            'codigosBarra' => function ($q) {
-                // Cargar códigos de barra activos
-                $q->where('activo', true)
+            'codigosBarra' => function ($codigoQuery) {
+                $codigoQuery->where('activo', true)
                     ->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal');
             },
-            'stock.almacen:id,nombre', // Cargar todos los stocks con almacenes
+            'stock.almacen:id,nombre',
+            // ✅ NUEVO: Cargar combos con productos relacionados
+            'comboItems' => fn($query) => $query->with('producto:id,nombre,sku,descripcion'),
+            'comboGrupos' => fn($query) => $query->with('items.producto:id,nombre,sku,descripcion'),
         ])
-            ->where('empresa_id', $empresa->id) // Filtro 1: Por empresa
-            ->when($q, fn($query) => $query->where(function ($subQuery) use ($searchLower) {
-                $subQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(sku) like ?', ["%$searchLower%"])
-                    ->orWhereRaw('LOWER(descripcion) like ?', ["%$searchLower%"])
-                    // Buscar en códigos de barra activos
-                    ->orWhereHas('codigosBarra', function ($codigosQuery) use ($searchLower) {
-                        $codigosQuery->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"])
+            ->where('empresa_id', $empresa->id);
+
+        // ✅ BÚSQUEDA: Aplicar ILIKE
+        if ($searchTerm) {
+            $query = $query->where(function ($subQuery) use ($searchTerm) {
+                $subQuery->whereRaw('nombre ILIKE ?', ["%{$searchTerm}%"])
+                    ->orWhereRaw('sku ILIKE ?', ["%{$searchTerm}%"])
+                    ->orWhereRaw('descripcion ILIKE ?', ["%{$searchTerm}%"])
+                    ->orWhereHas('codigosBarra', function ($codigosQuery) use ($searchTerm) {
+                        $codigosQuery->whereRaw('codigo ILIKE ?', ["%{$searchTerm}%"])
                             ->where('activo', true);
                     })
-                    // Buscar en marca
-                    ->orWhereHas('marca', function ($marcaQuery) use ($searchLower) {
-                        $marcaQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    ->orWhereHas('marca', function ($marcaQuery) use ($searchTerm) {
+                        $marcaQuery->whereRaw('nombre ILIKE ?', ["%{$searchTerm}%"]);
                     })
-                    // Buscar en categoría
-                    ->orWhereHas('categoria', function ($categoriaQuery) use ($searchLower) {
-                        $categoriaQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    ->orWhereHas('categoria', function ($categoriaQuery) use ($searchTerm) {
+                        $categoriaQuery->whereRaw('nombre ILIKE ?', ["%{$searchTerm}%"]);
                     })
-                    // Buscar en unidad de medida
-                    ->orWhereHas('unidad', function ($unidadQuery) use ($searchLower) {
-                        $unidadQuery->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
+                    ->orWhereHas('unidad', function ($unidadQuery) use ($searchTerm) {
+                        $unidadQuery->whereRaw('nombre ILIKE ?', ["%{$searchTerm}%"]);
                     });
-            }))
-            ->when($categoriaId, fn($query) => $query->where('categoria_id', $categoriaId))
-            ->when($marcaId, fn($query) => $query->where('marca_id', $marcaId))
-            ->when($proveedorId, fn($query) => $query->where('proveedor_id', $proveedorId))
-            // ✅ VALIDACIÓN 4: FILTRO 2 - Stock disponible > 0 en el almacén
-            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                $stockQuery->where('almacen_id', $almacenId)
-                    ->where('cantidad_disponible', '>', 0);
-            })
-            // ✅ VALIDACIÓN 5: FILTRO 3 - Precio de venta válido
-            ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
-                $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
-                    ->where('activo', true)
-                    ->where('precio', '>', 0);
-            })
-            // ✅ VALIDACIÓN 6: FILTRO 4 - Producto activo
-            ->where('activo', $activo)
+            });
+
+            Log::info('🔍 [indexApi] BÚSQUEDA', ['searchTerm' => $searchTerm]);
+        }
+
+        // ⚠️ TEMPORAL: Solo búsqueda, sin filtros de stock/precio
+        // Esto es para testear si el ILIKE funciona
+        $query = $query
+            ->when($categoriaId, fn($q) => $q->where('categoria_id', $categoriaId))
+            ->when($marcaId, fn($q) => $q->where('marca_id', $marcaId))
+            ->when($proveedorId, fn($q) => $q->where('proveedor_id', $proveedorId));
+            // COMENTADO TEMPORALMENTE PARA TESTEAR:
+            // ->whereHas('stock', function ($stockQuery) use ($almacenId) {
+            //     $stockQuery->where('almacen_id', $almacenId)
+            //         ->where('cantidad_disponible', '>', 0);
+            // })
+            // ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
+            //     $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
+            //         ->where('activo', true)
+            //         ->where('precio', '>', 0);
+            // })
+            // ->where('activo', $activo);
+
+        // ✅ Obtener cliente_id del request si viene en parámetros
+        $clienteId = $request->input('cliente_id');
+
+        $productos = $query
+            // ✅ NUEVO: Ordenar combos primero (es_combo DESC), luego por nombre
+            ->orderByDesc('es_combo')
             ->orderBy('nombre')
             ->paginate($perPage)
-            ->through(function ($producto) use ($almacenId, $almacenPrincipal, $tipoPrecioVentaId) {
-                // 🔍 DEBUGGING: Verificar si las imagenes están cargadas
-                Log::info('🔍 [indexApi] DEBUGGING PRODUCTO', [
-                    'producto_id' => $producto->id,
-                    'producto_nombre' => $producto->nombre,
-                    'imagenes_count' => $producto->imagenes?->count() ?? 0,
-                    'imagenes_data' => $producto->imagenes ? $producto->imagenes->toArray() : [],
+            ->through(function ($producto) use ($almacenId, $almacenPrincipal, $tipoPrecioVentaId, $clienteId) {
+                // ✅ Cargar relaciones necesarias (similar a mapearProductos)
+                $producto->load([
+                    'codigosBarra' => function ($q) {
+                        $q->where('activo', true)->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal');
+                    },
+                    'comboItems' => function ($q) {
+                        $q->select('id', 'combo_id', 'producto_id', 'cantidad', 'precio_unitario', 'tipo_precio_id', 'es_obligatorio')
+                            ->with([
+                                'producto' => function ($pq) {
+                                    $pq->select('id', 'nombre', 'sku', 'codigo_barras', 'precio_venta', 'unidad_medida_id');
+                                },
+                                'producto.unidad:id,nombre,codigo',
+                                'tipoPrecio:id,nombre,codigo'
+                            ]);
+                    },
+                    'comboGrupos' => function ($q) {
+                        $q->select('id', 'combo_id', 'nombre_grupo', 'cantidad_a_llevar', 'precio_grupo')
+                            ->with('items.producto:id,nombre,sku');
+                    },
                 ]);
 
-                // Consolidar stock por almacén (suma de lotes)
-                $stockConsolidado = $producto->stock->groupBy('almacen_id')->map(function ($stocks) {
-                    $primero = $stocks->first();
-                    return [
-                        'almacen_id'          => $primero->almacen_id,
-                        'almacen_nombre'      => $primero->almacen?->nombre ?? 'Almacén Desconocido',
-                        'cantidad'            => (int) $stocks->sum('cantidad'),
-                        'cantidad_disponible' => (int) $stocks->sum('cantidad_disponible'),
-                        'cantidad_reservada'  => (int) $stocks->sum('cantidad_reservada'),
-                    ];
-                })->values();
+                // ✅ Consolidar cantidades de múltiples lotes
+                $stocksAlmacen = $producto->stock ? $producto->stock->filter(fn($s) => $s->almacen_id == $almacenId)->values() : collect();
+                $cantidadTotal = (int) $stocksAlmacen->sum('cantidad');
+                $cantidadDisponible = (int) $stocksAlmacen->sum('cantidad_disponible');
+                $cantidadReservada = (int) $stocksAlmacen->sum('cantidad_reservada');
 
-                // Stock del almacén principal/seleccionado (consolidado)
-                $stockPrincipalConsolidado = $stockConsolidado->firstWhere('almacen_id', $almacenId);
-
-                if (! $stockPrincipalConsolidado) {
-                    $stockPrincipalConsolidado = [
-                        'almacen_id'          => $almacenId,
-                        'almacen_nombre'      => $almacenPrincipal->nombre ?? 'Almacén Principal',
-                        'cantidad'            => 0,
-                        'cantidad_disponible' => 0,
-                        'cantidad_reservada'  => 0,
-                    ];
+                // ✅ Para COMBOS, usar capacidad como stock (sincronizar con mapearProductos)
+                $capacidad = null;
+                if ($producto->es_combo) {
+                    $capacidad = ProductoStockService::obtenerStockProducto($producto->id, $almacenId)['capacidad'];
+                    $cantidadTotal = (int) ($capacidad ?? 0);
+                    $cantidadDisponible = (int) ($capacidad ?? 0);
+                    $cantidadReservada = 0;
                 }
 
-                // Detalle de stock por lotes (para gestionar inventario)
-                $stockPorLotes = $producto->stock
-                    ->where('almacen_id', $almacenId)
-                    ->map(fn($s) => [
-                        'id'                  => $s->id,
-                        'almacen_id'          => $s->almacen_id,
-                        'lote'                => $s->lote,
-                        'fecha_vencimiento'   => $s->fecha_vencimiento?->format('Y-m-d'),
-                        'cantidad'            => (int) $s->cantidad,
-                        'cantidad_disponible' => (int) $s->cantidad_disponible,
-                        'cantidad_reservada'  => (int) $s->cantidad_reservada,
-                    ])->values();
+                // ✅ MEJORADO: Buscar precio de venta con múltiples estrategias (como en mapearProductos)
+                $precioVentaObj = null;
 
-                // ✅ Obtener precio de venta para mostrar al cliente
-                $precioVenta = $producto->precios->firstWhere('tipo_precio_id', $tipoPrecioVentaId);
+                // Estrategia 1: Buscar por tipoPrecio->codigo === 'VENTA'
+                $precioVentaObj = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'VENTA');
 
-                // Obtener solo el string del segundo código de barra
+                // Estrategia 2: Si no encontró, buscar por tipoPrecio->nombre que contenga 'VENTA'
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->first(fn($p) => stripos($p->tipoPrecio?->nombre ?? '', 'VENTA') !== false);
+                }
+
+                // Estrategia 3: Si no encontró, buscar por nombre del precio que contenga 'VENTA'
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->first(fn($p) => stripos($p->nombre ?? '', 'VENTA') !== false);
+                }
+
+                // Estrategia 4: Si no encontró, buscar por es_precio_base
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios
+                        ->firstWhere('es_precio_base', true);
+                }
+
+                // Estrategia 5: Último recurso - usar el primer precio
+                if (!$precioVentaObj) {
+                    $precioVentaObj = $producto->precios->first();
+                }
+
+                $precioVenta = $precioVentaObj?->precio ?? 0;
+
+                // ✅ MEJORADO: Buscar precio de costo con múltiples estrategias
+                $precioCostoObj = null;
+
+                // Estrategia 1: Buscar por tipoPrecio->codigo === 'COSTO'
+                $precioCostoObj = $producto->precios
+                    ->first(fn($p) => $p->tipoPrecio?->codigo === 'COSTO');
+
+                // Estrategia 2: Si no encontró, buscar por tipoPrecio->nombre que contenga 'COSTO'
+                if (!$precioCostoObj) {
+                    $precioCostoObj = $producto->precios
+                        ->first(fn($p) => stripos($p->tipoPrecio?->nombre ?? '', 'COSTO') !== false);
+                }
+
+                // Estrategia 3: Si no encontró, buscar por nombre del precio que contenga 'COSTO'
+                if (!$precioCostoObj) {
+                    $precioCostoObj = $producto->precios
+                        ->first(fn($p) => stripos($p->nombre ?? '', 'COSTO') !== false);
+                }
+
+                $precioCosto = $precioCostoObj?->precio ?? 0;
+
+                // ✅ NUEVO: Obtener tipo_precio_id recomendado según el cliente
+                $tipoPrecioIdRecomendado = null;
+                $tipoPrecioNombreRecomendado = null;
+
+                // Determinar qué tipo de precio buscar según cliente_id
+                $tipoPrecioPrincipal = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
+
+                // Estrategia 1: Buscar por tipoPrecio->codigo === $tipoPrecioPrincipal
+                foreach ($producto->precios as $precio) {
+                    if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === $tipoPrecioPrincipal) {
+                        $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                        $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
+                        break;
+                    }
+                }
+
+                // Estrategia 2: Si no encontró por código, buscar por nombre
+                if (!$tipoPrecioIdRecomendado) {
+                    $buscarEnNombre = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
+                    foreach ($producto->precios as $precio) {
+                        $nombre = strtoupper($precio->nombre ?? '');
+                        if (strpos($nombre, $buscarEnNombre) !== false && strpos($nombre, 'COSTO') === false) {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio ? $precio->tipoPrecio->nombre : $precio->nombre;
+                            break;
+                        }
+                    }
+                }
+
+                // Estrategia 3: Fallback a VENTA si no encontró el principal
+                if (!$tipoPrecioIdRecomendado) {
+                    foreach ($producto->precios as $precio) {
+                        if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'VENTA') {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
+                            break;
+                        }
+                    }
+                }
+
+                // Estrategia 4 para COMBOS: Si aún no encontró, buscar LICORERIA
+                if (!$tipoPrecioIdRecomendado && $producto->es_combo) {
+                    foreach ($producto->precios as $precio) {
+                        if ($precio->tipoPrecio && $precio->tipoPrecio->codigo === 'LICORERIA') {
+                            $tipoPrecioIdRecomendado = $precio->tipo_precio_id;
+                            $tipoPrecioNombreRecomendado = $precio->tipoPrecio->nombre;
+                            break;
+                        }
+                    }
+                }
+
+                // Obtener segundo código de barra
                 $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
+
+                // ✅ NUEVO: Preparar items del combo con detalles correctos
+                $comboItems = [];
+                if ($producto->es_combo && $producto->comboItems->count() > 0) {
+                    $capacidadInfo = ComboStockService::calcularCapacidadConDetalles($producto->id, $almacenId);
+
+                    $comboItems = $producto->comboItems
+                        ->map(function($item) use ($capacidadInfo, $almacenId) {
+                            $stockAlmacen = $item->producto?->stock()
+                                ->where('almacen_id', $almacenId)
+                                ->first();
+
+                            $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
+                            $stockTotal = $stockAlmacen?->cantidad ?? 0;
+
+                            $detalle = collect($capacidadInfo['detalles'])
+                                ->firstWhere('producto_id', $item->producto_id);
+
+                            return [
+                                'id'                    => $item->id,
+                                'combo_id'              => $item->combo_id,
+                                'producto_id'           => $item->producto_id,
+                                'producto_nombre'       => $item->producto?->nombre ?? '',
+                                'producto_sku'          => $item->producto?->sku ?? '',
+                                'producto_codigo_barras'=> $item->producto?->codigo_barras ?? '',
+                                'cantidad'              => (float) $item->cantidad,
+                                'precio_unitario'       => (float) $item->precio_unitario,
+                                'tipo_precio_id'        => $item->tipo_precio_id,
+                                'tipo_precio_nombre'    => $item->tipoPrecio?->nombre ?? '',
+                                'unidad_medida_id'      => $item->producto?->unidad_medida_id,
+                                'unidad_medida_nombre'  => $item->producto?->unidad?->nombre ?? null,
+                                'stock_disponible'      => (int) $stockDisponible,
+                                'stock_total'           => (int) $stockTotal,
+                                'es_obligatorio'        => (bool) $item->es_obligatorio,
+                                'es_cuello_botella'     => $detalle['es_cuello_botella'] ?? false,
+                                'combos_posibles'       => $detalle['combos_posibles'] ?? 0,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+                }
+
+                $almacenNombre = $producto->stock
+                    ->where('almacen_id', $almacenId)
+                    ->first()?->almacen?->nombre ?? 'Almacén Principal';
 
                 return [
                     'id'                  => $producto->id,
@@ -1181,19 +1336,53 @@ class ProductoController extends Controller
                     'proveedor'           => $producto->proveedor?->nombre,
                     'imagenes'            => $producto->imagenes ?? [],
                     'codigos_barra'       => $segundoCodigoBarra,
-                    'precios'             => $producto->precios ?? [],
+                    'precios'             => $producto->precios->map(function($p) {
+                        return [
+                            'id' => $p->id,
+                            'nombre' => $p->tipoPrecio ? $p->tipoPrecio->nombre : ($p->nombre ?? 'Precio'),
+                            'precio' => (float) $p->precio,
+                            'tipo_precio_id' => $p->tipo_precio_id,
+                            'es_precio_base' => $p->es_precio_base,
+                            'tipo_precio' => $p->tipoPrecio ? [
+                                'id' => $p->tipoPrecio->id,
+                                'nombre' => $p->tipoPrecio->nombre,
+                                'codigo' => $p->tipoPrecio->codigo,
+                            ] : null,
+                        ];
+                    })->all(),
 
-                    // ✅ PRECIO: Devolver precio de venta
-                    'precio_venta'        => $precioVenta ? (float) $precioVenta->precio : 0,
-                    'precio_base'         => $precioVenta ? (float) $precioVenta->precio : 0,
-                    'precio_costo'        => $producto->precio_costo ?? 0,
+                    // ✅ PRECIO: Devolver precio de venta correctamente determinado
+                    'precio_venta'        => (float) $precioVenta,
+                    'precio_base'         => (float) $precioVenta,
+                    'precio_costo'        => (float) $precioCosto,
+                    'tipo_precio_id_recomendado' => $tipoPrecioIdRecomendado,
+                    'tipo_precio_nombre_recomendado' => $tipoPrecioNombreRecomendado,
 
-                    // ✅ STOCK: Devolver el TOTAL CONSOLIDADO (sin desglose de lotes)
-                    // El backend (VentaDistribucionService) distribuye entre lotes automáticamente con FIFO
-                    'stock'               => (int) $stockPrincipalConsolidado['cantidad_disponible'],  // ← Campo principal de stock disponible
-                    'stock_disponible'    => (int) $stockPrincipalConsolidado['cantidad_disponible'],  // ← Alias
-                    'stock_total'         => (int) $stockPrincipalConsolidado['cantidad'],             // ← Total incluyendo reservado
-                    'stock_reservado'     => (int) $stockPrincipalConsolidado['cantidad_reservada'],   // ← Cantidad bloqueada
+                    // ✅ STOCK: Consolidado considerando combos
+                    'stock'               => (int) $cantidadDisponible,
+                    'stock_disponible'    => (int) $cantidadDisponible,
+                    'stock_total'         => (int) $cantidadTotal,
+                    'stock_reservado'     => (int) $cantidadReservada,
+
+                    // ✅ COMBO: Campos mejorados
+                    'es_combo'            => (bool) $producto->es_combo,
+                    'combo_items'         => $comboItems,
+                    'combo_items_seleccionados' => [],
+                    'combo_grupos'        => $producto->comboGrupos ? $producto->comboGrupos->map(fn($grupo) => $grupo->toArray())->toArray() : [],
+                    'grupo_opcional'      => $producto->comboGrupos->isNotEmpty() ? [
+                        'nombre_grupo'       => $producto->comboGrupos->first()->nombre_grupo,
+                        'cantidad_a_llevar'  => $producto->comboGrupos->first()->cantidad_a_llevar,
+                        'precio_grupo'       => (float) $producto->comboGrupos->first()->precio_grupo,
+                        'productos'          => $producto->comboGrupos->first()->items->pluck('producto_id')->toArray(),
+                        'productos_detalle'  => $producto->comboGrupos->first()->items->map(fn($item) => [
+                            'producto_id'   => $item->producto_id,
+                            'producto_nombre' => $item->producto?->nombre,
+                            'producto_sku'  => $item->producto?->sku,
+                        ])->toArray(),
+                    ] : null,
+                    'capacidad'           => $capacidad,
+                    'almacen_id'          => $almacenId,
+                    'almacen_nombre'      => $almacenNombre,
                 ];
 
             });
@@ -1248,6 +1437,9 @@ class ProductoController extends Controller
                     ->select('id', 'producto_id', 'codigo', 'tipo', 'es_principal');
             },
             'imagenes',
+            // ✅ NUEVO: Cargar combos con productos relacionados
+            'comboItems' => fn($query) => $query->with('producto:id,nombre,sku,descripcion'),
+            'comboGrupos' => fn($query) => $query->with('productosDetalle:id,combo_grupo_id,producto_id,producto_nombre,producto_sku'),
         ]);
 
         // Consolidar stock por almacén (suma de lotes)
@@ -1295,6 +1487,21 @@ class ProductoController extends Controller
         // Obtener solo el string del segundo código de barra
         $segundoCodigoBarra = CodigoBarra::obtenerSegundoCodigoActivo($producto->id) ?? $producto->codigo_barras ?? '';
 
+        // ✅ NUEVO: Calcular capacidad del combo si aplica
+        $capacidadCombo = null;
+        if ($producto->es_combo && $producto->comboItems && $producto->comboItems->isNotEmpty()) {
+            // Capacidad = mínimo de (stock_disponible / cantidad_requerida) para items obligatorios
+            $capacidades = $producto->comboItems
+                ->filter(fn($item) => $item->es_obligatorio)
+                ->map(function ($item) {
+                    $stock = $item->stock_disponible ?? 0;
+                    $cantidad = $item->cantidad > 0 ? $item->cantidad : 1;
+                    return intdiv((int)$stock, (int)$cantidad);
+                });
+
+            $capacidadCombo = $capacidades->isNotEmpty() ? $capacidades->min() : 0;
+        }
+
         // Retornar producto con estructura mejorada de stock
         return ApiResponse::success([
             'id'                  => $producto->id,
@@ -1339,6 +1546,12 @@ class ProductoController extends Controller
 
             // Detalle de lotes del almacén seleccionado (para gestionar inventario)
             'stock_por_lotes'     => $stockPorLotes,
+
+            // ✅ NUEVO: Campos de COMBO
+            'es_combo'            => (bool) $producto->es_combo,
+            'combo_items'         => $producto->comboItems ? $producto->comboItems->map(fn($item) => $item->toArray())->toArray() : [],
+            'combo_grupos'        => $producto->comboGrupos ? $producto->comboGrupos->map(fn($grupo) => $grupo->toArray())->toArray() : [],
+            'capacidad'           => $capacidadCombo,
         ]);
     }
 

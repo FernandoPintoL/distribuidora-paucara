@@ -21,6 +21,8 @@ export interface Empresa extends BaseEntity {
   configuracion_impresion?: Record<string, any>;
   activo: boolean;
   es_principal: boolean;
+  permite_productos_fraccionados?: boolean; // ✨ NUEVO
+  es_farmacia?: boolean; // ✨ NUEVO
   created_at?: string;
   updated_at?: string;
 }
@@ -43,4 +45,6 @@ export interface EmpresaFormData extends BaseFormData {
   mensaje_legal?: string | null;
   activo?: boolean;
   es_principal?: boolean;
+  permite_productos_fraccionados?: boolean; // ✨ NUEVO
+  es_farmacia?: boolean; // ✨ NUEVO
 }

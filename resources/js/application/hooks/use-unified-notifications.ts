@@ -278,12 +278,24 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     };
   }, [shouldReceiveNotification, createNotification, onNotification, onError]);
 
+  // ✅ Rastrear si ya se han configurado los listeners para evitar reconfiguración
+  const listenersConfiguredRef = useRef(false);
+
   /**
    * Setup all event listeners
    */
   useEffect(() => {
     if (!websocketService.isSocketConnected()) {
       console.warn('WebSocket no conectado, esperando conexión...');
+      // Reset flag si desconecta
+      listenersConfiguredRef.current = false;
+      return;
+    }
+
+    // ✅ IMPORTANTE: Evitar reconfiguración múltiple de listeners
+    // Solo configurar UNA VEZ cuando el WebSocket se conecta
+    if (listenersConfiguredRef.current) {
+      console.log('ℹ️ Listeners ya configurados, omitiendo reconfiguración');
       return;
     }
 
@@ -292,9 +304,10 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     // PROFORMA EVENTS
     const setupListener = (eventName: string) => {
       try {
-        websocketService.on(eventName, handleNotification(eventName));
+        const listener = handleNotification(eventName);
+        websocketService.on(eventName, listener);
         listenersRef.current.set(eventName, () => {
-          websocketService.off(eventName, handleNotification(eventName));
+          websocketService.off(eventName, listener);
         });
       } catch (error) {
         console.error(`Error configurando listener para ${eventName}:`, error);
@@ -356,15 +369,19 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       websocketService.subscribeToOrganization(orgId);
     }
 
+    // ✅ Marcar que los listeners ya están configurados
+    listenersConfiguredRef.current = true;
+
     console.log('✅ Listeners de notificaciones configurados exitosamente');
 
     // Cleanup
     return () => {
       console.log('🧹 Limpiando listeners de notificaciones...');
+      listenersConfiguredRef.current = false;
       listenersRef.current.forEach(cleanup => cleanup());
       listenersRef.current.clear();
     };
-  }, [handleNotification, autoSubscribePublic, autoSubscribeUser, userId, orgId]);
+  }, []); // ✅ Dependencias vacías - solo se ejecuta una vez en mount
 
   /**
    * Request browser notification permission

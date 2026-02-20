@@ -453,6 +453,7 @@ class StockService
             ->keyBy('id');
 
         $expandido = [];
+        $metadataProductos = []; // ✅ NUEVO: Guardar metadata de productos NO combos
 
         foreach ($productos as $item) {
             $productoId = $item['producto_id'] ?? $item['id'];
@@ -485,12 +486,34 @@ class StockService
                     }
                 }
             } else {
+                // ✅ NUEVO (2026-02-18): Si NO es combo, guardar TODA la metadata del item
                 $expandido[$productoId] = ($expandido[$productoId] ?? 0) + $cantidad;
+
+                // Guardar campos adicionales (unidad_venta_id, tipo_precio_id, etc) para productos no combos
+                if (!isset($metadataProductos[$productoId])) {
+                    $metadataProductos[$productoId] = $item;
+                }
             }
         }
 
+        // ✅ NUEVO (2026-02-18): Retornar preservando metadata de productos no combos
         return array_map(
-            fn($prodId, $cant) => ['producto_id' => $prodId, 'cantidad' => $cant],
+            function($prodId, $cant) use ($metadataProductos, $item) {
+                $resultado = ['producto_id' => $prodId, 'cantidad' => $cant];
+
+                // Si tenemos metadata guardada para este producto (significa que NO era combo),
+                // preservar todos los campos adicionales
+                if (isset($metadataProductos[$prodId])) {
+                    // Copiar todos los campos del item original EXCEPTO cantidad (que actualizamos)
+                    foreach ($metadataProductos[$prodId] as $clave => $valor) {
+                        if ($clave !== 'cantidad' && $clave !== 'producto_id') {
+                            $resultado[$clave] = $valor;
+                        }
+                    }
+                }
+
+                return $resultado;
+            },
             array_keys($expandido),
             array_values($expandido)
         );

@@ -214,13 +214,16 @@ export function OutputSelectionModal({
             if (tipoDocumento === 'entrega') {
                 url = `${rutaBase}/exportar-excel`;
             } else if (tipoDocumento === 'pago') {
-                // Para pagos no hay excel
+                // Para pagos
+                url = `${rutaBase}/exportar-excel`;
+            } else if (tipoDocumento === 'caja') {
+                // Para cajas (cierre y movimientos)
                 url = `${rutaBase}/exportar-excel`;
             } else if (tipoDocumento === 'cuenta-por-cobrar' || tipoDocumento === 'cuenta-por-pagar') {
-                // Para cuentas por cobrar/pagar no hay excel
+                // Para cuentas por cobrar/pagar
                 url = `${rutaBase}/exportar-excel`;
             } else if (tipoDocumento === 'stock') {
-                // Para stock - Excel no disponible
+                // Para stock
                 url = `${rutaBase}/exportar-excel`;
             } else {
                 url = `${rutaBase}/exportar-excel`;
@@ -230,6 +233,9 @@ export function OutputSelectionModal({
                 url = `${rutaBase}/descargar?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'pago') {
                 // Para pagos
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'caja') {
+                // Para cajas (cierre y movimientos)
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'cuenta-por-cobrar') {
                 // Para cuentas por cobrar

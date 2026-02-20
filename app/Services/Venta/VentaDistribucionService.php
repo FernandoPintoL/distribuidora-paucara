@@ -160,7 +160,8 @@ class VentaDistribucionService
                 // ✅ CAMBIO (2026-02-16): Permitir decimales en lugar de truncar a entero
                 $cantidad = (float) ($item['cantidad'] ?? 0);
                 // ✅ NUEVO: Obtener unidad de venta desde el item (si existe)
-                $unidadVentaId = $item['unidad_medida_id'] ?? null;
+                // 🔧 CORREGIDO (2026-02-18): Buscar 'unidad_venta_id' (del frontend) o 'unidad_medida_id' (para compatibilidad)
+                $unidadVentaId = $item['unidad_venta_id'] ?? $item['unidad_medida_id'] ?? null;
 
                 if ($cantidad <= 0) {
                     Log::warning('⚠️ [VentaDistribucionService] Cantidad inválida', [
@@ -233,7 +234,7 @@ class VentaDistribucionService
                 }
 
                 // 4. Consumir stock según FIFO
-                $cantidadRestante = $cantidadAConsumir;
+                $cantidadRestante = (float) $cantidadAConsumir;  // ✅ Asegurar que es float/decimal
 
                 foreach ($stocks as $stock) {
                     if ($cantidadRestante <= 0) {
@@ -241,11 +242,13 @@ class VentaDistribucionService
                     }
 
                     // Tomar lo menor: lo que necesito o lo que hay disponible
-                    $cantidadTomar = min($cantidadRestante, $stock->cantidad_disponible);
+                    // ✅ CORREGIDO (2026-02-18): Asegurar que ambos valores son floats para decimales correctos
+                    $cantidadTomar = (float) min($cantidadRestante, (float) $stock->cantidad_disponible);
 
                     // Guardar valores ANTES de actualizar
-                    $cantidadAnterior = $stock->cantidad;
-                    $cantidadDisponibleAnterior = $stock->cantidad_disponible;
+                    // ✅ CORREGIDO (2026-02-18): Convertir a float para preservar decimales
+                    $cantidadAnterior = (float) $stock->cantidad;
+                    $cantidadDisponibleAnterior = (float) $stock->cantidad_disponible;
 
                     // Actualizar stock_productos
                     $stock->decrement('cantidad_disponible', $cantidadTomar);
@@ -253,10 +256,12 @@ class VentaDistribucionService
 
                     // Recargar para obtener valores actualizados
                     $stock->refresh();
-                    $cantidadPosterior = $stock->cantidad;
-                    $cantidadDisponiblePosterior = $stock->cantidad_disponible;
+                    // ✅ CORREGIDO (2026-02-18): Convertir a float para preservar decimales
+                    $cantidadPosterior = (float) $stock->cantidad;
+                    $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
 
                     // ✅ NUEVO (2026-02-16): Registrar movimiento con información de conversión
+                    // ✅ MEJORADO (2026-02-18): Usar columnas dedicadas para conversiones + JSON para metadatos
                     $movimiento = MovimientoInventario::create([
                         'stock_producto_id' => $stock->id,
                         'cantidad' => -$cantidadTomar,  // ← NEGATIVO (salida) EN UNIDAD ALMACENAMIENTO
@@ -264,6 +269,12 @@ class VentaDistribucionService
                         'cantidad_posterior' => $cantidadPosterior,
                         'tipo' => MovimientoInventario::TIPO_SALIDA_VENTA,
                         'numero_documento' => $numeroVenta,
+                        // ✅ NUEVO (2026-02-18): Columnas específicas para conversiones
+                        'cantidad_solicitada' => $conversionAplicada ? -$cantidad : null,     // ← Cantidad en unidad de venta
+                        'unidad_venta_id' => $conversionAplicada ? $unidadVentaId : null,    // ← ID de unidad de venta
+                        'unidad_base_id' => $conversionAplicada ? $producto->unidad_id : null, // ← ID de unidad base (almacenamiento)
+                        'factor_conversion' => $conversionAplicada ? $factorConversion : null, // ← Factor de conversión
+                        'es_conversion_aplicada' => $conversionAplicada,                       // ← ¿Se aplicó conversión?
                         'observacion' => json_encode([
                             'evento' => 'Consumo de stock para venta',
                             'venta_numero' => $numeroVenta,
@@ -294,7 +305,7 @@ class VentaDistribucionService
                     ]);
 
                     $movimientos[] = $movimiento;
-                    $cantidadRestante -= $cantidadTomar;
+                    $cantidadRestante = (float) ($cantidadRestante - $cantidadTomar);  // ✅ Mantener como float
                 }
             }
 

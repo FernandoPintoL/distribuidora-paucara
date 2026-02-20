@@ -241,7 +241,14 @@ class InventarioController extends Controller
         $stockPorAlmacen = $stockPorAlmacenCollection->concat($stockSinRegistros)->sortBy('producto_nombre')->values()->toArray();
 
         // Movimientos recientes (últimos 7 días)
-        $movimientosRecientes  = MovimientoInventario::with(['stockProducto.producto', 'stockProducto.almacen', 'user'])
+        // ✅ MEJORADO (2026-02-18): Incluir información de conversiones de unidades
+        $movimientosRecientes  = MovimientoInventario::with([
+            'stockProducto.producto',
+            'stockProducto.almacen',
+            'user',
+            'unidadVenta:id,nombre',   // Relación con unidades_medida para conversiones (unidad de venta)
+            'unidadBase:id,nombre',     // ✅ NUEVO (2026-02-18): Relación para unidad base
+        ])
             ->whereBetween('fecha', [now()->subDays(7), now()])
             ->whereHas('stockProducto.producto')
             ->orderByDesc('fecha')
@@ -250,6 +257,39 @@ class InventarioController extends Controller
             ->filter(function ($movimiento) {
                 // Filtrar movimientos que tengan relaciones válidas
                 return $movimiento->stockProducto && $movimiento->stockProducto->producto && $movimiento->stockProducto->almacen;
+            })
+            ->map(function ($movimiento) {
+                // ✅ NUEVO (2026-02-18): Agregar información de conversión para el frontend
+                return [
+                    'id'                      => $movimiento->id,
+                    'stock_producto_id'       => $movimiento->stock_producto_id,
+                    'cantidad'                => $movimiento->cantidad,
+                    'tipo'                    => $movimiento->tipo,
+                    'fecha'                   => $movimiento->fecha->format('d/m/Y H:i'),
+                    'numero_documento'        => $movimiento->numero_documento,
+                    // Conversión info
+                    'es_conversion_aplicada'  => (bool) $movimiento->es_conversion_aplicada,
+                    'cantidad_solicitada'     => $movimiento->cantidad_solicitada,
+                    'factor_conversion'       => $movimiento->factor_conversion,
+                    'unidad_venta_nombre'     => $movimiento->unidadVenta?->nombre,
+                    'unidad_base_nombre'      => $movimiento->unidadBase?->nombre, // ✅ NUEVO (2026-02-18): Unidad base
+                    // Relaciones
+                    'stockProducto' => [
+                        'id'       => $movimiento->stockProducto?->id,
+                        'producto' => [
+                            'id'     => $movimiento->stockProducto?->producto?->id,
+                            'nombre' => $movimiento->stockProducto?->producto?->nombre,
+                        ],
+                        'almacen' => [
+                            'id'     => $movimiento->stockProducto?->almacen?->id,
+                            'nombre' => $movimiento->stockProducto?->almacen?->nombre,
+                        ],
+                    ],
+                    'user' => [
+                        'id'   => $movimiento->user?->id,
+                        'name' => $movimiento->user?->name,
+                    ],
+                ];
             })
             ->values();
 
@@ -490,11 +530,14 @@ class InventarioController extends Controller
         $perPage     = 15;
 
         // Construir query con filtros
+        // ✅ MEJORADO (2026-02-18): Incluir información de conversiones de unidades
         $query = MovimientoInventario::with([
             'stockProducto.producto:id,nombre,sku',
             'stockProducto.almacen:id,nombre',
             'user:id,name,email',  // ✅ MODIFICADO: Agregar email
             'user.roles:id,name',  // ✅ NUEVO: Cargar roles del usuario
+            'unidadVenta:id,nombre',  // ✅ NUEVO (2026-02-18): Relación para conversiones (unidad de venta)
+            'unidadBase:id,nombre',   // ✅ NUEVO (2026-02-18): Relación para conversiones (unidad base)
         ])->porFecha($fechaInicio, $fechaFin);
 
         if ($tipo && ! empty($tipo)) {
@@ -624,6 +667,12 @@ class InventarioController extends Controller
                 'user_anulacion_id' => $movimiento->user_anulacion_id,
                 'fecha_anulacion'   => $movimiento->fecha_anulacion ? \Carbon\Carbon::parse($movimiento->fecha_anulacion)->toISOString() : null,
                 'ip_dispositivo'    => $movimiento->ip_dispositivo,
+                // ✅ NUEVO (2026-02-18): Información de conversiones de unidades
+                'es_conversion_aplicada' => (bool) $movimiento->es_conversion_aplicada,
+                'cantidad_solicitada'    => $movimiento->cantidad_solicitada,
+                'factor_conversion'      => $movimiento->factor_conversion,
+                'unidad_venta_nombre'    => $movimiento->unidadVenta?->nombre,
+                'unidad_base_nombre'     => $movimiento->unidadBase?->nombre,
             ];
         });
 
@@ -2834,10 +2883,11 @@ class InventarioController extends Controller
     public function apiStockFiltrado(Request $request): JsonResponse
     {
         try {
-            $busqueda     = (string) $request->string('busqueda', '')->lower();
-            $almacenId    = (int) $request->integer('almacen_id', 0);
-            $rangoStock   = (string) $request->string('rango_stock', 'todos');
-            $ordenamiento = (string) $request->string('ordenamiento', 'cantidad-desc');
+            $busqueda      = (string) $request->string('busqueda', '')->lower();
+            $almacenId     = (int) $request->integer('almacen_id', 0);
+            $rangoStock    = (string) $request->string('rango_stock', 'todos');
+            $ordenamiento  = (string) $request->string('ordenamiento', 'cantidad-desc');
+            $soloConStock  = (bool) $request->boolean('solo_con_stock', false);
 
             // Definir rangos de stock
             $rangos = [
@@ -2905,6 +2955,11 @@ class InventarioController extends Controller
                             continue;
                         }
 
+                        // ✅ NUEVO: Filtrar solo productos con stock disponible > 0
+                        if ($soloConStock && $stock->cantidad_disponible <= 0) {
+                            continue;
+                        }
+
                         if ($rangoStock === 'cero' && $stock->cantidad != 0) {
                             continue;
                         } elseif ($rangoStock !== 'cero' && ! ($stock->cantidad >= $rango['min'] && $stock->cantidad <= $rango['max'])) {
@@ -2915,6 +2970,12 @@ class InventarioController extends Controller
                     }
                 } else {
                     // Producto sin stock: crear registros virtuales (stock = 0)
+                    // ✅ NUEVO: Si "solo_con_stock" está activado, NO mostrar productos sin stock
+                    if ($soloConStock) {
+                        // Saltar este producto porque no tiene stock
+                        continue;
+                    }
+
                     if ($rangoStock === 'cero' || $rangoStock === 'todos') {
                         // Mostrar en todos los almacenes o solo el seleccionado
                         $almacenesParaMostrar = $almacenId > 0

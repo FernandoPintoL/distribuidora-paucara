@@ -682,18 +682,38 @@ class Venta extends Model
                     'diferencia_disponible' => $cantidadDisponibleNueva - $cantidadDisponibleAnterior,
                 ]);
 
-                // Crear movimiento de reversión
-                MovimientoInventario::create([
+                // ✅ CORREGIDO (2026-02-18): Preservar información de conversión en reversión
+                // Si el movimiento original tiene info de conversión, la reversión también debe tenerla
+                $datosReversion = [
                     'stock_producto_id' => $stockProducto->id,
                     'cantidad'          => $cantidadADevolver,
                     'fecha'             => now(),
-                    'observacion'       => "Reversión de venta #{$this->numero}",
+                    'observacion'       => json_encode([
+                        'evento' => 'Reversión de venta anulada',
+                        'venta_numero' => $this->numero,
+                        'venta_id' => $this->id,
+                        'movimiento_original_id' => $movimiento->id,
+                        'cantidad_original' => $movimiento->cantidad,
+                        'cantidad_revertida' => $cantidadADevolver,
+                        'fue_conversion_aplicada' => $movimiento->es_conversion_aplicada,
+                    ]),
                     'numero_documento'  => $this->numero . '-REV',
                     'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_posterior' => $cantidadNueva,  // ✅ Ahora con valor real de BD
                     'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
                     'user_id'           => Auth::id() ?? 1,  // ✅ CORREGIDO: Fallback a usuario 1 si no hay autenticación
-                ]);
+                ];
+
+                // ✅ NUEVO (2026-02-18): Si el movimiento original fue una conversión, preservar la información
+                if ($movimiento->es_conversion_aplicada) {
+                    $datosReversion['cantidad_solicitada'] = abs($movimiento->cantidad_solicitada ?? 0);
+                    $datosReversion['unidad_venta_id'] = $movimiento->unidad_venta_id;
+                    $datosReversion['unidad_base_id'] = $movimiento->unidad_base_id;
+                    $datosReversion['factor_conversion'] = $movimiento->factor_conversion;
+                    $datosReversion['es_conversion_aplicada'] = true;
+                }
+
+                MovimientoInventario::create($datosReversion);
 
                 // Si el lote queda en cantidad 0 o negativo, eliminarlo completamente (hard delete)
                 if ($cantidadNueva <= 0) {
@@ -714,7 +734,8 @@ class Venta extends Model
                     $stockProducto->forceDelete();
                 }
 
-                Log::info('✅ Stock revertido por anulación de venta', [
+                // ✅ MEJORADO (2026-02-18): Log más detallado incluyendo información de conversiones
+                $logData = [
                     'venta' => $this->numero,
                     'stock_producto_id' => $stockProducto->id,
                     'producto_id' => $stockProducto->producto_id,
@@ -725,7 +746,18 @@ class Venta extends Model
                     'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                     'cantidad_disponible_final' => $cantidadDisponibleNueva,
                     'movimiento_revercion_registrado' => $this->numero . '-REV',
-                ]);
+                ];
+
+                // ✅ NUEVO: Incluir datos de conversión si aplica
+                if ($movimiento->es_conversion_aplicada) {
+                    $logData['conversion_aplicada'] = true;
+                    $logData['cantidad_solicitada_original'] = $movimiento->cantidad_solicitada;
+                    $logData['unidad_venta_nombre'] = $movimiento->unidadVenta?->nombre ?? 'N/A';
+                    $logData['unidad_base_nombre'] = $movimiento->unidadBase?->nombre ?? 'N/A';
+                    $logData['factor_conversion'] = $movimiento->factor_conversion;
+                }
+
+                Log::info('✅ Stock revertido por anulación de venta', $logData);
             }
 
             DB::commit();

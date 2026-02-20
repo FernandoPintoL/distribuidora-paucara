@@ -14,6 +14,8 @@ use App\Events\ProformaRechazada;
 use App\Events\ProformaConvertida;
 use App\Services\Venta\PrecioRangoProductoService;
 use App\Services\Reservas\ReservaDistribucionService;
+use App\Services\ComboStockService; // ✅ CORREGIDO: namespace correcto
+use App\Services\Stock\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -148,6 +150,11 @@ class ApiProformaController extends Controller
             $stockInsuficiente = [];
             $detallesConRangos = [];
 
+            // ✅ NUEVO (2026-02-20): Instanciar servicios de stock para validar combos
+            $comboStockService = app(ComboStockService::class);
+            $stockService = app(StockService::class);
+            $almacenId = auth()->user()->almacen_id ?? 1; // Usar almacén del usuario autenticado
+
             foreach ($requestData['productos'] as $item) {
                 $producto = Producto::with('stock')->findOrFail($item['producto_id']);
                 // ✅ CORREGIDO (2026-02-16): Cambiar (int) a (float) para preservar decimales en productos fraccionados
@@ -172,16 +179,51 @@ class ApiProformaController extends Controller
                 // Obtener información completa del rango (para logging y auditoría)
                 $detallesRango = $producto->obtenerPrecioConDetallesRango($cantidad, $empresaId);
 
-                // Verificar disponibilidad de stock
-                $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+                // ✅ NUEVO (2026-02-20): Validar stock considerando si es COMBO o PRODUCTO SIMPLE
+                if ($producto->es_combo) {
+                    // Para COMBOS: Validar capacidad usando ComboStockService
+                    $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
+                    $capacidadDisponible = $capacidad['capacidad'] ?? 0;
 
-                if ($stockDisponible < $cantidad) {
-                    $stockInsuficiente[] = [
-                        'producto' => $producto->nombre,
-                        'requerido' => $cantidad,
-                        'disponible' => $stockDisponible,
-                        'faltante' => $cantidad - $stockDisponible,
-                    ];
+                    if ($capacidadDisponible < $cantidad) {
+                        $stockInsuficiente[] = [
+                            'producto' => $producto->nombre . ' (COMBO)',
+                            'requerido' => $cantidad . ' ' . ($cantidad == 1 ? 'combo' : 'combos'),
+                            'disponible' => $capacidadDisponible . ' ' . ($capacidadDisponible == 1 ? 'combo' : 'combos'),
+                            'faltante' => $cantidad - $capacidadDisponible,
+                            'detalles' => [
+                                'cuello_botella' => $capacidad['cuello_botella'] ?? null,
+                                'componentes' => $capacidad['componentes'] ?? [],
+                            ],
+                        ];
+                    }
+
+                    \Log::info('✅ Validación de COMBO exitosa', [
+                        'producto_id' => $producto->id,
+                        'nombre' => $producto->nombre,
+                        'combos_requeridos' => $cantidad,
+                        'capacidad_disponible' => $capacidadDisponible,
+                        'cuello_botella' => $capacidad['cuello_botella'] ?? null,
+                    ]);
+                } else {
+                    // Para PRODUCTOS SIMPLES: Validar stock disponible
+                    $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+
+                    if ($stockDisponible < $cantidad) {
+                        $stockInsuficiente[] = [
+                            'producto' => $producto->nombre,
+                            'requerido' => $cantidad,
+                            'disponible' => $stockDisponible,
+                            'faltante' => $cantidad - $stockDisponible,
+                        ];
+                    }
+
+                    \Log::info('✅ Validación de PRODUCTO SIMPLE exitosa', [
+                        'producto_id' => $producto->id,
+                        'nombre' => $producto->nombre,
+                        'cantidad_requerida' => $cantidad,
+                        'stock_disponible' => $stockDisponible,
+                    ]);
                 }
 
                 $subtotalItem = $cantidad * $precioUnitario;
@@ -269,9 +311,57 @@ class ApiProformaController extends Controller
             }
 
             // ✅ RESERVAR STOCK AHORA que los detalles existen
-            $reservaExitosa = $proforma->reservarStock();
-            if (!$reservaExitosa) {
-                Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
+            try {
+                $reservaExitosa = $proforma->reservarStock();
+                if (!$reservaExitosa) {
+                    Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
+                }
+            } catch (\Exception $reservaException) {
+                // 🔴 Error durante reserva de stock - dar mensajes más claros
+                DB::rollBack();
+
+                // Parsear el mensaje de error para extraer producto_id si existe
+                $errorMsg = $reservaException->getMessage();
+                $productoFallido = null;
+                $detalleError = null;
+
+                // Buscar en los detalles expandidos cual producto falló
+                if (preg_match('/producto_id[\'"]?\s*[:\s=>]+\s*(\d+)/', $errorMsg, $matches)) {
+                    $productoFallidoId = (int) $matches[1];
+                    $productoFallido = Producto::find($productoFallidoId);
+                } elseif (preg_match('/Stock insuficiente.*Disponible:\s*(\d+).*Solicitado:\s*(\d+)/', $errorMsg, $matches)) {
+                    // Tomar el primer producto que falló en los detalles
+                    foreach ($proforma->detalles as $detalle) {
+                        if (!$detalle->producto->es_combo) {
+                            $productoFallido = $detalle->producto;
+                            $detalleError = [
+                                'disponible' => (int) $matches[1],
+                                'solicitado' => (int) $matches[2],
+                            ];
+                            break;
+                        }
+                    }
+                }
+
+                // Si no encontramos qué producto, buscar en los detalles
+                if (!$productoFallido && $proforma->detalles->count() > 0) {
+                    $productoFallido = $proforma->detalles->first()->producto;
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay suficiente stock disponible para completar su pedido',
+                    'tipo_error' => 'STOCK_INSUFICIENTE',
+                    'detalles_error' => [
+                        'producto' => $productoFallido ? [
+                            'id' => $productoFallido->id,
+                            'nombre' => $productoFallido->nombre,
+                        ] : null,
+                        'stock_info' => $detalleError,
+                        'error_tecnico' => $errorMsg,
+                    ],
+                    'sugerencia' => 'Por favor, ajusta las cantidades o contacta al equipo de ventas para conocer disponibilidad.',
+                ], 422);
             }
 
             // Cargar relaciones para respuesta

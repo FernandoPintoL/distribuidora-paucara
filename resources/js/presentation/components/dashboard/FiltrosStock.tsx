@@ -21,6 +21,7 @@ export interface FiltrosState {
     almacenId: string;
     rangoStock: string; // 'todos', 'bajo', 'normal', 'alto'
     ordenamiento: string; // 'cantidad-asc', 'cantidad-desc', 'producto', 'almacen'
+    soloConStock: boolean; // Mostrar solo productos con stock >= 1
 }
 
 const RANGOS_STOCK = {
@@ -41,6 +42,7 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
         almacenId: '',
         rangoStock: 'todos',
         ordenamiento: 'cantidad-desc',
+        soloConStock: false,
     });
 
     // Aplica los filtros cuando se presiona Buscar o Enter
@@ -70,6 +72,7 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
             almacenId: '',
             rangoStock: 'todos',
             ordenamiento: 'cantidad-desc',
+            soloConStock: false,
         };
         setBusquedaLocal('');
         setFiltros(filtrosLimpios);
@@ -82,7 +85,7 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     Filtros
                 </h3>
-                {(filtros.busqueda || filtros.almacenId || filtros.rangoStock !== 'todos' || filtros.ordenamiento !== 'cantidad-desc') && (
+                {(filtros.busqueda || filtros.almacenId || filtros.rangoStock !== 'todos' || filtros.ordenamiento !== 'cantidad-desc' || filtros.soloConStock) && (
                     <button
                         onClick={limpiarFiltros}
                         className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800 transition"
@@ -148,6 +151,22 @@ export default function FiltrosStock({ almacenes, onFiltrosChange }: FiltrosStoc
                         <option value="almacen">Almacén (A-Z)</option>
                     </select>
                 </div>
+
+                {/* Toggle: Solo con Stock */}
+                <div className="flex items-end">
+                    <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition flex-1">
+                        <input
+                            type="checkbox"
+                            checked={filtros.soloConStock}
+                            onChange={(e) => handleFiltroChange({ soloConStock: e.target.checked })}
+                            className="w-5 h-5 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            Solo con stock
+                        </span>
+                    </label>
+                </div>
+
                 {/* Búsqueda por Producto */}
                 <div className="lg:col-span-2 flex flex-col">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

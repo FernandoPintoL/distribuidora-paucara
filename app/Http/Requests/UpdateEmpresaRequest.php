@@ -36,6 +36,8 @@ class UpdateEmpresaRequest extends FormRequest
             'mensaje_legal' => ['nullable', 'string'],
             'activo' => ['nullable', 'boolean'],
             'es_principal' => ['nullable', 'boolean'],
+            'permite_productos_fraccionados' => ['nullable', 'boolean'], // ✨ NUEVO
+            'es_farmacia' => ['nullable', 'boolean'], // ✨ NUEVO - Para habilitar campos de medicamentos
         ];
     }
 
@@ -55,6 +57,20 @@ class UpdateEmpresaRequest extends FormRequest
         if ($this->has('es_principal')) {
             $this->merge([
                 'es_principal' => $this->es_principal === true || $this->es_principal === 'true' || $this->es_principal === '1' || $this->es_principal === 1,
+            ]);
+        }
+
+        // ✨ NUEVO: Convertir permite_productos_fraccionados
+        if ($this->has('permite_productos_fraccionados')) {
+            $this->merge([
+                'permite_productos_fraccionados' => $this->permite_productos_fraccionados === true || $this->permite_productos_fraccionados === 'true' || $this->permite_productos_fraccionados === '1' || $this->permite_productos_fraccionados === 1,
+            ]);
+        }
+
+        // ✨ NUEVO: Convertir es_farmacia
+        if ($this->has('es_farmacia')) {
+            $this->merge([
+                'es_farmacia' => $this->es_farmacia === true || $this->es_farmacia === 'true' || $this->es_farmacia === '1' || $this->es_farmacia === 1,
             ]);
         }
     }
@@ -93,6 +109,8 @@ class UpdateEmpresaRequest extends FormRequest
             'mensaje_footer.max' => 'El mensaje de footer no puede exceder 500 caracteres.',
             'activo.boolean' => 'El estado activo debe ser verdadero o falso.',
             'es_principal.boolean' => 'El indicador de empresa principal debe ser verdadero o falso.',
+            'permite_productos_fraccionados.boolean' => 'La opción de productos fraccionados debe ser verdadera o falsa.', // ✨ NUEVO
+            'es_farmacia.boolean' => 'La opción de farmacia debe ser verdadera o falsa.', // ✨ NUEVO
         ];
     }
 
@@ -118,6 +136,8 @@ class UpdateEmpresaRequest extends FormRequest
             'mensaje_legal' => 'mensaje legal',
             'activo' => 'estado activo',
             'es_principal' => 'empresa principal',
+            'permite_productos_fraccionados' => 'productos fraccionados', // ✨ NUEVO
+            'es_farmacia' => 'farmacia', // ✨ NUEVO
         ];
     }
 }

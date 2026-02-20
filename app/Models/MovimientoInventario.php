@@ -44,6 +44,12 @@ class MovimientoInventario extends Model
         'ip_dispositivo',
         'ajuste_inventario_id',
         'merma_inventario_id',
+        // ✅ NUEVO (2026-02-18): Campos para conversión de unidades
+        'cantidad_solicitada',
+        'unidad_venta_id',
+        'unidad_base_id',
+        'factor_conversion',
+        'es_conversion_aplicada',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -52,9 +58,12 @@ class MovimientoInventario extends Model
     protected function casts(): array
     {
         return [
-            'cantidad'           => 'integer',
-            'cantidad_anterior'  => 'integer',
-            'cantidad_posterior' => 'integer',
+            // ✅ CORREGIDO (2026-02-18): Permitir decimales para productos fraccionados
+            'cantidad'           => 'float',
+            'cantidad_anterior'  => 'float',
+            'cantidad_posterior' => 'float',
+            'cantidad_solicitada' => 'float',  // ✅ NUEVO: También debe ser float
+            'factor_conversion'  => 'float',    // ✅ NUEVO: También debe ser float
             'fecha'              => 'datetime',
             'created_at'         => 'datetime',
             'updated_at'         => 'datetime',
@@ -85,6 +94,22 @@ class MovimientoInventario extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * ✅ NUEVO (2026-02-18): Relación con la unidad de venta para conversiones
+     */
+    public function unidadVenta(): BelongsTo
+    {
+        return $this->belongsTo(UnidadMedida::class, 'unidad_venta_id');
+    }
+
+    /**
+     * ✅ NUEVO (2026-02-18): Relación con la unidad base (almacenamiento) para conversiones
+     */
+    public function unidadBase(): BelongsTo
+    {
+        return $this->belongsTo(UnidadMedida::class, 'unidad_base_id');
     }
 
     /**

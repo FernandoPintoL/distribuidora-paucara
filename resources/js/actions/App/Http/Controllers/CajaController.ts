@@ -1044,6 +1044,108 @@ imprimirCierre.head = (args: { aperturaCaja: number | { id: number } } | [apertu
     
     imprimirCierre.form = imprimirCierreForm
 /**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+export const exportarExcelCierre = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcelCierre.url(args, options),
+    method: 'get',
+})
+
+exportarExcelCierre.definition = {
+    methods: ["get","head"],
+    url: '/cajas/{aperturaCaja}/cierre/exportar-excel',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+exportarExcelCierre.url = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { aperturaCaja: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { aperturaCaja: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    aperturaCaja: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        aperturaCaja: typeof args.aperturaCaja === 'object'
+                ? args.aperturaCaja.id
+                : args.aperturaCaja,
+                }
+
+    return exportarExcelCierre.definition.url
+            .replace('{aperturaCaja}', parsedArgs.aperturaCaja.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+exportarExcelCierre.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportarExcelCierre.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+exportarExcelCierre.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportarExcelCierre.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+    const exportarExcelCierreForm = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportarExcelCierre.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+        exportarExcelCierreForm.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcelCierre.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::exportarExcelCierre
+ * @see app/Http/Controllers/CajaController.php:1691
+ * @route '/cajas/{aperturaCaja}/cierre/exportar-excel'
+ */
+        exportarExcelCierreForm.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportarExcelCierre.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportarExcelCierre.form = exportarExcelCierreForm
+/**
 * @see \App\Http\Controllers\CajaController::obtenerDatosCierre
  * @see app/Http/Controllers/CajaController.php:502
  * @route '/cajas/{aperturaCaja}/datos-cierre'
@@ -1147,7 +1249,7 @@ obtenerDatosCierre.head = (args: { aperturaCaja: number | { id: number } } | [ap
     obtenerDatosCierre.form = obtenerDatosCierreForm
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 export const imprimirMovimientos = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1162,7 +1264,7 @@ imprimirMovimientos.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimirMovimientos.url = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1195,7 +1297,7 @@ imprimirMovimientos.url = (args: { aperturaCaja: number | { id: number } } | [ap
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimirMovimientos.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1204,7 +1306,7 @@ imprimirMovimientos.get = (args: { aperturaCaja: number | { id: number } } | [ap
 })
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
 imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1214,7 +1316,7 @@ imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [a
 
     /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
     const imprimirMovimientosForm = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1224,7 +1326,7 @@ imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [a
 
             /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
         imprimirMovimientosForm.get = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1233,7 +1335,7 @@ imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [a
         })
             /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimientos
- * @see app/Http/Controllers/CajaController.php:1694
+ * @see app/Http/Controllers/CajaController.php:1744
  * @route '/cajas/{aperturaCaja}/movimientos/imprimir'
  */
         imprimirMovimientosForm.head = (args: { aperturaCaja: number | { id: number } } | [aperturaCaja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1249,7 +1351,7 @@ imprimirMovimientos.head = (args: { aperturaCaja: number | { id: number } } | [a
     imprimirMovimientos.form = imprimirMovimientosForm
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
 export const imprimirMovimiento = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1264,7 +1366,7 @@ imprimirMovimiento.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
 imprimirMovimiento.url = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1297,7 +1399,7 @@ imprimirMovimiento.url = (args: { movimiento: number | { id: number } } | [movim
 
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
 imprimirMovimiento.get = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1306,7 +1408,7 @@ imprimirMovimiento.get = (args: { movimiento: number | { id: number } } | [movim
 })
 /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
 imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1316,7 +1418,7 @@ imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movi
 
     /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
     const imprimirMovimientoForm = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1326,7 +1428,7 @@ imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movi
 
             /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
         imprimirMovimientoForm.get = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1335,7 +1437,7 @@ imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movi
         })
             /**
 * @see \App\Http\Controllers\CajaController::imprimirMovimiento
- * @see app/Http/Controllers/CajaController.php:1808
+ * @see app/Http/Controllers/CajaController.php:1858
  * @route '/cajas/movimiento/{movimiento}/imprimir'
  */
         imprimirMovimientoForm.head = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1351,7 +1453,7 @@ imprimirMovimiento.head = (args: { movimiento: number | { id: number } } | [movi
     imprimirMovimiento.form = imprimirMovimientoForm
 /**
 * @see \App\Http\Controllers\CajaController::eliminarMovimiento
- * @see app/Http/Controllers/CajaController.php:1853
+ * @see app/Http/Controllers/CajaController.php:1903
  * @route '/cajas/movimiento/{movimiento}/eliminar'
  */
 export const eliminarMovimiento = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1366,7 +1468,7 @@ eliminarMovimiento.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::eliminarMovimiento
- * @see app/Http/Controllers/CajaController.php:1853
+ * @see app/Http/Controllers/CajaController.php:1903
  * @route '/cajas/movimiento/{movimiento}/eliminar'
  */
 eliminarMovimiento.url = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1399,7 +1501,7 @@ eliminarMovimiento.url = (args: { movimiento: number | { id: number } } | [movim
 
 /**
 * @see \App\Http\Controllers\CajaController::eliminarMovimiento
- * @see app/Http/Controllers/CajaController.php:1853
+ * @see app/Http/Controllers/CajaController.php:1903
  * @route '/cajas/movimiento/{movimiento}/eliminar'
  */
 eliminarMovimiento.delete = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1409,7 +1511,7 @@ eliminarMovimiento.delete = (args: { movimiento: number | { id: number } } | [mo
 
     /**
 * @see \App\Http\Controllers\CajaController::eliminarMovimiento
- * @see app/Http/Controllers/CajaController.php:1853
+ * @see app/Http/Controllers/CajaController.php:1903
  * @route '/cajas/movimiento/{movimiento}/eliminar'
  */
     const eliminarMovimientoForm = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1424,7 +1526,7 @@ eliminarMovimiento.delete = (args: { movimiento: number | { id: number } } | [mo
 
             /**
 * @see \App\Http\Controllers\CajaController::eliminarMovimiento
- * @see app/Http/Controllers/CajaController.php:1853
+ * @see app/Http/Controllers/CajaController.php:1903
  * @route '/cajas/movimiento/{movimiento}/eliminar'
  */
         eliminarMovimientoForm.delete = (args: { movimiento: number | { id: number } } | [movimiento: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -1440,7 +1542,7 @@ eliminarMovimiento.delete = (args: { movimiento: number | { id: number } } | [mo
     eliminarMovimiento.form = eliminarMovimientoForm
 /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
 export const exportarExcel = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1455,7 +1557,7 @@ exportarExcel.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
 exportarExcel.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1488,7 +1590,7 @@ exportarExcel.url = (args: { caja: number | { id: number } } | [caja: number | {
 
 /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
 exportarExcel.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1497,7 +1599,7 @@ exportarExcel.get = (args: { caja: number | { id: number } } | [caja: number | {
 })
 /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
 exportarExcel.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1507,7 +1609,7 @@ exportarExcel.head = (args: { caja: number | { id: number } } | [caja: number | 
 
     /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
     const exportarExcelForm = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1517,7 +1619,7 @@ exportarExcel.head = (args: { caja: number | { id: number } } | [caja: number | 
 
             /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
         exportarExcelForm.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1526,7 +1628,7 @@ exportarExcel.head = (args: { caja: number | { id: number } } | [caja: number | 
         })
             /**
 * @see \App\Http\Controllers\CajaController::exportarExcel
- * @see app/Http/Controllers/CajaController.php:1747
+ * @see app/Http/Controllers/CajaController.php:1797
  * @route '/cajas/{caja}/movimientos/exportar-excel'
  */
         exportarExcelForm.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1542,7 +1644,7 @@ exportarExcel.head = (args: { caja: number | { id: number } } | [caja: number | 
     exportarExcel.form = exportarExcelForm
 /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
 export const exportarPdf = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1557,7 +1659,7 @@ exportarPdf.definition = {
 
 /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
 exportarPdf.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1590,7 +1692,7 @@ exportarPdf.url = (args: { caja: number | { id: number } } | [caja: number | { i
 
 /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
 exportarPdf.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1599,7 +1701,7 @@ exportarPdf.get = (args: { caja: number | { id: number } } | [caja: number | { i
 })
 /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
 exportarPdf.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1609,7 +1711,7 @@ exportarPdf.head = (args: { caja: number | { id: number } } | [caja: number | { 
 
     /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
     const exportarPdfForm = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1619,7 +1721,7 @@ exportarPdf.head = (args: { caja: number | { id: number } } | [caja: number | { 
 
             /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
         exportarPdfForm.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1628,7 +1730,7 @@ exportarPdf.head = (args: { caja: number | { id: number } } | [caja: number | { 
         })
             /**
 * @see \App\Http\Controllers\CajaController::exportarPdf
- * @see app/Http/Controllers/CajaController.php:1769
+ * @see app/Http/Controllers/CajaController.php:1819
  * @route '/cajas/{caja}/movimientos/exportar-pdf'
  */
         exportarPdfForm.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -2079,6 +2181,6 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     reportes.form = reportesForm
-const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, registrarMovimientoJson, movimientosApertura, imprimirCierre, obtenerDatosCierre, imprimirMovimientos, imprimirMovimiento, eliminarMovimiento, exportarExcel, exportarPdf, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
+const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, registrarMovimientoJson, movimientosApertura, imprimirCierre, exportarExcelCierre, obtenerDatosCierre, imprimirMovimientos, imprimirMovimiento, eliminarMovimiento, exportarExcel, exportarPdf, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
 
 export default CajaController

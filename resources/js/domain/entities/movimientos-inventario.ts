@@ -22,6 +22,15 @@ export interface MovimientoInventario extends BaseEntity {
     tipo_ajuste_inventario_id?: Id;
     tipoAjusteInventario?: TipoAjusteInventario;
 
+    // ✅ NUEVO (2026-02-18): Información de conversiones de unidades
+    es_conversion_aplicada?: boolean;
+    cantidad_solicitada?: number | null;
+    unidad_venta_id?: Id | null;
+    unidad_base_id?: Id | null;
+    factor_conversion?: number | null;
+    unidad_venta_nombre?: string | null;
+    unidad_base_nombre?: string | null;
+
     // Relaciones
     stockProducto?: StockProducto;
     user?: User;

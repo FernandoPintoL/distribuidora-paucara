@@ -131,6 +131,20 @@ export const empresasConfig: ModuleConfig<Empresa, EmpresaFormData> = {
       placeholder: 'Ingrese el mensaje legal'
     },
 
+    // Características
+    {
+      key: 'permite_productos_fraccionados',
+      label: 'Permitir Productos Fraccionados',
+      type: 'boolean',
+      description: 'Habilita la opción de conversiones de unidades en productos'
+    },
+    {
+      key: 'es_farmacia',
+      label: 'Es Farmacia',
+      type: 'boolean',
+      description: 'Habilita campos de medicamentos (principio activo, uso de medicación)'
+    },
+
     // Estado
     {
       key: 'es_principal',

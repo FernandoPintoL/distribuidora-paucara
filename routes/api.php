@@ -1168,6 +1168,7 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
     Route::post('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'store']);
     Route::get('/', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'index']);
     Route::get('/estadisticas', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'estadisticas']);
+    Route::get('/dashboard-stats', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'dashboardStats']); // ✅ NUEVO: Stats ligeras para dashboard
     Route::get('/orden-del-dia', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'ordenDelDia']); // ✅ NUEVO
     Route::get('/validar-horario', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'validarHorario']);
     Route::get('/{visita}', [\App\Http\Controllers\Api\VisitaPreventistaController::class, 'show']);

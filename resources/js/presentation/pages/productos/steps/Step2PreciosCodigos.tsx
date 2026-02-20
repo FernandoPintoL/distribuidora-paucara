@@ -50,7 +50,7 @@ export interface Step2Props {
     unidades?: { id: number | string; nombre: string; codigo: string }[]; // ✨ NUEVO
 }
 
-export default function Step2PreciosCodigos(props: Step2Props) {
+function Step2PreciosCodigos(props: Step2Props) {
     const {
         data,
         errors,
@@ -601,15 +601,54 @@ export default function Step2PreciosCodigos(props: Step2Props) {
 
     const handleModernScannerResult = useCallback((result: string) => {
         if (result && targetIndex !== null) {
+            console.log('✅ CÓDIGO ESCANEADO - CONFIGURANDO EN FORMA', {
+                targetIndex,
+                codigoCapturado: result,
+                codigoLargo: result.length,
+                timestamp: new Date().toISOString(),
+            });
             setCodigo(targetIndex, result);
-            closeCamera();
+
+            // Pequeño delay para asegurar que el setState se procese antes de cerrar
+            setTimeout(() => {
+                console.log('🔍 Estado de códigos DESPUÉS de setCodigo:', data.codigos);
+                closeCamera();
+
+                // Enfocar el input del código después de cerrar la cámara y que se actualice la UI
+                setTimeout(() => {
+                    const inputFocused = codeInputRefs.current[targetIndex];
+                    if (inputFocused) {
+                        console.log('👁️ Enfocando input del código en índice:', targetIndex);
+                        inputFocused.focus();
+                        inputFocused.select();
+                    }
+                }, 100);
+            }, 50);
+        } else {
+            console.warn('⚠️ No se pudo procesar resultado del escáner', {
+                resultado: result,
+                targetIndex,
+            });
         }
-    }, [setCodigo, targetIndex, closeCamera]);
+    }, [setCodigo, targetIndex, closeCamera, codeInputRefs]);
 
     const handleModernScannerError = useCallback((error: string) => {
         setModernScannerError(error);
         console.warn('Modern scanner error:', error);
     }, []);
+
+    // 🔧 Manejo de actualizaciones del escáner (creado con useCallback para evitar recreaciones)
+    const handleScannerUpdate = useCallback((err: unknown, result: unknown) => {
+        if (err) {
+            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error del escáner');
+            handleModernScannerError(errorMessage);
+        }
+        if (result) {
+            const scanResult = result as { getText: () => string };
+            console.log('📱 Resultado del escáner:', scanResult.getText());
+            handleModernScannerResult(scanResult.getText());
+        }
+    }, [handleModernScannerResult, handleModernScannerError]);
 
     const switchToFallbackScanner = useCallback(() => {
         setUseModernScanner(false);
@@ -633,6 +672,10 @@ export default function Step2PreciosCodigos(props: Step2Props) {
     const tpNombre = (tp: TipoPrecioOption) => String(tp?.nombre ?? tp?.label ?? '');
     const tpIcono = (tp: TipoPrecioOption) => tp?.configuracion?.icono ?? tp?.icono ?? '';
 
+    // 🔧 MEJORA: Usar ref para comparar precios sin disparar re-renders innecesarios
+    const prevPreciosLengthRef = useRef<number>(0);
+    const prevCostoRef = useRef<number>(0);
+
     // Calcula y sincroniza automáticamente los montos de venta cuando cambia el costo o la selección de tipos de precio
     useEffect(() => {
         const costo = Number(props.precioCosto ?? 0);
@@ -640,6 +683,17 @@ export default function Step2PreciosCodigos(props: Step2Props) {
             console.log('⏭️ Recalc precios: Costo inválido o negativo');
             return;
         }
+
+        // ✅ IMPORTANTE: Solo ejecutar si cambió el costo O cambió la cantidad de precios
+        // Esto evita que se dispare por cambios menores en los valores de los precios
+        const preciosLength = data.precios?.length ?? 0;
+        if (prevCostoRef.current === costo && prevPreciosLengthRef.current === preciosLength) {
+            console.log('⏭️ Omitiendo sincronización: mismos costo y cantidad de precios');
+            return;
+        }
+
+        prevCostoRef.current = costo;
+        prevPreciosLengthRef.current = preciosLength;
 
         console.log('💵 SINCRONIZACIÓN AUTOMÁTICA DE PRECIOS', {
             costoBases: costo,
@@ -690,7 +744,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         } else {
             console.log('ℹ️ Sin cambios en los precios');
         }
-    }, [props.precioCosto, data.precios, tipos_precio, setPrecios]);
+    }, [props.precioCosto, tipos_precio, setPrecios]);
 
     return (
         <div>
@@ -1077,6 +1131,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                         <Input
                                             ref={(el) => { codeInputRefs.current[i] = el; }}
                                             value={c.codigo}
+                                            autoFocus={i === 0} // ✨ Enfocar automáticamente el primer input de código
                                             onChange={(e) => setCodigo(i, e.target.value)}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
@@ -1093,7 +1148,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                                     }
                                                 }
                                             }}
-                                            placeholder="Ingresa código EAN, UPC, etc. (opcional)"
+                                            placeholder={i === 0 ? "🔍 Enfocado - Escanea aquí o escribe código EAN, UPC, etc." : "Ingresa código EAN, UPC, etc. (opcional)"}
                                             className="font-mono text-sm flex-1"
                                         />
                                     </div>
@@ -1169,15 +1224,7 @@ export default function Step2PreciosCodigos(props: Step2Props) {
                                 <BarcodeScannerComponent
                                     width="100%"
                                     height="100%"
-                                    onUpdate={(err, result) => {
-                                        if (err) {
-                                            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error del escáner');
-                                            handleModernScannerError(errorMessage);
-                                        }
-                                        if (result) {
-                                            handleModernScannerResult(result.getText());
-                                        }
-                                    }}
+                                    onUpdate={handleScannerUpdate}
                                     facingMode="environment"
                                 />
                             ) : supportsGetUserMedia ? (
@@ -1214,3 +1261,5 @@ export default function Step2PreciosCodigos(props: Step2Props) {
         </div>
     );
 }
+
+export default Step2PreciosCodigos;

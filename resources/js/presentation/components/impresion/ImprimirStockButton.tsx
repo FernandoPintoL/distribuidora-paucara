@@ -26,6 +26,10 @@ interface ImprimirStockButtonProps {
     stock: StockItem[];
     almacenFiltro?: string;
     busquedaFiltro?: string;
+    rangoStockFiltro?: string;
+    ordenamientoFiltro?: string;
+    soloConStockFiltro?: boolean;
+    filtrosCompletos?: any;
     className?: string;
     iconOnly?: boolean;
 }
@@ -40,6 +44,10 @@ export function ImprimirStockButton({
     stock,
     almacenFiltro,
     busquedaFiltro,
+    rangoStockFiltro,
+    ordenamientoFiltro,
+    soloConStockFiltro,
+    filtrosCompletos,
     className = '',
     iconOnly = false,
 }: ImprimirStockButtonProps) {
@@ -49,7 +57,7 @@ export function ImprimirStockButton({
     const [formatoSeleccionado, setFormatoSeleccionado] = useState<string>('A4');
 
     const prepararImpresion = async (formato: string, accionURL: 'download' | 'stream' = 'stream') => {
-        console.log('Preparando impresión de stock:', { formato, cantidad: stock.length, accion: accionURL });
+        console.log('Preparando impresión de stock:', { formato, cantidad: stock.length, accion: accionURL, filtros: filtrosCompletos });
         setLoading(true);
 
         try {
@@ -64,6 +72,10 @@ export function ImprimirStockButton({
                     stock,
                     almacen_filtro: almacenFiltro || null,
                     busqueda_filtro: busquedaFiltro || null,
+                    rango_stock_filtro: rangoStockFiltro || null,
+                    ordenamiento_filtro: ordenamientoFiltro || null,
+                    solo_con_stock_filtro: soloConStockFiltro || null,
+                    filtros_completos: filtrosCompletos || null,
                 }),
             });
 
@@ -191,13 +203,44 @@ export function ImprimirStockButton({
                                         </button>
                                     </div>
 
-                                    {/* Información */}
-                                    <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                        <p className="text-sm text-blue-900 dark:text-blue-300">
-                                            Registros: <span className="font-semibold">{stock.length}</span>
-                                            {almacenFiltro && <span> • Almacén: {almacenFiltro}</span>}
-                                            {busquedaFiltro && <span> • Búsqueda: {busquedaFiltro}</span>}
-                                        </p>
+                                    {/* Información de filtros aplicados */}
+                                    <div className="mb-6 space-y-3">
+                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                            <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                                                📊 Registros a imprimir: <span className="text-lg">{stock.length}</span>
+                                            </p>
+                                        </div>
+
+                                        {/* Filtros activos */}
+                                        {(almacenFiltro || busquedaFiltro || rangoStockFiltro || ordenamientoFiltro || soloConStockFiltro) && (
+                                            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                                <p className="text-xs font-semibold text-green-900 dark:text-green-300 mb-2 uppercase">
+                                                    ✓ Filtros aplicados:
+                                                </p>
+                                                <div className="space-y-1 text-xs text-green-800 dark:text-green-400">
+                                                    {almacenFiltro && (
+                                                        <p>• <span className="font-medium">Almacén:</span> {almacenFiltro}</p>
+                                                    )}
+                                                    {busquedaFiltro && (
+                                                        <p>• <span className="font-medium">Búsqueda:</span> {busquedaFiltro}</p>
+                                                    )}
+                                                    {rangoStockFiltro && (
+                                                        <p>• <span className="font-medium">Rango de Stock:</span> {rangoStockFiltro}</p>
+                                                    )}
+                                                    {soloConStockFiltro && (
+                                                        <p>• <span className="font-medium">📦 Solo con stock</span> (≥ 1)</p>
+                                                    )}
+                                                    {ordenamientoFiltro && ordenamientoFiltro !== 'cantidad-desc' && (
+                                                        <p>• <span className="font-medium">Ordenamiento:</span> {
+                                                            ordenamientoFiltro === 'cantidad-asc' ? 'Cantidad (Menor a Mayor)' :
+                                                            ordenamientoFiltro === 'producto' ? 'Producto (A-Z)' :
+                                                            ordenamientoFiltro === 'almacen' ? 'Almacén (A-Z)' :
+                                                            ordenamientoFiltro
+                                                        }</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Pantalla principal: seleccionar acción */}

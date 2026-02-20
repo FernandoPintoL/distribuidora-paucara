@@ -1187,4 +1187,128 @@ class ExcelExportService
             'Expires' => '0'
         ]);
     }
+
+    /**
+     * ✅ NUEVO: Exportar cierre de caja a Excel
+     *
+     * @param array $datosExcel Datos del cierre preparados
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportarCierreCaja(array $datosExcel)
+    {
+        Log::info('📊 ExcelExportService::exportarCierreCaja', [
+            'apertura_id' => $datosExcel['apertura']->id ?? null
+        ]);
+
+        try {
+            $apertura = $datosExcel['apertura'];
+            $cierre = $datosExcel['cierre'];
+            $datos = $datosExcel['datos'];
+            $usuario = $datosExcel['usuario'];
+
+            // Crear encabezado
+            if ($this->empresa) {
+                $this->agregarCelda($this->empresa->nombre, ['fontSize' => 14, 'bold' => true, 'color' => '1F2937']);
+                $this->currentRow++;
+
+                if ($this->empresa->nit) {
+                    $this->agregarCelda('NIT: ' . $this->empresa->nit, ['fontSize' => 10, 'color' => '6B7280']);
+                    $this->currentRow++;
+                }
+            }
+
+            // Título
+            $this->agregarCelda('CIERRE DE CAJA', ['fontSize' => 12, 'bold' => true, 'color' => '000000']);
+            $this->currentRow++;
+
+            $this->agregarCelda('Folio #' . $cierre->id . ' - ' . now()->format('d/m/Y H:i:s'), ['fontSize' => 10, 'color' => '4B5563']);
+            $this->currentRow += 2;
+
+            // Información General
+            $this->agregarCelda('INFORMACIÓN GENERAL', ['fontSize' => 11, 'bold' => true, 'color' => '1F2937']);
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Caja:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $apertura->caja->nombre ?? 'N/A');
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Responsable:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $usuario->name ?? 'N/A');
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Apertura:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $apertura->fecha->format('d/m/Y H:i'));
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Cierre:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $cierre->created_at->format('d/m/Y H:i'));
+            $this->currentRow += 2;
+
+            // Ventas por Tipo de Pago
+            if (isset($datos['ventasPorTipoPago']) && count($datos['ventasPorTipoPago']) > 0) {
+                $this->agregarCelda('VENTAS POR TIPO DE PAGO', ['fontSize' => 11, 'bold' => true, 'color' => '1F2937']);
+                $this->currentRow++;
+
+                $this->sheet->setCellValue('A' . $this->currentRow, 'Tipo de Pago');
+                $this->sheet->setCellValue('B' . $this->currentRow, 'Cantidad');
+                $this->sheet->setCellValue('C' . $this->currentRow, 'Total');
+                $this->currentRow++;
+
+                $totalVentas = 0;
+                $totalCantidad = 0;
+
+                foreach ($datos['ventasPorTipoPago'] as $tipo => $resumen) {
+                    $this->sheet->setCellValue('A' . $this->currentRow, $tipo);
+                    $this->sheet->setCellValue('B' . $this->currentRow, $resumen['cantidad'] ?? 0);
+                    $this->sheet->setCellValue('C' . $this->currentRow, $resumen['total'] ?? 0);
+                    $totalVentas += $resumen['total'] ?? 0;
+                    $totalCantidad += $resumen['cantidad'] ?? 0;
+                    $this->currentRow++;
+                }
+
+                $this->sheet->setCellValue('A' . $this->currentRow, 'TOTAL VENTAS');
+                $this->sheet->setCellValue('B' . $this->currentRow, $totalCantidad);
+                $this->sheet->setCellValue('C' . $this->currentRow, $totalVentas);
+                $this->currentRow += 2;
+            }
+
+            // Resumen Financiero
+            $this->agregarCelda('RESUMEN FINANCIERO', ['fontSize' => 11, 'bold' => true, 'color' => '1F2937']);
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Monto de Apertura:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $apertura->monto_apertura ?? 0);
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Total Ventas:');
+            $this->sheet->setCellValue('B' . $this->currentRow, ($datos['sumatorialVentas'] ?? 0) + ($datos['sumatorialVentasCredito'] ?? 0));
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Efectivo Esperado:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $cierre->monto_esperado ?? 0);
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'Efectivo Contado:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $cierre->monto_real ?? 0);
+            $this->currentRow++;
+
+            $this->sheet->setCellValue('A' . $this->currentRow, 'DIFERENCIA:');
+            $this->sheet->setCellValue('B' . $this->currentRow, $cierre->diferencia ?? 0);
+            $this->currentRow += 2;
+
+            // Aplicar formatos
+            $this->aplicarFormato();
+
+            // Generar nombre del archivo
+            $nombreArchivo = "Cierre_Caja_{$apertura->id}_" . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return $this->descargarArchivo($this->spreadsheet, $nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('❌ Error al exportar cierre de caja a Excel', [
+                'error' => $e->getMessage(),
+                'apertura_id' => $datosExcel['apertura']->id ?? null
+            ]);
+            throw $e;
+        }
+    }
 }

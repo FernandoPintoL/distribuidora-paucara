@@ -67,23 +67,35 @@ export interface StockPorAlmacen {
 
 /**
  * Movimiento de inventario reciente
+ * ✅ MEJORADO (2026-02-18): Incluir información de conversiones de unidades
  */
 export interface MovimientoReciente {
     id: number;
-    tipo: 'entrada' | 'salida' | 'ajuste';
+    tipo: string; // 'ENTRADA_COMPRA' | 'SALIDA_VENTA' | etc
     cantidad: number;
     fecha: string;
-    stockProducto: {
-        producto: {
+    numero_documento?: string;
+    stockProducto?: {
+        id?: number;
+        producto?: {
+            id?: number;
             nombre: string;
         };
-        almacen: {
+        almacen?: {
+            id?: number;
             nombre: string;
         };
     };
     user?: {
+        id?: number;
         name: string;
     };
+    // ✅ NUEVO (2026-02-18): Campos para conversión de unidades
+    es_conversion_aplicada?: boolean;
+    cantidad_solicitada?: number;
+    factor_conversion?: number;
+    unidad_venta_nombre?: string;
+    unidad_base_nombre?: string;
 }
 
 /**

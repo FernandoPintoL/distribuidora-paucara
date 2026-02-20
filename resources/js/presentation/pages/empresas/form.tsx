@@ -36,6 +36,8 @@ const initialEmpresaData: EmpresaFormData = {
   mensaje_legal: '',
   activo: true,
   es_principal: false,
+  permite_productos_fraccionados: false, // ✨ NUEVO
+  es_farmacia: false, // ✨ NUEVO
 };
 
 export default function EmpresaForm({ empresa }: EmpresaFormPageProps) {

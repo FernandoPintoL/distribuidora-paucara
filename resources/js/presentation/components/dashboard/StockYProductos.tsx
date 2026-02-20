@@ -71,6 +71,7 @@ export default function StockYProductos({
                 if (filtros.almacenId) params.append('almacen_id', filtros.almacenId);
                 params.append('rango_stock', filtros.rangoStock);
                 params.append('ordenamiento', filtros.ordenamiento);
+                if (filtros.soloConStock) params.append('solo_con_stock', 'true');
 
                 const response = await fetch(`/api/inventario/stock-filtrado?${params.toString()}`);
 
@@ -131,6 +132,7 @@ export default function StockYProductos({
             if (filtros.almacenId) params.append('almacen_id', filtros.almacenId);
             params.append('rango_stock', filtros.rangoStock);
             params.append('ordenamiento', filtros.ordenamiento);
+            if (filtros.soloConStock) params.append('solo_con_stock', 'true');
 
             const reloadResponse = await fetch(`/api/inventario/stock-filtrado?${params.toString()}`);
             if (reloadResponse.ok) {
@@ -209,6 +211,10 @@ export default function StockYProductos({
                                         : undefined
                                 }
                                 busquedaFiltro={filtros.busqueda || undefined}
+                                rangoStockFiltro={filtros.rangoStock !== 'todos' ? filtros.rangoStock : undefined}
+                                ordenamientoFiltro={filtros.ordenamiento}
+                                soloConStockFiltro={filtros.soloConStock}
+                                filtrosCompletos={filtros}
                             />
                         </div>
                     </div>

@@ -182,4 +182,37 @@ class ComboStockService
             'detalles' => $detalles,
         ];
     }
+
+    /**
+     * ✅ NUEVO (2026-02-20): Obtener stock y capacidad de combo
+     * Método compatibilidad para ApiProformaController
+     *
+     * @param int $comboId - ID del combo
+     * @param int|null $almacenId - ID del almacén
+     * @return array - ['capacidad' => int, 'cuello_botella' => array, 'componentes' => array]
+     */
+    public static function obtenerStockProducto(int $comboId, ?int $almacenId = null): array
+    {
+        $detalles = self::calcularCapacidadConDetalles($comboId, $almacenId);
+
+        // Encontrar cuello de botella
+        $cuelloBotella = null;
+        foreach ($detalles['detalles'] as $detalle) {
+            if ($detalle['es_cuello_botella'] && $detalle['es_obligatorio']) {
+                $cuelloBotella = [
+                    'producto_id' => $detalle['producto_id'],
+                    'producto_nombre' => $detalle['producto_nombre'],
+                    'stock_disponible' => $detalle['stock_disponible'],
+                    'combos_posibles' => $detalle['combos_posibles'],
+                ];
+                break;
+            }
+        }
+
+        return [
+            'capacidad' => $detalles['capacidad_total'],
+            'cuello_botella' => $cuelloBotella,
+            'componentes' => $detalles['detalles'],
+        ];
+    }
 }

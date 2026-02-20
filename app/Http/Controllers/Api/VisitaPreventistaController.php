@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreVisitaPreventistaRequest;
 use App\Models\VisitaPreventistaCliente;
 use App\Models\Cliente;
+use App\Models\Proforma;
 use App\Services\VisitaPreventistaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -162,6 +163,82 @@ class VisitaPreventistaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estadísticas: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ GET /api/visitas/dashboard-stats
+     * Obtener estadísticas ligeras para el dashboard
+     *
+     * Retorna SOLO números/conteos (sin cargar listas completas):
+     * - Total de proformas creadas por el usuario
+     * - Proformas pendientes y aprobadas
+     * - Para preventistas: clientes asignados (activos e inactivos)
+     *
+     * Funciona para cualquier rol (Preventista, Vendedor, Admin, etc.)
+     * Esto reemplaza la necesidad de cargar listas completas en la pantalla de inicio
+     */
+    public function dashboardStats(Request $request)
+    {
+        try {
+            $usuario = auth()->user();
+
+            if (!$usuario) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado.',
+                ], 403);
+            }
+
+            // Total de proformas creadas por el usuario
+            $totalProformas = Proforma::where('usuario_creador_id', $usuario->id)->count();
+
+            // Proformas pendientes
+            $totalProformasPendientes = Proforma::where('usuario_creador_id', $usuario->id)
+                ->join('estados_logistica', 'proformas.estado_proforma_id', '=', 'estados_logistica.id')
+                ->where('estados_logistica.codigo', 'PENDIENTE')
+                ->count();
+
+            // Proformas aprobadas
+            $totalProformasAprobadas = Proforma::where('usuario_creador_id', $usuario->id)
+                ->join('estados_logistica', 'proformas.estado_proforma_id', '=', 'estados_logistica.id')
+                ->where('estados_logistica.codigo', 'APROBADA')
+                ->count();
+
+            // Si es preventista, incluir datos de clientes asignados
+            $totalClientes = 0;
+            $clientesActivos = 0;
+            $clientesInactivos = 0;
+
+            $empleado = $usuario->empleado;
+            if ($empleado && $empleado->zona()) {
+                $totalClientes = Cliente::where('preventista_id', $empleado->id)->count();
+                $clientesActivos = Cliente::where('preventista_id', $empleado->id)
+                    ->where('activo', 1)
+                    ->count();
+                $clientesInactivos = $totalClientes - $clientesActivos;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estadísticas del dashboard obtenidas correctamente.',
+                'data' => [
+                    'total_proformas' => (int) $totalProformas,
+                    'proformas_pendientes' => (int) $totalProformasPendientes,
+                    'proformas_aprobadas' => (int) $totalProformasAprobadas,
+                    'total_clientes' => (int) $totalClientes,
+                    'clientes_activos' => (int) $clientesActivos,
+                    'clientes_inactivos' => (int) $clientesInactivos,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en dashboardStats: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas del dashboard: ' . $e->getMessage(),
             ], 500);
         }
     }

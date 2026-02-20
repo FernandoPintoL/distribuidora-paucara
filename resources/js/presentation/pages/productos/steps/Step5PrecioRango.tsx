@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
@@ -47,6 +47,10 @@ export default function Step5PrecioRango({
 
   // Referencia para hacer scroll al formulario
   const formCardRef = useRef<HTMLDivElement>(null);
+
+  // Referencias para los inputs de cantidad (mejora para scanner)
+  const cantidadMinRef = useRef<HTMLInputElement>(null);
+  const cantidadMaxRef = useRef<HTMLInputElement>(null);
 
   // 🔍 DEBUG: Verificar que tiposPrecio llegue correctamente
   useEffect(() => {
@@ -98,12 +102,12 @@ export default function Step5PrecioRango({
     }
   };
 
-  const updateField = <K extends keyof PrecioRangoFormData>(key: K, value: PrecioRangoFormData[K]) => {
+  const updateField = useCallback(<K extends keyof PrecioRangoFormData>(key: K, value: PrecioRangoFormData[K]) => {
     setData(prev => ({
       ...prev,
       [key]: value,
     }));
-  };
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
@@ -397,11 +401,11 @@ export default function Step5PrecioRango({
                       label: t.nombre || 'Sin nombre',
                       description: `Código: ${t.codigo || 'N/A'}`,
                     } as SelectOption))}
-                    onChange={(value) => {
+                    onChange={useCallback((value) => {
                       const tipoPrecioId = parseInt(String(value));
                       console.log('🔄 Tipo precio seleccionado:', tipoPrecioId);
                       updateField('tipo_precio_id', tipoPrecioId);
-                    }}
+                    }, [updateField])}
                     searchPlaceholder="Buscar por nombre o código..."
                     emptyText="No se encontraron tipos de precio"
                     error={errors.tipo_precio_id}
@@ -419,12 +423,24 @@ export default function Step5PrecioRango({
                 <div className="space-y-2">
                   <Label htmlFor="cantidad-min">Cantidad Mínima *</Label>
                   <Input
+                    ref={cantidadMinRef}
                     id="cantidad-min"
                     type="number"
                     min="1"
                     value={data.cantidad_minima}
-                    onChange={(e) => updateField('cantidad_minima', parseInt(e.target.value))}
-                    className={errors.cantidad_minima ? 'border-red-500' : ''}
+                    onChange={(e) => {
+                      const valor = parseInt(e.target.value);
+                      if (!isNaN(valor)) {
+                        updateField('cantidad_minima', valor);
+                      }
+                    }}
+                    onFocus={(e) => {
+                      // Seleccionar todo el contenido al hacer focus para mejor UX con scanner
+                      e.target.select();
+                    }}
+                    autoComplete="off"
+                    className={`${errors.cantidad_minima ? 'border-red-500' : ''} transition-colors`}
+                    disabled={isSubmitting}
                   />
                   {errors.cantidad_minima && (
                     <p className="text-sm text-red-600 dark:text-red-400">{errors.cantidad_minima}</p>
@@ -434,14 +450,28 @@ export default function Step5PrecioRango({
                 <div className="space-y-2">
                   <Label htmlFor="cantidad-max">Cantidad Máxima (opcional)</Label>
                   <Input
+                    ref={cantidadMaxRef}
                     id="cantidad-max"
                     type="number"
                     placeholder="Dejar vacío para sin límite"
                     value={data.cantidad_maxima || ''}
-                    onChange={(e) =>
-                      updateField('cantidad_maxima', e.target.value ? parseInt(e.target.value) : null)
-                    }
-                    className={errors.cantidad_maxima ? 'border-red-500' : ''}
+                    onChange={(e) => {
+                      if (e.target.value === '') {
+                        updateField('cantidad_maxima', null);
+                      } else {
+                        const valor = parseInt(e.target.value);
+                        if (!isNaN(valor)) {
+                          updateField('cantidad_maxima', valor);
+                        }
+                      }
+                    }}
+                    onFocus={(e) => {
+                      // Seleccionar todo el contenido al hacer focus para mejor UX con scanner
+                      e.target.select();
+                    }}
+                    autoComplete="off"
+                    className={`${errors.cantidad_maxima ? 'border-red-500' : ''} transition-colors`}
+                    disabled={isSubmitting}
                   />
                   {errors.cantidad_maxima && (
                     <p className="text-sm text-red-600 dark:text-red-400">{errors.cantidad_maxima}</p>

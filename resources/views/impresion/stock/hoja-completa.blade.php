@@ -58,7 +58,7 @@
 </table>
 
 {{-- Resumen --}}
-<div class="totales">
+<div class="totales" style="font-size: 12px;">
     <table>
         <tr class="total-final">
             <td><strong>TOTAL DE REGISTROS:</strong></td>
