@@ -30,6 +30,7 @@ interface Props {
     efectivoEsperado?: { apertura: number; ventas_efectivo: number; pagos_credito: number; gastos: number; pagos_sueldo?: number; anticipos?: number; anulaciones?: number; total_egresos?: number; total: number };  // ✅ Efectivo real esperado
     datosActualizados?: any; // ✅ NUEVO: Datos frescos del servidor
     cargandoDatos?: boolean; // ✅ NUEVO: Indicador de carga
+    ventasCreditoTotales?: number; // ✅ NUEVO: Sumatoria de ventas a crédito de esta caja
     onAbrirClick: () => void;
     onCerrarClick: () => void;
     onGastoClick?: () => void;
@@ -47,6 +48,7 @@ export function CajaEstadoCard({
     efectivoEsperado,
     datosActualizados,
     cargandoDatos = false,
+    ventasCreditoTotales = 0,
     onAbrirClick,
     onCerrarClick,
     onGastoClick,
@@ -242,16 +244,16 @@ export function CajaEstadoCard({
                         </div>
 
                         {/* ✅ NUEVO: Referencial - Sumatoria total de TODAS las ventas aprobadas */}
-                        {datosActualizados?.sumatoria_ventas_total && (
+                        {(datosActualizados?.sumatoria_ventas_total || ventasCreditoTotales) && (
                             <div className="pt-3 border-t border-gray-300 dark:border-gray-600">
                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
                                     📊 REFERENCIAL: Total Ventas Aprobadas
                                 </label>
                                 <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                    {formatCurrency(datosActualizados.sumatoria_ventas_total + datosActualizados.sumatoria_ventas_credito)}
+                                    {formatCurrency((datosActualizados?.sumatoria_ventas_total || 0) + (ventasCreditoTotales || 0))}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Efectivo + Transferencia + Crédito (aprobadas)
+                                    Efectivo + Transferencia + Crédito Aprobadas (de esta caja)
                                 </p>
                             </div>
                         )}

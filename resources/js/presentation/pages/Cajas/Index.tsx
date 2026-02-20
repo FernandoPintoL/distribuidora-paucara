@@ -61,7 +61,7 @@ export default function Index(props: CajasIndexProps) {
     const [datosActualizados, setDatosActualizados] = useState<any>(null);
     const [cargandoDatos, setCargandoDatos] = useState(false);
 
-    const { movimientosHoy, totalMovimientos, esVistaAdmin = false, usuarioDestino, historicoAperturas } = props;
+    const { movimientosHoy, totalMovimientos, esVistaAdmin = false, usuarioDestino, historicoAperturas, ventasCreditoTotales } = props;
 
     // ✅ NUEVO: useEffect para cargar datos frescos del servidor (una sola llamada)
     useEffect(() => {
@@ -223,6 +223,7 @@ export default function Index(props: CajasIndexProps) {
                         efectivoEsperado={efectivoEsperadoActual}
                         datosActualizados={datosActualizados}
                         cargandoDatos={cargandoDatos}
+                        ventasCreditoTotales={ventasCreditoTotales}
                         onAbrirClick={handleAbrirModal}
                         onCerrarClick={handleAbrirCierreModal}
                         onGastoClick={() => setShowMovimientoModal(true)}
