@@ -78,6 +78,8 @@ RUN echo "📁 [BUILD] Creando directorios de almacenamiento..." && \
     mkdir -p storage/app/public/clientes/fotos_lugar && \
     mkdir -p storage/app/public/productos && \
     mkdir -p storage/app/public/empresas && \
+    mkdir -p storage/app/public/entregas && \
+    mkdir -p storage/app/public/visitas && \
     mkdir -p storage/app/public/proveedores && \
     mkdir -p storage/app/public/fotos_lugar && \
     mkdir -p storage/app/backups && \

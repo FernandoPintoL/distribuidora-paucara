@@ -39,6 +39,10 @@ nul
 !/storage/app/public/empresas/**
 !/storage/app/public/clientes/
 !/storage/app/public/clientes/**
+!/storage/app/public/entregas/
+!/storage/app/public/entregas/**
+!/storage/app/public/visitas/
+!/storage/app/public/visitas/**
 !/storage/app/public/proveedores/
 !/storage/app/public/proveedores/**
 !/storage/app/public/fotos_lugar/
