@@ -46,6 +46,7 @@ interface Props {
     ventasTotales?: number;  // ✅ NUEVO: Total de ventas de CierreCajaService
     ventasAnuladas?: number;  // ✅ NUEVO: Ventas anuladas de CierreCajaService
     ventasCredito?: number;  // ✅ NUEVO: Ventas a crédito de CierreCajaService
+    sumatorialCompras?: number;  // ✅ NUEVO: Sumatoria de compras de CierreCajaService
     cargandoDatos?: boolean;  // ✅ NUEVO: Indicador si se están cargando datos del servidor
 }
 
@@ -75,7 +76,7 @@ const getTipoOperacionColor = (codigo: string): string => {
     }
 };
 
-export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, cargandoDatos = false }: Props) {
+export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, sumatorialCompras = 0, cargandoDatos = false }: Props) {
     console.log('MovimientosDelDiaTable - Props recibidos:', { cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago, ventasPorEstado, pagosPorTipoPago, gastosPorTipoPago, ventasTotales, ventasAnuladas, ventasCredito, cargandoDatos });
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');

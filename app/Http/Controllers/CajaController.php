@@ -172,13 +172,15 @@ class CajaController extends Controller
             $ventasCreditoTotales = (float) $this->cierreCajaService->calcularVentasCreditoDeCaja($cajaAbiertaHoy);
 
             // ✅ CORREGIDO (2026-02-11): Usar sumatorias individuales en lugar de salidas_reales
-            // Calcular ingresos y egresos (sin contar créditos, compras, anuladas)
+            // ✅ ACTUALIZADO (2026-02-20): Incluir COMPRA en totalEgresos
             $sumatorialGastos = (float) ($datosCalculados['sumatorialGastos'] ?? 0);
             $sumatorialPagosSueldo = (float) ($datosCalculados['sumatorialPagosSueldo'] ?? 0);
             $sumatorialAnticipos = (float) ($datosCalculados['sumatorialAnticipos'] ?? 0);
+            $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
 
             $totalIngresos = $totalVentas + $pagosCredito;  // Ventas APROBADAS + Pagos CxC
-            $totalEgresos = $sumatorialGastos + $sumatorialPagosSueldo + $sumatorialAnticipos;  // GASTOS + PAGO_SUELDO + ANTICIPO
+            // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
+            $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
             $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
 
             // Construir listado de ventas por tipo de pago (solo aprobadas)
@@ -210,6 +212,9 @@ class CajaController extends Controller
             // ✅ Obtener anulaciones del servicio (referencial)
             $sumatorialAnulaciones = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
 
+            // ✅ NUEVO (2026-02-20): Obtener sumatoria de compras del servicio
+            $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
+
             $datosResumen = [
                 'apertura'              => $montoApertura,
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
@@ -218,7 +223,7 @@ class CajaController extends Controller
                 'ventasCreditoTotales'  => $ventasCreditoTotales,  // ✅ NUEVO: TODAS las ventas a crédito (histórico)
                 'totalSalidas'          => $totalEgresos,          // Suma TODAS las salidas (GASTOS + SUELDOS + ANTICIPOS)
                 'totalIngresos'         => $totalIngresos,         // Ventas + Pagos CxC
-                'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO
+                'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA
                 'efectivoEsperado'      => $efectivoEsperado,      // Apertura + Ingresos - Egresos
                 'ventasPorTipoPago'     => $ventasPorTipoPago,     // Desglose de ventas por tipo de pago
                 'pagosCreditoPorTipoPago' => $sumatoriaPagosCreditoPorTipo,  // Desglose de pagos de crédito por tipo de pago
@@ -227,6 +232,7 @@ class CajaController extends Controller
                 'sumatorialGastos'      => $sumatorialGastos,
                 'sumatorialPagosSueldo' => $sumatorialPagosSueldo,
                 'sumatorialAnticipos'   => $sumatorialAnticipos,
+                'sumatorialCompras'     => $sumatorialCompras,      // ✅ NUEVO (2026-02-20): Compras a proveedores
                 'sumatorialAnulaciones' => $sumatorialAnulaciones,
             ];
 
@@ -256,6 +262,7 @@ class CajaController extends Controller
             'ventasAnuladas'            => $datosResumen ? $datosResumen['ventasAnuladas'] ?? 0 : 0,
             'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
             'ventasCreditoTotales'      => $datosResumen ? $datosResumen['ventasCreditoTotales'] ?? 0 : 0,  // ✅ NUEVO
+            'sumatorialCompras'         => $datosResumen ? $datosResumen['sumatorialCompras'] ?? 0 : 0,  // ✅ NUEVO (2026-02-20)
         ]);
     }
 

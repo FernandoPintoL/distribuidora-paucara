@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
 /**
  * @see routes/roles.php:13
  * @route '/roles/templates'
@@ -37,36 +37,3 @@ page.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: page.url(options),
     method: 'head',
 })
-
-    /**
- * @see routes/roles.php:13
- * @route '/roles/templates'
- */
-    const pageForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: page.url(options),
-        method: 'get',
-    })
-
-            /**
- * @see routes/roles.php:13
- * @route '/roles/templates'
- */
-        pageForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: page.url(options),
-            method: 'get',
-        })
-            /**
- * @see routes/roles.php:13
- * @route '/roles/templates'
- */
-        pageForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: page.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    page.form = pageForm

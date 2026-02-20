@@ -186,19 +186,23 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
     const pagosDeCredito = datosCierre?.monto_pagos_creditos || 0;
     const gastosTotales = datosCierre?.sumatoria_gastos || 0;
 
-    // ✅ CORREGIDO: Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
-    const ingresos = ventasTotales + pagosDeCredito;
+    // ✅ CORREGIDO (2026-02-20): Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
+    const ingresos = ventasEnEfectivo + pagosDeCredito;
     const egresos = datosCierre?.total_egresos || 0;
 
-    // ✅ DEBUG: Log de cómo se calcula Total Ingresos
-    console.log('💰 [CierreCajaModal] TOTAL INGRESOS CALCULADO:', {
-        ventas_efectivo: ventasEnEfectivo,
-        pagos_credito: pagosDeCredito,
-        total_ingresos: ingresos,
-        formula: 'ventas_efectivo + pagos_credito',
+    // ✅ MEJORADO (2026-02-20): Total Esperado = Ventas Efectivo + Pagos Crédito - Total Egresos
+    const totalEsperadoMejorado = ventasEnEfectivo + pagosDeCredito - egresos;
+
+    // ✅ DEBUG: Log de cómo se calcula Total Esperado
+    console.log('💰 [CierreCajaModal] TOTAL ESPERADO CORRECTO:', {
+        ventasEfectivo: ventasEnEfectivo,
+        pagosCredito: pagosDeCredito,
+        totalEgresos: egresos,
+        formula: `${ventasEnEfectivo} + ${pagosDeCredito} - ${egresos}`,
+        total: totalEsperadoMejorado,
     });
+
     const efectivoReal = ventasEnEfectivo + pagosDeCredito - gastosTotales;
-    const totalEsperadoMejorado = efectivoEsperado.total;
     const ventasAnuladas = datosCierre?.sumatoria_ventas_anuladas || 0;
 
     const diferencia = data.monto_real ? parseFloat(data.monto_real) - totalEsperadoMejorado : 0;

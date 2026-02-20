@@ -28,6 +28,11 @@ interface DatosResumen {
     totalEgresos: number;
     efectivoEsperado: number;
     ventasPorTipoPago: VentaPorTipoPago[];
+    sumatorialGastos?: number;  // ✅ NUEVO: Desglose de gastos
+    sumatorialPagosSueldo?: number;  // ✅ NUEVO: Desglose de sueldos
+    sumatorialAnticipos?: number;  // ✅ NUEVO: Desglose de anticipos
+    sumatorialCompras?: number;  // ✅ NUEVO: Desglose de compras
+    sumatorialAnulaciones?: number;  // ✅ NUEVO: Desglose de anulaciones
 }
 
 interface ResumenCajaCardProps {
@@ -215,6 +220,16 @@ export function ResumenCajaCard({ datosResumen, cargando = false }: ResumenCajaC
                                     <td className="text-right py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
                                     <td className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">
                                         {formatCurrency(datosResumen.sumatorialAnticipos)}
+                                    </td>
+                                </tr>
+                            )}
+
+                            {datosResumen.sumatorialCompras !== undefined && datosResumen.sumatorialCompras > 0 && (
+                                <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300 pl-8">• Compras</td>
+                                    <td className="text-right py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                                    <td className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">
+                                        {formatCurrency(datosResumen.sumatorialCompras)}
                                     </td>
                                 </tr>
                             )}

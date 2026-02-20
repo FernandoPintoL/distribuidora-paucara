@@ -139,6 +139,7 @@ export interface DatosResumen {
     sumatorialGastos?: number;
     sumatorialPagosSueldo?: number;
     sumatorialAnticipos?: number;
+    sumatorialCompras?: number;  // ✅ NUEVO (2026-02-20): Compras a proveedores
     sumatorialAnulaciones?: number;
 }
 
@@ -163,4 +164,8 @@ export interface CajasIndexProps {
     pagosPorTipoPago?: any; // ✅ NUEVO: Pagos agrupados por tipo de pago
     gastosPorTipoPago?: any; // ✅ NUEVO: Gastos agrupados por tipo de pago
     datosResumen?: DatosResumen | null; // ✅ NUEVO (2026-02-11): Datos refactorizados de cierre de caja
+    sumatorialCompras?: number;  // ✅ NUEVO (2026-02-20): Sumatoria de compras
+    ventasTotales?: number;  // ✅ NUEVO: Total de ventas
+    ventasAnuladas?: number;  // ✅ NUEVO: Ventas anuladas
+    ventasCredito?: number;  // ✅ NUEVO: Ventas a crédito
 }

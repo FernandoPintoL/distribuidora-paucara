@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::confirmar
  * @see app/Http/Controllers/Api/ApiProformaController.php:2249
@@ -57,27 +57,6 @@ confirmar.post = (args: { proforma: number | { id: number } } | [proforma: numbe
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\ApiProformaController::confirmar
- * @see app/Http/Controllers/Api/ApiProformaController.php:2249
- * @route '/api/proformas/{proforma}/confirmar'
- */
-    const confirmarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: confirmar.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\ApiProformaController::confirmar
- * @see app/Http/Controllers/Api/ApiProformaController.php:2249
- * @route '/api/proformas/{proforma}/confirmar'
- */
-        confirmarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: confirmar.url(args, options),
-            method: 'post',
-        })
-    
-    confirmar.form = confirmarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::coordinar
  * @see app/Http/Controllers/Api/ApiProformaController.php:1458
@@ -136,27 +115,6 @@ coordinar.post = (args: { proforma: number | { id: number } } | [proforma: numbe
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\ApiProformaController::coordinar
- * @see app/Http/Controllers/Api/ApiProformaController.php:1458
- * @route '/api/proformas/{proforma}/coordinar'
- */
-    const coordinarForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: coordinar.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\ApiProformaController::coordinar
- * @see app/Http/Controllers/Api/ApiProformaController.php:1458
- * @route '/api/proformas/{proforma}/coordinar'
- */
-        coordinarForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: coordinar.url(args, options),
-            method: 'post',
-        })
-    
-    coordinar.form = coordinarForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
  * @see app/Http/Controllers/Api/ApiProformaController.php:3914
@@ -215,27 +173,6 @@ actualizarDetalles.post = (args: { proforma: number | { id: number } } | [profor
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:3914
- * @route '/api/proformas/{proforma}/actualizar-detalles'
- */
-    const actualizarDetallesForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: actualizarDetalles.url(args, options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\ApiProformaController::actualizarDetalles
- * @see app/Http/Controllers/Api/ApiProformaController.php:3914
- * @route '/api/proformas/{proforma}/actualizar-detalles'
- */
-        actualizarDetallesForm.post = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: actualizarDetalles.url(args, options),
-            method: 'post',
-        })
-    
-    actualizarDetalles.form = actualizarDetallesForm
 /**
 * @see \App\Http\Controllers\ProformaController::imprimir
  * @see app/Http/Controllers/ProformaController.php:830
@@ -303,41 +240,6 @@ imprimir.head = (args: { proforma: number | { id: number } } | [proforma: number
     method: 'head',
 })
 
-    /**
-* @see \App\Http\Controllers\ProformaController::imprimir
- * @see app/Http/Controllers/ProformaController.php:830
- * @route '/api/proformas/{proforma}/imprimir'
- */
-    const imprimirForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimir.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ProformaController::imprimir
- * @see app/Http/Controllers/ProformaController.php:830
- * @route '/api/proformas/{proforma}/imprimir'
- */
-        imprimirForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ProformaController::imprimir
- * @see app/Http/Controllers/ProformaController.php:830
- * @route '/api/proformas/{proforma}/imprimir'
- */
-        imprimirForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    imprimir.form = imprimirForm
 /**
 * @see \App\Http\Controllers\ProformaController::preview
  * @see app/Http/Controllers/ProformaController.php:864
@@ -404,42 +306,6 @@ preview.head = (args: { proforma: number | { id: number } } | [proforma: number 
     url: preview.url(args, options),
     method: 'head',
 })
-
-    /**
-* @see \App\Http\Controllers\ProformaController::preview
- * @see app/Http/Controllers/ProformaController.php:864
- * @route '/api/proformas/{proforma}/preview'
- */
-    const previewForm = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: preview.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\ProformaController::preview
- * @see app/Http/Controllers/ProformaController.php:864
- * @route '/api/proformas/{proforma}/preview'
- */
-        previewForm.get = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: preview.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\ProformaController::preview
- * @see app/Http/Controllers/ProformaController.php:864
- * @route '/api/proformas/{proforma}/preview'
- */
-        previewForm.head = (args: { proforma: number | { id: number } } | [proforma: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: preview.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    preview.form = previewForm
 const proformas = {
     confirmar,
 coordinar,

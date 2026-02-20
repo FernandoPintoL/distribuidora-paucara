@@ -279,30 +279,31 @@ class CierreCajaService
     }
 
     /**
-     * ✅ Calcular SALIDAS REALES (dinero que realmente sale)
-     * Incluye SOLO los tipos con dirección='SALIDA' que son dinero real:
+     * ✅ Calcular SALIDAS REALES (dinero que realmente sale de la caja)
+     * Incluye TODOS los tipos con dirección='SALIDA' que son dinero real:
      * - GASTOS: Gastos operacionales ✓
      * - PAGO_SUELDO: Pago de nómina ✓
      * - ANTICIPO: Anticipos a empleados ✓
+     * - COMPRA: Compras a proveedores (dinero que sale) ✓
      *
      * Excluye:
      * - ANULACION: Ventas anuladas (transacción que nunca pasó) ❌
-     * - COMPRA: Deuda a proveedores (promesa de pago) ❌
      *
      * ✅ NOTA: Este es el dinero que REALMENTE afecta el efectivo en caja
      */
     private function calcularSalidasReales($movimientos): float
     {
         try {
-            // Restar solo los tipos que son dinero real que sale
-            // EXCLUYE ANULACION (transacción cancelada, nunca pasó)
+            // ✅ Restar todos los tipos que son dinero real que sale
+            // INCLUYE: GASTOS, PAGO_SUELDO, ANTICIPO, COMPRA
+            // EXCLUYE: ANULACION (transacción cancelada, nunca pasó)
             $salidas = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']))
+                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO', 'COMPRA']))
                 ->sum('monto'));
 
             // Desglose por tipo para logging
             $desglose = $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO']))
+                ->filter(fn($m) => $this->esPagoValido($m) && in_array($m->tipoOperacion?->codigo, ['GASTOS', 'PAGO_SUELDO', 'ANTICIPO', 'COMPRA']))
                 ->groupBy(fn($m) => $m->tipoOperacion?->codigo)
                 ->map(fn($grupo) => abs((float) $grupo->sum('monto')))
                 ->toArray();
@@ -419,13 +420,15 @@ class CierreCajaService
 
     /**
      * ✅ Calcular total de egresos (dinero que realmente sale)
-     * ✅ Excluye ANULACION (transacción cancelada)
-     * ✅ Excluye COMPRA (promesa de pago)
+     * ✅ Excluye ANULACION (transacción cancelada, nunca pasó)
      *
-     * Incluye SOLO dinero real que sale:
-     * - GASTOS
-     * - PAGO_SUELDO
-     * - ANTICIPO
+     * ✅ ACTUALIZADO (2026-02-20): Incluye COMPRA en los egresos
+     *
+     * Incluye dinero real que sale:
+     * - GASTOS ✓
+     * - PAGO_SUELDO ✓
+     * - ANTICIPO ✓
+     * - COMPRA ✓ (dinero que sale de la caja)
      */
     private function calcularTotalEgresos($movimientos): float
     {
@@ -433,7 +436,7 @@ class CierreCajaService
             ->filter(fn($m) =>
                 $m->tipoOperacion?->direccion === 'SALIDA' &&
                 $this->esPagoValido($m) &&
-                !in_array($m->tipoOperacion?->codigo, ['ANULACION', 'COMPRA'])
+                !in_array($m->tipoOperacion?->codigo, ['ANULACION'])  // ✅ Solo excluye ANULACION
             )
             ->sum('monto'));
     }
@@ -713,8 +716,13 @@ class CierreCajaService
             ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')
             ->sum('monto'));
 
-        // ✅ EXCLUYE ANULACIONES y COMPRA (solo dinero real que sale)
-        $totalEgresos = $gastos + $pagosSueldo + $anticipos;
+        $compras = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'COMPRA')
+            ->sum('monto'));
+
+        // ✅ ACTUALIZADO (2026-02-20): Incluye COMPRA en los egresos (dinero real que sale)
+        // EXCLUYE solo ANULACIONES (transacción cancelada que nunca pasó dinero real)
+        $totalEgresos = $gastos + $pagosSueldo + $anticipos + $compras;
 
         return [
             'apertura' => $montoApertura,
@@ -725,6 +733,7 @@ class CierreCajaService
             'gastos' => $gastos,
             'pagos_sueldo' => $pagosSueldo,
             'anticipos' => $anticipos,
+            'compras' => $compras,
             'anulaciones' => $anulaciones,
             'total_egresos' => $totalEgresos,
             'total' => $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos,
@@ -877,7 +886,9 @@ class CierreCajaService
     /**
      * ✅ REFACTORIZADO (2026-02-20): Calcular sumatoria de ventas APROBADAS a CRÉDITO
      *
-     * Filtra por politica_pago='CREDITO' (no por tipos_pago que son métodos de pago)
+     * Busca DIRECTAMENTE en tabla ventas (no en movimientos_caja)
+     * Esto es más óptimo y captura TODAS las ventas a crédito aprobadas
+     * independientemente de si tienen movimiento registrado
      *
      * Diferencia importante:
      * - tipos_pago: Métodos de pago (Efectivo, Transferencia, Cheque) → cómo pagó
@@ -886,30 +897,37 @@ class CierreCajaService
     private function calcularVentasAprobadasCredito(AperturaCaja $aperturaCaja): float
     {
         try {
-            // ✅ Filtra por politica_pago='CREDITO' en la tabla ventas (no tipos_pago)
-            $total = DB::table('movimientos_caja')
-                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
-                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+            // ✅ REFACTORIZADO: Buscar DIRECTAMENTE en tabla ventas
+            // Esto es más óptimo que depender de movimientos_caja
+            $query = DB::table('ventas')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-                ->where('tipo_operacion_caja.codigo', 'VENTA')                    // ✅ VENTA (no CREDITO)
-                ->where('ventas.politica_pago', 'CREDITO')                        // ✅ POLÍTICA de pago (no tipo_pago)
+                ->where('ventas.caja_id', $aperturaCaja->caja_id)                 // ✅ Ventas de ESTA caja
+                ->where('ventas.politica_pago', 'CREDITO')                        // ✅ POLÍTICA de pago = CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)        // ✅ APROBADAS
-                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
-                ->sum('ventas.total');
+                ->whereBetween('ventas.created_at', [$this->fechaInicio, $this->fechaFin]);  // ✅ Rango de fechas
 
-            Log::info('💳 [calcularVentasAprobadasCredito]:', [
+            // ✅ DEBUG: Ver el SQL y cantidad de registros
+            $registros = $query->get();
+            $total = (float) $registros->sum('total');
+
+            Log::info('💳 [calcularVentasAprobadasCredito] - DEBUGGING (OPTIMIZADO):', [
                 'apertura_id' => $aperturaCaja->id,
                 'caja_id' => $aperturaCaja->caja_id,
+                'fecha_inicio' => $this->fechaInicio,
+                'fecha_fin' => $this->fechaFin,
+                'cantidad_registros' => $registros->count(),
                 'total_credito' => $total,
-                'source' => 'politica_pago (correcto)',
+                'registro_ids' => $registros->pluck('id')->toArray(),
+                'sql_query' => $query->toSql(),
+                'sql_bindings' => $query->getBindings(),
             ]);
 
-            return (float) $total;
+            return $total;
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasAprobadasCredito]:', [
                 'apertura_id' => $aperturaCaja->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return 0;
         }

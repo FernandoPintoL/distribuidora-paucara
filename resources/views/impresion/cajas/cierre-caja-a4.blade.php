@@ -124,13 +124,31 @@
         <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
             <tbody>
                 <tr style="border-bottom: 1px solid #ddd;">
-                    <td style="padding: 8px; width: 50%;"><strong>+ Entrada de Efectivo (CXC):</strong></td>
-                    <td style="padding: 8px; text-align: right;">{{ number_format($efectivoEsperado['pagos_credito'] ?? 0, 2) }}</td>
+                    <td style="padding: 8px; width: 50%;"><strong>+ Pagos CXC (Efectivo):</strong></td>
+                    <td style="padding: 8px; text-align: right;">{{ number_format($montoPagosCreditos ?? 0, 2) }}</td>
                 </tr>
-                <tr style="border-bottom: 2px solid #000;">
-                    <td style="padding: 8px;"><strong>- Salida de Efectivo (Gastos):</strong></td>
-                    <td style="padding: 8px; text-align: right;">{{ number_format($efectivoEsperado['gastos'] ?? 0, 2) }}</td>
+                <tr style="border-bottom: 2px solid #000; background-color: #ffe6e6; font-weight: bold;">
+                    <td style="padding: 8px;"><strong>- TOTAL EGRESOS:</strong></td>
+                    <td style="padding: 8px; text-align: right;">{{ number_format($totalEgresos ?? 0, 2) }}</td>
                 </tr>
+                <tr style="border-bottom: 1px solid #ddd; font-size: 10px; padding-left: 20px;">
+                    <td style="padding: 4px 8px 4px 20px;">Gastos:</td>
+                    <td style="padding: 4px 8px; text-align: right;">{{ number_format($sumatorialGastos ?? 0, 2) }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
+                    <td style="padding: 4px 8px 4px 20px;">Pagos Sueldo:</td>
+                    <td style="padding: 4px 8px; text-align: right;">{{ number_format($sumatorialPagosSueldo ?? 0, 2) }}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
+                    <td style="padding: 4px 8px 4px 20px;">Anticipos:</td>
+                    <td style="padding: 4px 8px; text-align: right;">{{ number_format($sumatorialAnticipos ?? 0, 2) }}</td>
+                </tr>
+                @if(($sumatorialCompras ?? 0) > 0)
+                <tr style="border-bottom: 1px solid #ddd; font-size: 10px; color: #d9534f; font-weight: bold;">
+                    <td style="padding: 4px 8px 4px 20px;">Compras a Proveedores:</td>
+                    <td style="padding: 4px 8px; text-align: right;">{{ number_format($sumatorialCompras, 2) }}</td>
+                </tr>
+                @endif
             </tbody>
         </table>
     </div>
@@ -150,7 +168,7 @@
                 </tr>
                 <tr style="border-bottom: 1px solid #ddd;">
                     <td style="padding: 8px;"><strong>Efectivo Esperado:</strong></td>
-                    <td style="padding: 8px; text-align: right; font-weight: bold;">{{ number_format($cierre->monto_esperado, 2) }}</td>
+                    <td style="padding: 8px; text-align: right; font-weight: bold;">{{ number_format(($sumatorialVentasEfectivo ?? 0) + ($montoPagosCreditos ?? 0) - ($totalEgresos ?? 0), 2) }}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #ddd;">
                     <td style="padding: 8px;"><strong>Efectivo Contado:</strong></td>

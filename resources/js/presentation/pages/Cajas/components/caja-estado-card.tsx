@@ -62,13 +62,40 @@ export function CajaEstadoCard({
     console.log('Renderizando CajaEstadoCard - cajaAbiertaHoy:', cajaAbiertaHoy);
     console.log('Efectivo esperado:', efectivoEsperado);
 
-    // ✅ DEBUG: Log de sumatorias de ventas
-    console.log('📊 SUMATORIAS DE VENTAS:', {
-        sumatoria_ventas_total: datosActualizados?.sumatoria_ventas_total,
-        sumatoria_ventas_efectivo: datosActualizados?.sumatoria_ventas_efectivo,
-        sumatoria_ventas_credito: datosActualizados?.sumatoria_ventas_credito,
-        suma_manual: (datosActualizados?.sumatoria_ventas_efectivo ?? 0) + (datosActualizados?.sumatoria_ventas_credito ?? 0),
+    // ✅ DEBUG COMPLETO: Ver TODO lo que llega en datosActualizados
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔍 DATOS ACTUALIZADOS COMPLETOS - ESTRUCTURA COMPLETA:');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(datosActualizados);
+    console.log('');
+    console.log('📊 VALORES PRINCIPALES:');
+    console.log({
+        totalEfectivo: datosActualizados?.totalEfectivo,
+        totalVentas: datosActualizados?.totalVentas,
+        totalEgresos: datosActualizados?.totalEgresos,
+        totalIngresos: datosActualizados?.totalIngresos,
     });
+    console.log('');
+    console.log('💵 DETALLE EFECTIVO:');
+    console.log(datosActualizados?.detalleEfectivo);
+    console.log('');
+    console.log('📝 SUMATORIAS DESGLOSADAS:');
+    console.log({
+        sumatorialVentas: datosActualizados?.sumatorialVentas,
+        sumatorialVentasEfectivo: datosActualizados?.sumatorialVentasEfectivo,
+        sumatorialVentasCredito: datosActualizados?.sumatorialVentasCredito,
+        sumatorialGastos: datosActualizados?.sumatorialGastos,
+        sumatorialPagosSueldo: datosActualizados?.sumatorialPagosSueldo,
+        sumatorialAnticipos: datosActualizados?.sumatorialAnticipos,
+        sumatorialCompras: datosActualizados?.sumatorialCompras,
+        sumatorialAnulaciones: datosActualizados?.sumatorialAnulaciones,
+    });
+    console.log('');
+    console.log('💳 VENTAS POR TIPO PAGO:');
+    console.log(datosActualizados?.ventasPorTipoPago);
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
 
     // ✅ NUEVO: Detectar si la caja es del día anterior o anterior
     const esDiaAnterior = () => {
@@ -88,10 +115,22 @@ export function CajaEstadoCard({
 
     const isDiaAnterior = esDiaAnterior();
 
-    // ✅ MEJORADO: Usar datos frescos del servidor si están disponibles
-    const efectivoActual = datosActualizados?.efectivo_esperado || efectivoEsperado;
+    // ✅ MEJORADO (2026-02-20): Usar datos frescos del servidor si están disponibles
+    // datosActualizados viene del endpoint /cajas/{id}/datos-cierre y trae valores correctos del backend
+    const totalEgresos = datosActualizados?.total_egresos || 0;
+    const efectivoEsperadoDelServidor = datosActualizados?.efectivoEsperado || 0;
 
-    console.log('Efectivo actual (usando datos actualizados si están disponibles):', efectivoActual);
+    // Si vienen datos del servidor, usar esos (son más precisos), sino usar los props originales
+    const efectivoActual = datosActualizados ? {
+        apertura: datosActualizados.apertura || efectivoEsperado?.apertura || 0,
+        ventas_efectivo: datosActualizados.detalleEfectivo?.ventas_efectivo_transferencia || efectivoEsperado?.ventas_efectivo || 0,
+        pagos_credito: datosActualizados.detalleEfectivo?.pagos_credito || efectivoEsperado?.pagos_credito || 0,
+        total_egresos: totalEgresos,
+        total: efectivoEsperadoDelServidor,
+    } : efectivoEsperado;
+
+    console.log('Efectivo actual (usando datos actualizados del servidor):', efectivoActual);
+    console.log('Total Egresos correcto:', totalEgresos);
 
     if (!cajaAbiertaHoy) {
         return (
@@ -217,16 +256,62 @@ export function CajaEstadoCard({
                         <div>
                             <div className="flex items-center justify-between">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Salidas (Egresos)
+                                    Salidas (Egresos Desglosado)
                                 </label>
                                 {cargandoDatos && (
                                     <span className="text-xs text-blue-600 dark:text-blue-400">Actualizando...</span>
                                 )}
                             </div>
                             {efectivoActual ? (
-                                <p className="text-lg font-semibold text-red-600 dark:text-red-400 mt-1">
-                                    -{formatCurrency(efectivoActual.total_egresos || efectivoActual.gastos || 0)}
-                                </p>
+                                <div className="mt-2 space-y-2">
+                                    {/* Gastos */}
+                                    {(datosActualizados?.sumatorialGastos ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-red-50 dark:bg-red-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Gastos</span>
+                                            <span className="font-semibold text-red-600 dark:text-red-400">
+                                                {formatCurrency(datosActualizados.sumatorialGastos)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Pagos de Sueldo */}
+                                    {(datosActualizados?.sumatorialPagosSueldo ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-red-50 dark:bg-red-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Pagos de Sueldo</span>
+                                            <span className="font-semibold text-red-600 dark:text-red-400">
+                                                {formatCurrency(datosActualizados.sumatorialPagosSueldo)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Anticipos */}
+                                    {(datosActualizados?.sumatorialAnticipos ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-red-50 dark:bg-red-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Anticipos</span>
+                                            <span className="font-semibold text-red-600 dark:text-red-400">
+                                                {formatCurrency(datosActualizados.sumatorialAnticipos)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Compras */}
+                                    {(datosActualizados?.sumatorialCompras ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-orange-50 dark:bg-orange-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Compras a Proveedores</span>
+                                            <span className="font-semibold text-orange-600 dark:text-orange-400">
+                                                {formatCurrency(datosActualizados.sumatorialCompras)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Total Egresos */}
+                                    <div className="flex justify-between items-center text-sm p-2 bg-red-100 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700 font-bold">
+                                        <span className="text-red-800 dark:text-red-200">Total Egresos</span>
+                                        <span className="text-red-700 dark:text-red-300">
+                                            -{formatCurrency(totalEgresos)}
+                                        </span>
+                                    </div>
+                                </div>
                             ) : (
                                 <p className="text-lg font-semibold text-gray-500 dark:text-gray-400">
                                     Sin egresos
@@ -239,7 +324,29 @@ export function CajaEstadoCard({
                                 💰 Total Esperado
                             </label>
                             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                                {efectivoActual ? formatCurrency(efectivoActual.total) : formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos)}
+                                {/* ✅ CORREGIDO (2026-02-20): Calcular correctamente con datos del servidor */}
+                                {(() => {
+                                    if (datosActualizados) {
+                                        // Usar los valores correctos del servidor:
+                                        // Ventas Efectivo + Pagos Crédito - Total Egresos (correcto)
+                                        const ventasEfectivo = datosActualizados.sumatoria_ventas_efectivo || 0;
+                                        const pagosCredito = datosActualizados.monto_pagos_creditos || 0;
+                                        const totalEgresos = datosActualizados.total_egresos || 0;
+                                        const total = ventasEfectivo + pagosCredito - totalEgresos;
+
+                                        console.log('💰 TOTAL ESPERADO CORRECTO:', {
+                                            ventasEfectivo: ventasEfectivo,
+                                            pagosCredito: pagosCredito,
+                                            totalEgresos: totalEgresos,
+                                            formula: `${ventasEfectivo} + ${pagosCredito} - ${totalEgresos}`,
+                                            total: total,
+                                        });
+                                        return formatCurrency(total);
+                                    } else {
+                                        // Fallback si no hay datos del servidor
+                                        return formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos);
+                                    }
+                                })()}
                             </p>
                         </div>
 

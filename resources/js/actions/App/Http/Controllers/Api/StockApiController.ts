@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
  * @see app/Http/Controllers/Api/StockApiController.php:19
@@ -33,27 +33,6 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:19
- * @route '/api/stock/preparar-impresion'
- */
-    const prepararImpresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: prepararImpresion.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresion
- * @see app/Http/Controllers/Api/StockApiController.php:19
- * @route '/api/stock/preparar-impresion'
- */
-        prepararImpresionForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: prepararImpresion.url(options),
-            method: 'post',
-        })
-    
-    prepararImpresion.form = prepararImpresionForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionMovimientos
  * @see app/Http/Controllers/Api/StockApiController.php:55
@@ -88,27 +67,6 @@ prepararImpresionMovimientos.post = (options?: RouteQueryOptions): RouteDefiniti
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionMovimientos
- * @see app/Http/Controllers/Api/StockApiController.php:55
- * @route '/api/stock/preparar-impresion-movimientos'
- */
-    const prepararImpresionMovimientosForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: prepararImpresionMovimientos.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionMovimientos
- * @see app/Http/Controllers/Api/StockApiController.php:55
- * @route '/api/stock/preparar-impresion-movimientos'
- */
-        prepararImpresionMovimientosForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: prepararImpresionMovimientos.url(options),
-            method: 'post',
-        })
-    
-    prepararImpresionMovimientos.form = prepararImpresionMovimientosForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
  * @see app/Http/Controllers/Api/StockApiController.php:178
@@ -143,27 +101,6 @@ prepararImpresionVentas.post = (options?: RouteQueryOptions): RouteDefinition<'p
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:178
- * @route '/api/stock/preparar-impresion-ventas'
- */
-    const prepararImpresionVentasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: prepararImpresionVentas.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionVentas
- * @see app/Http/Controllers/Api/StockApiController.php:178
- * @route '/api/stock/preparar-impresion-ventas'
- */
-        prepararImpresionVentasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: prepararImpresionVentas.url(options),
-            method: 'post',
-        })
-    
-    prepararImpresionVentas.form = prepararImpresionVentasForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
  * @see app/Http/Controllers/Api/StockApiController.php:290
@@ -198,27 +135,6 @@ prepararImpresionCompras.post = (options?: RouteQueryOptions): RouteDefinition<'
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:290
- * @route '/api/stock/preparar-impresion-compras'
- */
-    const prepararImpresionComprasForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: prepararImpresionCompras.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionCompras
- * @see app/Http/Controllers/Api/StockApiController.php:290
- * @route '/api/stock/preparar-impresion-compras'
- */
-        prepararImpresionComprasForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: prepararImpresionCompras.url(options),
-            method: 'post',
-        })
-    
-    prepararImpresionCompras.form = prepararImpresionComprasForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
  * @see app/Http/Controllers/Api/StockApiController.php:324
@@ -253,27 +169,6 @@ prepararImpresionProductosVendidos.post = (options?: RouteQueryOptions): RouteDe
     method: 'post',
 })
 
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
- * @see app/Http/Controllers/Api/StockApiController.php:324
- * @route '/api/stock/preparar-impresion-productos-vendidos'
- */
-    const prepararImpresionProductosVendidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: prepararImpresionProductosVendidos.url(options),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::prepararImpresionProductosVendidos
- * @see app/Http/Controllers/Api/StockApiController.php:324
- * @route '/api/stock/preparar-impresion-productos-vendidos'
- */
-        prepararImpresionProductosVendidosForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: prepararImpresionProductosVendidos.url(options),
-            method: 'post',
-        })
-    
-    prepararImpresionProductosVendidos.form = prepararImpresionProductosVendidosForm
 /**
 * @see \App\Http\Controllers\Api\StockApiController::destroy
  * @see app/Http/Controllers/Api/StockApiController.php:431
@@ -326,38 +221,6 @@ destroy.delete = (args: { id: string | number } | [id: string | number ] | strin
     url: destroy.url(args, options),
     method: 'delete',
 })
-
-    /**
-* @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:431
- * @route '/api/stock/productos/{id}'
- */
-    const destroyForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-        action: destroy.url(args, {
-                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                        _method: 'DELETE',
-                        ...(options?.query ?? options?.mergeQuery ?? {}),
-                    }
-                }),
-        method: 'post',
-    })
-
-            /**
-* @see \App\Http\Controllers\Api\StockApiController::destroy
- * @see app/Http/Controllers/Api/StockApiController.php:431
- * @route '/api/stock/productos/{id}'
- */
-        destroyForm.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
-            action: destroy.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'DELETE',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'post',
-        })
-    
-    destroy.form = destroyForm
 const StockApiController = { prepararImpresion, prepararImpresionMovimientos, prepararImpresionVentas, prepararImpresionCompras, prepararImpresionProductosVendidos, destroy }
 
 export default StockApiController

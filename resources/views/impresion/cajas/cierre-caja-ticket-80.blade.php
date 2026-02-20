@@ -11,6 +11,14 @@
 <div class="center" style="margin-top: 1px;">
     {{ now()->format('d/m/Y H:i') }}
 </div>
+<div class="separador"></div>
+{{-- ✅ RANGO DE VENTAS --}}
+@if($rangoVentasIds['minId'] && $rangoVentasIds['maxId'] && $rangoVentasIds['totalVentas'] > 0)
+<div style="margin-bottom: 2px;">
+    <small>Ventas: {{ $rangoVentasIds['minId'] }} - {{ $rangoVentasIds['maxId'] }}</small>
+</div>
+<div class="separador"></div>
+@endif
 
 <div class="separador"></div>
 
@@ -44,13 +52,7 @@
 
 <div class="separador"></div>
 
-{{-- ✅ RANGO DE VENTAS --}}
-@if($rangoVentasIds['minId'] && $rangoVentasIds['maxId'] && $rangoVentasIds['totalVentas'] > 0)
-<div style="margin-bottom: 2px;">
-    <small>Ventas: {{ $rangoVentasIds['minId'] }} - {{ $rangoVentasIds['maxId'] }}</small>
-</div>
-<div class="separador"></div>
-@endif
+
 
 {{-- ✅ VENTAS APROBADAS POR TIPO DE PAGO (INCLUYENDO CEROS) --}}
 @if($ventasPorTipoPagoCompleto && count($ventasPorTipoPagoCompleto) > 0)
@@ -149,7 +151,7 @@
         </tr>
         <tr style="border-top: 1px solid #000 font-weight: bold;">
             <td style="text-align: left; padding: 1px 0;">Ventas Total Sin Factura:</td>
-            <td style="text-align: right; padding: 1px 0;">{{ number_format($sumatorialVentas, 2) }}</td>
+            <td style="text-align: right; padding: 1px 0;">{{ number_format($totalVentasDesglose, 2) }}</td>
         </tr>
 
     </tbody>
@@ -161,13 +163,13 @@
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 2px;">
     <tbody>
         <tr style="border-bottom: 1px dotted #ccc;">
-            <td style="text-align: left; padding: 1px 0;">+ Entrada de Efectivo</td>
-            <td style="text-align: right; padding: 1px 0;">+{{ number_format($efectivoEsperado['pagos_credito'], 2) }}</td>
+            <td style="text-align: left; padding: 1px 0;">+ CXC Efectivo</td>
+            <td style="text-align: right; padding: 1px 0;">+{{ number_format($montoPagosCreditos ?? 0, 2) }}</td>
         </tr>
 
-        <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000;">
-            <td style="text-align: left; padding: 1px 0;">- Salida de Efectivo</td>
-            <td style="text-align: right; padding: 1px 0;">-{{ number_format($efectivoEsperado['gastos'], 2) }}</td>
+        <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background: #ffe6e6;">
+            <td style="text-align: left; padding: 1px 0;">- TOTAL EGRESOS:</td>
+            <td style="text-align: right; padding: 1px 0;">-{{ number_format($totalEgresos ?? 0, 2) }}</td>
         </tr>
     </tbody>
 </table>
@@ -186,7 +188,7 @@
         </tr>
         <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold;">
             <td style="text-align: left; padding: 1px 0; ">Eftvo Esperado Caja:</td>
-            <td style="text-align: right; padding: 1px 0; ">{{ number_format($cierre->monto_esperado, 2) }}</td>
+            <td style="text-align: right; padding: 1px 0; ">{{ number_format(($sumatorialVentasEfectivo ?? 0) + ($montoPagosCreditos ?? 0) - ($totalEgresos ?? 0), 2) }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #000; font-weight: bold;">
             <td style="text-align: left; padding: 1px 0; ">Eftvo Esperado Caja:</td>
@@ -208,7 +210,7 @@
         <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; background: #f0f0f0;">
 
             <td style="text-align: left; padding: 1px 0;">Ventas Totales:</td>
-            <td style="text-align: right; padding: 1px 0;">{{ number_format(($sumatorialVentas ?? 0) + ($sumatorialVentasCredito ?? 0), 2) }}</td>
+            <td style="text-align: right; padding: 1px 0;">{{ number_format($totalVentasDesglose, 2) }}</td>
         </tr>
 
     </tbody>
