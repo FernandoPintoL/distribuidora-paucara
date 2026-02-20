@@ -710,6 +710,18 @@ export default function ProductosTable({
         setModalCascadaState(prev => ({ ...prev, isOpen: false }));
     }, []);
 
+    // ✅ NUEVO: Handler para abrir modal de cascada
+    const handleAbrirModalCascada = useCallback((index: number, detalle: DetalleProducto) => {
+        setModalCascadaState({
+            isOpen: true,
+            productoId: typeof detalle.producto_id === 'string' ? parseInt(detalle.producto_id) : detalle.producto_id,
+            precioActual: detalle.precio_costo || null,
+            precioCostoNuevo: detalle.precio_unitario || null,
+            detalleIndex: index,
+            productoData: detalle.producto || { id: detalle.producto_id, nombre: 'Producto' }
+        });
+    }, []);
+
     // ✅ NUEVO: Calcular precio según unidad seleccionada
     const calcularPrecioPorUnidad = (precioBase: number, unidadDestinoId: number | string | undefined, conversiones?: Array<any>): number => {
         if (!unidadDestinoId || !conversiones || conversiones.length === 0) {

@@ -109,6 +109,13 @@ export default function Step5PrecioRango({
     }));
   }, []);
 
+  // ✅ MOVIDO FUERA DE RENDERIZACIÓN CONDICIONAL
+  const handleTipoPrecioChange = useCallback((value: any) => {
+    const tipoPrecioId = parseInt(String(value));
+    console.log('🔄 Tipo precio seleccionado:', tipoPrecioId);
+    updateField('tipo_precio_id', tipoPrecioId);
+  }, [updateField]);
+
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
@@ -401,11 +408,7 @@ export default function Step5PrecioRango({
                       label: t.nombre || 'Sin nombre',
                       description: `Código: ${t.codigo || 'N/A'}`,
                     } as SelectOption))}
-                    onChange={useCallback((value) => {
-                      const tipoPrecioId = parseInt(String(value));
-                      console.log('🔄 Tipo precio seleccionado:', tipoPrecioId);
-                      updateField('tipo_precio_id', tipoPrecioId);
-                    }, [updateField])}
+                    onChange={handleTipoPrecioChange}
                     searchPlaceholder="Buscar por nombre o código..."
                     emptyText="No se encontraron tipos de precio"
                     error={errors.tipo_precio_id}

@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 import reportesDiarios from './reportes-diarios'
 import cajas from './cajas'
 import gastos from './gastos'
@@ -46,6 +46,41 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\CajaController::dashboard
+ * @see app/Http/Controllers/CajaController.php:745
+ * @route '/cajas/admin/dashboard'
+ */
+    const dashboardForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboard.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::dashboard
+ * @see app/Http/Controllers/CajaController.php:745
+ * @route '/cajas/admin/dashboard'
+ */
+        dashboardForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::dashboard
+ * @see app/Http/Controllers/CajaController.php:745
+ * @route '/cajas/admin/dashboard'
+ */
+        dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboard.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\CajaController::cierreDiario
  * @see app/Http/Controllers/CajaController.php:1272
@@ -80,6 +115,27 @@ cierreDiario.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\CajaController::cierreDiario
+ * @see app/Http/Controllers/CajaController.php:1272
+ * @route '/cajas/admin/cierre-diario'
+ */
+    const cierreDiarioForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: cierreDiario.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::cierreDiario
+ * @see app/Http/Controllers/CajaController.php:1272
+ * @route '/cajas/admin/cierre-diario'
+ */
+        cierreDiarioForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: cierreDiario.url(options),
+            method: 'post',
+        })
+    
+    cierreDiario.form = cierreDiarioForm
 /**
 * @see \App\Http\Controllers\CajaController::cierreDiarioJson
  * @see app/Http/Controllers/CajaController.php:1092
@@ -114,6 +170,27 @@ cierreDiarioJson.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
     method: 'post',
 })
 
+    /**
+* @see \App\Http\Controllers\CajaController::cierreDiarioJson
+ * @see app/Http/Controllers/CajaController.php:1092
+ * @route '/cajas/admin/cierre-diario-json'
+ */
+    const cierreDiarioJsonForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: cierreDiarioJson.url(options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::cierreDiarioJson
+ * @see app/Http/Controllers/CajaController.php:1092
+ * @route '/cajas/admin/cierre-diario-json'
+ */
+        cierreDiarioJsonForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: cierreDiarioJson.url(options),
+            method: 'post',
+        })
+    
+    cierreDiarioJson.form = cierreDiarioJsonForm
 /**
 * @see \App\Http\Controllers\CajaController::reportes
  * @see app/Http/Controllers/CajaController.php:890
@@ -157,6 +234,41 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:890
+ * @route '/cajas/admin/reportes'
+ */
+    const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: reportes.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:890
+ * @route '/cajas/admin/reportes'
+ */
+        reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: reportes.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::reportes
+ * @see app/Http/Controllers/CajaController.php:890
+ * @route '/cajas/admin/reportes'
+ */
+        reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: reportes.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    reportes.form = reportesForm
 /**
  * @see routes/web.php:542
  * @route '/cajas/admin/conciliacion'
@@ -195,6 +307,39 @@ conciliacion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: conciliacion.url(options),
     method: 'head',
 })
+
+    /**
+ * @see routes/web.php:542
+ * @route '/cajas/admin/conciliacion'
+ */
+    const conciliacionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: conciliacion.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:542
+ * @route '/cajas/admin/conciliacion'
+ */
+        conciliacionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: conciliacion.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:542
+ * @route '/cajas/admin/conciliacion'
+ */
+        conciliacionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: conciliacion.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    conciliacion.form = conciliacionForm
 const admin = {
     dashboard,
 cierreDiario,

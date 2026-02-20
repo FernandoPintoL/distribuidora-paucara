@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 import modulosSidebar from './modulos-sidebar'
 import combos from './combos'
 import productos from './productos'
@@ -61,6 +61,41 @@ modulosSidebar.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     method: 'head',
 })
 
+    /**
+* @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:234
+ * @route '/api/modulos-sidebar'
+ */
+    const modulosSidebarForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: modulosSidebar.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:234
+ * @route '/api/modulos-sidebar'
+ */
+        modulosSidebarForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: modulosSidebar.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
+ * @see app/Http/Controllers/ModuloSidebarController.php:234
+ * @route '/api/modulos-sidebar'
+ */
+        modulosSidebarForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: modulosSidebar.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    modulosSidebar.form = modulosSidebarForm
 /**
 * @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
  * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
@@ -103,6 +138,42 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     url: dashboardRedirect.url(options),
     method: 'head',
 })
+
+    /**
+* @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
+ * @route '/api/dashboard-redirect'
+ */
+    const dashboardRedirectForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: dashboardRedirect.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
+ * @route '/api/dashboard-redirect'
+ */
+        dashboardRedirectForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardRedirect.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Auth\DashboardRedirectController::dashboardRedirect
+ * @see app/Http/Controllers/Auth/DashboardRedirectController.php:81
+ * @route '/api/dashboard-redirect'
+ */
+        dashboardRedirectForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: dashboardRedirect.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    dashboardRedirect.form = dashboardRedirectForm
 const api = {
     modulosSidebar,
 dashboardRedirect,
