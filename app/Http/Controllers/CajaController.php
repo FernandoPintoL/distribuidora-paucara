@@ -667,7 +667,7 @@ class CajaController extends Controller
         $apertura = AperturaCaja::findOrFail($aperturaId);
 
         // ✅ VALIDACIÓN: El usuario debe ser el propietario o admin
-        if ($apertura->user_id !== $usuarioAutenticado->id && ! $usuarioAutenticado->hasRole('admin|super-admin')) {
+        if ($apertura->user_id !== $usuarioAutenticado->id && ! $usuarioAutenticado->hasRole(['admin', 'Admin', 'Super Admin'])) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
