@@ -34,6 +34,7 @@ use Illuminate\Support\Facades\Log;
  */
 class CierreCajaService
 {
+    protected $fechaInicio;
     protected $fechaFin;
 
     // Códigos de estado estándar
@@ -53,7 +54,13 @@ class CierreCajaService
      */
     public function calcularDatos(AperturaCaja $aperturaCaja): array
     {
+        // ✅ NUEVO (2026-02-20): Rango de fecha inteligente para cajas antiguas
+        // Si la caja está CERRADA → usar fecha de apertura (incluir todos los días de esa caja)
+        // Si la caja está ABIERTA → usar SOLO hoy (aunque sea de días anteriores)
+        $esCajaCerrada = $aperturaCaja->cierre !== null;
+        $this->fechaInicio = $esCajaCerrada ? $aperturaCaja->fecha : today();
         $this->fechaFin = $aperturaCaja->cierre?->created_at ?? now();
+
         $movimientos = $this->obtenerMovimientos($aperturaCaja);
         $movimientosVenta = $this->obtenerMovimientosVenta($aperturaCaja);
 
@@ -149,7 +156,7 @@ class CierreCajaService
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'VENTA')  // ✅ SOLO VENTA (no CREDITO)
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
                 ->sum('ventas.total');
 
             Log::info('💰 [calcularTotalVentas]:', [
@@ -239,7 +246,7 @@ class CierreCajaService
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)
                 ->whereIn('tipos_pago.codigo', $tiposPago)
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
                 ->sum('ventas.total');
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasPorTipoPagoEspecifico]:', [
@@ -466,7 +473,7 @@ class CierreCajaService
     private function obtenerMovimientos(AperturaCaja $aperturaCaja)
     {
         return MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
-            ->whereBetween('fecha', [$aperturaCaja->fecha, $this->fechaFin])
+            ->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin])
             ->with(['tipoOperacion', 'comprobantes', 'tipoPago', 'venta.estadoDocumento', 'pago'])
             ->orderBy('id', 'desc')
             ->get();
@@ -488,7 +495,7 @@ class CierreCajaService
         }
 
         return MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
-            ->whereBetween('fecha', [$aperturaCaja->fecha, $this->fechaFin])
+            ->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin])
             ->where('tipo_operacion_id', $tipoOperacionVentaId)
             ->with(['tipoPago', 'venta.estadoDocumento'])
             ->get()
@@ -629,7 +636,7 @@ class CierreCajaService
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
                 ->groupBy('estados_documento.codigo', 'estados_documento.nombre')
                 ->select(
                     'estados_documento.codigo as codigo',
@@ -822,7 +829,7 @@ class CierreCajaService
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->whereIn('tipo_operacion_caja.codigo', $tiposOperacion)
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO) // ✅ Usa código, no nombre
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin]);
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin]);
 
             // Filtro opcional por tipo de pago
             if ($tipoPagoCodigo) {
@@ -928,7 +935,7 @@ class CierreCajaService
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
                 ->where('estados_documento.codigo', self::ESTADO_ANULADO) // ✅ Usa constante
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
                 ->sum('ventas.total');
 
             Log::info('📋 [calcularVentasAnuladas]:', [
@@ -1039,7 +1046,7 @@ class CierreCajaService
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'CREDITO')
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)
-                ->whereBetween('movimientos_caja.fecha', [$aperturaCaja->fecha, $this->fechaFin])
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
                 ->distinct('ventas.id')
                 ->count();
 
