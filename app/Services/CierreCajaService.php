@@ -54,11 +54,11 @@ class CierreCajaService
      */
     public function calcularDatos(AperturaCaja $aperturaCaja): array
     {
-        // ✅ NUEVO (2026-02-20): Rango de fecha inteligente para cajas antiguas
-        // Si la caja está CERRADA → usar fecha de apertura (incluir todos los días de esa caja)
-        // Si la caja está ABIERTA → usar SOLO hoy (aunque sea de días anteriores)
-        $esCajaCerrada = $aperturaCaja->cierre !== null;
-        $this->fechaInicio = $esCajaCerrada ? $aperturaCaja->fecha : today();
+        // ✅ NUEVO (2026-02-20): Rango de fecha desde apertura hasta cierre/hoy
+        // Siempre incluir movimientos desde que se abrió la caja
+        // Si CERRADA: hasta fecha de cierre
+        // Si ABIERTA: hasta ahora (permite ver cajas abiertas desde días anteriores)
+        $this->fechaInicio = $aperturaCaja->fecha;
         $this->fechaFin = $aperturaCaja->cierre?->created_at ?? now();
 
         $movimientos = $this->obtenerMovimientos($aperturaCaja);
