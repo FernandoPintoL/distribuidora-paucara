@@ -33,21 +33,13 @@ interface PageProps extends InertiaPageProps {
 
 interface ProductoMermaForm {
     producto_id: number;
-    producto?: ProductoInventario;
+    nombre: string;
+    codigo: string;
+    stock_actual: number;
     cantidad: number;
     costo_unitario?: number;
-    lote?: string;
-    fecha_vencimiento?: string;
     observaciones?: string;
-    stock_producto_id?: number; // ID del lote seleccionado
-}
-
-interface DetalleLote {
-    id: number;
-    lote: string;
-    fecha_vencimiento?: string;
-    cantidad: number;
-    cantidad_disponible: number;
+    producto?: any; // Referenced in the component
 }
 
 const RegistrarMermaPage: React.FC = () => {
@@ -71,8 +63,6 @@ const RegistrarMermaPage: React.FC = () => {
     const [productosDisponibles, setProductosDisponibles] = useState<any[]>([]);
     const [cargandoProductos, setCargandoProductos] = useState(false);
     const [guardando, setGuardando] = useState(false);
-    const [productoSeleccionandoLote, setProductoSeleccionandoLote] = useState<any | null>(null);
-    const [loteSeleccionado, setLoteSeleccionado] = useState<DetalleLote | null>(null);
     const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
     const [mermaParaImprimir, setMermaParaImprimir] = useState<any | null>(null);
 
@@ -121,7 +111,7 @@ const RegistrarMermaPage: React.FC = () => {
             console.log('📥 [MERMAS] Respuesta recibida:', data);
 
             if (data.success && Array.isArray(data.data)) {
-                // ✅ NUEVO: Preservar detalles_lotes en lugar de descartarlos
+                // ✅ Agregación automática de stocks sin considerar lotes
                 const productosFormatados = data.data.map((stock: any) => ({
                     id: stock.producto_id,
                     nombre: stock.producto_nombre,
@@ -129,8 +119,7 @@ const RegistrarMermaPage: React.FC = () => {
                     stock_actual: stock.cantidad,
                     precio_venta: stock.precio_venta || 0,
                     es_fraccionado: stock.es_fraccionado || false,
-                    unidad_medida_nombre: stock.unidad_medida_nombre || 'Unidades',
-                    detalles_lotes: stock.detalles_lotes || [] // ✅ Preservar lotes
+                    unidad_medida_nombre: stock.unidad_medida_nombre || 'Unidades'
                 }));
 
                 console.log('✅ [MERMAS] Productos encontrados:', productosFormatados);
@@ -138,17 +127,8 @@ const RegistrarMermaPage: React.FC = () => {
                 // Si hay un solo resultado, agregarlo automáticamente
                 if (productosFormatados.length === 1) {
                     const producto = productosFormatados[0];
-                    console.log('🎯 [MERMAS] Un solo resultado encontrado');
-
-                    // Si el producto tiene múltiples lotes, mostrar selector
-                    if (producto.detalles_lotes && producto.detalles_lotes.length > 1) {
-                        console.log('📦 [MERMAS] Múltiples lotes detectados, mostrando selector...');
-                        setProductoSeleccionandoLote(producto);
-                        setLoteSeleccionado(null);
-                    } else {
-                        // Si hay un solo lote o no hay detalles, agregar directamente
-                        agregarProducto(producto, producto.detalles_lotes?.[0] || null);
-                    }
+                    console.log('🎯 [MERMAS] Un solo resultado encontrado, agregando automáticamente...');
+                    agregarProducto(producto);
                 } else {
                     setProductosDisponibles(productosFormatados);
                 }
@@ -164,37 +144,30 @@ const RegistrarMermaPage: React.FC = () => {
         }
     }, [formData.almacen_id]);
 
-    const agregarProducto = (producto: any, loteSeleccionado?: DetalleLote | null) => {
+    const agregarProducto = (producto: any) => {
         const productoExistente = productos.find(p => p.producto_id === producto.id);
         if (productoExistente) {
             NotificationService.error('Este producto ya está agregado');
             return;
         }
 
-        // Si hay un lote seleccionado, pre-llenar los datos
-        const lote = loteSeleccionado || producto.detalles_lotes?.[0];
-
         console.log('✅ [MERMAS] Agregando producto:', {
             producto: producto.nombre,
-            lote_seleccionado: lote?.lote || 'Sin lote',
-            fecha_vencimiento: lote?.fecha_vencimiento || 'N/A'
+            stock_actual: producto.stock_actual
         });
 
         setProductos(prev => [...prev, {
             producto_id: producto.id,
-            producto,
+            nombre: producto.nombre,
+            codigo: producto.codigo,
+            stock_actual: producto.stock_actual,
             cantidad: 1,
             costo_unitario: producto.precio_venta || 0,
-            lote: lote?.lote || '',
-            fecha_vencimiento: lote?.fecha_vencimiento || '',
-            stock_producto_id: lote?.id, // ✅ ID del lote específico
             observaciones: ''
         }]);
 
         setBusquedaProducto('');
         setProductosDisponibles([]);
-        setProductoSeleccionandoLote(null);
-        setLoteSeleccionado(null);
     };
 
     const eliminarProducto = (index: number) => {
@@ -255,10 +228,7 @@ const RegistrarMermaPage: React.FC = () => {
                         producto_id: item.producto_id,
                         cantidad: item.cantidad,
                         costo_unitario: item.costo_unitario,
-                        lote: item.lote,
-                        fecha_vencimiento: item.fecha_vencimiento,
-                        observaciones: item.observaciones,
-                        stock_producto_id: item.stock_producto_id // ✅ ID del lote específico
+                        observaciones: item.observaciones
                     }))
                 }),
             });
@@ -500,17 +470,7 @@ const RegistrarMermaPage: React.FC = () => {
                                             {productosDisponibles.map((producto) => (
                                                 <button
                                                     key={producto.id}
-                                                    onClick={() => {
-                                                        // ✅ Si tiene múltiples lotes, mostrar selector
-                                                        if (producto.detalles_lotes && producto.detalles_lotes.length > 1) {
-                                                            setProductoSeleccionandoLote(producto);
-                                                            setLoteSeleccionado(null);
-                                                            setProductosDisponibles([]);
-                                                            setBusquedaProducto('');
-                                                        } else {
-                                                            agregarProducto(producto, producto.detalles_lotes?.[0] || null);
-                                                        }
-                                                    }}
+                                                    onClick={() => agregarProducto(producto)}
                                                     className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                                                 >
                                                     <div className="font-medium text-gray-900 dark:text-gray-100">
@@ -518,11 +478,6 @@ const RegistrarMermaPage: React.FC = () => {
                                                     </div>
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
                                                         Código: {producto.codigo} | Stock: {producto.stock_actual || 0}
-                                                        {producto.detalles_lotes && producto.detalles_lotes.length > 1 && (
-                                                            <span className="ml-2 text-blue-600 dark:text-blue-400 font-medium">
-                                                                📦 {producto.detalles_lotes.length} lotes
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </button>
                                             ))}
@@ -537,67 +492,6 @@ const RegistrarMermaPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* ✅ MODAL: Selector de Lotes */}
-                            {productoSeleccionandoLote && (
-                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
-                                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-96 max-w-full p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                            📦 Seleccionar Lote - {productoSeleccionandoLote.nombre}
-                                        </h3>
-
-                                        <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
-                                            {productoSeleccionandoLote.detalles_lotes?.map((lote: DetalleLote) => (
-                                                <button
-                                                    key={lote.id}
-                                                    onClick={() => setLoteSeleccionado(lote)}
-                                                    className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                                                        loteSeleccionado?.id === lote.id
-                                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                                    }`}
-                                                >
-                                                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                                                        📌 Folio Lote: {lote.lote || 'Sin lote'}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        📊 Stock Total: <span className="font-medium text-blue-600 dark:text-blue-400">{(parseFloat(lote.cantidad) || 0).toFixed(2)}</span>
-                                                        <span className="text-gray-500"> | Disponible: {(parseFloat(lote.cantidad_disponible) || 0).toFixed(2)}</span>
-                                                    </div>
-                                                    {lote.fecha_vencimiento && (
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                            📅 Vencimiento: {lote.fecha_vencimiento}
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <div className="flex gap-3">
-                                            <Button
-                                                variant="outline"
-                                                className="flex-1"
-                                                onClick={() => {
-                                                    setProductoSeleccionandoLote(null);
-                                                    setLoteSeleccionado(null);
-                                                }}
-                                            >
-                                                Cancelar
-                                            </Button>
-                                            <Button
-                                                className="flex-1"
-                                                disabled={!loteSeleccionado}
-                                                onClick={() => {
-                                                    if (loteSeleccionado) {
-                                                        agregarProducto(productoSeleccionandoLote, loteSeleccionado);
-                                                    }
-                                                }}
-                                            >
-                                                ✓ Confirmar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             {!formData.almacen_id && (
                                 <div className="text-center py-8">
@@ -669,27 +563,6 @@ const RegistrarMermaPage: React.FC = () => {
                                                             {(Number(producto.costo_unitario) || 0).toFixed(2)}
                                                         </span>
                                                     </div>
-                                                </div>
-
-                                                <div>
-                                                    <Label className="text-xs">Lote</Label>
-                                                    <Input
-                                                        type="text"
-                                                        value={producto.lote || ''}
-                                                        onChange={(e) => actualizarProducto(index, 'lote', e.target.value)}
-                                                        className="w-24 dark:bg-gray-900 dark:text-white dark:border-gray-700"
-                                                        placeholder="Opcional"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <Label className="text-xs">F. Venc.</Label>
-                                                    <Input
-                                                        type="date"
-                                                        value={producto.fecha_vencimiento || ''}
-                                                        onChange={(e) => actualizarProducto(index, 'fecha_vencimiento', e.target.value)}
-                                                        className="w-36 dark:bg-gray-900 dark:text-white dark:border-gray-700"
-                                                    />
                                                 </div>
 
                                                 <div className="flex flex-col items-center justify-center">
