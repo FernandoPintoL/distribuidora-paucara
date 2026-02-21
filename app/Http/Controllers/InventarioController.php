@@ -1503,6 +1503,12 @@ class InventarioController extends Controller
             ]);
 
             // PASO 1: Crear registro maestro en mermas_inventario (con número temporal)
+            // Concatenar motivo específico + observaciones
+            $observacionCompleta = $data['motivo'];
+            if (!empty($data['observaciones'])) {
+                $observacionCompleta .= "\n\n📝 Observaciones adicionales:\n" . $data['observaciones'];
+            }
+
             $mermaInventario = MermaInventario::create([
                 'numero'              => 'TEMP',
                 'almacen_id'          => $data['almacen_id'],
@@ -1510,7 +1516,7 @@ class InventarioController extends Controller
                 'tipo_merma'          => $data['tipo_merma'],
                 'cantidad_productos'  => count($data['productos']),
                 'costo_total'         => 0, // Se actualiza después
-                'observacion'         => $data['observaciones'] ?? null,
+                'observacion'         => $observacionCompleta,
                 'estado'              => MermaInventario::ESTADO_PROCESADO,
             ]);
 
