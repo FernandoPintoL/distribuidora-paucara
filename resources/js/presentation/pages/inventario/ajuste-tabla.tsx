@@ -44,7 +44,7 @@ interface AjusteItem {
     tipo_ajuste: 'entrada' | 'salida';
     tipo_ajuste_inventario_id?: number;
     tipoAjusteInventario?: TipoAjusteInventario;
-    observacion: string;
+    // ✅ Removida: observacion por línea (ahora es general del documento)
 }
 
 interface PageProps extends InertiaPageProps {
@@ -149,6 +149,7 @@ export default function AjusteTabla() {
     const [almacenSeleccionado, setAlmacenSeleccionado] = useState<string>('');
     const [ajustes, setAjustes] = useState<AjusteItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [observacionGeneral, setObservacionGeneral] = useState<string>(''); // ✅ NUEVA: Observación general del documento
 
     // Cargar tipos de ajuste si no vienen del backend
     const [tiposAjuste, setTiposAjuste] = useState<TipoAjusteInventario[]>(tipos_ajuste_inventario);
@@ -401,9 +402,9 @@ export default function AjusteTabla() {
         return ajustes.map((ajuste) => ({
             stock_producto_id: ajuste.stock_producto_id,
             nueva_cantidad: ajuste.cantidad_nueva,
-            observacion: ajuste.observacion,
+            observacion: observacionGeneral || 'Ajuste de inventario', // ✅ Usa observación general
             tipo_ajuste: ajuste.tipo_ajuste,
-            tipo_ajuste_inventario_id: ajuste.tipo_ajuste_inventario_id, // ✅ Incluir tipo de ajuste
+            tipo_ajuste_inventario_id: ajuste.tipo_ajuste_inventario_id,
         }));
     };
 
@@ -626,29 +627,48 @@ export default function AjusteTabla() {
                     </div>
                 </div>
 
-                {/* Selector de Almacén */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow dark:shadow-slate-900">
-                    <label className="block text-sm font-medium dark:text-gray-200 mb-2">
-                        Almacén
-                    </label>
-                    <Select
-                        value={almacenSeleccionado}
-                        onValueChange={setAlmacenSeleccionado}
-                    >
-                        <SelectTrigger className="w-full max-w-md">
-                            <SelectValue placeholder="Selecciona un almacén" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {almacenes.map((almacen) => (
-                                <SelectItem
-                                    key={almacen.id}
-                                    value={String(almacen.id)}
-                                >
-                                    {almacen.nombre}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                {/* Selector de Almacén y Observación General */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow dark:shadow-slate-900 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium dark:text-gray-200 mb-2">
+                            Almacén
+                        </label>
+                        <Select
+                            value={almacenSeleccionado}
+                            onValueChange={setAlmacenSeleccionado}
+                        >
+                            <SelectTrigger className="w-full max-w-md">
+                                <SelectValue placeholder="Selecciona un almacén" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {almacenes.map((almacen) => (
+                                    <SelectItem
+                                        key={almacen.id}
+                                        value={String(almacen.id)}
+                                    >
+                                        {almacen.nombre}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* ✅ NUEVA: Observación General del Documento */}
+                    <div>
+                        <label className="block text-sm font-medium dark:text-gray-200 mb-2">
+                            📝 Observación General del Ajuste (Opcional)
+                        </label>
+                        <Textarea
+                            value={observacionGeneral}
+                            onChange={(e) => setObservacionGeneral(e.target.value)}
+                            placeholder="Ej: Ajuste por faltantes encontrados en recuento físico..."
+                            className="w-full"
+                            rows={3}
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Esta observación se mostrará en el documento y en la impresión
+                        </p>
+                    </div>
                 </div>
 
                 {/* Tabla de Ajustes */}
@@ -675,9 +695,7 @@ export default function AjusteTabla() {
                                             <th className="px-4 py-3 text-left text-sm font-medium dark:text-gray-200">
                                                 Stock Nuevo
                                             </th>
-                                            <th className="px-4 py-3 text-left text-sm font-medium dark:text-gray-200">
-                                                Observación
-                                            </th>
+                                            {{/* ✅ REMOVIDA: Columna de Observación - ahora es general */}}
                                             <th className="px-4 py-3 text-center text-sm font-medium dark:text-gray-200">
                                                 Acción
                                             </th>
@@ -945,24 +963,7 @@ export default function AjusteTabla() {
                                                     )}
                                                 </td>
 
-                                                {/* Observación */}
-                                                <td className="px-4 py-3">
-                                                    <Input
-                                                        type="text"
-                                                        value={
-                                                            ajuste.observacion
-                                                        }
-                                                        onChange={(e) =>
-                                                            actualizarFila(
-                                                                ajuste.id,
-                                                                'observacion',
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        className="w-full"
-                                                        placeholder="Observación..."
-                                                    />
-                                                </td>
+                                                {{/* ✅ REMOVIDA: Columna de Observación - ahora es general */}}
 
                                                 {/* Acción */}
                                                 <td className="px-4 py-3 text-center">
