@@ -111,7 +111,7 @@
             {{-- ITEMS DEL COMBO SI EXISTEN --}}
             @if($esCombo && count($itemsSeleccionados) > 0)
                 <tr>
-                    <td colspan="4" style="padding: 2px 4px; font-size: 8px; color: #666;">
+                    <td colspan="4" style="padding: 2px 4px; font-size: 12px;">
                         <strong>Componentes ({{ count($itemsSeleccionados) }}):</strong>
                     </td>
                 </tr>
@@ -123,7 +123,7 @@
                             ?->producto;
                     @endphp
                     <tr>
-                        <td colspan="4" style="padding: 1px 12px; font-size: 8px; color: #666;">
+                        <td colspan="4" style="padding: 1px 12px; font-size: 12px;">
                             └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
                             @if($item['cantidad'] ?? false)
                                 ({{ $item['cantidad'] }} u)
