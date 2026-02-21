@@ -1127,6 +1127,9 @@ class InventarioController extends Controller
             $cantidadSalidas = 0;
             $cantidadProductos = count($ajustes);
 
+            // ✅ NUEVO: Recolectar tipos de ajuste para guardar en observación
+            $tiposAjusteResumen = [];
+
             // Crear el registro maestro de AjusteInventario (sin número aún)
             $ajuste = AjusteInventario::create([
                 'numero' => 'TEMP',  // Temporal, se actualiza después de obtener el ID
@@ -1159,6 +1162,15 @@ class InventarioController extends Controller
                 MovimientoInventario::TIPO_ENTRADA_AJUSTE :
                 MovimientoInventario::TIPO_SALIDA_AJUSTE;
 
+                // ✅ NUEVO: Obtener nombre del tipo de ajuste si existe
+                $tipoAjusteInventarioId = $ajusteItem['tipo_ajuste_inventario_id'] ?? null;
+                if ($tipoAjusteInventarioId) {
+                    $tipoAjuste = TipoAjusteInventario::find($tipoAjusteInventarioId);
+                    if ($tipoAjuste && !in_array($tipoAjuste->label, $tiposAjusteResumen)) {
+                        $tiposAjusteResumen[] = $tipoAjuste->label;
+                    }
+                }
+
                 // Registrar el movimiento con el tipo de ajuste y número de documento
                 $movimiento = MovimientoInventario::registrar(
                     $stockProducto,
@@ -1167,7 +1179,7 @@ class InventarioController extends Controller
                     $observacion,
                     $numeroDocumento,
                     null,
-                    $ajusteItem['tipo_ajuste_id'] ?? null
+                    $tipoAjusteInventarioId  // ✅ CORREGIDO: usar tipo_ajuste_inventario_id
                 );
 
                 // Asociar el movimiento al ajuste maestro
@@ -1183,10 +1195,17 @@ class InventarioController extends Controller
                 $movimientos[] = $movimiento;
             }
 
-            // Actualizar el ajuste maestro con los totales reales
+            // ✅ NUEVO: Construir observación con tipos de ajuste
+            $observacionFinal = 'Ajuste masivo de inventario';
+            if (!empty($tiposAjusteResumen)) {
+                $observacionFinal .= ' | Tipos: ' . implode(', ', $tiposAjusteResumen);
+            }
+
+            // Actualizar el ajuste maestro con los totales reales Y la observación con tipos de ajuste
             $ajuste->update([
                 'cantidad_entradas' => $cantidadEntradas,
                 'cantidad_salidas' => $cantidadSalidas,
+                'observacion' => $observacionFinal,  // ✅ NUEVO: Guardar tipos de ajuste
             ]);
         });
 
