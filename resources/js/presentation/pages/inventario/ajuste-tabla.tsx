@@ -695,7 +695,7 @@ export default function AjusteTabla() {
                                             <th className="px-4 py-3 text-left text-sm font-medium dark:text-gray-200">
                                                 Stock Nuevo
                                             </th>
-                                            {{/* ✅ REMOVIDA: Columna de Observación - ahora es general */}}
+                                            {/* ✅ REMOVIDA: Columna de Observación - ahora es general */}
                                             <th className="px-4 py-3 text-center text-sm font-medium dark:text-gray-200">
                                                 Acción
                                             </th>
@@ -963,7 +963,7 @@ export default function AjusteTabla() {
                                                     )}
                                                 </td>
 
-                                                {{/* ✅ REMOVIDA: Columna de Observación - ahora es general */}}
+                                                {/* ✅ REMOVIDA: Columna de Observación - ahora es general */}
 
                                                 {/* Acción */}
                                                 <td className="px-4 py-3 text-center">
