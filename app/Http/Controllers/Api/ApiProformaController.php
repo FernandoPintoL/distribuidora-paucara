@@ -3345,7 +3345,54 @@ class ApiProformaController extends Controller
                 $detallesMap[$producto_id] = ($detallesMap[$producto_id] ?? 0) + $cantidad;
             }
 
-            Log::info('📊 Mapa de detalles esperados', ['mapa' => $detallesMap]);
+            // 🎁 IMPORTANTE: Expandir COMBOS en el mapa de detalles esperados
+            // Esto es CRÍTICO porque las reservas actuales tienen los componentes expandidos,
+            // pero el mapa esperado solo tiene el combo padre. Necesitamos expandir para comparar correctamente.
+            $stockService = new StockService();
+
+            foreach ($detallesGuardados as $detalle) {
+                $producto = Producto::find($detalle['producto_id']);
+
+                if ($producto && $producto->es_combo) {
+                    $cantidadCombos = (int) $detalle['cantidad'];
+
+                    Log::info('🎁 Expandiendo COMBO en mapa de detalles esperados', [
+                        'combo_id' => $producto->id,
+                        'cantidad_combos' => $cantidadCombos,
+                    ]);
+
+                    // Expandir el combo usando la misma lógica que en creación de proformas
+                    $componentesExpandidos = $stockService->expandirCombos([
+                        [
+                            'producto_id' => $producto->id,
+                            'cantidad' => $cantidadCombos,
+                            'combo_items_seleccionados' => $detalle['combo_items_seleccionados'] ?? null
+                        ]
+                    ]);
+
+                    // Agregar componentes al mapa (reemplazar el combo)
+                    foreach ($componentesExpandidos as $componente) {
+                        $productoComponenteId = $componente['producto_id'];
+                        $cantidadComponente = $componente['cantidad'];
+
+                        $detallesMap[$productoComponenteId] =
+                            ($detallesMap[$productoComponenteId] ?? 0) + $cantidadComponente;
+
+                        Log::info('  ├─ Componente agregado al mapa', [
+                            'componente_id' => $productoComponenteId,
+                            'cantidad' => $cantidadComponente,
+                        ]);
+                    }
+
+                    // REMOVER el combo del mapa (nunca se reserva directamente, solo sus componentes)
+                    unset($detallesMap[$detalle['producto_id']]);
+                    Log::info('  └─ Combo removido del mapa (ya está expandido)', [
+                        'combo_id' => $detalle['producto_id'],
+                    ]);
+                }
+            }
+
+            Log::info('📊 Mapa de detalles esperados (DESPUÉS DE EXPANDIR COMBOS)', ['mapa' => $detallesMap]);
 
             // Instanciar servicio de distribución
             $reservaService = new ReservaDistribucionService();
@@ -3949,16 +3996,31 @@ class ApiProformaController extends Controller
             // Obtener los detalles enviados
             $detallesActualizados = $request->input('detalles', []);
 
+            // ✅ DEBUG: Ver exactamente qué datos llegaron
+            Log::info('🔍 [actualizarDetalles] Detalles recibidos del frontend:', [
+                'cantidad_detalles' => count($detallesActualizados),
+                'detalles_completos' => $detallesActualizados,
+            ]);
+
             // Inicializar contadores
             $subtotalNuevo = 0;
             $detallesGuardados = [];
 
             // Procesar cada detalle
-            foreach ($detallesActualizados as $detalleData) {
+            foreach ($detallesActualizados as $i => $detalleData) {
                 $producto_id = $detalleData['producto_id'];
                 $cantidad = (float) $detalleData['cantidad'];
                 $precio_unitario = (float) $detalleData['precio_unitario'];
                 $subtotal = (float) $detalleData['subtotal'];
+
+                // ✅ DEBUG: Ver qué se procesa por detalle
+                Log::info("📋 [actualizarDetalles] Procesando detalle #$i:", [
+                    'producto_id' => $producto_id,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => $precio_unitario,
+                    'tiene_combo_items' => isset($detalleData['combo_items_seleccionados']),
+                    'combo_items' => $detalleData['combo_items_seleccionados'] ?? null,
+                ]);
 
                 // Validar que el producto existe
                 $producto = \App\Models\Producto::findOrFail($producto_id);

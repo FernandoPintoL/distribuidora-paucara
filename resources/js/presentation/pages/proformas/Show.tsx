@@ -1078,6 +1078,11 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 })
             }));
 
+            // ✅ DEBUG: Ver EXACTAMENTE qué se envía
+            const payloadParaEnviar = { detalles: detallesParaGuardar };
+            console.log('%c🔍 PAYLOAD QUE SE ENVÍA:', 'color: purple; font-weight: bold;', JSON.stringify(payloadParaEnviar, null, 2));
+            console.log('%c📊 DETALLES INDIVIDUALES:', 'color: purple;', detallesParaGuardar);
+
             // Realizar petición POST
             const response = await fetch(`/api/proformas/${proforma.id}/actualizar-detalles`, {
                 method: 'POST',
@@ -1088,7 +1093,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ detalles: detallesParaGuardar }),
+                body: JSON.stringify(payloadParaEnviar),
             });
 
             if (!response.ok) {
