@@ -60,13 +60,13 @@
     <thead>
         <tr>
             <th style="width: 5%;">#</th>
-            <th style="width: 20%;">Producto</th>
+            <th style="width: 25%;">Producto</th>
             {{-- <th style="width: 12%;">Almacén</th> --}}
-            <th style="width: 12%;">Tipo Ajuste</th>
-            <th style="width: 8%;">Cantidad</th>
-            <th style="width: 8%;">Anterior</th>
-            <th style="width: 8%;">Posterior</th>
-            <th style="width: 15%;">Observación</th>
+            <th style="width: 15%;">Tipo Ajuste</th>
+            <th style="width: 10%;">Cantidad</th>
+            <th style="width: 10%;">Anterior</th>
+            <th style="width: 10%;">Posterior</th>
+            {{-- ✅ REMOVIDO: Columna de observación por línea --}}
         </tr>
     </thead>
     <tbody>
@@ -98,7 +98,7 @@
             </td>
             <td style="text-align: right;">{{ number_format($ajuste['cantidad_anterior'], 2) }}</td>
             <td style="text-align: right;">{{ number_format($ajuste['cantidad_posterior'], 2) }}</td>
-            <td style="font-size: 10px;">{{ $ajuste['observacion'] ?? '-' }}</td>
+            {{-- ✅ REMOVIDO: Observación individual de cada fila --}}
         </tr>
         @empty
         <tr>
