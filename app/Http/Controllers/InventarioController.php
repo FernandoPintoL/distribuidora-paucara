@@ -1127,8 +1127,9 @@ class InventarioController extends Controller
             $cantidadSalidas = 0;
             $cantidadProductos = count($ajustes);
 
-            // ✅ NUEVO: Recolectar tipos de ajuste para guardar en observación
+            // ✅ NUEVO: Recolectar tipos de ajuste y observación general
             $tiposAjusteResumen = [];
+            $observacionGeneral = $ajustes[0]['observacion'] ?? 'Ajuste de inventario'; // ✅ Obtener observación del usuario
 
             // Crear el registro maestro de AjusteInventario (sin número aún)
             $ajuste = AjusteInventario::create([
@@ -1138,7 +1139,7 @@ class InventarioController extends Controller
                 'cantidad_entradas' => 0, // Se actualiza después
                 'cantidad_salidas' => 0,  // Se actualiza después
                 'cantidad_productos' => $cantidadProductos,
-                'observacion' => 'Ajuste masivo de inventario',
+                'observacion' => $observacionGeneral, // ✅ Guardar observación del usuario
                 'estado' => AjusteInventario::ESTADO_PROCESADO,
             ]);
 
@@ -1195,17 +1196,17 @@ class InventarioController extends Controller
                 $movimientos[] = $movimiento;
             }
 
-            // ✅ NUEVO: Construir observación con tipos de ajuste
-            $observacionFinal = 'Ajuste masivo de inventario';
+            // ✅ ACTUALIZADO: Construir observación con observación del usuario + tipos de ajuste
+            $observacionFinal = $observacionGeneral;  // ✅ Mantener observación del usuario como base
             if (!empty($tiposAjusteResumen)) {
-                $observacionFinal .= ' | Tipos: ' . implode(', ', $tiposAjusteResumen);
+                $observacionFinal .= ' | Tipos: ' . implode(', ', $tiposAjusteResumen);  // ✅ Agregar tipos
             }
 
-            // Actualizar el ajuste maestro con los totales reales Y la observación con tipos de ajuste
+            // Actualizar el ajuste maestro con los totales reales Y la observación completa
             $ajuste->update([
                 'cantidad_entradas' => $cantidadEntradas,
                 'cantidad_salidas' => $cantidadSalidas,
-                'observacion' => $observacionFinal,  // ✅ NUEVO: Guardar tipos de ajuste
+                'observacion' => $observacionFinal,  // ✅ Observación completa: usuario + tipos
             ]);
         });
 
