@@ -37,10 +37,20 @@
         </td>
     </tr>
 </table>
+    {{-- ✅ Mostrar observación con tipos de ajuste --}}
     @if(!empty($cabecera['observacion']))
-    <div style="border-top: 1px solid #bdc3c7;">
-        <p style="margin: 3px 0; font-size: 12px;"><strong>Observación:</strong></p>
-        <p style="margin: 3px 0; font-size: 12px; color: #666;">{{ $cabecera['observacion'] }}</p>
+    <div style="border-left: 4px solid #2196F3; background-color: #e3f2fd; padding: 10px; margin-top: 10px; border-radius: 3px;">
+        <p style="margin: 0 0 5px 0; font-size: 12px;"><strong>📝 Observación:</strong></p>
+        <p style="margin: 0; font-size: 11px; color: #1565c0; line-height: 1.4;">
+            {!! nl2br(e($cabecera['observacion'])) !!}
+        </p>
+
+        {{-- Si la observación contiene tipos de ajuste, mostrar resumen --}}
+        @if(strpos($cabecera['observacion'], 'Tipos:') !== false)
+        <p style="margin: 5px 0 0 0; font-size: 10px; color: #0d47a1; font-style: italic;">
+            ✓ Contiene información detallada de tipos de ajuste realizados
+        </p>
+        @endif
     </div>
     @endif
 </div>
