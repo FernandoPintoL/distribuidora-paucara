@@ -4981,4 +4981,89 @@ class ApiProformaController extends Controller
             'proforma_ids'       => $proformas->pluck('id')->toArray(),
         ]);
     }
+
+    /**
+     * ✅ NUEVO: Descargar PDF de proformas filtradas (para app móvil)
+     * Genera PDF directamente sin usar sesión
+     * Accessible para preventistas del usuario autenticado
+     */
+    public function descargarPdfProformas(Request $request)
+    {
+        try {
+            // Obtener filtros
+            $filtros = $request->input('filtros', []);
+            $formato = $request->input('formato', 'A4');
+            $idsParam = $request->input('ids');
+
+            // Obtener IDs desde parámetro
+            if ($idsParam) {
+                $proformaIds = is_array($idsParam)
+                    ? array_map('intval', $idsParam)
+                    : array_map('intval', explode(',', $idsParam));
+            } else {
+                $proformaIds = [];
+            }
+
+            if (empty($proformaIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay proformas para descargar'
+                ], 400);
+            }
+
+            // Obtener proformas con relaciones necesarias
+            $proformas = Proforma::whereIn('id', $proformaIds)
+                ->with([
+                    'cliente',
+                    'usuarioCreador',
+                    'detalles.producto',
+                    'venta.cliente',
+                    'venta.detalles.producto',
+                    'estadoLogistica',
+                ])
+                ->orderBy('id', 'asc') // ✅ Ordenar ascendentemente por ID
+                ->get();
+
+            if ($proformas->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron proformas con los IDs especificados'
+                ], 404);
+            }
+
+            // Mapear formato a vista específica
+            $vistaMap = [
+                'A4'        => 'proformas.imprimir.listado-a4',
+                'TICKET_80' => 'proformas.imprimir.ticket-80',
+                'TICKET_58' => 'proformas.imprimir.ticket-58',
+            ];
+
+            $vista = $vistaMap[$formato] ?? 'proformas.imprimir.listado-a4';
+
+            // Renderizar HTML
+            $html = view($vista, [
+                'proformas' => $proformas,
+                'filtros' => $filtros,
+                'titulo' => 'Reporte de Proformas',
+            ])->render();
+
+            // Convertir a PDF usando DomPDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+
+            // Retornar PDF como descarga
+            $nombreArchivo = 'proformas-' . now()->format('YmdHis') . '.pdf';
+            return $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ Error al descargar PDF de proformas', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar el PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

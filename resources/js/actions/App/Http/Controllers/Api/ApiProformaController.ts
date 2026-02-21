@@ -367,6 +367,84 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
     
     prepararImpresion.form = prepararImpresionForm
 /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+export const descargarPdfProformas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarPdfProformas.url(options),
+    method: 'get',
+})
+
+descargarPdfProformas.definition = {
+    methods: ["get","head"],
+    url: '/api/proformas/descargar-pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+descargarPdfProformas.url = (options?: RouteQueryOptions) => {
+    return descargarPdfProformas.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+descargarPdfProformas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarPdfProformas.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: descargarPdfProformas.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+    const descargarPdfProformasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: descargarPdfProformas.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+        descargarPdfProformasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarPdfProformas.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @route '/api/proformas/descargar-pdf'
+ */
+        descargarPdfProformasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarPdfProformas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    descargarPdfProformas.form = descargarPdfProformasForm
+/**
 * @see \App\Http\Controllers\Api\ApiProformaController::store
  * @see app/Http/Controllers/Api/ApiProformaController.php:26
  * @route '/api/proformas'
@@ -2005,6 +2083,6 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
         })
     
     obtenerUltimoCarrito.form = obtenerUltimoCarritoForm
-const ApiProformaController = { index, stats, searchClientes, searchUsuarios, prepararImpresion, store, show, update, aprobar, rechazar, convertirAVenta, confirmarProforma, extenderVencimiento, coordinarEntrega, actualizarDetalles, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, obtenerSiguientePendiente, crearPedidoDesdeApp, obtenerDetallePedido, obtenerEstadoPedido, obtenerUltimoCarrito }
+const ApiProformaController = { index, stats, searchClientes, searchUsuarios, prepararImpresion, descargarPdfProformas, store, show, update, aprobar, rechazar, convertirAVenta, confirmarProforma, extenderVencimiento, coordinarEntrega, actualizarDetalles, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, obtenerSiguientePendiente, crearPedidoDesdeApp, obtenerDetallePedido, obtenerEstadoPedido, obtenerUltimoCarrito }
 
 export default ApiProformaController

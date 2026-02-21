@@ -293,6 +293,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 
     // Impresión de proformas filtradas (debe ir antes de {proforma})
     Route::post('/proformas/preparar-impresion', [ApiProformaController::class, 'prepararImpresion']);  // ✅ NUEVO: Preparar impresión
+    Route::get('/proformas/descargar-pdf', [ApiProformaController::class, 'descargarPdfProformas']);  // ✅ NUEVO: Descargar PDF (para app móvil)
 
     Route::post('/proformas', [ApiProformaController::class, 'store']);                   // Crear
     Route::get('/proformas/{proforma}', [ApiProformaController::class, 'show']);          // Ver detalle
