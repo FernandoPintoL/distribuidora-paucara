@@ -256,6 +256,9 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'merma') {
                 // Para mermas
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'proforma') {
+                // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
+                url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -291,6 +294,9 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'merma') {
                 // Para mermas
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'proforma') {
+                // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
+                url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             }

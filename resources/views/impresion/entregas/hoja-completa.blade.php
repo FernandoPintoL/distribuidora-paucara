@@ -165,6 +165,52 @@
 @endphp
 @include('impresion.entregas.partials._lista-generica')
 
+{{-- ✅ NUEVA 2026-02-21: TIPO DE ENTREGA Y NOVEDADES --}}
+@if($resumen_pagos && isset($resumen_pagos['confirmaciones']) && count($resumen_pagos['confirmaciones']) > 0)
+<div style="margin: 15px 0; padding: 10px; border-top: 2px solid #131313; padding-top: 10px;">
+    <h3 style="margin-top: 0;">📦 Tipo de Entrega</h3>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <tbody>
+            @foreach($resumen_pagos['confirmaciones'] as $conf)
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 8px; width: 25%; font-weight: bold;">F. {{ $conf['venta_id'] }}</td>
+                <td style="padding: 8px; width: 35%;">{{ $conf['tipo_entrega'] === 'COMPLETA' ? '✅ Completa' : '⚠️ Con Novedad' }}</td>
+                <td style="padding: 8px; width: 40%; text-align: right;">
+                    @if($conf['tipo_novedad'])
+                    <span style="background-color: #fff3e0; padding: 3px 8px; border-radius: 3px; font-size: 11px;">{{ $conf['tipo_novedad'] }}</span>
+                    @endif
+                </td>
+            </tr>
+
+            {{-- Productos devueltos si aplica --}}
+            @if($conf['tipo_novedad'] === 'DEVOLUCION_PARCIAL' && $conf['productos_devueltos'] && count($conf['productos_devueltos']) > 0)
+            <tr>
+                <td colspan="3" style="padding: 8px; background-color: #f9f9f9;">
+                    <p style="margin: 5px 0 8px 0; font-weight: bold; font-size: 11px; color: #ff9800;">📦 Productos Devueltos:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        <tbody>
+                            @foreach($conf['productos_devueltos'] as $prod)
+                            <tr style="border-bottom: 1px dotted #ccc;">
+                                <td style="padding: 3px 5px; width: 50%;">{{ substr($prod['producto_nombre'] ?? 'N/A', 0, 30) }}</td>
+                                <td style="padding: 3px 5px; text-align: center; width: 20%;">x{{ $prod['cantidad'] ?? 0 }}</td>
+                                <td style="padding: 3px 5px; text-align: right; width: 30%;">Bs. {{ number_format($prod['subtotal'] ?? 0, 2) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    <div style="text-align: right; padding: 5px 5px 0 5px; border-top: 1px solid #ccc; margin-top: 3px;">
+                        <p style="margin: 0; font-weight: bold; font-size: 11px;">Total Devuelto: Bs. {{ number_format($conf['monto_devuelto'], 2) }}</p>
+                    </div>
+                </td>
+            </tr>
+            @endif
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
 {{-- ✅ NUEVA 2026-02-12: RESUMEN DE PAGOS --}}
 @if($resumen_pagos)
 <div style="margin: 15px 0; border-top: 2px solid #131313; padding-top: 10px;">

@@ -286,6 +286,14 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // CRUD básico
     Route::get('/proformas', [ApiProformaController::class, 'index']);                    // Lista (inteligente por rol)
     Route::get('/proformas/estadisticas', [ApiProformaController::class, 'stats']);       // Estadísticas (debe ir antes de {proforma})
+
+    // Búsquedas desde frontend (debe ir antes de {proforma})
+    Route::get('/proformas/search/clientes', [ApiProformaController::class, 'searchClientes']);  // ✅ NUEVO: Buscar clientes
+    Route::get('/proformas/search/usuarios', [ApiProformaController::class, 'searchUsuarios']);  // ✅ NUEVO: Buscar usuarios
+
+    // Impresión de proformas filtradas (debe ir antes de {proforma})
+    Route::post('/proformas/preparar-impresion', [ApiProformaController::class, 'prepararImpresion']);  // ✅ NUEVO: Preparar impresión
+
     Route::post('/proformas', [ApiProformaController::class, 'store']);                   // Crear
     Route::get('/proformas/{proforma}', [ApiProformaController::class, 'show']);          // Ver detalle
     Route::put('/proformas/{proforma}', [ApiProformaController::class, 'update']);        // ✅ NUEVO: Actualizar proforma
@@ -896,6 +904,11 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::patch('/{entrega}/ventas/{venta}/corregir-pago', [EntregaController::class, 'corregirPagoConfirmacion'])
             ->middleware('permission:entregas.update')
             ->name('entregas.corregir-pago');
+
+        // ✅ NUEVO 2026-02-21: Cambiar tipo de entrega de una venta
+        Route::patch('/{entrega}/ventas/{venta}/cambiar-tipo-entrega', [EntregaController::class, 'cambiarTipoEntrega'])
+            ->middleware('permission:entregas.update')
+            ->name('entregas.cambiar-tipo-entrega');
     });
 
     // ✅ PHASE 3: REPORTES DE CARGA (Gestión de cargas en vehículos)

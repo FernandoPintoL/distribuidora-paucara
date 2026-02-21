@@ -399,6 +399,16 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // ✅ NUEVO: Editar proforma existente
         Route::get('/{proforma}/edit', [\App\Http\Controllers\ProformaController::class, 'edit'])->name('edit');
 
+        // ==========================================
+        // RUTAS DE IMPRESIÓN (DEBEN ir ANTES de rutas con parámetros dinámicos)
+        // ==========================================
+        // ✅ Impresión de proformas filtradas (con parámetros query)
+        Route::get('/imprimir-filtrado', [\App\Http\Controllers\ProformaController::class, 'imprimirFiltrado'])->name('imprimir-filtrado');
+
+        // ✅ Impresión individual (con ID en path)
+        Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
+        Route::get('/{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
+
         // Rutas con parámetros dinámicos van al final
         // Vista: Detalle de proforma (usa ProformaController::show)
         Route::get('/{proforma}', [\App\Http\Controllers\ProformaController::class, 'show'])->name('show');
@@ -416,9 +426,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->middleware('caja.abierta')
             ->name('convertir-venta');
         Route::post('/{id}/renovar-reservas', [\App\Http\Controllers\ProformaController::class, 'renovarReservas'])->name('renovar-reservas');
-
-        Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
-        Route::get('/{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])->name('preview');
     });
 
     // ==========================================

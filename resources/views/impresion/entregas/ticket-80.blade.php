@@ -146,6 +146,40 @@
 
     <div class="separador"></div>
 
+    {{-- ✅ NUEVA 2026-02-21: TIPO DE ENTREGA Y NOVEDADES --}}
+    @if($resumen_pagos && isset($resumen_pagos['confirmaciones']) && count($resumen_pagos['confirmaciones']) > 0)
+    <p style="font-weight: bold; text-align: center; margin: 3px 0;">📦 TIPO DE ENTREGA</p>
+
+    @foreach($resumen_pagos['confirmaciones'] as $conf)
+    <div style="margin: 3px 0; padding: 2px 3px; border: 1px solid #999; @if($conf['tuvo_problema']) background-color: #fff3e0; @endif">
+        {{-- Venta ID y Tipo Entrega --}}
+        <p style="margin: 1px 0; font-weight: bold;">F.:{{ $conf['venta_id'] }} | {{ $conf['tipo_entrega'] === 'COMPLETA' ? '✅ Completa' : '⚠️ Con Novedad' }}</p>
+
+        {{-- Tipo Novedad si aplica --}}
+        @if($conf['tipo_novedad'])
+        <p style="margin: 1px 0; padding-left: 5px;">{{ $conf['tipo_novedad'] }}</p>
+        @endif
+
+        {{-- Productos devueltos si aplica --}}
+        @if($conf['tipo_novedad'] === 'DEVOLUCION_PARCIAL' && $conf['productos_devueltos'] && count($conf['productos_devueltos']) > 0)
+        <div style="margin: 2px 0; padding: 2px; background-color: #f5f5f5; border-left: 2px solid #ff9800;">
+            <p style="margin: 1px 0; font-weight: bold; font-size: 10px;">Productos Devueltos:</p>
+            @foreach($conf['productos_devueltos'] as $prod)
+            <p style="margin: 0px 0; padding-left: 5px; font-size: 10px;">
+                • {{ substr($prod['producto_nombre'] ?? 'N/A', 0, 20) }} x{{ $prod['cantidad'] ?? 0 }} = {{ number_format($prod['subtotal'] ?? 0, 2) }}
+            </p>
+            @endforeach
+            <p style="margin: 1px 0; padding-left: 5px; font-weight: bold; font-size: 10px;">
+                Total Dev: {{ number_format($conf['monto_devuelto'], 2) }}
+            </p>
+        </div>
+        @endif
+    </div>
+    @endforeach
+
+    <div class="separador"></div>
+    @endif
+
     {{-- ✅ NUEVA 2026-02-12: RESUMEN DE PAGOS --}}
     @if($resumen_pagos)
     <p style="font-weight: bold; text-align: center; margin: 3px 0;">💳 RESUMEN DE PAGOS</p>

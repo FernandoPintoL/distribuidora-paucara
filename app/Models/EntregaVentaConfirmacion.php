@@ -12,8 +12,8 @@ class EntregaVentaConfirmacion extends Model
     protected $fillable = [
         'entrega_id',
         'venta_id',
-        'tipo_entrega',        // ✅ NUEVO: COMPLETA o NOVEDAD
-        'tipo_novedad',        // ✅ NUEVO: CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADO
+        'tipo_entrega',        // ✅ NUEVO: COMPLETA o CON_NOVEDAD
+        'tipo_novedad',        // ✅ NUEVO: CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADA, NO_CONTACTADO
         'tuvo_problema',       // ✅ NUEVO: Flag para reportes
         'firma_digital_url',
         'fotos',

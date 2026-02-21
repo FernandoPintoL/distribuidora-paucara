@@ -1,21 +1,18 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
+use App\Events\ProformaCreada;
+use App\Events\ProformaRechazada;
 use App\Http\Controllers\Controller;
+use App\Models\AperturaCaja;
+use App\Models\CierreCaja;
 use App\Models\Cliente;
 use App\Models\Producto;
 use App\Models\Proforma;
-use App\Models\AperturaCaja;
-use App\Models\CierreCaja;
-use App\Events\ProformaCreada;
-use App\Events\ProformaAprobada;
-use App\Events\ProformaRechazada;
-use App\Events\ProformaConvertida;
-use App\Services\Venta\PrecioRangoProductoService;
+use App\Services\ComboStockService;
 use App\Services\Reservas\ReservaDistribucionService;
-use App\Services\ComboStockService; // ✅ CORREGIDO: namespace correcto
-use App\Services\Stock\StockService;
+use App\Services\Stock\StockService; // ✅ CORREGIDO: namespace correcto
+use App\Services\Venta\PrecioRangoProductoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,12 +29,12 @@ class ApiProformaController extends Controller
         $requestData = $request->all();
 
         // NUEVO: Normalizar tipo_entrega (default: DELIVERY si no viene)
-        if (!isset($requestData['tipo_entrega'])) {
+        if (! isset($requestData['tipo_entrega'])) {
             $requestData['tipo_entrega'] = 'DELIVERY';
         }
 
         // Si viene fecha_programada (timestamp ISO8601), convertir a fecha
-        if ($request->filled('fecha_programada') && !$request->filled('fecha_entrega_solicitada')) {
+        if ($request->filled('fecha_programada') && ! $request->filled('fecha_entrega_solicitada')) {
             try {
                 $requestData['fecha_entrega_solicitada'] = \Carbon\Carbon::parse($request->fecha_programada)->format('Y-m-d');
             } catch (\Exception $e) {
@@ -49,33 +46,33 @@ class ApiProformaController extends Controller
         }
 
         // Si viene hora_inicio_preferida, usar como hora_entrega_solicitada
-        if ($request->filled('hora_inicio_preferida') && !$request->filled('hora_entrega_solicitada')) {
+        if ($request->filled('hora_inicio_preferida') && ! $request->filled('hora_entrega_solicitada')) {
             $requestData['hora_entrega_solicitada'] = $request->hora_inicio_preferida;
         }
 
         // Si viene hora_fin_preferida, usar como hora_entrega_solicitada_fin
-        if ($request->filled('hora_fin_preferida') && !$request->filled('hora_entrega_solicitada_fin')) {
+        if ($request->filled('hora_fin_preferida') && ! $request->filled('hora_entrega_solicitada_fin')) {
             $requestData['hora_entrega_solicitada_fin'] = $request->hora_fin_preferida;
         }
 
         // ✅ NUEVO: Normalizar política de pago (default: CONTRA_ENTREGA)
-        if (!isset($requestData['politica_pago'])) {
+        if (! isset($requestData['politica_pago'])) {
             $requestData['politica_pago'] = 'CONTRA_ENTREGA';
         }
 
         $validator = Validator::make($requestData, [
-            'cliente_id' => 'required|exists:clientes,id',
-            'productos' => 'required|array|min:1',
-            'productos.*.producto_id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|numeric|min:1',
+            'cliente_id'                      => 'required|exists:clientes,id',
+            'productos'                       => 'required|array|min:1',
+            'productos.*.producto_id'         => 'required|exists:productos,id',
+            'productos.*.cantidad'            => 'required|numeric|min:1',
             // NUEVO: tipo_entrega es requerido
-            'tipo_entrega' => 'required|in:DELIVERY,PICKUP',
+            'tipo_entrega'                    => 'required|in:DELIVERY,PICKUP',
             // ✅ NUEVO: Validación de política de pago
-            'politica_pago' => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
+            'politica_pago'                   => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
             // Solicitud de entrega del cliente (REQUERIDO)
-            'fecha_entrega_solicitada' => 'required|date|after_or_equal:today',
-            'hora_entrega_solicitada' => 'nullable|date_format:H:i',
-            'hora_entrega_solicitada_fin' => 'nullable|date_format:H:i',
+            'fecha_entrega_solicitada'        => 'required|date|after_or_equal:today',
+            'hora_entrega_solicitada'         => 'nullable|date_format:H:i',
+            'hora_entrega_solicitada_fin'     => 'nullable|date_format:H:i',
             // MODIFICADO: Dirección solo requerida para DELIVERY
             'direccion_entrega_solicitada_id' => 'required_if:tipo_entrega,DELIVERY|nullable|exists:direcciones_cliente,id',
         ]);
@@ -84,19 +81,19 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
         // Usar datos normalizados
-        $fechaEntrega = $requestData['fecha_entrega_solicitada'] ?? null;
-        $horaEntrega = $requestData['hora_entrega_solicitada'] ?? null;
+        $fechaEntrega   = $requestData['fecha_entrega_solicitada'] ?? null;
+        $horaEntrega    = $requestData['hora_entrega_solicitada'] ?? null;
         $horaEntregaFin = $requestData['hora_entrega_solicitada_fin'] ?? null;
 
         // MODIFICADO: Validación condicional de dirección según tipo_entrega
         if ($requestData['tipo_entrega'] === 'DELIVERY') {
             // Para DELIVERY, la dirección es OBLIGATORIA
-            if (!$request->filled('direccion_entrega_solicitada_id')) {
+            if (! $request->filled('direccion_entrega_solicitada_id')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'La dirección de entrega es requerida para pedidos de tipo DELIVERY',
@@ -121,14 +118,14 @@ class ApiProformaController extends Controller
 
             // ✅ NUEVO: Validar política de pago (si es CREDITO, validar permisos del cliente)
             if ($requestData['politica_pago'] === 'CREDITO') {
-                if (!$cliente->puede_tener_credito) {
+                if (! $cliente->puede_tener_credito) {
                     return response()->json([
                         'success' => false,
                         'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
                     ], 422);
                 }
 
-                if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                if (! $cliente->limite_credito || $cliente->limite_credito <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
@@ -136,24 +133,24 @@ class ApiProformaController extends Controller
                 }
             }
 
-            // ✅ Obtener el usuario autenticado que está creando la proforma
-            // IMPORTANTE: usuario_creador_id debe ser el usuario autenticado ACTUAL, no el user_id del cliente
+                                          // ✅ Obtener el usuario autenticado que está creando la proforma
+                                          // IMPORTANTE: usuario_creador_id debe ser el usuario autenticado ACTUAL, no el user_id del cliente
             $usuarioCreador = Auth::id(); // El usuario que CREA la proforma (quien hace la solicitud API)
 
             // ✅ NUEVO: Instanciar servicio de precios con rangos
             $precioRangoService = app(PrecioRangoProductoService::class);
-            $empresaId = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
+            $empresaId          = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
 
             // Calcular totales y verificar stock
-            $subtotal = 0;
+            $subtotal           = 0;
             $productosValidados = [];
-            $stockInsuficiente = [];
-            $detallesConRangos = [];
+            $stockInsuficiente  = [];
+            $detallesConRangos  = [];
 
             // ✅ NUEVO (2026-02-20): Instanciar servicios de stock para validar combos
             $comboStockService = app(ComboStockService::class);
-            $stockService = app(StockService::class);
-            $almacenId = auth()->user()->almacen_id ?? 1; // Usar almacén del usuario autenticado
+            $stockService      = app(StockService::class);
+            $almacenId         = auth()->user()->almacen_id ?? 1; // Usar almacén del usuario autenticado
 
             foreach ($requestData['productos'] as $item) {
                 $producto = Producto::with('stock')->findOrFail($item['producto_id']);
@@ -161,7 +158,7 @@ class ApiProformaController extends Controller
                 $cantidad = (float) $item['cantidad'];
 
                 // ✅ NUEVO (2026-02-16): Validar que solo productos fraccionados pueden tener decimales
-                if (!$producto->es_fraccionado && (float)$cantidad != floor((float)$cantidad)) {
+                if (! $producto->es_fraccionado && (float) $cantidad != floor((float) $cantidad)) {
                     return response()->json([
                         'success' => false,
                         'message' => "El producto '{$producto->nombre}' no permite cantidades fraccionadas. Solo se pueden vender unidades completas.",
@@ -172,7 +169,7 @@ class ApiProformaController extends Controller
                 // El precio NO viene del cliente, se calcula en backend por seguridad
                 $precioUnitario = $producto->obtenerPrecioConRango($cantidad, $empresaId);
 
-                if (!$precioUnitario || $precioUnitario <= 0) {
+                if (! $precioUnitario || $precioUnitario <= 0) {
                     throw new \Exception("El producto {$producto->nombre} no tiene precio definido para esta cantidad");
                 }
 
@@ -182,28 +179,28 @@ class ApiProformaController extends Controller
                 // ✅ NUEVO (2026-02-20): Validar stock considerando si es COMBO o PRODUCTO SIMPLE
                 if ($producto->es_combo) {
                     // Para COMBOS: Validar capacidad usando ComboStockService
-                    $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
+                    $capacidad           = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
                     $capacidadDisponible = $capacidad['capacidad'] ?? 0;
 
                     if ($capacidadDisponible < $cantidad) {
                         $stockInsuficiente[] = [
-                            'producto' => $producto->nombre . ' (COMBO)',
-                            'requerido' => $cantidad . ' ' . ($cantidad == 1 ? 'combo' : 'combos'),
+                            'producto'   => $producto->nombre . ' (COMBO)',
+                            'requerido'  => $cantidad . ' ' . ($cantidad == 1 ? 'combo' : 'combos'),
                             'disponible' => $capacidadDisponible . ' ' . ($capacidadDisponible == 1 ? 'combo' : 'combos'),
-                            'faltante' => $cantidad - $capacidadDisponible,
-                            'detalles' => [
+                            'faltante'   => $cantidad - $capacidadDisponible,
+                            'detalles'   => [
                                 'cuello_botella' => $capacidad['cuello_botella'] ?? null,
-                                'componentes' => $capacidad['componentes'] ?? [],
+                                'componentes'    => $capacidad['componentes'] ?? [],
                             ],
                         ];
                     }
 
                     \Log::info('✅ Validación de COMBO exitosa', [
-                        'producto_id' => $producto->id,
-                        'nombre' => $producto->nombre,
-                        'combos_requeridos' => $cantidad,
+                        'producto_id'          => $producto->id,
+                        'nombre'               => $producto->nombre,
+                        'combos_requeridos'    => $cantidad,
                         'capacidad_disponible' => $capacidadDisponible,
-                        'cuello_botella' => $capacidad['cuello_botella'] ?? null,
+                        'cuello_botella'       => $capacidad['cuello_botella'] ?? null,
                     ]);
                 } else {
                     // Para PRODUCTOS SIMPLES: Validar stock disponible
@@ -211,29 +208,29 @@ class ApiProformaController extends Controller
 
                     if ($stockDisponible < $cantidad) {
                         $stockInsuficiente[] = [
-                            'producto' => $producto->nombre,
-                            'requerido' => $cantidad,
+                            'producto'   => $producto->nombre,
+                            'requerido'  => $cantidad,
                             'disponible' => $stockDisponible,
-                            'faltante' => $cantidad - $stockDisponible,
+                            'faltante'   => $cantidad - $stockDisponible,
                         ];
                     }
 
                     \Log::info('✅ Validación de PRODUCTO SIMPLE exitosa', [
-                        'producto_id' => $producto->id,
-                        'nombre' => $producto->nombre,
+                        'producto_id'        => $producto->id,
+                        'nombre'             => $producto->nombre,
                         'cantidad_requerida' => $cantidad,
-                        'stock_disponible' => $stockDisponible,
+                        'stock_disponible'   => $stockDisponible,
                     ]);
                 }
 
                 $subtotalItem = $cantidad * $precioUnitario;
-                $subtotal += $subtotalItem;
+                $subtotal     += $subtotalItem;
 
                 // ✅ ACTUALIZADO (2026-02-20): Procesar combo_items_seleccionados desde Flutter
                 $comboItemsSeleccionados = null;
                 if (isset($item['combo_items_seleccionados']) && is_array($item['combo_items_seleccionados'])) {
                     // Los items ya vienen seleccionados desde la app (sin necesidad de filtro)
-                    $comboItemsSeleccionados = array_map(function($itemCombo) {
+                    $comboItemsSeleccionados = array_map(function ($itemCombo) {
                         // ✅ CORREGIDO: Procesar cantidad (puede ser int o float)
                         $cantidad = $itemCombo['cantidad'] ?? 1;
                         if (is_string($cantidad)) {
@@ -242,25 +239,25 @@ class ApiProformaController extends Controller
 
                         return [
                             'combo_item_id' => $itemCombo['combo_item_id'] ?? null,
-                            'producto_id' => $itemCombo['producto_id'] ?? null,
-                            'cantidad' => $cantidad,
+                            'producto_id'   => $itemCombo['producto_id'] ?? null,
+                            'cantidad'      => $cantidad,
                         ];
                     }, $item['combo_items_seleccionados']);
 
                     \Log::info('✅ Combo items procesados desde Flutter', [
                         'cantidad_items' => count($comboItemsSeleccionados),
-                        'items' => $comboItemsSeleccionados,
+                        'items'          => $comboItemsSeleccionados,
                     ]);
                 }
 
                 $productosValidados[] = [
-                    'producto_id' => $producto->id,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precioUnitario,
-                    'subtotal' => $subtotalItem,
-                    'tipo_precio_id' => $item['tipo_precio_id'] ?? null,                    // ✅ NUEVO (2026-02-16)
-                    'tipo_precio_nombre' => $item['tipo_precio_nombre'] ?? null,            // ✅ NUEVO (2026-02-16)
-                    'combo_items_seleccionados' => $comboItemsSeleccionados,               // ✅ NUEVO (2026-02-16)
+                    'producto_id'               => $producto->id,
+                    'cantidad'                  => $cantidad,
+                    'precio_unitario'           => $precioUnitario,
+                    'subtotal'                  => $subtotalItem,
+                    'tipo_precio_id'            => $item['tipo_precio_id'] ?? null,     // ✅ NUEVO (2026-02-16)
+                    'tipo_precio_nombre'        => $item['tipo_precio_nombre'] ?? null, // ✅ NUEVO (2026-02-16)
+                    'combo_items_seleccionados' => $comboItemsSeleccionados,            // ✅ NUEVO (2026-02-16)
                 ];
 
                 // ✅ Guardar detalles del rango para auditoría
@@ -272,38 +269,38 @@ class ApiProformaController extends Controller
             // Si hay productos con stock insuficiente, retornar error
             if (! empty($stockInsuficiente)) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Stock insuficiente para algunos productos',
+                    'success'             => false,
+                    'message'             => 'Stock insuficiente para algunos productos',
                     'productos_sin_stock' => $stockInsuficiente,
                 ], 422);
             }
 
             // Calcular impuestos (13% IVA) - Por ahora no se suma al total
             $impuesto = $subtotal * 0.13;
-            $total = $subtotal; // Sin impuestos por ahora
+            $total    = $subtotal; // Sin impuestos por ahora
 
             // Crear proforma con solicitud de entrega del cliente
             $proforma = Proforma::create([
-                'numero' => Proforma::generarNumeroProforma(),
-                'fecha' => now(),
-                'fecha_vencimiento' => now()->addDays(7),
-                'cliente_id' => $requestData['cliente_id'],
-                'estado_proforma_id' => 1, // ID del estado PENDIENTE en estados_logistica
-                'canal_origen' => Proforma::CANAL_APP_EXTERNA,
-                'tipo_entrega' => $requestData['tipo_entrega'], // NUEVO: DELIVERY o PICKUP
-                'subtotal' => $subtotal,
-                'impuesto' => $impuesto,
-                'total' => $total,
-                'moneda_id' => 1, // Bolivianos por defecto
-                // Usuario creador: el usuario asociado al cliente
-                // IMPORTANTE: esto es user_id, NO cliente_id
-                'usuario_creador_id' => $usuarioCreador,
+                'numero'                          => Proforma::generarNumeroProforma(),
+                'fecha'                           => now(),
+                'fecha_vencimiento'               => now()->addDays(7),
+                'cliente_id'                      => $requestData['cliente_id'],
+                'estado_proforma_id'              => 1, // ID del estado PENDIENTE en estados_logistica
+                'canal_origen'                    => Proforma::CANAL_APP_EXTERNA,
+                'tipo_entrega'                    => $requestData['tipo_entrega'], // NUEVO: DELIVERY o PICKUP
+                'subtotal'                        => $subtotal,
+                'impuesto'                        => $impuesto,
+                'total'                           => $total,
+                'moneda_id'                       => 1, // Bolivianos por defecto
+                                                        // Usuario creador: el usuario asociado al cliente
+                                                        // IMPORTANTE: esto es user_id, NO cliente_id
+                'usuario_creador_id'              => $usuarioCreador,
                 // ✅ NUEVO: Política de pago
-                'politica_pago' => $requestData['politica_pago'],
+                'politica_pago'                   => $requestData['politica_pago'],
                 // Solicitud de entrega del cliente (usa campos normalizados)
-                'fecha_entrega_solicitada' => $fechaEntrega,
-                'hora_entrega_solicitada' => $horaEntrega,
-                'hora_entrega_solicitada_fin' => $horaEntregaFin,
+                'fecha_entrega_solicitada'        => $fechaEntrega,
+                'hora_entrega_solicitada'         => $horaEntrega,
+                'hora_entrega_solicitada_fin'     => $horaEntregaFin,
                 // MODIFICADO: Dirección solo para DELIVERY (null para PICKUP)
                 'direccion_entrega_solicitada_id' => $requestData['tipo_entrega'] === 'DELIVERY'
                     ? $requestData['direccion_entrega_solicitada_id']
@@ -318,7 +315,7 @@ class ApiProformaController extends Controller
             // ✅ RESERVAR STOCK AHORA que los detalles existen
             try {
                 $reservaExitosa = $proforma->reservarStock();
-                if (!$reservaExitosa) {
+                if (! $reservaExitosa) {
                     Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
                 }
             } catch (\Exception $reservaException) {
@@ -326,20 +323,20 @@ class ApiProformaController extends Controller
                 DB::rollBack();
 
                 // Parsear el mensaje de error para extraer producto_id si existe
-                $errorMsg = $reservaException->getMessage();
+                $errorMsg        = $reservaException->getMessage();
                 $productoFallido = null;
-                $detalleError = null;
+                $detalleError    = null;
 
                 // Buscar en los detalles expandidos cual producto falló
                 if (preg_match('/producto_id[\'"]?\s*[:\s=>]+\s*(\d+)/', $errorMsg, $matches)) {
                     $productoFallidoId = (int) $matches[1];
-                    $productoFallido = Producto::find($productoFallidoId);
+                    $productoFallido   = Producto::find($productoFallidoId);
                 } elseif (preg_match('/Stock insuficiente.*Disponible:\s*(\d+).*Solicitado:\s*(\d+)/', $errorMsg, $matches)) {
                     // Tomar el primer producto que falló en los detalles
                     foreach ($proforma->detalles as $detalle) {
-                        if (!$detalle->producto->es_combo) {
+                        if (! $detalle->producto->es_combo) {
                             $productoFallido = $detalle->producto;
-                            $detalleError = [
+                            $detalleError    = [
                                 'disponible' => (int) $matches[1],
                                 'solicitado' => (int) $matches[2],
                             ];
@@ -349,23 +346,23 @@ class ApiProformaController extends Controller
                 }
 
                 // Si no encontramos qué producto, buscar en los detalles
-                if (!$productoFallido && $proforma->detalles->count() > 0) {
+                if (! $productoFallido && $proforma->detalles->count() > 0) {
                     $productoFallido = $proforma->detalles->first()->producto;
                 }
 
                 return response()->json([
-                    'success' => false,
-                    'message' => 'No hay suficiente stock disponible para completar su pedido',
-                    'tipo_error' => 'STOCK_INSUFICIENTE',
+                    'success'        => false,
+                    'message'        => 'No hay suficiente stock disponible para completar su pedido',
+                    'tipo_error'     => 'STOCK_INSUFICIENTE',
                     'detalles_error' => [
-                        'producto' => $productoFallido ? [
-                            'id' => $productoFallido->id,
+                        'producto'      => $productoFallido ? [
+                            'id'     => $productoFallido->id,
                             'nombre' => $productoFallido->nombre,
                         ] : null,
-                        'stock_info' => $detalleError,
+                        'stock_info'    => $detalleError,
                         'error_tecnico' => $errorMsg,
                     ],
-                    'sugerencia' => 'Por favor, ajusta las cantidades o contacta al equipo de ventas para conocer disponibilidad.',
+                    'sugerencia'     => 'Por favor, ajusta las cantidades o contacta al equipo de ventas para conocer disponibilidad.',
                 ], 422);
             }
 
@@ -381,15 +378,15 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma creada exitosamente. Será revisada por nuestro equipo.',
-                'data' => [
-                    'proforma' => $proforma,
-                    'numero' => $proforma->numero,
-                    'total' => $proforma->total,
-                    'estado' => $proforma->estado,
-                    'politica_pago' => $proforma->politica_pago,  // ✅ Incluir política de pago en respuesta
-                    'detalles_rangos' => $detallesConRangos,  // ✅ Información de rangos aplicados
-                    'subtotal' => $subtotal,
-                    'impuesto' => $impuesto,
+                'data'    => [
+                    'proforma'        => $proforma,
+                    'numero'          => $proforma->numero,
+                    'total'           => $proforma->total,
+                    'estado'          => $proforma->estado,
+                    'politica_pago'   => $proforma->politica_pago, // ✅ Incluir política de pago en respuesta
+                    'detalles_rangos' => $detallesConRangos,       // ✅ Información de rangos aplicados
+                    'subtotal'        => $subtotal,
+                    'impuesto'        => $impuesto,
                 ],
             ], 201);
 
@@ -399,7 +396,7 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error creando proforma',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -415,17 +412,17 @@ class ApiProformaController extends Controller
         }
 
         $proforma->load([
-            'detalles.producto.imagenes',  // ✅ AGREGADO: Cargar imágenes del producto
-            'cliente.localidad',  // ✅ ACTUALIZADO: Cargar localidad del cliente
+            'detalles.producto.imagenes', // ✅ AGREGADO: Cargar imágenes del producto
+            'cliente.localidad',          // ✅ ACTUALIZADO: Cargar localidad del cliente
             'usuarioCreador',
             'usuarioAprobador',
-            'estadoLogistica',  // ✅ AGREGADO: Cargar relación de estado
-            'venta'  // ✅ NUEVO: Cargar venta relacionada (cuando está CONVERTIDA)
+            'estadoLogistica', // ✅ AGREGADO: Cargar relación de estado
+            'venta',           // ✅ NUEVO: Cargar venta relacionada (cuando está CONVERTIDA)
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $proforma,
+            'data'    => $proforma,
         ]);
     }
 
@@ -452,12 +449,12 @@ class ApiProformaController extends Controller
         $requestData = $request->all();
 
         // Normalizar tipo_entrega (default: DELIVERY si no viene)
-        if (!isset($requestData['tipo_entrega'])) {
+        if (! isset($requestData['tipo_entrega'])) {
             $requestData['tipo_entrega'] = $proforma->tipo_entrega ?? 'DELIVERY';
         }
 
         // Si viene fecha_programada, convertir a fecha_entrega_solicitada
-        if ($request->filled('fecha_programada') && !$request->filled('fecha_entrega_solicitada')) {
+        if ($request->filled('fecha_programada') && ! $request->filled('fecha_entrega_solicitada')) {
             try {
                 $requestData['fecha_entrega_solicitada'] = \Carbon\Carbon::parse($request->fecha_programada)->format('Y-m-d');
             } catch (\Exception $e) {
@@ -469,39 +466,39 @@ class ApiProformaController extends Controller
         }
 
         // Si viene hora_inicio_preferida
-        if ($request->filled('hora_inicio_preferida') && !$request->filled('hora_entrega_solicitada')) {
+        if ($request->filled('hora_inicio_preferida') && ! $request->filled('hora_entrega_solicitada')) {
             $requestData['hora_entrega_solicitada'] = $request->hora_inicio_preferida;
         }
 
         // Si viene hora_fin_preferida
-        if ($request->filled('hora_fin_preferida') && !$request->filled('hora_entrega_solicitada_fin')) {
+        if ($request->filled('hora_fin_preferida') && ! $request->filled('hora_entrega_solicitada_fin')) {
             $requestData['hora_entrega_solicitada_fin'] = $request->hora_fin_preferida;
         }
 
         // Normalizar política de pago
-        if (!isset($requestData['politica_pago'])) {
+        if (! isset($requestData['politica_pago'])) {
             $requestData['politica_pago'] = $proforma->politica_pago ?? 'CONTRA_ENTREGA';
         }
 
         $validator = Validator::make($requestData, [
-            'cliente_id' => 'sometimes|exists:clientes,id',
-            'productos' => 'sometimes|array|min:1',
-            'productos.*.producto_id' => 'required_with:productos|exists:productos,id',
-            'productos.*.cantidad' => 'required_with:productos|numeric|min:1',
-            'tipo_entrega' => 'sometimes|in:DELIVERY,PICKUP',
-            'politica_pago' => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
-            'fecha_entrega_solicitada' => 'sometimes|date',
-            'hora_entrega_solicitada' => 'nullable|date_format:H:i',
-            'hora_entrega_solicitada_fin' => 'nullable|date_format:H:i',
+            'cliente_id'                      => 'sometimes|exists:clientes,id',
+            'productos'                       => 'sometimes|array|min:1',
+            'productos.*.producto_id'         => 'required_with:productos|exists:productos,id',
+            'productos.*.cantidad'            => 'required_with:productos|numeric|min:1',
+            'tipo_entrega'                    => 'sometimes|in:DELIVERY,PICKUP',
+            'politica_pago'                   => 'sometimes|string|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
+            'fecha_entrega_solicitada'        => 'sometimes|date',
+            'hora_entrega_solicitada'         => 'nullable|date_format:H:i',
+            'hora_entrega_solicitada_fin'     => 'nullable|date_format:H:i',
             'direccion_entrega_solicitada_id' => 'required_if:tipo_entrega,DELIVERY|nullable|exists:direcciones_cliente,id',
-            'observaciones' => 'nullable|string|max:1000',
+            'observaciones'                   => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
@@ -509,18 +506,18 @@ class ApiProformaController extends Controller
         try {
             // Obtener el cliente (puede ser el mismo o uno nuevo)
             $clienteId = $requestData['cliente_id'] ?? $proforma->cliente_id;
-            $cliente = Cliente::findOrFail($clienteId);
+            $cliente   = Cliente::findOrFail($clienteId);
 
             // Validar política de pago si es CREDITO
             if ($requestData['politica_pago'] === 'CREDITO') {
-                if (!$cliente->puede_tener_credito) {
+                if (! $cliente->puede_tener_credito) {
                     return response()->json([
                         'success' => false,
                         'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
                     ], 422);
                 }
 
-                if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                if (! $cliente->limite_credito || $cliente->limite_credito <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
@@ -530,7 +527,7 @@ class ApiProformaController extends Controller
 
             // Validación condicional de dirección según tipo_entrega
             if ($requestData['tipo_entrega'] === 'DELIVERY') {
-                if (!$request->filled('direccion_entrega_solicitada_id')) {
+                if (! $request->filled('direccion_entrega_solicitada_id')) {
                     return response()->json([
                         'success' => false,
                         'message' => 'La dirección de entrega es requerida para pedidos de tipo DELIVERY',
@@ -549,12 +546,12 @@ class ApiProformaController extends Controller
 
             // Servicio de precios con rangos
             $precioRangoService = app(PrecioRangoProductoService::class);
-            $empresaId = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
+            $empresaId          = $cliente->empresa_id ?? auth()->user()->empresa_id ?? 1;
 
             // Calcular totales con los nuevos productos
-            $subtotal = 0;
+            $subtotal           = 0;
             $productosValidados = [];
-            $stockInsuficiente = [];
+            $stockInsuficiente  = [];
 
             if ($request->filled('productos')) {
                 foreach ($requestData['productos'] as $item) {
@@ -564,7 +561,7 @@ class ApiProformaController extends Controller
                     // Calcular precio con rangos
                     $precioUnitario = $producto->obtenerPrecioConRango($cantidad, $empresaId);
 
-                    if (!$precioUnitario || $precioUnitario <= 0) {
+                    if (! $precioUnitario || $precioUnitario <= 0) {
                         throw new \Exception("El producto {$producto->nombre} no tiene precio definido para esta cantidad");
                     }
 
@@ -579,64 +576,64 @@ class ApiProformaController extends Controller
 
                     if ($stockDisponible < $cantidad) {
                         $stockInsuficiente[] = [
-                            'producto' => $producto->nombre,
-                            'requerido' => $cantidad,
+                            'producto'   => $producto->nombre,
+                            'requerido'  => $cantidad,
                             'disponible' => $stockDisponible,
-                            'faltante' => $cantidad - $stockDisponible,
+                            'faltante'   => $cantidad - $stockDisponible,
                         ];
                     }
 
                     $subtotalItem = $cantidad * $precioUnitario;
-                    $subtotal += $subtotalItem;
+                    $subtotal     += $subtotalItem;
 
                     // ✅ NUEVO (2026-02-16): Procesar combo_items_seleccionados
-                    $comboItemsSeleccionados = null;
+                    $comboItemsSeleccionados  = null;
                     if (isset($item['combo_items_seleccionados']) && is_array($item['combo_items_seleccionados'])) {
                         // Filtrar solo items que están incluidos (incluido = true)
-                        $comboItemsSeleccionados = array_filter($item['combo_items_seleccionados'], function($itemCombo) {
+                        $comboItemsSeleccionados = array_filter($item['combo_items_seleccionados'], function ($itemCombo) {
                             return ($itemCombo['incluido'] ?? false) === true;
                         });
                         // Reindexar array después de filter
                         $comboItemsSeleccionados = array_values($comboItemsSeleccionados);
                         // Mapear a formato estándar
-                        $comboItemsSeleccionados = array_map(function($itemCombo) {
+                        $comboItemsSeleccionados = array_map(function ($itemCombo) {
                             return [
                                 'combo_item_id' => $itemCombo['combo_item_id'] ?? null,
-                                'producto_id' => $itemCombo['producto_id'] ?? null,
-                                'incluido' => $itemCombo['incluido'] ?? false,
+                                'producto_id'   => $itemCombo['producto_id'] ?? null,
+                                'incluido'      => $itemCombo['incluido'] ?? false,
                             ];
                         }, $comboItemsSeleccionados);
                     }
 
                     $productosValidados[] = [
-                        'producto_id' => $producto->id,
-                        'cantidad' => $cantidad,
-                        'precio_unitario' => $precioUnitario,
-                        'subtotal' => $subtotalItem,
-                        'tipo_precio_id' => $item['tipo_precio_id'] ?? null,                    // ✅ NUEVO (2026-02-16)
-                        'tipo_precio_nombre' => $item['tipo_precio_nombre'] ?? null,            // ✅ NUEVO (2026-02-16)
-                        'combo_items_seleccionados' => $comboItemsSeleccionados,               // ✅ NUEVO (2026-02-16)
+                        'producto_id'               => $producto->id,
+                        'cantidad'                  => $cantidad,
+                        'precio_unitario'           => $precioUnitario,
+                        'subtotal'                  => $subtotalItem,
+                        'tipo_precio_id'            => $item['tipo_precio_id'] ?? null,     // ✅ NUEVO (2026-02-16)
+                        'tipo_precio_nombre'        => $item['tipo_precio_nombre'] ?? null, // ✅ NUEVO (2026-02-16)
+                        'combo_items_seleccionados' => $comboItemsSeleccionados,            // ✅ NUEVO (2026-02-16)
                     ];
                 }
 
-                if (!empty($stockInsuficiente)) {
+                if (! empty($stockInsuficiente)) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Stock insuficiente para algunos productos',
+                        'success'             => false,
+                        'message'             => 'Stock insuficiente para algunos productos',
                         'productos_sin_stock' => $stockInsuficiente,
                     ], 422);
                 }
             } else {
                 // Si no vienen productos, mantener los existentes
                 foreach ($proforma->detalles as $detalle) {
-                    $subtotal += $detalle->subtotal;
-                    $productosValidados[] = [
-                        'producto_id' => $detalle->producto_id,
-                        'cantidad' => $detalle->cantidad,
-                        'precio_unitario' => $detalle->precio_unitario,
-                        'subtotal' => $detalle->subtotal,
-                        'tipo_precio_id' => $detalle->tipo_precio_id,                        // ✅ PRESERVAR (2026-02-16)
-                        'tipo_precio_nombre' => $detalle->tipo_precio_nombre,                // ✅ PRESERVAR (2026-02-16)
+                    $subtotal             += $detalle->subtotal;
+                    $productosValidados[]  = [
+                        'producto_id'               => $detalle->producto_id,
+                        'cantidad'                  => $detalle->cantidad,
+                        'precio_unitario'           => $detalle->precio_unitario,
+                        'subtotal'                  => $detalle->subtotal,
+                        'tipo_precio_id'            => $detalle->tipo_precio_id,            // ✅ PRESERVAR (2026-02-16)
+                        'tipo_precio_nombre'        => $detalle->tipo_precio_nombre,        // ✅ PRESERVAR (2026-02-16)
                         'combo_items_seleccionados' => $detalle->combo_items_seleccionados, // ✅ PRESERVAR (2026-02-16)
                     ];
                 }
@@ -644,15 +641,15 @@ class ApiProformaController extends Controller
 
             // Calcular impuestos
             $impuesto = $subtotal * 0.13;
-            $total = $subtotal;
+            $total    = $subtotal;
 
             // Actualizar campos de cabecera
             $proforma->update([
-                'cliente_id' => $clienteId,
-                'tipo_entrega' => $requestData['tipo_entrega'],
-                'subtotal' => $subtotal,
-                'impuesto' => $impuesto,
-                'total' => $total,
+                'cliente_id'    => $clienteId,
+                'tipo_entrega'  => $requestData['tipo_entrega'],
+                'subtotal'      => $subtotal,
+                'impuesto'      => $impuesto,
+                'total'         => $total,
                 'politica_pago' => $requestData['politica_pago'],
                 'observaciones' => $requestData['observaciones'] ?? $proforma->observaciones,
             ]);
@@ -687,7 +684,7 @@ class ApiProformaController extends Controller
                 // Liberar y regenerar reservas de stock
                 $proforma->liberarReservas();
                 $reservaExitosa = $proforma->reservarStock();
-                if (!$reservaExitosa) {
+                if (! $reservaExitosa) {
                     \Log::warning('⚠️  No se pudieron reservar todos los productos para proforma ' . $proforma->numero);
                 }
             }
@@ -700,14 +697,14 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma actualizada exitosamente',
-                'data' => [
-                    'proforma' => $proforma,
-                    'numero' => $proforma->numero,
-                    'total' => $proforma->total,
-                    'estado' => $proforma->estado,
+                'data'    => [
+                    'proforma'      => $proforma,
+                    'numero'        => $proforma->numero,
+                    'total'         => $proforma->total,
+                    'estado'        => $proforma->estado,
                     'politica_pago' => $proforma->politica_pago,
-                    'subtotal' => $subtotal,
-                    'impuesto' => $impuesto,
+                    'subtotal'      => $subtotal,
+                    'impuesto'      => $impuesto,
                 ],
             ], 200);
 
@@ -717,7 +714,7 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error actualizando proforma',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -745,27 +742,27 @@ class ApiProformaController extends Controller
         // ========================================
         // VALIDACIÓN MEJORADA DE AUTENTICACIÓN
         // ========================================
-        if (!$user) {
+        if (! $user) {
             Log::warning('API Index Proformas: No authenticated user found', [
                 'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
-                'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
-                'user_agent' => $request->userAgent(),
-                'client_ip' => $request->ip(),
+                'auth_header'  => $request->header('Authorization') ? 'present' : 'missing',
+                'user_agent'   => $request->userAgent(),
+                'client_ip'    => $request->ip(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'No autenticado. El token de acceso no es válido o ha expirado.',
-                'debug' => [
-                    'token_present' => (bool)$request->bearerToken(),
-                    'auth_method' => auth()->guard(),
+                'debug'   => [
+                    'token_present' => (bool) $request->bearerToken(),
+                    'auth_method'   => auth()->guard(),
                 ],
             ], 401);
         }
 
-        if (!$user->activo) {
+        if (! $user->activo) {
             Log::warning('API Index Proformas: User inactive', [
-                'user_id' => $user->id,
+                'user_id'   => $user->id,
                 'user_name' => $user->name,
             ]);
 
@@ -783,26 +780,37 @@ class ApiProformaController extends Controller
             ->implode(',');
 
         $validator = Validator::make($request->all(), [
-            'estado' => 'nullable|in:' . $estadosValidos,
-            'canal_origen' => 'nullable|string',
-            'fecha_desde' => 'nullable|date',
-            'fecha_hasta' => 'nullable|date|after_or_equal:fecha_desde',
-            // ✅ NUEVO: Validación para filtros de fecha de vencimiento
-            'fecha_vencimiento_desde' => 'nullable|date',
-            'fecha_vencimiento_hasta' => 'nullable|date|after_or_equal:fecha_vencimiento_desde',
-            // ✅ NUEVO: Validación para filtros de fecha de entrega solicitada
+            // Búsqueda
+            'search'                         => 'nullable|string|max:100',
+            // Filtros de estado
+            'estado'                         => 'nullable|in:' . $estadosValidos,
+            'canal_origen'                   => 'nullable|string',
+            // Filtros de cliente y usuario
+            'cliente_id'                     => 'nullable|integer|exists:clientes,id',
+            'usuario_creador_id'             => 'nullable|integer|exists:users,id',
+            // Filtros de fecha
+            'fecha_desde'                    => 'nullable|date',
+            'fecha_hasta'                    => 'nullable|date|after_or_equal:fecha_desde',
+            'fecha_vencimiento_desde'        => 'nullable|date',
+            'fecha_vencimiento_hasta'        => 'nullable|date|after_or_equal:fecha_vencimiento_desde',
             'fecha_entrega_solicitada_desde' => 'nullable|date',
             'fecha_entrega_solicitada_hasta' => 'nullable|date|after_or_equal:fecha_entrega_solicitada_desde',
-            'page' => 'nullable|integer|min:1',
-            'per_page' => 'nullable|integer|min:1|max:100',
-            'format' => 'nullable|in:default,app', // Formato de respuesta
+            // Filtros de monto
+            'total_min'                      => 'nullable|numeric|min:0',
+            'total_max'                      => 'nullable|numeric|min:0',
+            // Filtros de vencimiento
+            'filtro_vencidas'                => 'nullable|in:TODAS,VIGENTES,VENCIDAS',
+            // Paginación
+            'page'                           => 'nullable|integer|min:1',
+            'per_page'                       => 'nullable|integer|min:1|max:100',
+            'format'                         => 'nullable|in:default,app',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Parámetros de filtro incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
@@ -817,11 +825,11 @@ class ApiProformaController extends Controller
         $userRoles = $user->roles->pluck('name')->map(fn($role) => strtolower($role))->toArray();
 
         if (in_array('cliente', $userRoles)) {
-            // CLIENTE: Solo sus propias proformas
-            // Buscar el cliente asociado al usuario autenticado
+                                       // CLIENTE: Solo sus propias proformas
+                                       // Buscar el cliente asociado al usuario autenticado
             $cliente = $user->cliente; // Relación HasOne en el modelo User
 
-            if (!$cliente) {
+            if (! $cliente) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene un cliente asociado',
@@ -829,16 +837,13 @@ class ApiProformaController extends Controller
             }
 
             $query->where('cliente_id', $cliente->id);
-        }
-        elseif (in_array('preventista', $userRoles)) {
+        } elseif (in_array('preventista', $userRoles)) {
             // PREVENTISTA: Solo las proformas que él creó
             $query->where('usuario_creador_id', $user->id);
-        }
-        elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'], $userRoles)) {
+        } elseif (array_intersect(['logistica', 'admin', 'cajero', 'manager', 'encargado', 'chofer'], $userRoles)) {
             // DASHBOARD: Todas las proformas (sin filtro adicional)
             // Opcionalmente se puede filtrar por canal_origen, estado, etc.
-        }
-        else {
+        } else {
             // Usuario sin rol reconocido: sin acceso
             return response()->json([
                 'success' => false,
@@ -897,9 +902,54 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
         }
 
+        // ✅ NUEVO 2026-02-21: Búsqueda general (ID, número, cliente)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('numero', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($q) use ($search) {
+                      $q->whereRaw('LOWER(nombre) like ?', ["%{$search}%"]);
+                  });
+            });
+        }
+
         // Búsqueda por número de proforma
         if ($request->filled('numero')) {
             $query->where('numero', 'like', '%' . $request->numero . '%');
+        }
+
+        // ✅ Filtro por cliente_id
+        if ($request->filled('cliente_id')) {
+            $query->where('cliente_id', $request->cliente_id);
+        }
+
+        // ✅ Filtro por usuario_creador_id
+        if ($request->filled('usuario_creador_id')) {
+            $query->where('usuario_creador_id', $request->usuario_creador_id);
+        }
+
+        // ✅ Filtro por monto mínimo
+        if ($request->filled('total_min')) {
+            $query->where('total', '>=', floatval($request->total_min));
+        }
+
+        // ✅ Filtro por monto máximo
+        if ($request->filled('total_max')) {
+            $query->where('total', '<=', floatval($request->total_max));
+        }
+
+        // ✅ Filtro por proformas vencidas/vigentes
+        if ($request->filled('filtro_vencidas')) {
+            $hoy = now()->startOfDay();
+            if ($request->filtro_vencidas === 'VENCIDAS') {
+                $query->whereDate('fecha_vencimiento', '<', $hoy);
+            } elseif ($request->filtro_vencidas === 'VIGENTES') {
+                $query->where(function ($q) use ($hoy) {
+                    $q->whereDate('fecha_vencimiento', '>=', $hoy)
+                      ->orWhereNull('fecha_vencimiento');
+                });
+            }
         }
 
         // ✅ Búsqueda por cliente (nombre, teléfono, NIT) - case insensitive
@@ -908,8 +958,8 @@ class ApiProformaController extends Controller
             $query->whereHas('cliente', function ($clienteQuery) use ($searchCliente) {
                 $clienteQuery->where(function ($q) use ($searchCliente) {
                     $q->whereRaw('LOWER(nombre) like ?', ["%{$searchCliente}%"])
-                      ->orWhereRaw('LOWER(nit) like ?', ["%{$searchCliente}%"])
-                      ->orWhereRaw('LOWER(telefono) like ?', ["%{$searchCliente}%"]);
+                        ->orWhereRaw('LOWER(nit) like ?', ["%{$searchCliente}%"])
+                        ->orWhereRaw('LOWER(telefono) like ?', ["%{$searchCliente}%"]);
                 });
             });
         }
@@ -935,7 +985,7 @@ class ApiProformaController extends Controller
         // PAGINACIÓN
         // ========================================
 
-        $perPage = min($request->get('per_page', 20), 100);
+        $perPage   = min($request->get('per_page', 20), 100);
         $proformas = $query->paginate($perPage);
 
         // ========================================
@@ -946,40 +996,40 @@ class ApiProformaController extends Controller
         if ($request->format === 'app') {
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'pedidos' => $proformas->map(function ($proforma) {
+                'data'    => [
+                    'pedidos'    => $proformas->map(function ($proforma) {
                         return [
-                            'id' => $proforma->id,
-                            'codigo' => $proforma->numero,
-                            'fecha' => $proforma->fecha?->format('Y-m-d'),
-                            'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                            'id'                       => $proforma->id,
+                            'codigo'                   => $proforma->numero,
+                            'fecha'                    => $proforma->fecha?->format('Y-m-d'),
+                            'fecha_vencimiento'        => $proforma->fecha_vencimiento?->format('Y-m-d'),
                             // ✅ NUEVO: Agregar fecha entrega solicitada
                             'fecha_entrega_solicitada' => $proforma->fecha_entrega_solicitada?->format('Y-m-d'),
-                            'hora_entrega_solicitada' => $proforma->hora_entrega_solicitada,
+                            'hora_entrega_solicitada'  => $proforma->hora_entrega_solicitada,
                             // ✅ MODIFICADO: Devolver objeto estado completo en lugar de solo código
-                            'estado' => $proforma->estadoLogistica ? [
-                                'id' => $proforma->estadoLogistica->id,
-                                'codigo' => $proforma->estadoLogistica->codigo,
-                                'nombre' => $proforma->estadoLogistica->nombre,
-                                'color' => $proforma->estadoLogistica->color,
-                                'icono' => $proforma->estadoLogistica->icono,
+                            'estado'                   => $proforma->estadoLogistica ? [
+                                'id'        => $proforma->estadoLogistica->id,
+                                'codigo'    => $proforma->estadoLogistica->codigo,
+                                'nombre'    => $proforma->estadoLogistica->nombre,
+                                'color'     => $proforma->estadoLogistica->color,
+                                'icono'     => $proforma->estadoLogistica->icono,
                                 'categoria' => $proforma->estadoLogistica->categoria,
                             ] : null,
-                            'total' => (float) $proforma->total,
-                            'moneda' => 'BOB',
+                            'total'                    => (float) $proforma->total,
+                            'moneda'                   => 'BOB',
                             // ✅ NUEVO: Información del cliente
-                            'cliente' => [
-                                'id' => $proforma->cliente->id,
-                                'nombre' => $proforma->cliente->nombre,
+                            'cliente'                  => [
+                                'id'       => $proforma->cliente->id,
+                                'nombre'   => $proforma->cliente->nombre,
                                 'telefono' => $proforma->cliente->telefono,
-                                'nit' => $proforma->cliente->nit,
+                                'nit'      => $proforma->cliente->nit,
                             ],
-                            'cantidad_items' => $proforma->detalles->count(),
-                            'total_productos' => (float) $proforma->detalles->sum('cantidad'),
-                            'tiene_reserva_activa' => $proforma->reservasActivas()->count() > 0,
-                            'observaciones' => $proforma->observaciones,
-                            'observaciones_rechazo' => $proforma->observaciones_rechazo,
-                            'items_preview' => $proforma->detalles->take(3)->map(function ($detalle) {
+                            'cantidad_items'           => $proforma->detalles->count(),
+                            'total_productos'          => (float) $proforma->detalles->sum('cantidad'),
+                            'tiene_reserva_activa'     => $proforma->reservasActivas()->count() > 0,
+                            'observaciones'            => $proforma->observaciones,
+                            'observaciones_rechazo'    => $proforma->observaciones_rechazo,
+                            'items_preview'            => $proforma->detalles->take(3)->map(function ($detalle) {
                                 return [
                                     'producto' => $detalle->producto->nombre ?? 'Producto',
                                     'cantidad' => (float) $detalle->cantidad,
@@ -988,12 +1038,12 @@ class ApiProformaController extends Controller
                         ];
                     }),
                     'paginacion' => [
-                        'total' => $proformas->total(),
-                        'por_pagina' => $proformas->perPage(),
+                        'total'         => $proformas->total(),
+                        'por_pagina'    => $proformas->perPage(),
                         'pagina_actual' => $proformas->currentPage(),
                         'ultima_pagina' => $proformas->lastPage(),
-                        'desde' => $proformas->firstItem(),
-                        'hasta' => $proformas->lastItem(),
+                        'desde'         => $proformas->firstItem(),
+                        'hasta'         => $proformas->lastItem(),
                     ],
                 ],
             ]);
@@ -1004,21 +1054,21 @@ class ApiProformaController extends Controller
         $data = $proformas->map(function ($proforma) {
             $item = $proforma->toArray();
             // Agregar información de venta si está convertida
-            $item['venta_id'] = $proforma->venta?->id;
+            $item['venta_id']     = $proforma->venta?->id;
             $item['venta_numero'] = $proforma->venta?->numero;
             return $item;
         })->toArray();
 
         return response()->json([
             'success' => true,
-            'data' => $data,
-            'meta' => [
+            'data'    => $data,
+            'meta'    => [
                 'current_page' => $proformas->currentPage(),
-                'last_page' => $proformas->lastPage(),
-                'per_page' => $proformas->perPage(),
-                'total' => $proformas->total(),
-                'from' => $proformas->firstItem(),
-                'to' => $proformas->lastItem(),
+                'last_page'    => $proformas->lastPage(),
+                'per_page'     => $proformas->perPage(),
+                'total'        => $proformas->total(),
+                'from'         => $proformas->firstItem(),
+                'to'           => $proformas->lastItem(),
             ],
         ]);
     }
@@ -1038,33 +1088,33 @@ class ApiProformaController extends Controller
         // ========================================
         // VALIDACIÓN MEJORADA DE AUTENTICACIÓN
         // ========================================
-        if (!$user) {
+        if (! $user) {
             // Log detallado para debugging
             Log::warning('API Stats: No authenticated user found', [
                 'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
-                'auth_header' => $request->header('Authorization') ? 'present' : 'missing',
-                'user_agent' => $request->userAgent(),
-                'method' => $request->method(),
-                'path' => $request->path(),
-                'client_ip' => $request->ip(),
-                'timestamp' => now()->toIso8601String(),
+                'auth_header'  => $request->header('Authorization') ? 'present' : 'missing',
+                'user_agent'   => $request->userAgent(),
+                'method'       => $request->method(),
+                'path'         => $request->path(),
+                'client_ip'    => $request->ip(),
+                'timestamp'    => now()->toIso8601String(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'No autenticado. El token de acceso no es válido o ha expirado.',
-                'debug' => [
-                    'token_present' => (bool)$request->bearerToken(),
-                    'auth_method' => auth()->guard(),
-                    'timestamp' => now(),
+                'debug'   => [
+                    'token_present' => (bool) $request->bearerToken(),
+                    'auth_method'   => auth()->guard(),
+                    'timestamp'     => now(),
                 ],
             ], 401);
         }
 
         // Validación adicional: verificar que el usuario está activo
-        if (!$user->activo) {
+        if (! $user->activo) {
             Log::warning('API Stats: User inactive', [
-                'user_id' => $user->id,
+                'user_id'   => $user->id,
                 'user_name' => $user->name,
             ]);
 
@@ -1086,12 +1136,11 @@ class ApiProformaController extends Controller
         // Verificar permisos en orden: admin/logistica primero (mayor prioridad)
         if (array_intersect(['Gestor Logística', 'admin', 'Admin', 'Cajero', 'Manager', 'encargado', 'Chofer'], $userRoles)) {
             // DASHBOARD: Todas las proformas
-        }
-        elseif (in_array('cliente', $userRoles)) {
+        } elseif (in_array('cliente', $userRoles)) {
             // CLIENTE: Solo sus propias proformas
             $cliente = $user->cliente;
 
-            if (!$cliente) {
+            if (! $cliente) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene un cliente asociado',
@@ -1099,12 +1148,10 @@ class ApiProformaController extends Controller
             }
 
             $query->where('cliente_id', $cliente->id);
-        }
-        elseif (in_array('preventista', $userRoles)) {
+        } elseif (in_array('preventista', $userRoles)) {
             // PREVENTISTA: Solo las proformas que él creó
             $query->where('usuario_creador_id', $user->id);
-        }
-        else {
+        } else {
             return response()->json([
                 'success' => false,
                 'message' => 'No tiene permisos para ver estadísticas de proformas',
@@ -1136,7 +1183,7 @@ class ApiProformaController extends Controller
 
             // Obtener IDs de estados PENDIENTE y APROBADA
             $estadoPendiente = Proforma::obtenerIdEstado('PENDIENTE', 'proforma');
-            $estadoAprobada = Proforma::obtenerIdEstado('APROBADA', 'proforma');
+            $estadoAprobada  = Proforma::obtenerIdEstado('APROBADA', 'proforma');
 
             // Construir array de estados válidos (filtrar nulls)
             $estadosActivos = array_filter([$estadoPendiente, $estadoAprobada]);
@@ -1158,54 +1205,54 @@ class ApiProformaController extends Controller
 
             // Obtener IDs de estados para mapeo
             $estadoIds = [
-                'pendiente' => Proforma::obtenerIdEstado('PENDIENTE', 'proforma'),
-                'aprobada' => Proforma::obtenerIdEstado('APROBADA', 'proforma'),
-                'rechazada' => Proforma::obtenerIdEstado('RECHAZADA', 'proforma'),
+                'pendiente'  => Proforma::obtenerIdEstado('PENDIENTE', 'proforma'),
+                'aprobada'   => Proforma::obtenerIdEstado('APROBADA', 'proforma'),
+                'rechazada'  => Proforma::obtenerIdEstado('RECHAZADA', 'proforma'),
                 'convertida' => Proforma::obtenerIdEstado('CONVERTIDA', 'proforma'),
-                'vencida' => Proforma::obtenerIdEstado('VENCIDA', 'proforma'),
+                'vencida'    => Proforma::obtenerIdEstado('VENCIDA', 'proforma'),
             ];
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'total' => $total,
-                    'por_estado' => [
-                        'pendiente' => $porEstado->get($estadoIds['pendiente'])?->cantidad ?? 0,
-                        'aprobada' => $porEstado->get($estadoIds['aprobada'])?->cantidad ?? 0,
-                        'rechazada' => $porEstado->get($estadoIds['rechazada'])?->cantidad ?? 0,
+                'data'    => [
+                    'total'             => $total,
+                    'por_estado'        => [
+                        'pendiente'  => $porEstado->get($estadoIds['pendiente'])?->cantidad ?? 0,
+                        'aprobada'   => $porEstado->get($estadoIds['aprobada'])?->cantidad ?? 0,
+                        'rechazada'  => $porEstado->get($estadoIds['rechazada'])?->cantidad ?? 0,
                         'convertida' => $porEstado->get($estadoIds['convertida'])?->cantidad ?? 0,
-                        'vencida' => $porEstado->get($estadoIds['vencida'])?->cantidad ?? 0,
+                        'vencida'    => $porEstado->get($estadoIds['vencida'])?->cantidad ?? 0,
                     ],
                     'montos_por_estado' => [
-                        'pendiente' => (float) ($porEstado->get($estadoIds['pendiente'])?->monto_total ?? 0),
-                        'aprobada' => (float) ($porEstado->get($estadoIds['aprobada'])?->monto_total ?? 0),
-                        'rechazada' => (float) ($porEstado->get($estadoIds['rechazada'])?->monto_total ?? 0),
+                        'pendiente'  => (float) ($porEstado->get($estadoIds['pendiente'])?->monto_total ?? 0),
+                        'aprobada'   => (float) ($porEstado->get($estadoIds['aprobada'])?->monto_total ?? 0),
+                        'rechazada'  => (float) ($porEstado->get($estadoIds['rechazada'])?->monto_total ?? 0),
                         'convertida' => (float) ($porEstado->get($estadoIds['convertida'])?->monto_total ?? 0),
-                        'vencida' => (float) ($porEstado->get($estadoIds['vencida'])?->monto_total ?? 0),
+                        'vencida'    => (float) ($porEstado->get($estadoIds['vencida'])?->monto_total ?? 0),
                     ],
-                    'por_canal' => [
+                    'por_canal'         => [
                         'app_externa' => $porCanal->get(Proforma::CANAL_APP_EXTERNA)?->cantidad ?? 0,
-                        'web' => $porCanal->get(Proforma::CANAL_WEB)?->cantidad ?? 0,
-                        'presencial' => $porCanal->get(Proforma::CANAL_PRESENCIAL)?->cantidad ?? 0,
+                        'web'         => $porCanal->get(Proforma::CANAL_WEB)?->cantidad ?? 0,
+                        'presencial'  => $porCanal->get(Proforma::CANAL_PRESENCIAL)?->cantidad ?? 0,
                     ],
-                    'alertas' => [
-                        'vencidas' => $vencidas,
+                    'alertas'           => [
+                        'vencidas'   => $vencidas,
                         'por_vencer' => $porVencer,
                     ],
-                    'monto_total' => (float) $montoTotal,
+                    'monto_total'       => (float) $montoTotal,
                 ],
             ]);
         } catch (\Exception $e) {
             Log::error('Error obteniendo estadísticas de proformas', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estadísticas de proformas',
-                'error' => config('app.debug') ? $e->getMessage() : null,
+                'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -1214,16 +1261,16 @@ class ApiProformaController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => [
-                'numero' => $proforma->numero,
-                'estado_codigo' => $proforma->estadoLogistica?->codigo,
-                'estado_nombre' => $proforma->estadoLogistica?->nombre,
-                'estado_id' => $proforma->estado_proforma_id,
-                'fecha' => $proforma->fecha,
-                'total' => $proforma->total,
-                'observaciones' => $proforma->observaciones,
-                'observaciones_rechazo' => $proforma->observaciones_rechazo,
-                'fecha_aprobacion' => $proforma->fecha_aprobacion,
+            'data'    => [
+                'numero'                  => $proforma->numero,
+                'estado_codigo'           => $proforma->estadoLogistica?->codigo,
+                'estado_nombre'           => $proforma->estadoLogistica?->nombre,
+                'estado_id'               => $proforma->estado_proforma_id,
+                'fecha'                   => $proforma->fecha,
+                'total'                   => $proforma->total,
+                'observaciones'           => $proforma->observaciones,
+                'observaciones_rechazo'   => $proforma->observaciones_rechazo,
+                'fecha_aprobacion'        => $proforma->fecha_aprobacion,
                 'puede_convertir_a_venta' => $proforma->puedeConvertirseAVenta(),
             ],
         ]);
@@ -1261,7 +1308,7 @@ class ApiProformaController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $productos,
+            'data'    => $productos,
         ]);
     }
 
@@ -1274,35 +1321,35 @@ class ApiProformaController extends Controller
         $proforma->load('estadoLogistica');
 
         $request->validate([
-            'comentario' => 'nullable|string|max:500',
+            'comentario'                      => 'nullable|string|max:500',
             // Confirmación de entrega del vendedor después de coordinación
             // ✅ FIXED: Comparar con fecha_entrega_solicitada (no con today que depende de zona horaria)
-            'fecha_entrega_confirmada' => [
+            'fecha_entrega_confirmada'        => [
                 'nullable',
                 'date',
                 function ($attribute, $value, $fail) use ($proforma) {
                     if ($value) {
                         $fechaConfirmada = \Carbon\Carbon::parse($value)->toDateString();
                         $fechaSolicitada = $proforma->fecha_entrega_solicitada ?
-                            \Carbon\Carbon::parse($proforma->fecha_entrega_solicitada)->toDateString() :
-                            null;
+                        \Carbon\Carbon::parse($proforma->fecha_entrega_solicitada)->toDateString() :
+                        null;
 
                         // Si existe fecha solicitada, la confirmada debe ser >= a ella
                         if ($fechaSolicitada && \Carbon\Carbon::parse($fechaConfirmada)->lt(\Carbon\Carbon::parse($fechaSolicitada))) {
                             $fail('La fecha de entrega confirmada debe ser igual o posterior a la fecha solicitada (' . $fechaSolicitada . ')');
                         }
                     }
-                }
+                },
             ],
-            'hora_entrega_confirmada' => 'nullable|date_format:H:i',
-            'hora_entrega_confirmada_fin' => 'nullable|date_format:H:i',
+            'hora_entrega_confirmada'         => 'nullable|date_format:H:i',
+            'hora_entrega_confirmada_fin'     => 'nullable|date_format:H:i',
             'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
-            'comentario_coordinacion' => 'nullable|string|max:1000',
+            'comentario_coordinacion'         => 'nullable|string|max:1000',
             // Datos de intentos de contacto
-            'numero_intentos_contacto' => 'nullable|integer|min:0',
-            'fecha_ultimo_intento' => 'nullable|date',
-            'resultado_ultimo_intento' => 'nullable|string|max:500',
-            'notas_llamada' => 'nullable|string|max:1000',
+            'numero_intentos_contacto'        => 'nullable|integer|min:0',
+            'fecha_ultimo_intento'            => 'nullable|date',
+            'resultado_ultimo_intento'        => 'nullable|string|max:500',
+            'notas_llamada'                   => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -1323,7 +1370,7 @@ class ApiProformaController extends Controller
                     ->where('id', $direccionConfirmadaId)
                     ->exists();
 
-                if (!$direccionExiste) {
+                if (! $direccionExiste) {
                     return response()->json([
                         'success' => false,
                         'message' => 'La dirección de entrega confirmada no pertenece a este cliente',
@@ -1336,18 +1383,18 @@ class ApiProformaController extends Controller
 
             // Actualizar proforma con confirmación del vendedor y datos de contacto
             $proforma->update([
-                'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_solicitada,
-                'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_solicitada,
-                'hora_entrega_confirmada_fin' => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_solicitada_fin,
+                'fecha_entrega_confirmada'        => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_solicitada,
+                'hora_entrega_confirmada'         => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_solicitada,
+                'hora_entrega_confirmada_fin'     => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_solicitada_fin,
                 'direccion_entrega_confirmada_id' => $direccionFinal,
-                'coordinacion_completada' => true,
-                'comentario_coordinacion' => $request->comentario_coordinacion,
+                'coordinacion_completada'         => true,
+                'comentario_coordinacion'         => $request->comentario_coordinacion,
                 // Datos de intentos de contacto (se envían desde la pantalla principal)
-                'numero_intentos_contacto' => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto,
+                'numero_intentos_contacto'        => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto,
                 // Si no se proporciona fecha_ultimo_intento, se genera automáticamente la de hoy
-                'fecha_ultimo_intento' => $request->fecha_ultimo_intento ?? ($request->numero_intentos_contacto ? now()->toDateString() : $proforma->fecha_ultimo_intento),
-                'resultado_ultimo_intento' => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
-                'notas_llamada' => $request->notas_llamada ?? $proforma->notas_llamada,
+                'fecha_ultimo_intento'            => $request->fecha_ultimo_intento ?? ($request->numero_intentos_contacto ? now()->toDateString() : $proforma->fecha_ultimo_intento),
+                'resultado_ultimo_intento'        => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
+                'notas_llamada'                   => $request->notas_llamada ?? $proforma->notas_llamada,
             ]);
 
             // Obtener usuario autenticado
@@ -1359,7 +1406,7 @@ class ApiProformaController extends Controller
             // Aprobar la proforma
             $aprobada = $proforma->aprobar($usuario, $request->comentario);
 
-            if (!$aprobada) {
+            if (! $aprobada) {
                 return response()->json([
                     'success' => false,
                     'message' => $proforma->estaVencida()
@@ -1373,25 +1420,25 @@ class ApiProformaController extends Controller
             // No usamos Pusher broadcasting porque tenemos WebSocket nativo en Node.js
             Log::info('✅ [aprobar] Notificaciones manejadas por servidor WebSocket Node.js (SendProformaApprovedNotification)', [
                 'proforma_id' => $proforma->id,
-                'usuario_id' => $usuario?->id,
+                'usuario_id'  => $usuario?->id,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma aprobada exitosamente',
-                'data' => $proforma->fresh(['detalles.producto', 'cliente', 'direccionConfirmada', 'direccionSolicitada', 'estadoLogistica']),
+                'data'    => $proforma->fresh(['detalles.producto', 'cliente', 'direccionConfirmada', 'direccionSolicitada', 'estadoLogistica']),
             ]);
 
         } catch (\Exception $e) {
             Log::error('❌ Error al aprobar proforma', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
             ]);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Error al aprobar la proforma: '.$e->getMessage(),
+                'success'       => false,
+                'message'       => 'Error al aprobar la proforma: ' . $e->getMessage(),
                 'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
@@ -1411,7 +1458,7 @@ class ApiProformaController extends Controller
 
         try {
             // ✅ Permitir rechazar proformas en estados: PENDIENTE, APROBADA, VENCIDA
-            if (!in_array($proforma->estado, ['PENDIENTE', 'APROBADA', 'VENCIDA'])) {
+            if (! in_array($proforma->estado, ['PENDIENTE', 'APROBADA', 'VENCIDA'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Solo se pueden rechazar proformas en estados PENDIENTE, APROBADA o VENCIDA',
@@ -1430,20 +1477,20 @@ class ApiProformaController extends Controller
             } catch (\Exception $broadcastError) {
                 Log::warning('⚠️  Error al emitir evento de rechazo (no crítico)', [
                     'proforma_id' => $proforma->id,
-                    'error' => $broadcastError->getMessage(),
+                    'error'       => $broadcastError->getMessage(),
                 ]);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Proforma rechazada',
-                'data' => $proforma->fresh(),
+                'data'    => $proforma->fresh(),
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al rechazar la proforma: '.$e->getMessage(),
+                'message' => 'Error al rechazar la proforma: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1459,21 +1506,21 @@ class ApiProformaController extends Controller
     {
         $request->validate([
             // Campos existentes
-            'fecha_entrega_confirmada' => 'nullable|date|after_or_equal:today',
-            'hora_entrega_confirmada' => 'nullable|date_format:H:i',
-            'hora_entrega_confirmada_fin' => 'nullable|date_format:H:i',
+            'fecha_entrega_confirmada'        => 'nullable|date|after_or_equal:today',
+            'hora_entrega_confirmada'         => 'nullable|date_format:H:i',
+            'hora_entrega_confirmada_fin'     => 'nullable|date_format:H:i',
             'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
-            'comentario_coordinacion' => 'nullable|string|max:1000',
-            'notas_llamada' => 'nullable|string|max:500',
+            'comentario_coordinacion'         => 'nullable|string|max:1000',
+            'notas_llamada'                   => 'nullable|string|max:500',
 
             // Nuevos campos de control de intentos
-            'numero_intentos_contacto' => 'nullable|integer|min:0|max:255',
-            'resultado_ultimo_intento' => 'nullable|string|in:Aceptado,No contactado,Rechazado,Reagendar',
+            'numero_intentos_contacto'        => 'nullable|integer|min:0|max:255',
+            'resultado_ultimo_intento'        => 'nullable|string|in:Aceptado,No contactado,Rechazado,Reagendar',
 
             // Nuevos campos de entrega realizada
-            'entregado_en' => 'nullable|date_format:Y-m-d\TH:i',
-            'entregado_a' => 'nullable|string|max:255',
-            'observaciones_entrega' => 'nullable|string|max:1000',
+            'entregado_en'                    => 'nullable|date_format:Y-m-d\TH:i',
+            'entregado_a'                     => 'nullable|string|max:255',
+            'observaciones_entrega'           => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -1498,21 +1545,21 @@ class ApiProformaController extends Controller
 
             // Preparar datos a actualizar
             $datosActualizar = [
-                'fecha_entrega_confirmada' => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_confirmada,
-                'hora_entrega_confirmada' => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_confirmada,
-                'hora_entrega_confirmada_fin' => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_confirmada_fin,
+                'fecha_entrega_confirmada'        => $request->fecha_entrega_confirmada ?? $proforma->fecha_entrega_confirmada,
+                'hora_entrega_confirmada'         => $request->hora_entrega_confirmada ?? $proforma->hora_entrega_confirmada,
+                'hora_entrega_confirmada_fin'     => $request->hora_entrega_confirmada_fin ?? $proforma->hora_entrega_confirmada_fin,
                 'direccion_entrega_confirmada_id' => $request->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_confirmada_id,
-                'comentario_coordinacion' => $comentarioFinal ?: $proforma->comentario_coordinacion,
-                'coordinacion_completada' => true,
+                'comentario_coordinacion'         => $comentarioFinal ?: $proforma->comentario_coordinacion,
+                'coordinacion_completada'         => true,
 
                 // Nuevos campos de control
-                'coordinacion_actualizada_en' => now(),
+                'coordinacion_actualizada_en'     => now(),
                 'coordinacion_actualizada_por_id' => auth()->id(),
-                'numero_intentos_contacto' => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto ?? 0,
-                'resultado_ultimo_intento' => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
-                'entregado_en' => $request->entregado_en ?? $proforma->entregado_en,
-                'entregado_a' => $request->entregado_a ?? $proforma->entregado_a,
-                'observaciones_entrega' => $request->observaciones_entrega ?? $proforma->observaciones_entrega,
+                'numero_intentos_contacto'        => $request->numero_intentos_contacto ?? $proforma->numero_intentos_contacto ?? 0,
+                'resultado_ultimo_intento'        => $request->resultado_ultimo_intento ?? $proforma->resultado_ultimo_intento,
+                'entregado_en'                    => $request->entregado_en ?? $proforma->entregado_en,
+                'entregado_a'                     => $request->entregado_a ?? $proforma->entregado_a,
+                'observaciones_entrega'           => $request->observaciones_entrega ?? $proforma->observaciones_entrega,
             ];
 
             // Actualizar proforma con todos los datos
@@ -1523,16 +1570,16 @@ class ApiProformaController extends Controller
 
             // Log de coordinación actualizada
             Log::info('Coordinación de proforma actualizada', [
-                'proforma_id' => $proforma->id,
-                'proforma_numero' => $proforma->numero,
-                'usuario_id' => auth()->id(),
+                'proforma_id'        => $proforma->id,
+                'proforma_numero'    => $proforma->numero,
+                'usuario_id'         => auth()->id(),
                 'datos_actualizados' => array_keys($datosActualizar),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Coordinación guardada exitosamente',
-                'data' => $proforma->fresh([
+                'data'    => $proforma->fresh([
                     'cliente',
                     'usuarioCreador',
                     'coordinacionActualizadaPor',
@@ -1543,15 +1590,15 @@ class ApiProformaController extends Controller
 
         } catch (\Exception $e) {
             Log::error('❌ Error al guardar coordinación de proforma', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
-                'usuario_id' => auth()->id(),
+                'usuario_id'  => auth()->id(),
             ]);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Error al guardar la coordinación: '.$e->getMessage(),
+                'success'       => false,
+                'message'       => 'Error al guardar la coordinación: ' . $e->getMessage(),
                 'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
@@ -1571,7 +1618,7 @@ class ApiProformaController extends Controller
 
             $extendida = $proforma->extenderVencimiento($dias);
 
-            if (!$extendida) {
+            if (! $extendida) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No se puede extender el vencimiento. Solo se permite para proformas PENDIENTES o APROBADAS.',
@@ -1582,22 +1629,22 @@ class ApiProformaController extends Controller
                 'success' => true,
                 'message' => "Fecha de vencimiento extendida {$dias} días",
                 'data' => [
-                    'proforma' => $proforma->fresh(),
+                    'proforma'                => $proforma->fresh(),
                     'nueva_fecha_vencimiento' => $proforma->fecha_vencimiento->format('Y-m-d'),
-                    'dias_extendidos' => $dias,
+                    'dias_extendidos'         => $dias,
                 ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('❌ Error al extender vencimiento de proforma', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
                 'proforma_id' => $proforma->id,
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al extender el vencimiento: '.$e->getMessage(),
+                'message' => 'Error al extender el vencimiento: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1608,24 +1655,24 @@ class ApiProformaController extends Controller
     public function verificarStock(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'productos' => 'required|array|min:1',
+            'productos'               => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|numeric|min:1',
+            'productos.*.cantidad'    => 'required|numeric|min:1',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
-        $verificacion = [];
+        $verificacion   = [];
         $todoDisponible = true;
 
         foreach ($request->productos as $item) {
-            $producto = Producto::with('stockProductos')->findOrFail($item['producto_id']);
+            $producto          = Producto::with('stockProductos')->findOrFail($item['producto_id']);
             $cantidadRequerida = $item['cantidad'];
 
             $stockTotal = $producto->stockProductos()->sum('cantidad_disponible');
@@ -1637,19 +1684,19 @@ class ApiProformaController extends Controller
             }
 
             $verificacion[] = [
-                'producto_id' => $producto->id,
-                'producto_nombre' => $producto->nombre,
-                'cantidad_requerida' => $cantidadRequerida,
+                'producto_id'         => $producto->id,
+                'producto_nombre'     => $producto->nombre,
+                'cantidad_requerida'  => $cantidadRequerida,
                 'cantidad_disponible' => $stockTotal,
-                'disponible' => $disponible,
-                'diferencia' => $stockTotal - $cantidadRequerida,
+                'disponible'          => $disponible,
+                'diferencia'          => $stockTotal - $cantidadRequerida,
             ];
         }
 
         return response()->json([
-            'success' => true,
+            'success'         => true,
             'todo_disponible' => $todoDisponible,
-            'verificacion' => $verificacion,
+            'verificacion'    => $verificacion,
         ]);
     }
 
@@ -1658,22 +1705,22 @@ class ApiProformaController extends Controller
      */
     public function verificarReservas(Proforma $proforma)
     {
-        $reservas = $proforma->reservasActivas()->with('stockProducto.producto')->get();
+        $reservas  = $proforma->reservasActivas()->with('stockProducto.producto')->get();
         $expiradas = $proforma->tieneReservasExpiradas();
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'proforma_id' => $proforma->id,
-                'tiene_reservas' => $reservas->count() > 0,
+            'data'    => [
+                'proforma_id'        => $proforma->id,
+                'tiene_reservas'     => $reservas->count() > 0,
                 'reservas_expiradas' => $expiradas,
-                'reservas' => $reservas->map(function ($reserva) {
+                'reservas'           => $reservas->map(function ($reserva) {
                     return [
-                        'id' => $reserva->id,
-                        'producto_nombre' => $reserva->stockProducto->producto->nombre,
+                        'id'                 => $reserva->id,
+                        'producto_nombre'    => $reserva->stockProducto->producto->nombre,
                         'cantidad_reservada' => $reserva->cantidad_reservada,
-                        'fecha_expiracion' => $reserva->fecha_expiracion,
-                        'expirada' => $reserva->estaExpirada(),
+                        'fecha_expiracion'   => $reserva->fecha_expiracion,
+                        'expirada'           => $reserva->estaExpirada(),
                     ];
                 }),
             ],
@@ -1693,7 +1740,7 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
@@ -1732,18 +1779,18 @@ class ApiProformaController extends Controller
     {
         // Validaciones
         $validator = Validator::make($request->all(), [
-            'items' => 'required|array|min:1',
+            'items'               => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
-            'items.*.cantidad' => 'required|numeric|min:0.01',
-            'direccion_id' => 'nullable|exists:direcciones_cliente,id',
-            'observaciones' => 'nullable|string|max:1000',
+            'items.*.cantidad'    => 'required|numeric|min:0.01',
+            'direccion_id'        => 'nullable|exists:direcciones_cliente,id',
+            'observaciones'       => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
@@ -1786,17 +1833,17 @@ class ApiProformaController extends Controller
 
                 if (! $direccion) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'No tienes una dirección de entrega configurada. Por favor agrega una dirección antes de crear un pedido.',
+                        'success'            => false,
+                        'message'            => 'No tienes una dirección de entrega configurada. Por favor agrega una dirección antes de crear un pedido.',
                         'requiere_direccion' => true,
                     ], 422);
                 }
             }
 
             // 3. Validar stock y calcular totales
-            $subtotal = 0;
+            $subtotal           = 0;
             $productosValidados = [];
-            $stockInsuficiente = [];
+            $stockInsuficiente  = [];
 
             foreach ($request->items as $item) {
                 $producto = Producto::with('stockProductos')->findOrFail($item['producto_id']);
@@ -1826,61 +1873,61 @@ class ApiProformaController extends Controller
                 if ($stockDisponible < $cantidad) {
                     $stockInsuficiente[] = [
                         'producto_id' => $producto->id,
-                        'producto' => $producto->nombre,
-                        'requerido' => $cantidad,
-                        'disponible' => $stockDisponible,
-                        'faltante' => $cantidad - $stockDisponible,
+                        'producto'    => $producto->nombre,
+                        'requerido'   => $cantidad,
+                        'disponible'  => $stockDisponible,
+                        'faltante'    => $cantidad - $stockDisponible,
                     ];
                 }
 
                 $subtotalItem = $cantidad * $precio;
-                $subtotal += $subtotalItem;
+                $subtotal     += $subtotalItem;
 
                 $productosValidados[] = [
-                    'producto_id' => $producto->id,
-                    'producto' => $producto,
-                    'cantidad' => $cantidad,
+                    'producto_id'     => $producto->id,
+                    'producto'        => $producto,
+                    'cantidad'        => $cantidad,
                     'precio_unitario' => $precio,
-                    'subtotal' => $subtotalItem,
+                    'subtotal'        => $subtotalItem,
                 ];
             }
 
             // Si hay productos con stock insuficiente, retornar error detallado
             if (! empty($stockInsuficiente)) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Stock insuficiente para algunos productos',
+                    'success'             => false,
+                    'message'             => 'Stock insuficiente para algunos productos',
                     'productos_sin_stock' => $stockInsuficiente,
                 ], 422);
             }
 
             // 4. Calcular impuestos (13% IVA en Bolivia) - Por ahora no se suma al total
             $impuesto = $subtotal * 0.13;
-            $total = $subtotal; // Sin impuestos por ahora
+            $total    = $subtotal; // Sin impuestos por ahora
 
             // 5. Crear la proforma
             $proforma = Proforma::create([
-                'numero' => Proforma::generarNumeroProforma(),
-                'fecha' => now(),
-                'fecha_vencimiento' => now()->addDays(7), // 7 días para aprobar
-                'cliente_id' => $cliente->id,
+                'numero'             => Proforma::generarNumeroProforma(),
+                'fecha'              => now(),
+                'fecha_vencimiento'  => now()->addDays(7), // 7 días para aprobar
+                'cliente_id'         => $cliente->id,
                 'estado_proforma_id' => 1, // ID = 1 para PENDIENTE
-                'canal_origen' => Proforma::CANAL_APP_EXTERNA,
-                'subtotal' => $subtotal,
-                'impuesto' => $impuesto,
-                'total' => $total,
-                'moneda_id' => 1, // Bolivianos por defecto
-                'observaciones' => $request->observaciones,
-                'usuario_creador_id' => Auth::id(),  // ✅ Usuario autenticado que crea la proforma
+                'canal_origen'       => Proforma::CANAL_APP_EXTERNA,
+                'subtotal'           => $subtotal,
+                'impuesto'           => $impuesto,
+                'total'              => $total,
+                'moneda_id'          => 1, // Bolivianos por defecto
+                'observaciones'      => $request->observaciones,
+                'usuario_creador_id' => Auth::id(), // ✅ Usuario autenticado que crea la proforma
             ]);
 
             // 6. Crear detalles de la proforma
             foreach ($productosValidados as $detalle) {
                 $proforma->detalles()->create([
-                    'producto_id' => $detalle['producto_id'],
-                    'cantidad' => $detalle['cantidad'],
+                    'producto_id'     => $detalle['producto_id'],
+                    'cantidad'        => $detalle['cantidad'],
                     'precio_unitario' => $detalle['precio_unitario'],
-                    'subtotal' => $detalle['subtotal'],
+                    'subtotal'        => $detalle['subtotal'],
                 ]);
             }
 
@@ -1891,8 +1938,8 @@ class ApiProformaController extends Controller
                 DB::rollBack();
 
                 return response()->json([
-                    'success' => false,
-                    'message' => 'No se pudo reservar el stock para este pedido. Algunos productos pueden haber sido vendidos recientemente.',
+                    'success'    => false,
+                    'message'    => 'No se pudo reservar el stock para este pedido. Algunos productos pueden haber sido vendidos recientemente.',
                     'error_code' => 'RESERVA_FALLIDA',
                 ], 422);
             }
@@ -1915,38 +1962,38 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Pedido creado exitosamente. Será revisado por nuestro equipo en las próximas horas.',
-                'data' => [
-                    'pedido' => [
-                        'id' => $proforma->id,
-                        'codigo' => $proforma->numero,
-                        'fecha' => $proforma->fecha->format('Y-m-d'),
+                'data'    => [
+                    'pedido'            => [
+                        'id'                => $proforma->id,
+                        'codigo'            => $proforma->numero,
+                        'fecha'             => $proforma->fecha->format('Y-m-d'),
                         'fecha_vencimiento' => $proforma->fecha_vencimiento->format('Y-m-d'),
-                        'estado' => $proforma->estado,
-                        'canal' => $proforma->canal_origen,
-                        'subtotal' => (float) $proforma->subtotal,
-                        'impuesto' => (float) $proforma->impuesto,
-                        'total' => (float) $proforma->total,
-                        'observaciones' => $proforma->observaciones,
-                        'items' => $proforma->detalles->map(function ($detalle) {
+                        'estado'            => $proforma->estado,
+                        'canal'             => $proforma->canal_origen,
+                        'subtotal'          => (float) $proforma->subtotal,
+                        'impuesto'          => (float) $proforma->impuesto,
+                        'total'             => (float) $proforma->total,
+                        'observaciones'     => $proforma->observaciones,
+                        'items'             => $proforma->detalles->map(function ($detalle) {
                             return [
-                                'producto_id' => $detalle->producto_id,
-                                'producto' => $detalle->producto->nombre,
-                                'cantidad' => (float) $detalle->cantidad,
+                                'producto_id'     => $detalle->producto_id,
+                                'producto'        => $detalle->producto->nombre,
+                                'cantidad'        => (float) $detalle->cantidad,
                                 'precio_unitario' => (float) $detalle->precio_unitario,
-                                'subtotal' => (float) $detalle->subtotal,
+                                'subtotal'        => (float) $detalle->subtotal,
                             ];
                         }),
                     ],
                     'direccion_entrega' => [
-                        'id' => $direccion->id,
-                        'direccion' => $direccion->direccion,
-                        'latitud' => $direccion->latitud,
-                        'longitud' => $direccion->longitud,
+                        'id'            => $direccion->id,
+                        'direccion'     => $direccion->direccion,
+                        'latitud'       => $direccion->latitud,
+                        'longitud'      => $direccion->longitud,
                         'observaciones' => $direccion->observaciones,
                     ],
-                    'stock_reservado' => [
-                        'cantidad_reservas' => $proforma->reservasActivas->count(),
-                        'fecha_expiracion' => $proforma->reservasActivas->first()?->fecha_expiracion,
+                    'stock_reservado'   => [
+                        'cantidad_reservas'     => $proforma->reservasActivas->count(),
+                        'fecha_expiracion'      => $proforma->reservasActivas->first()?->fecha_expiracion,
                         'tiempo_restante_horas' => $proforma->reservasActivas->first()
                             ? now()->diffInHours($proforma->reservasActivas->first()->fecha_expiracion, false)
                             : null,
@@ -1960,18 +2007,17 @@ class ApiProformaController extends Controller
             // Log del error para debugging
             Log::error('Error creando pedido desde app', [
                 'user_id' => Auth::id(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear el pedido. Por favor intenta nuevamente.',
-                'error' => config('app.debug') ? $e->getMessage() : null,
+                'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
-
 
     /**
      * ═══════════════════════════════════════════════════════════════════════
@@ -2032,68 +2078,68 @@ class ApiProformaController extends Controller
         // Construir respuesta detallada
         return response()->json([
             'success' => true,
-            'data' => [
-                'pedido' => [
-                    'id' => $proforma->id,
-                    'codigo' => $proforma->numero,
-                    'fecha' => $proforma->fecha->format('Y-m-d H:i'),
-                    'fecha_vencimiento' => $proforma->fecha_vencimiento?->format('Y-m-d'),
-                    'estado' => $proforma->estado,
-                    'canal_origen' => $proforma->canal_origen,
-                    'subtotal' => (float) $proforma->subtotal,
-                    'impuesto' => (float) $proforma->impuesto,
-                    'total' => (float) $proforma->total,
-                    'moneda' => 'BOB',
-                    'observaciones' => $proforma->observaciones,
-                    'observaciones_rechazo' => $proforma->observaciones_rechazo,
-                    'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
-                    'puede_cancelar' => $proforma->estado === Proforma::PENDIENTE,
+            'data'    => [
+                'pedido'            => [
+                    'id'                     => $proforma->id,
+                    'codigo'                 => $proforma->numero,
+                    'fecha'                  => $proforma->fecha->format('Y-m-d H:i'),
+                    'fecha_vencimiento'      => $proforma->fecha_vencimiento?->format('Y-m-d'),
+                    'estado'                 => $proforma->estado,
+                    'canal_origen'           => $proforma->canal_origen,
+                    'subtotal'               => (float) $proforma->subtotal,
+                    'impuesto'               => (float) $proforma->impuesto,
+                    'total'                  => (float) $proforma->total,
+                    'moneda'                 => 'BOB',
+                    'observaciones'          => $proforma->observaciones,
+                    'observaciones_rechazo'  => $proforma->observaciones_rechazo,
+                    'fecha_aprobacion'       => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
+                    'puede_cancelar'         => $proforma->estado === Proforma::PENDIENTE,
                     'puede_extender_reserva' => $proforma->reservasActivas->count() > 0 &&
-                                                $proforma->estado === Proforma::PENDIENTE,
+                    $proforma->estado === Proforma::PENDIENTE,
                 ],
-                'items' => $proforma->detalles->map(function ($detalle) {
+                'items'             => $proforma->detalles->map(function ($detalle) {
                     return [
-                        'id' => $detalle->id,
-                        'producto_id' => $detalle->producto_id,
-                        'producto' => $detalle->producto->nombre,
+                        'id'              => $detalle->id,
+                        'producto_id'     => $detalle->producto_id,
+                        'producto'        => $detalle->producto->nombre,
                         'codigo_producto' => $detalle->producto->codigo,
-                        'categoria' => $detalle->producto->categoria?->nombre,
-                        'marca' => $detalle->producto->marca?->nombre,
-                        'unidad_medida' => $detalle->producto->unidad?->abreviacion,
-                        'cantidad' => (float) $detalle->cantidad,
+                        'categoria'       => $detalle->producto->categoria?->nombre,
+                        'marca'           => $detalle->producto->marca?->nombre,
+                        'unidad_medida'   => $detalle->producto->unidad?->abreviacion,
+                        'cantidad'        => (float) $detalle->cantidad,
                         'precio_unitario' => (float) $detalle->precio_unitario,
-                        'subtotal' => (float) $detalle->subtotal,
-                        'imagen_url' => $detalle->producto->imagen_url,
+                        'subtotal'        => (float) $detalle->subtotal,
+                        'imagen_url'      => $detalle->producto->imagen_url,
                     ];
                 }),
                 'direccion_entrega' => $direccionEntrega ? [
-                    'id' => $direccionEntrega->id,
-                    'direccion' => $direccionEntrega->direccion,
-                    'latitud' => $direccionEntrega->latitud,
-                    'longitud' => $direccionEntrega->longitud,
+                    'id'            => $direccionEntrega->id,
+                    'direccion'     => $direccionEntrega->direccion,
+                    'latitud'       => $direccionEntrega->latitud,
+                    'longitud'      => $direccionEntrega->longitud,
                     'observaciones' => $direccionEntrega->observaciones,
-                    'es_principal' => $direccionEntrega->es_principal,
+                    'es_principal'  => $direccionEntrega->es_principal,
                 ] : null,
-                'reservas_stock' => $proforma->reservasActivas->count() > 0 ? [
-                    'tiene_reservas' => true,
-                    'cantidad_reservas' => $proforma->reservasActivas->count(),
-                    'fecha_expiracion' => $proforma->reservasActivas->first()?->fecha_expiracion?->format('Y-m-d H:i'),
+                'reservas_stock'    => $proforma->reservasActivas->count() > 0 ? [
+                    'tiene_reservas'        => true,
+                    'cantidad_reservas'     => $proforma->reservasActivas->count(),
+                    'fecha_expiracion'      => $proforma->reservasActivas->first()?->fecha_expiracion?->format('Y-m-d H:i'),
                     'tiempo_restante_horas' => $proforma->reservasActivas->first()
                         ? now()->diffInHours($proforma->reservasActivas->first()->fecha_expiracion, false)
                         : null,
-                    'detalles_por_almacen' => $proforma->reservasActivas->groupBy('stockProducto.almacen.nombre')->map(function ($reservas, $almacen) {
+                    'detalles_por_almacen'  => $proforma->reservasActivas->groupBy('stockProducto.almacen.nombre')->map(function ($reservas, $almacen) {
                         return [
-                            'almacen' => $almacen,
+                            'almacen'              => $almacen,
                             'productos_reservados' => $reservas->count(),
                         ];
                     })->values(),
                 ] : [
                     'tiene_reservas' => false,
                 ],
-                'seguimiento' => [
-                    'creado_por' => $proforma->usuarioCreador?->name,
-                    'fecha_creacion' => $proforma->created_at->format('Y-m-d H:i'),
-                    'aprobado_por' => $proforma->usuarioAprobador?->name,
+                'seguimiento'       => [
+                    'creado_por'       => $proforma->usuarioCreador?->name,
+                    'fecha_creacion'   => $proforma->created_at->format('Y-m-d H:i'),
+                    'aprobado_por'     => $proforma->usuarioAprobador?->name,
                     'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
                 ],
             ],
@@ -2156,27 +2202,27 @@ class ApiProformaController extends Controller
 
         // Verificar si tiene reservas activas
         $tieneReservasActivas = $proforma->reservasActivas()->exists();
-        $reserva = $tieneReservasActivas ? $proforma->reservasActivas()->first() : null;
+        $reserva              = $tieneReservasActivas ? $proforma->reservasActivas()->first() : null;
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'id' => $proforma->id,
-                'codigo' => $proforma->numero,
-                'estado' => $proforma->estado,
-                'fecha' => $proforma->fecha->format('Y-m-d'),
-                'total' => (float) $proforma->total,
-                'observaciones' => $proforma->observaciones,
-                'estado_detalle' => [
+            'data'    => [
+                'id'                    => $proforma->id,
+                'codigo'                => $proforma->numero,
+                'estado'                => $proforma->estado,
+                'fecha'                 => $proforma->fecha->format('Y-m-d'),
+                'total'                 => (float) $proforma->total,
+                'observaciones'         => $proforma->observaciones,
+                'estado_detalle'        => [
                     'descripcion' => $this->obtenerDescripcionEstado($proforma->estado),
-                    'color' => $this->obtenerColorEstado($proforma->estado),
-                    'icono' => $this->obtenerIconoEstado($proforma->estado),
+                    'color'       => $this->obtenerColorEstado($proforma->estado),
+                    'icono'       => $this->obtenerIconoEstado($proforma->estado),
                 ],
-                'fecha_aprobacion' => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
+                'fecha_aprobacion'      => $proforma->fecha_aprobacion?->format('Y-m-d H:i'),
                 'observaciones_rechazo' => $proforma->observaciones_rechazo,
-                'tiene_reserva_activa' => $tieneReservasActivas,
-                'reserva_info' => $reserva ? [
-                    'fecha_expiracion' => $reserva->fecha_expiracion->format('Y-m-d H:i'),
+                'tiene_reserva_activa'  => $tieneReservasActivas,
+                'reserva_info'          => $reserva ? [
+                    'fecha_expiracion'      => $reserva->fecha_expiracion->format('Y-m-d H:i'),
                     'tiempo_restante_horas' => now()->diffInHours($reserva->fecha_expiracion, false),
                 ] : null,
             ],
@@ -2189,11 +2235,11 @@ class ApiProformaController extends Controller
     private function obtenerDescripcionEstado($estado)
     {
         return match ($estado) {
-            Proforma::PENDIENTE => 'Tu pedido está siendo revisado por nuestro equipo',
-            Proforma::APROBADA => 'Tu pedido ha sido aprobado y está listo para ser procesado',
-            Proforma::RECHAZADA => 'Lo sentimos, tu pedido no pudo ser procesado',
+            Proforma::PENDIENTE  => 'Tu pedido está siendo revisado por nuestro equipo',
+            Proforma::APROBADA   => 'Tu pedido ha sido aprobado y está listo para ser procesado',
+            Proforma::RECHAZADA  => 'Lo sentimos, tu pedido no pudo ser procesado',
             Proforma::CONVERTIDA => 'Tu pedido ha sido confirmado y está en proceso de entrega',
-            default => 'Estado desconocido',
+            default              => 'Estado desconocido',
         };
     }
 
@@ -2203,11 +2249,11 @@ class ApiProformaController extends Controller
     private function obtenerColorEstado($estado)
     {
         return match ($estado) {
-            Proforma::PENDIENTE => '#FFA500', // Naranja
-            Proforma::APROBADA => '#4CAF50', // Verde
-            Proforma::RECHAZADA => '#F44336', // Rojo
+            Proforma::PENDIENTE  => '#FFA500', // Naranja
+            Proforma::APROBADA   => '#4CAF50', // Verde
+            Proforma::RECHAZADA  => '#F44336', // Rojo
             Proforma::CONVERTIDA => '#2196F3', // Azul
-            default => '#9E9E9E', // Gris
+            default              => '#9E9E9E', // Gris
         };
     }
 
@@ -2217,11 +2263,11 @@ class ApiProformaController extends Controller
     private function obtenerIconoEstado($estado)
     {
         return match ($estado) {
-            Proforma::PENDIENTE => 'clock',
-            Proforma::APROBADA => 'check-circle',
-            Proforma::RECHAZADA => 'x-circle',
+            Proforma::PENDIENTE  => 'clock',
+            Proforma::APROBADA   => 'check-circle',
+            Proforma::RECHAZADA  => 'x-circle',
             Proforma::CONVERTIDA => 'truck',
-            default => 'help-circle',
+            default              => 'help-circle',
         };
     }
 
@@ -2260,7 +2306,7 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Parámetros de validación incorrectos',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
@@ -2269,8 +2315,8 @@ class ApiProformaController extends Controller
                 // Validación 1: La proforma debe estar APROBADA
                 if ($proforma->estado !== Proforma::APROBADA) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'La proforma debe estar aprobada para confirmarla',
+                        'success'       => false,
+                        'message'       => 'La proforma debe estar aprobada para confirmarla',
                         'estado_actual' => $proforma->estado,
                     ], 422);
                 }
@@ -2279,10 +2325,10 @@ class ApiProformaController extends Controller
                 $cantidadProductos = $proforma->detalles()->count();
                 if ($cantidadProductos < 5) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Debe solicitar mínimo 5 productos diferentes',
+                        'success'               => false,
+                        'message'               => 'Debe solicitar mínimo 5 productos diferentes',
                         'productos_solicitados' => $cantidadProductos,
-                        'productos_requeridos' => 5,
+                        'productos_requeridos'  => 5,
                     ], 422);
                 }
 
@@ -2304,13 +2350,13 @@ class ApiProformaController extends Controller
                 }
 
                 // Validación 5: Verificar disponibilidad de stock actual
-                $disponibilidad = $proforma->verificarDisponibilidadStock();
-                $stockInsuficiente = array_filter($disponibilidad, fn($item) => !$item['disponible']);
+                $disponibilidad    = $proforma->verificarDisponibilidadStock();
+                $stockInsuficiente = array_filter($disponibilidad, fn($item) => ! $item['disponible']);
 
-                if (!empty($stockInsuficiente)) {
+                if (! empty($stockInsuficiente)) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Stock insuficiente para algunos productos',
+                        'success'             => false,
+                        'message'             => 'Stock insuficiente para algunos productos',
                         'productos_sin_stock' => $stockInsuficiente,
                     ], 422);
                 }
@@ -2325,7 +2371,7 @@ class ApiProformaController extends Controller
                     ->first();
 
                 // Si no hay caja de hoy, buscar la más reciente
-                if (!$cajaAbiertaParaGuardar) {
+                if (! $cajaAbiertaParaGuardar) {
                     $cajaAbiertaParaGuardar = \App\Models\AperturaCaja::where('user_id', $usuario->id)
                         ->abiertas()
                         ->with('caja')
@@ -2341,29 +2387,29 @@ class ApiProformaController extends Controller
                 // ✅ NUEVO: Para CONTRA_ENTREGA, monto_pagado = total (para registrar en caja)
                 // pero estado_pago sigue siendo PENDIENTE
                 $montoPagadoInicial = ($politicaPago === 'CONTRA_ENTREGA') ? $montoTotal : 0;
-                $montoPendiente = $montoTotal - $montoPagadoInicial;
+                $montoPendiente     = $montoTotal - $montoPagadoInicial;
 
                 $datosVenta = [
-                    'numero' => '0',  // ✅ TEMP: Se asignará al ID después de crear
-                    'fecha' => now()->toDateString(),
-                    'subtotal' => $proforma->subtotal,
-                    'descuento' => $proforma->descuento ?? 0,
-                    'impuesto' => 0,  // ✅ NUEVO: La empresa NO usa impuesto
-                    'total' => $montoTotal,  // ✅ CAMBIO: Total SIN impuesto
-                    'monto_total' => $montoTotal,
-                    'monto_pagado' => $montoPagadoInicial,  // ✅ CAMBIO: = total para CONTRA_ENTREGA
-                    'monto_pendiente' => $montoPendiente,  // ✅ CAMBIO: 0 para CONTRA_ENTREGA
-                    'politica_pago' => $politicaPago,
-                    'estado_pago' => 'PENDIENTE',
-                    'observaciones' => $proforma->observaciones,
-                    'cliente_id' => $proforma->cliente_id,
-                    'usuario_id' => request()->user()->id,
-                    'moneda_id' => $proforma->moneda_id,
-                    'proforma_id' => $proforma->id,
+                    'numero'              => '0', // ✅ TEMP: Se asignará al ID después de crear
+                    'fecha'               => now()->toDateString(),
+                    'subtotal'            => $proforma->subtotal,
+                    'descuento'           => $proforma->descuento ?? 0,
+                    'impuesto'            => 0,           // ✅ NUEVO: La empresa NO usa impuesto
+                    'total'               => $montoTotal, // ✅ CAMBIO: Total SIN impuesto
+                    'monto_total'         => $montoTotal,
+                    'monto_pagado'        => $montoPagadoInicial, // ✅ CAMBIO: = total para CONTRA_ENTREGA
+                    'monto_pendiente'     => $montoPendiente,     // ✅ CAMBIO: 0 para CONTRA_ENTREGA
+                    'politica_pago'       => $politicaPago,
+                    'estado_pago'         => 'PENDIENTE',
+                    'observaciones'       => $proforma->observaciones,
+                    'cliente_id'          => $proforma->cliente_id,
+                    'usuario_id'          => request()->user()->id,
+                    'moneda_id'           => $proforma->moneda_id,
+                    'proforma_id'         => $proforma->id,
                     // Campos de logística
-                    'requiere_envio' => $proforma->esDeAppExterna(),
-                    'canal_origen' => $proforma->canal_origen,
-                    'estado_logistico' => $proforma->esDeAppExterna()
+                    'requiere_envio'      => $proforma->esDeAppExterna(),
+                    'canal_origen'        => $proforma->canal_origen,
+                    'estado_logistico'    => $proforma->esDeAppExterna()
                         ? \App\Models\Venta::ESTADO_PENDIENTE_ENVIO
                         : null,
                     // ✅ Estado del documento: APROBADO (ID=3) cuando se convierte proforma aprobada a venta
@@ -2371,7 +2417,7 @@ class ApiProformaController extends Controller
                         ->where('activo', true)
                         ->first()?->id ?? 3,
                     // ✅ NUEVO: Guardar caja_id en ventas incluso para CONTRA_ENTREGA
-                    'caja_id' => $cajaAbiertaParaGuardar?->caja_id ?? null,
+                    'caja_id'             => $cajaAbiertaParaGuardar?->caja_id ?? null,
                 ];
 
                 // Crear la venta
@@ -2381,17 +2427,17 @@ class ApiProformaController extends Controller
                 $numeroVenta = 'VEN' . now()->format('Ymd') . '-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT);
                 $venta->update(['numero' => $numeroVenta]);
                 Log::info('✅ [procesarVenta desde ApiProformaController] Número de venta asignado con ID', [
-                    'venta_id' => $venta->id,
+                    'venta_id'     => $venta->id,
                     'numero_venta' => $numeroVenta,
                 ]);
 
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {
                     $venta->detalles()->create([
-                        'producto_id' => $detalleProforma->producto_id,
-                        'cantidad' => $detalleProforma->cantidad,
+                        'producto_id'     => $detalleProforma->producto_id,
+                        'cantidad'        => $detalleProforma->cantidad,
                         'precio_unitario' => $detalleProforma->precio_unitario,
-                        'subtotal' => $detalleProforma->subtotal,
+                        'subtotal'        => $detalleProforma->subtotal,
                     ]);
                 }
 
@@ -2405,7 +2451,7 @@ class ApiProformaController extends Controller
                     ->first();
 
                 // Si no hay caja de hoy, buscar la más reciente
-                if (!$cajaAbiertaParaRegistro) {
+                if (! $cajaAbiertaParaRegistro) {
                     $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
                         ->abiertas()
                         ->with('caja')
@@ -2417,8 +2463,8 @@ class ApiProformaController extends Controller
                 if ($cajaAbiertaParaRegistro) {
                     $venta->setAttribute('_caja_id', $cajaAbiertaParaRegistro->caja_id);
                     Log::info('🔑 [procesarVenta] Establecido _caja_id para listener', [
-                        'venta_id' => $venta->id,
-                        'caja_id' => $cajaAbiertaParaRegistro->caja_id,
+                        'venta_id'    => $venta->id,
+                        'caja_id'     => $cajaAbiertaParaRegistro->caja_id,
                         'caja_nombre' => $cajaAbiertaParaRegistro->caja?->nombre,
                     ]);
                 }
@@ -2427,7 +2473,7 @@ class ApiProformaController extends Controller
                 event(new \App\Events\VentaCreada($venta));
 
                 // Marcar la proforma como convertida
-                if (!$proforma->marcarComoConvertida()) {
+                if (! $proforma->marcarComoConvertida()) {
                     throw new \Exception('Error al marcar la proforma como convertida');
                 }
 
@@ -2439,31 +2485,31 @@ class ApiProformaController extends Controller
                 // Ver: ProformaConvertida event → SendProformaConvertedNotification listener
 
                 Log::info('Proforma confirmada como venta (API)', [
-                    'proforma_id' => $proforma->id,
+                    'proforma_id'     => $proforma->id,
                     'proforma_numero' => $proforma->numero,
-                    'venta_id' => $venta->id,
-                    'venta_numero' => $venta->numero,
-                    'politica_pago' => $politicaPago,
-                    'usuario_id' => request()->user()->id,
+                    'venta_id'        => $venta->id,
+                    'venta_numero'    => $venta->numero,
+                    'politica_pago'   => $politicaPago,
+                    'usuario_id'      => request()->user()->id,
                 ]);
 
                 return response()->json([
                     'success' => true,
                     'message' => "Proforma {$proforma->numero} confirmada como venta {$venta->numero}",
                     'data' => [
-                        'venta' => [
-                            'id' => $venta->id,
-                            'numero' => $venta->numero,
-                            'fecha' => $venta->fecha,
-                            'monto_total' => (float) $venta->monto_total,
-                            'monto_pagado' => (float) $venta->monto_pagado,
-                            'monto_pendiente' => (float) $venta->monto_pendiente,
-                            'politica_pago' => $venta->politica_pago,
-                            'estado_pago' => $venta->estado_pago,
+                        'venta'       => [
+                            'id'               => $venta->id,
+                            'numero'           => $venta->numero,
+                            'fecha'            => $venta->fecha,
+                            'monto_total'      => (float) $venta->monto_total,
+                            'monto_pagado'     => (float) $venta->monto_pagado,
+                            'monto_pendiente'  => (float) $venta->monto_pendiente,
+                            'politica_pago'    => $venta->politica_pago,
+                            'estado_pago'      => $venta->estado_pago,
                             'estado_logistico' => $venta->estado_logistico,
                         ],
-                        'cliente' => [
-                            'id' => $venta->cliente->id,
+                        'cliente'     => [
+                            'id'     => $venta->cliente->id,
                             'nombre' => $venta->cliente->nombre,
                         ],
                         'items_count' => $venta->detalles->count(),
@@ -2475,8 +2521,8 @@ class ApiProformaController extends Controller
 
                 Log::error('Error al confirmar proforma como venta (API)', [
                     'proforma_id' => $proforma->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+                    'error'       => $e->getMessage(),
+                    'trace'       => $e->getTraceAsString(),
                 ]);
 
                 return response()->json([
@@ -2512,17 +2558,17 @@ class ApiProformaController extends Controller
         // Ahora incluye CREDITO en las políticas permitidas
         if ($request->input('con_pago')) {
             $request->validate([
-                'tipo_pago_id' => 'required_unless:politica_pago,CREDITO|exists:tipos_pago,id',
+                'tipo_pago_id'  => 'required_unless:politica_pago,CREDITO|exists:tipos_pago,id',
                 'politica_pago' => 'required|in:CONTRA_ENTREGA,ANTICIPADO_100,MEDIO_MEDIO,CREDITO',
-                'monto_pagado' => 'nullable|numeric|min:0',
+                'monto_pagado'  => 'nullable|numeric|min:0',
             ]);
         }
 
         return DB::transaction(function () use ($proforma, $request) {
             try {
                 // ⭐ VALIDACIÓN PRINCIPAL: Caja abierta O consolidada es OBLIGATORIA para TODAS las conversiones
-                $usuario = request()->user();
-                $politica = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
+                $usuario     = request()->user();
+                $politica    = $request->input('politica_pago') ?? 'CONTRA_ENTREGA';
                 $montoPagado = (float) ($request->input('monto_pagado') ?? 0);
 
                 // ✅ NUEVO: Para CONTRA_ENTREGA, forzar monto_pagado = total (para registrar en caja)
@@ -2534,21 +2580,21 @@ class ApiProformaController extends Controller
 
                 // 📊 LOG: INICIO DEL FLUJO DE CONVERSIÓN
                 Log::info('🚀 [ApiProformaController::convertirAVenta] INICIO DEL FLUJO', [
-                    'proforma_id' => $proforma->id,
+                    'proforma_id'     => $proforma->id,
                     'proforma_numero' => $proforma->numero,
-                    'usuario_id' => $usuario->id,
-                    'usuario_nombre' => $usuario->name,
-                    'usuario_roles' => $usuario->getRoleNames()->toArray(),
-                    'cliente_id' => $proforma->cliente_id,
-                    'cliente_nombre' => $proforma->cliente->nombre,
+                    'usuario_id'      => $usuario->id,
+                    'usuario_nombre'  => $usuario->name,
+                    'usuario_roles'   => $usuario->getRoleNames()->toArray(),
+                    'cliente_id'      => $proforma->cliente_id,
+                    'cliente_nombre'  => $proforma->cliente->nombre,
                 ]);
 
                 // 📊 LOG: PARÁMETROS DE PAGO RECIBIDOS
                 Log::info('💳 [convertirAVenta] Parámetros de pago', [
                     'politica_pago' => $politica,
-                    'monto_pagado' => $montoPagado,
-                    'tipo_pago_id' => $request->input('tipo_pago_id'),
-                    'con_pago' => $request->input('con_pago', false),
+                    'monto_pagado'  => $montoPagado,
+                    'tipo_pago_id'  => $request->input('tipo_pago_id'),
+                    'con_pago'      => $request->input('con_pago', false),
                 ]);
 
                 // ✅ VALIDACIÓN: Caja abierta HOY (sin importar si es admin o cajero)
@@ -2558,7 +2604,7 @@ class ApiProformaController extends Controller
 
                 // 📊 LOG: Búsqueda de caja del día actual
                 Log::info('🔍 [convertirAVenta] Buscando caja abierta de HOY', [
-                    'usuario_id' => $usuario->id,
+                    'usuario_id'       => $usuario->id,
                     'caja_abierta_hoy' => $cajaAbiertaHoy,
                 ]);
 
@@ -2572,22 +2618,22 @@ class ApiProformaController extends Controller
                     ->exists();
 
                 // ❌ Si no tiene caja abierta NI caja consolidada → RECHAZAR
-                if (!$cajaAbiertaHoy && !$cierreConsolidadoReciente) {
+                if (! $cajaAbiertaHoy && ! $cierreConsolidadoReciente) {
                     Log::error('❌ [convertirAVenta] RECHAZADA: No hay caja abierta ni consolidada', [
-                        'proforma_id' => $proforma->id,
-                        'usuario_id' => $usuario->id,
-                        'caja_abierta_hoy' => $cajaAbiertaHoy,
+                        'proforma_id'                 => $proforma->id,
+                        'usuario_id'                  => $usuario->id,
+                        'caja_abierta_hoy'            => $cajaAbiertaHoy,
                         'cierre_consolidado_reciente' => $cierreConsolidadoReciente,
                     ]);
 
                     return response()->json([
-                        'success' => false,
-                        'message' => 'No puede convertir proforma a venta sin una caja abierta o consolidada del día anterior. Por favor, abra una caja primero.',
-                        'code' => 'CAJA_NO_DISPONIBLE',
+                        'success'  => false,
+                        'message'  => 'No puede convertir proforma a venta sin una caja abierta o consolidada del día anterior. Por favor, abra una caja primero.',
+                        'code'     => 'CAJA_NO_DISPONIBLE',
                         'detalles' => [
-                            'politica_pago' => $politica,
-                            'monto_pagado' => $montoPagado,
-                            'motivo' => 'Requiere caja abierta HOY o consolidada en las últimas 24 horas',
+                            'politica_pago'    => $politica,
+                            'monto_pagado'     => $montoPagado,
+                            'motivo'           => 'Requiere caja abierta HOY o consolidada en las últimas 24 horas',
                             'accion_requerida' => 'Abra una caja en /cajas antes de convertir esta proforma',
                         ],
                     ], 422);
@@ -2598,19 +2644,19 @@ class ApiProformaController extends Controller
 
                 Log::info('✅ [ApiProformaController::convertirAVenta] Validación de caja exitosa', [
                     'proforma_id' => $proforma->id,
-                    'usuario_id' => $usuario->id,
+                    'usuario_id'  => $usuario->id,
                     'estado_caja' => $estadoCajaActual,
-                    'politica' => $politica,
-                    'monto' => $montoPagado,
+                    'politica'    => $politica,
+                    'monto'       => $montoPagado,
                 ]);
 
                 // ✅ VALIDACIÓN 0.2: Si la política es CREDITO, validar permisos del cliente
                 if ($politica === 'CREDITO') {
                     $cliente = $proforma->cliente;
 
-                    if (!$cliente->puede_tener_credito) {
+                    if (! $cliente->puede_tener_credito) {
                         Log::warning('⚠️ Cliente no tiene permiso de crédito', [
-                            'cliente_id' => $cliente->id,
+                            'cliente_id'  => $cliente->id,
                             'proforma_id' => $proforma->id,
                         ]);
 
@@ -2621,9 +2667,9 @@ class ApiProformaController extends Controller
                         ], 422);
                     }
 
-                    if (!$cliente->limite_credito || $cliente->limite_credito <= 0) {
+                    if (! $cliente->limite_credito || $cliente->limite_credito <= 0) {
                         Log::warning('⚠️ Cliente sin límite de crédito', [
-                            'cliente_id' => $cliente->id,
+                            'cliente_id'  => $cliente->id,
                             'proforma_id' => $proforma->id,
                         ]);
 
@@ -2636,27 +2682,27 @@ class ApiProformaController extends Controller
 
                     // Calcular saldo disponible
                     $saldoDisponible = $cliente->calcularSaldoDisponible();
-                    $totalProforma = (float) $proforma->total;
+                    $totalProforma   = (float) $proforma->total;
 
                     if ($saldoDisponible < $totalProforma) {
                         return response()->json([
                             'success' => false,
                             'message' => "Crédito insuficiente para esta venta",
-                            'code' => 'CREDITO_INSUFICIENTE',
-                            'datos' => [
-                                'monto_venta' => $totalProforma,
+                            'code'    => 'CREDITO_INSUFICIENTE',
+                            'datos'   => [
+                                'monto_venta'      => $totalProforma,
                                 'saldo_disponible' => $saldoDisponible,
-                                'limite_credito' => (float) $cliente->limite_credito,
+                                'limite_credito'   => (float) $cliente->limite_credito,
                             ],
                         ], 422);
                     }
                 }
 
                 // Validación 1: La proforma debe poder convertirse
-                if (!$proforma->puedeConvertirseAVenta()) {
+                if (! $proforma->puedeConvertirseAVenta()) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Esta proforma no puede convertirse a venta',
+                        'success'       => false,
+                        'message'       => 'Esta proforma no puede convertirse a venta',
                         'estado_actual' => $proforma->estado,
                     ], 422);
                 }
@@ -2676,7 +2722,7 @@ class ApiProformaController extends Controller
                     // ✅ SIMPLIFICADO: Si hay reservas activas NO expiradas, no validar disponibilidad
                     // Las reservas ya garantizan que el stock existe para esta proforma
                     Log::info('✅ Proforma tiene reservas activas, continuando conversión sin validar stock disponible', [
-                        'proforma_id' => $proforma->id,
+                        'proforma_id'      => $proforma->id,
                         'reservas_activas' => $reservasActivas,
                     ]);
                 } else {
@@ -2685,7 +2731,7 @@ class ApiProformaController extends Controller
 
                     $reservasCreadas = $proforma->reservarStock();
 
-                    if (!$reservasCreadas) {
+                    if (! $reservasCreadas) {
                         return response()->json([
                             'success' => false,
                             'message' => 'No se pudieron crear reservas de stock. Verifique la disponibilidad de inventario.',
@@ -2702,9 +2748,9 @@ class ApiProformaController extends Controller
                 $total = max(0, $proforma->subtotal - ($proforma->descuento ?? 0));
 
                 // Lógica mejorada para determinar estado de pago según política
-                $estadoPago = match($politica) {
+                $estadoPago = match ($politica) {
                     // CREDITO: No requiere pago inmediato, se registra como cuenta por cobrar
-                    'CREDITO' => 'PENDIENTE',
+                    'CREDITO'        => 'PENDIENTE',
 
                     // ANTICIPADO_100: Requiere 100% de pago, si se pagó todo = PAGADO
                     'ANTICIPADO_100' => ($montoPagado >= $total) ? 'PAGADO' : 'PARCIAL',
@@ -2713,21 +2759,21 @@ class ApiProformaController extends Controller
                     // Si se pagó el 100% = PAGADO
                     // Si se pagó entre 50%-100% = PARCIAL
                     // Si se pagó menos de 50% = PENDIENTE
-                    'MEDIO_MEDIO' => match(true) {
-                        $montoPagado >= $total => 'PAGADO',
+                    'MEDIO_MEDIO'    => match (true) {
+                        $montoPagado >= $total       => 'PAGADO',
                         $montoPagado >= ($total / 2) => 'PARCIAL',
-                        default => 'PENDIENTE',
+                        default                      => 'PENDIENTE',
                     },
 
                     // CONTRA_ENTREGA: Se paga en la entrega, siempre inicia como PENDIENTE
                     'CONTRA_ENTREGA' => 'PENDIENTE',
 
-                    // Default: PENDIENTE (seguridad)
-                    default => 'PENDIENTE',
+                // Default: PENDIENTE (seguridad)
+                    default          => 'PENDIENTE',
                 };
 
                 // NUEVO: Determinar requiere_envio y estado_logistico según tipo_entrega
-                $tipoEntrega = $proforma->tipo_entrega ?? 'DELIVERY';
+                $tipoEntrega   = $proforma->tipo_entrega ?? 'DELIVERY';
                 $requiereEnvio = $tipoEntrega === 'DELIVERY';
 
                 // REFACTORIZADO: Obtener IDs de estados en lugar de strings ENUM
@@ -2738,7 +2784,7 @@ class ApiProformaController extends Controller
                     $estadoLogisticoId = \App\Models\Venta::obtenerIdEstado('PENDIENTE_ENVIO', 'venta_logistica');
                 }
 
-                if (!$estadoLogisticoId) {
+                if (! $estadoLogisticoId) {
                     throw new \Exception('No se encontraron los estados logísticos requeridos en la base de datos');
                 }
 
@@ -2752,7 +2798,7 @@ class ApiProformaController extends Controller
                     ->first();
 
                 // Si no hay caja de hoy, buscar la más reciente
-                if (!$cajaAbiertaParaRegistro) {
+                if (! $cajaAbiertaParaRegistro) {
                     $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', $usuario->id)
                         ->abiertas()
                         ->with('caja')
@@ -2766,51 +2812,51 @@ class ApiProformaController extends Controller
                 // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
                 $pesoTotal = 0;
                 foreach ($proforma->detalles as $detalle) {
-                    $pesoProducto = $detalle->producto?->peso ?? 0;
-                    $pesoTotal += $detalle->cantidad * $pesoProducto;
+                    $pesoProducto  = $detalle->producto?->peso ?? 0;
+                    $pesoTotal    += $detalle->cantidad * $pesoProducto;
                 }
 
                 // Preparar datos para la venta desde la proforma
                 $datosVenta = [
-                    'numero' => '0',  // ✅ TEMP: Se asignará al ID después de crear
-                    'fecha' => now()->toDateString(),
-                    'subtotal' => $proforma->subtotal,
-                    'descuento' => $proforma->descuento ?? 0,
-                    'impuesto' => 0,  // ✅ NUEVO: La empresa NO usa impuesto
-                    'total' => max(0, $proforma->subtotal - ($proforma->descuento ?? 0)),  // ✅ CAMBIO: Total SIN impuesto (subtotal - descuento)
-                    'peso_total_estimado' => $pesoTotal,  // ✅ NUEVO: Pasar peso calculado
-                    'observaciones' => $proforma->observaciones,
-                    'cliente_id' => $proforma->cliente_id,
-                    'usuario_id' => request()->user()->id,
-                    'moneda_id' => $proforma->moneda_id,
-                    'proforma_id' => $proforma->id,
-                    // Campos de logística
-                    'tipo_entrega' => $tipoEntrega, // NUEVO
-                    'requiere_envio' => $requiereEnvio, // MODIFICADO
-                    'canal_origen' => $proforma->canal_origen,
-                    'estado_logistico_id' => $estadoLogisticoId, // REFACTORIZADO: Ahora es FK
-                    // Campos de entrega comprometida (desde coordinación de proforma)
-                    // MODIFICADO: Solo para DELIVERY (null para PICKUP)
-                    'direccion_cliente_id' => $tipoEntrega === 'DELIVERY'
+                    'numero'                     => '0', // ✅ TEMP: Se asignará al ID después de crear
+                    'fecha'                      => now()->toDateString(),
+                    'subtotal'                   => $proforma->subtotal,
+                    'descuento'                  => $proforma->descuento ?? 0,
+                    'impuesto'                   => 0,                                                         // ✅ NUEVO: La empresa NO usa impuesto
+                    'total'                      => max(0, $proforma->subtotal - ($proforma->descuento ?? 0)), // ✅ CAMBIO: Total SIN impuesto (subtotal - descuento)
+                    'peso_total_estimado'        => $pesoTotal,                                                // ✅ NUEVO: Pasar peso calculado
+                    'observaciones'              => $proforma->observaciones,
+                    'cliente_id'                 => $proforma->cliente_id,
+                    'usuario_id'                 => request()->user()->id,
+                    'moneda_id'                  => $proforma->moneda_id,
+                    'proforma_id'                => $proforma->id,
+                                                                    // Campos de logística
+                    'tipo_entrega'               => $tipoEntrega,   // NUEVO
+                    'requiere_envio'             => $requiereEnvio, // MODIFICADO
+                    'canal_origen'               => $proforma->canal_origen,
+                    'estado_logistico_id'        => $estadoLogisticoId, // REFACTORIZADO: Ahora es FK
+                                                                        // Campos de entrega comprometida (desde coordinación de proforma)
+                                                                        // MODIFICADO: Solo para DELIVERY (null para PICKUP)
+                    'direccion_cliente_id'       => $tipoEntrega === 'DELIVERY'
                         ? ($proforma->direccion_entrega_confirmada_id ?? $proforma->direccion_entrega_solicitada_id)
                         : null,
                     'fecha_entrega_comprometida' => $proforma->fecha_entrega_confirmada,
-                    'hora_entrega_comprometida' => $proforma->hora_entrega_confirmada, // Hora SLA (inicio del rango)
-                    'ventana_entrega_ini' => $proforma->hora_entrega_confirmada, // Inicio del rango de entrega
-                    'ventana_entrega_fin' => $proforma->hora_entrega_confirmada_fin, // Fin del rango de entrega
-                    'idempotency_key' => \Illuminate\Support\Str::uuid()->toString(),
+                    'hora_entrega_comprometida'  => $proforma->hora_entrega_confirmada,     // Hora SLA (inicio del rango)
+                    'ventana_entrega_ini'        => $proforma->hora_entrega_confirmada,     // Inicio del rango de entrega
+                    'ventana_entrega_fin'        => $proforma->hora_entrega_confirmada_fin, // Fin del rango de entrega
+                    'idempotency_key'            => \Illuminate\Support\Str::uuid()->toString(),
                     // Campos de pago
-                    'tipo_pago_id' => $request->input('tipo_pago_id'),
-                    'politica_pago' => $politica,
-                    'estado_pago' => $estadoPago,
-                    'monto_pagado' => $montoPagado,
-                    'monto_pendiente' => max(0, ($proforma->subtotal - ($proforma->descuento ?? 0)) - $montoPagado),
+                    'tipo_pago_id'               => $request->input('tipo_pago_id'),
+                    'politica_pago'              => $politica,
+                    'estado_pago'                => $estadoPago,
+                    'monto_pagado'               => $montoPagado,
+                    'monto_pendiente'            => max(0, ($proforma->subtotal - ($proforma->descuento ?? 0)) - $montoPagado),
                     // ✅ Estado del documento: APROBADO (ID=3) cuando se convierte proforma aprobada a venta
-                    'estado_documento_id' => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
+                    'estado_documento_id'        => \App\Models\EstadoDocumento::where('codigo', 'APROBADO')
                         ->where('activo', true)
                         ->first()?->id ?? 3,
                     // ✅ NUEVO: Guardar caja_id en ventas incluso para CONTRA_ENTREGA
-                    'caja_id' => $cajaAbiertaParaRegistro?->caja_id ?? null,
+                    'caja_id'                    => $cajaAbiertaParaRegistro?->caja_id ?? null,
                 ];
 
                 // Crear la venta
@@ -2821,7 +2867,7 @@ class ApiProformaController extends Controller
                 $numeroVenta = 'VEN' . now()->format('Ymd') . '-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT);
                 $venta->update(['numero' => $numeroVenta]);
                 Log::info('✅ [convertirAVenta] Número de venta asignado con ID', [
-                    'venta_id' => $venta->id,
+                    'venta_id'     => $venta->id,
                     'numero_venta' => $numeroVenta,
                 ]);
 
@@ -2835,7 +2881,7 @@ class ApiProformaController extends Controller
                     ->first();
 
                 // Si no hay caja de hoy, buscar la más reciente
-                if (!$cajaAbiertaParaRegistro) {
+                if (! $cajaAbiertaParaRegistro) {
                     $cajaAbiertaParaRegistro = \App\Models\AperturaCaja::where('user_id', request()->user()->id)
                         ->abiertas()
                         ->with('caja')
@@ -2847,13 +2893,13 @@ class ApiProformaController extends Controller
                 if ($cajaAbiertaParaRegistro) {
                     $venta->setAttribute('_caja_id', $cajaAbiertaParaRegistro->caja_id);
                     Log::info('🔑 [convertirAVenta] Establecido _caja_id para listener', [
-                        'venta_id' => $venta->id,
-                        'caja_id' => $cajaAbiertaParaRegistro->caja_id,
+                        'venta_id'    => $venta->id,
+                        'caja_id'     => $cajaAbiertaParaRegistro->caja_id,
                         'caja_nombre' => $cajaAbiertaParaRegistro->caja?->nombre,
                     ]);
                 } else {
                     Log::warning('⚠️ [convertirAVenta] No hay caja para establecer _caja_id', [
-                        'venta_id' => $venta->id,
+                        'venta_id'   => $venta->id,
                         'usuario_id' => request()->user()->id,
                     ]);
                 }
@@ -2866,29 +2912,29 @@ class ApiProformaController extends Controller
                     // ✅ NUEVO: Copiar combo_items_seleccionados si existen (mismo procesamiento que VentaService)
                     $comboItemsSeleccionados = null;
                     if ($detalleProforma->combo_items_seleccionados && is_array($detalleProforma->combo_items_seleccionados)) {
-                        $comboItemsSeleccionados = array_map(function($item) {
+                        $comboItemsSeleccionados = array_map(function ($item) {
                             return [
                                 'combo_item_id' => $item['combo_item_id'] ?? null,
-                                'producto_id' => $item['producto_id'] ?? null,
-                                'incluido' => $item['incluido'] ?? false,
+                                'producto_id'   => $item['producto_id'] ?? null,
+                                'incluido'      => $item['incluido'] ?? false,
                             ];
                         }, $detalleProforma->combo_items_seleccionados);
                     }
 
                     $venta->detalles()->create([
-                        'producto_id' => $detalleProforma->producto_id,
-                        'cantidad' => $detalleProforma->cantidad,
-                        'precio_unitario' => $detalleProforma->precio_unitario,
-                        'subtotal' => $detalleProforma->subtotal,
+                        'producto_id'               => $detalleProforma->producto_id,
+                        'cantidad'                  => $detalleProforma->cantidad,
+                        'precio_unitario'           => $detalleProforma->precio_unitario,
+                        'subtotal'                  => $detalleProforma->subtotal,
                         // ✅ NUEVO: Copiar campos faltantes desde detalle de proforma
-                        'tipo_precio_id' => $detalleProforma->tipo_precio_id,
-                        'tipo_precio_nombre' => $detalleProforma->tipo_precio_nombre,
+                        'tipo_precio_id'            => $detalleProforma->tipo_precio_id,
+                        'tipo_precio_nombre'        => $detalleProforma->tipo_precio_nombre,
                         'combo_items_seleccionados' => $comboItemsSeleccionados,
                     ]);
                 }
 
                 // Marcar la proforma como convertida
-                if (!$proforma->marcarComoConvertida()) {
+                if (! $proforma->marcarComoConvertida()) {
                     throw new \Exception('Error al marcar la proforma como convertida');
                 }
 
@@ -2901,7 +2947,7 @@ class ApiProformaController extends Controller
                 // 📊 NUEVO: Obtener detalles de reservas ANTES de consumir
                 // ✅ FIXED: Las reservas están relacionadas con proforma + stockProducto, no con detalleProforma
                 $reservasDetalles = [];
-                $reservasActivas = $proforma->reservas()->where('estado', 'ACTIVA')->get();
+                $reservasActivas  = $proforma->reservas()->where('estado', 'ACTIVA')->get();
 
                 if ($reservasActivas->isNotEmpty()) {
                     // Agrupar reservas por producto
@@ -2911,16 +2957,16 @@ class ApiProformaController extends Controller
                         $detalleProducto = $proforma->detalles->firstWhere('producto_id', $productoId);
                         if ($detalleProducto) {
                             $reservasDetalles[] = [
-                                'producto_id' => $productoId,
-                                'producto_nombre' => $detalleProducto->producto?->nombre,
-                                'producto_sku' => $detalleProducto->producto?->codigoPrincipal?->codigo,
+                                'producto_id'         => $productoId,
+                                'producto_nombre'     => $detalleProducto->producto?->nombre,
+                                'producto_sku'        => $detalleProducto->producto?->codigoPrincipal?->codigo,
                                 'cantidad_solicitada' => $detalleProducto->cantidad,
-                                'cantidad_reservada' => $reservasProducto->sum('cantidad_reservada'),
-                                'cantidad_lotes' => $reservasProducto->count(),
-                                'lotes' => $reservasProducto->map(fn($r) => [
-                                    'id' => $r->id,
-                                    'cantidad' => $r->cantidad_reservada,
-                                    'lote' => $r->stockProducto?->lote,
+                                'cantidad_reservada'  => $reservasProducto->sum('cantidad_reservada'),
+                                'cantidad_lotes'      => $reservasProducto->count(),
+                                'lotes'               => $reservasProducto->map(fn($r) => [
+                                    'id'                => $r->id,
+                                    'cantidad'          => $r->cantidad_reservada,
+                                    'lote'              => $r->stockProducto?->lote,
                                     'fecha_vencimiento' => $r->stockProducto?->fecha_vencimiento?->format('Y-m-d'),
                                 ])->toArray(),
                             ];
@@ -2931,15 +2977,15 @@ class ApiProformaController extends Controller
                 try {
                     $proforma->consumirReservas($numeroVenta);
                     Log::info('✅ [ApiProformaController::convertirAVenta] Reservas consumidas exitosamente', [
-                        'proforma_id' => $proforma->id,
-                        'numero_venta' => $numeroVenta,
+                        'proforma_id'                    => $proforma->id,
+                        'numero_venta'                   => $numeroVenta,
                         'cantidad_detalles_con_reservas' => count($reservasDetalles),
                     ]);
                 } catch (\Exception $e) {
                     Log::error('❌ [ApiProformaController::convertirAVenta] Error al consumir reservas', [
-                        'proforma_id' => $proforma->id,
+                        'proforma_id'  => $proforma->id,
                         'numero_venta' => $numeroVenta,
-                        'error' => $e->getMessage(),
+                        'error'        => $e->getMessage(),
                     ]);
                     throw $e;
                 }
@@ -2949,12 +2995,12 @@ class ApiProformaController extends Controller
                 if (in_array($politica, ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'])) {
                     // 📊 LOG: Llamada a registrarMovimientoCajaParaPago
                     Log::info('📋 [convertirAVenta] Registrando movimiento en caja', [
-                        'venta_id' => $venta->id,
-                        'venta_numero' => $venta->numero,
-                        'proforma_id' => $proforma->id,
+                        'venta_id'      => $venta->id,
+                        'venta_numero'  => $venta->numero,
+                        'proforma_id'   => $proforma->id,
                         'politica_pago' => $politica,
-                        'monto_pagado' => $montoPagado,
-                        'total_venta' => $venta->total,
+                        'monto_pagado'  => $montoPagado,
+                        'total_venta'   => $venta->total,
                     ]);
 
                     $this->registrarMovimientoCajaParaPago(
@@ -2966,12 +3012,12 @@ class ApiProformaController extends Controller
                     );
 
                     Log::info('✅ [convertirAVenta] Movimiento en caja registrado exitosamente', [
-                        'venta_id' => $venta->id,
+                        'venta_id'      => $venta->id,
                         'politica_pago' => $politica,
                     ]);
                 } else {
                     Log::info('⏭️ [convertirAVenta] No se registra en caja (política no requiere)', [
-                        'venta_id' => $venta->id,
+                        'venta_id'      => $venta->id,
                         'politica_pago' => $politica,
                     ]);
                 }
@@ -2998,29 +3044,29 @@ class ApiProformaController extends Controller
                 // No usamos Pusher broadcasting porque tenemos WebSocket nativo en Node.js
                 Log::info('✅ [convertirAVenta] Notificaciones manejadas por servidor WebSocket Node.js (SendProformaConvertedNotification)', [
                     'proforma_id' => $proforma->id,
-                    'venta_id' => $venta->id,
+                    'venta_id'    => $venta->id,
                 ]);
 
                 // ✅ MEJORADO: Log detallado con información de política de pago
                 Log::info('🎉 [convertirAVenta] FLUJO COMPLETADO EXITOSAMENTE', [
-                    'proforma_id' => $proforma->id,
+                    'proforma_id'     => $proforma->id,
                     'proforma_numero' => $proforma->numero,
-                    'venta_id' => $venta->id,
-                    'venta_numero' => $venta->numero,
-                    'cliente_id' => $venta->cliente_id,
-                    'cliente_nombre' => $venta->cliente->nombre,
-                    'usuario_id' => request()->user()->id,
-                    'usuario_nombre' => request()->user()->name,
+                    'venta_id'        => $venta->id,
+                    'venta_numero'    => $venta->numero,
+                    'cliente_id'      => $venta->cliente_id,
+                    'cliente_nombre'  => $venta->cliente->nombre,
+                    'usuario_id'      => request()->user()->id,
+                    'usuario_nombre'  => request()->user()->name,
                 ]);
 
                 Log::info('💰 [convertirAVenta] Detalles de pago registrados', [
-                    'venta_id' => $venta->id,
-                    'total' => (float) $venta->total,
-                    'politica_pago' => $politica,
-                    'estado_pago' => $estadoPago,
-                    'monto_pagado' => $montoPagado,
-                    'monto_pendiente' => (float) ($total - $montoPagado),
-                    'requiere_envio' => $venta->requiere_envio,
+                    'venta_id'            => $venta->id,
+                    'total'               => (float) $venta->total,
+                    'politica_pago'       => $politica,
+                    'estado_pago'         => $estadoPago,
+                    'monto_pagado'        => $montoPagado,
+                    'monto_pendiente'     => (float) ($total - $montoPagado),
+                    'requiere_envio'      => $venta->requiere_envio,
                     'reservas_consumidas' => $reservasActivas,
                 ]);
 
@@ -3028,40 +3074,40 @@ class ApiProformaController extends Controller
                     'success' => true,
                     'message' => "Proforma {$proforma->numero} convertida exitosamente a venta {$venta->numero}",
                     'data' => [
-                        'venta' => [
-                            'id' => $venta->id,
-                            'numero' => $venta->numero,
-                            'fecha' => $venta->fecha->format('Y-m-d'),
-                            'total' => (float) $venta->total,
-                            'cliente' => [
-                                'id' => $venta->cliente->id,
+                        'venta'           => [
+                            'id'               => $venta->id,
+                            'numero'           => $venta->numero,
+                            'fecha'            => $venta->fecha->format('Y-m-d'),
+                            'total'            => (float) $venta->total,
+                            'cliente'          => [
+                                'id'     => $venta->cliente->id,
                                 'nombre' => $venta->cliente->nombre,
                             ],
                             'estado_documento' => $venta->estadoDocumento?->nombre,
-                            'requiere_envio' => $venta->requiere_envio,
+                            'requiere_envio'   => $venta->requiere_envio,
                             'estado_logistico' => $venta->estado_logistico,
                             // ✅ NUEVO: Información de pago
-                            'pago' => [
-                                'politica_pago' => $politica,
-                                'estado_pago' => $estadoPago,
-                                'monto_pagado' => $montoPagado,
+                            'pago'             => [
+                                'politica_pago'   => $politica,
+                                'estado_pago'     => $estadoPago,
+                                'monto_pagado'    => $montoPagado,
                                 'monto_pendiente' => (float) ($total - $montoPagado),
                             ],
                         ],
-                        'proforma' => [
-                            'id' => $proforma->id,
-                            'numero' => $proforma->numero,
-                            'estado' => $proforma->estado,
+                        'proforma'        => [
+                            'id'            => $proforma->id,
+                            'numero'        => $proforma->numero,
+                            'estado'        => $proforma->estado,
                             'politica_pago' => $proforma->politica_pago,
                         ],
                         // ✅ NUEVO: Información detallada de reservas consumidas
                         'stock_consumido' => [
-                            'cantidad_productos' => count($reservasDetalles),
+                            'cantidad_productos'     => count($reservasDetalles),
                             'cantidad_lotes_totales' => collect($reservasDetalles)->sum('cantidad_lotes'),
-                            'mensaje' => count($reservasDetalles) === 0
+                            'mensaje'                => count($reservasDetalles) === 0
                                 ? '✅ Venta creada sin reservas de stock'
                                 : '✅ ' . count($reservasDetalles) . ' producto(s) desreservado(s) - Stock consumido',
-                            'detalles' => $reservasDetalles,
+                            'detalles'               => $reservasDetalles,
                         ],
                     ],
                 ], 201);
@@ -3071,8 +3117,8 @@ class ApiProformaController extends Controller
 
                 Log::error('Error al convertir proforma a venta (API)', [
                     'proforma_id' => $proforma->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+                    'error'       => $e->getMessage(),
+                    'trace'       => $e->getTraceAsString(),
                 ]);
 
                 return response()->json([
@@ -3099,7 +3145,7 @@ class ApiProformaController extends Controller
 
             // Validar que el usuario autenticado sea el propietario
             $usuarioActual = Auth::user();
-            if ($usuarioActual->id !== (int)$usuarioId) {
+            if ($usuarioActual->id !== (int) $usuarioId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado para acceder a este carrito',
@@ -3108,11 +3154,11 @@ class ApiProformaController extends Controller
 
             // Obtener el cliente del usuario autenticado
             $cliente = Cliente::where('user_id', $usuarioId)->first();
-            if (!$cliente) {
+            if (! $cliente) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene un cliente asociado',
-                    'data' => null,
+                    'data'    => null,
                 ], 200);
             }
 
@@ -3129,66 +3175,66 @@ class ApiProformaController extends Controller
                 ])
                 ->first();
 
-            if (!$proforma) {
+            if (! $proforma) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No hay carrito guardado para este usuario',
-                    'data' => null,
+                    'data'    => null,
                 ], 200);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Carrito recuperado exitosamente',
-                'data' => [
-                    'id' => $proforma->id,
-                    'numero' => $proforma->numero,
-                    'fecha' => $proforma->fecha,
-                    'subtotal' => $proforma->subtotal,
-                    'descuento' => $proforma->descuento,
-                    'impuesto' => $proforma->impuesto,
-                    'total' => $proforma->total,
-                    'estado' => $proforma->estado,
-                    'observaciones' => $proforma->observaciones,
-                    'canal_origen' => $proforma->canal_origen,
-                    'requiere_envio' => $proforma->requiere_envio,
+                'data'    => [
+                    'id'                              => $proforma->id,
+                    'numero'                          => $proforma->numero,
+                    'fecha'                           => $proforma->fecha,
+                    'subtotal'                        => $proforma->subtotal,
+                    'descuento'                       => $proforma->descuento,
+                    'impuesto'                        => $proforma->impuesto,
+                    'total'                           => $proforma->total,
+                    'estado'                          => $proforma->estado,
+                    'observaciones'                   => $proforma->observaciones,
+                    'canal_origen'                    => $proforma->canal_origen,
+                    'requiere_envio'                  => $proforma->requiere_envio,
                     // Información de entrega
-                    'fecha_entrega_solicitada' => $proforma->fecha_entrega_solicitada,
-                    'hora_entrega_solicitada' => $proforma->hora_entrega_solicitada,
+                    'fecha_entrega_solicitada'        => $proforma->fecha_entrega_solicitada,
+                    'hora_entrega_solicitada'         => $proforma->hora_entrega_solicitada,
                     'direccion_entrega_solicitada_id' => $proforma->direccion_entrega_solicitada_id,
-                    'direccionSolicitada' => $proforma->direccionSolicitada ? [
-                        'id' => $proforma->direccionSolicitada->id,
+                    'direccionSolicitada'             => $proforma->direccionSolicitada ? [
+                        'id'        => $proforma->direccionSolicitada->id,
                         'direccion' => $proforma->direccionSolicitada->direccion,
-                        'latitud' => $proforma->direccionSolicitada->latitud,
-                        'longitud' => $proforma->direccionSolicitada->longitud,
+                        'latitud'   => $proforma->direccionSolicitada->latitud,
+                        'longitud'  => $proforma->direccionSolicitada->longitud,
                     ] : null,
                     // Detalles de la proforma
-                    'detalles' => $proforma->detalles->map(function ($detalle) {
+                    'detalles'                        => $proforma->detalles->map(function ($detalle) {
                         return [
-                            'id' => $detalle->id,
-                            'producto_id' => $detalle->producto_id,
-                            'cantidad' => $detalle->cantidad,
+                            'id'              => $detalle->id,
+                            'producto_id'     => $detalle->producto_id,
+                            'cantidad'        => $detalle->cantidad,
                             'precio_unitario' => $detalle->precio_unitario,
-                            'descuento' => $detalle->descuento,
-                            'subtotal' => $detalle->subtotal,
-                            'producto' => [
-                                'id' => $detalle->producto->id,
-                                'nombre' => $detalle->producto->nombre,
-                                'codigo' => $detalle->producto->codigo,
+                            'descuento'       => $detalle->descuento,
+                            'subtotal'        => $detalle->subtotal,
+                            'producto'        => [
+                                'id'           => $detalle->producto->id,
+                                'nombre'       => $detalle->producto->nombre,
+                                'codigo'       => $detalle->producto->codigo,
                                 'precio_venta' => $detalle->producto->precio_venta,
                             ],
                         ];
                     })->toArray(),
-                    'created_at' => $proforma->created_at->toIso8601String(),
-                    'updated_at' => $proforma->updated_at->toIso8601String(),
+                    'created_at'                      => $proforma->created_at->toIso8601String(),
+                    'updated_at'                      => $proforma->updated_at->toIso8601String(),
                 ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Error al obtener último carrito', [
                 'usuario_id' => $request->route('usuarioId'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -3210,45 +3256,50 @@ class ApiProformaController extends Controller
      */
     public function indexInertia(Request $request): Response
     {
-        // Reutilizar la lógica del método index() pero devolver Inertia
+        // ✅ NUEVO 2026-02-21: Usar la misma lógica de filtrado que el API
         $user = Auth::user();
 
         // Construir query base
         $query = Proforma::query();
 
-        // Filtrado por rol (mismo código que index())
+        // Filtrado por rol
         if ($user->hasRole('cliente') || $user->cliente_id) {
             $clienteId = $user->cliente_id ?? $user->cliente->id ?? null;
 
-            if (!$clienteId) {
+            if (! $clienteId) {
                 return Inertia::render('Error', [
                     'message' => 'Usuario no tiene un cliente asociado',
-                    'status' => 403
+                    'status'  => 403,
                 ]);
             }
 
             $query->where('cliente_id', $clienteId);
-        }
-        elseif ($user->hasRole('Preventista')) {
+        } elseif ($user->hasRole('Preventista')) {
             $query->where('usuario_creador_id', $user->id);
-        }
-        elseif ($user->hasAnyRole(['Gestor de Logística', 'Admin', 'Cajero', 'Manager', 'Chofer'])) {
+        } elseif ($user->hasAnyRole(['Gestor de Logística', 'Admin', 'Cajero', 'Manager', 'Chofer', 'Encargado'])) {
             // Dashboard: todas las proformas
-        }
-        else {
+        } else {
             return Inertia::render('Error', [
                 'message' => 'No tiene permisos para ver proformas',
-                'status' => 403
+                'status'  => 403,
             ]);
         }
 
-        // Aplicar filtros opcionales
-        // 🔑 ARREGLADO: Buscar dinámicamente en estados_logistica por código
+        // ✅ NUEVO: Búsqueda general (ID, número, cliente)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('numero', 'like', "%{$search}%")
+                  ->orWhereHas('cliente', function ($q) use ($search) {
+                      $q->whereRaw('LOWER(nombre) like ?', ["%{$search}%"]);
+                  });
+            });
+        }
+
+        // Filtros por parámetros
         if ($request->filled('estado')) {
             $estadoCode = strtoupper($request->estado);
-
-            // Buscar el estado en la tabla estados_logistica
-            // Soporta cualquier estado: PENDIENTE, APROBADA, EN_RUTA, etc.
             $estadoId = DB::table('estados_logistica')
                 ->where('codigo', $estadoCode)
                 ->where('categoria', 'proforma')
@@ -3257,19 +3308,47 @@ class ApiProformaController extends Controller
             if ($estadoId) {
                 $query->where('estado_proforma_id', $estadoId);
             }
-            // Si no existe el estado, simplemente no aplica el filtro
         }
 
-        if ($request->filled('canal_origen')) {
-            $query->where('canal_origen', $request->canal_origen);
+        // ✅ NUEVO: Filtro por cliente_id
+        if ($request->filled('cliente_id')) {
+            $query->where('cliente_id', $request->cliente_id);
+        }
+
+        // ✅ NUEVO: Filtro por usuario_creador_id
+        if ($request->filled('usuario_creador_id')) {
+            $query->where('usuario_creador_id', $request->usuario_creador_id);
+        }
+
+        // ✅ NUEVO: Filtro por monto mínimo
+        if ($request->filled('total_min')) {
+            $query->where('total', '>=', floatval($request->total_min));
+        }
+
+        // ✅ NUEVO: Filtro por monto máximo
+        if ($request->filled('total_max')) {
+            $query->where('total', '<=', floatval($request->total_max));
+        }
+
+        // ✅ NUEVO: Filtro por proformas vencidas/vigentes
+        if ($request->filled('filtro_vencidas')) {
+            $hoy = now()->startOfDay();
+            if ($request->filtro_vencidas === 'VENCIDAS') {
+                $query->whereDate('fecha_vencimiento', '<', $hoy);
+            } elseif ($request->filtro_vencidas === 'VIGENTES') {
+                $query->where(function ($q) use ($hoy) {
+                    $q->whereDate('fecha_vencimiento', '>=', $hoy)
+                      ->orWhereNull('fecha_vencimiento');
+                });
+            }
         }
 
         if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha', '>=', $request->fecha_desde);
+            $query->whereDate('created_at', '>=', $request->fecha_desde);
         }
 
         if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<=', $request->fecha_hasta);
+            $query->whereDate('created_at', '<=', $request->fecha_hasta);
         }
 
         // Eager loading y paginación
@@ -3278,7 +3357,7 @@ class ApiProformaController extends Controller
             'usuarioCreador',
             'detalles.producto',
             'direccionSolicitada',
-            'direccionConfirmada'
+            'direccionConfirmada',
         ])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -3327,7 +3406,7 @@ class ApiProformaController extends Controller
     {
         try {
             Log::info('🔄 Iniciando ajuste de reservaciones (MULTI-LOTE)', [
-                'proforma_id' => $proforma->id,
+                'proforma_id'     => $proforma->id,
                 'detalles_nuevos' => count($detallesGuardados),
             ]);
 
@@ -3340,8 +3419,8 @@ class ApiProformaController extends Controller
             // 2️⃣ Crear mapa de producto_id → cantidad esperada (de los nuevos detalles)
             $detallesMap = [];
             foreach ($detallesGuardados as $detalle) {
-                $producto_id = (int) $detalle['producto_id'];
-                $cantidad = (int) $detalle['cantidad'];
+                $producto_id               = (int) $detalle['producto_id'];
+                $cantidad                  = (int) $detalle['cantidad'];
                 $detallesMap[$producto_id] = ($detallesMap[$producto_id] ?? 0) + $cantidad;
             }
 
@@ -3357,30 +3436,30 @@ class ApiProformaController extends Controller
                     $cantidadCombos = (int) $detalle['cantidad'];
 
                     Log::info('🎁 Expandiendo COMBO en mapa de detalles esperados', [
-                        'combo_id' => $producto->id,
+                        'combo_id'        => $producto->id,
                         'cantidad_combos' => $cantidadCombos,
                     ]);
 
                     // Expandir el combo usando la misma lógica que en creación de proformas
                     $componentesExpandidos = $stockService->expandirCombos([
                         [
-                            'producto_id' => $producto->id,
-                            'cantidad' => $cantidadCombos,
-                            'combo_items_seleccionados' => $detalle['combo_items_seleccionados'] ?? null
-                        ]
+                            'producto_id'               => $producto->id,
+                            'cantidad'                  => $cantidadCombos,
+                            'combo_items_seleccionados' => $detalle['combo_items_seleccionados'] ?? null,
+                        ],
                     ]);
 
                     // Agregar componentes al mapa (reemplazar el combo)
                     foreach ($componentesExpandidos as $componente) {
                         $productoComponenteId = $componente['producto_id'];
-                        $cantidadComponente = $componente['cantidad'];
+                        $cantidadComponente   = $componente['cantidad'];
 
                         $detallesMap[$productoComponenteId] =
                             ($detallesMap[$productoComponenteId] ?? 0) + $cantidadComponente;
 
                         Log::info('  ├─ Componente agregado al mapa', [
                             'componente_id' => $productoComponenteId,
-                            'cantidad' => $cantidadComponente,
+                            'cantidad'      => $cantidadComponente,
                         ]);
                     }
 
@@ -3401,21 +3480,21 @@ class ApiProformaController extends Controller
             foreach ($reservasPorProducto as $producto_id => $reservasDelProducto) {
                 // Calcular cantidad total reservada para este producto (suma de todos los lotes)
                 $cantidadTotalReservada = $reservasDelProducto->sum('cantidad_reservada');
-                $cantidadEsperada = $detallesMap[$producto_id] ?? 0;
+                $cantidadEsperada       = $detallesMap[$producto_id] ?? 0;
 
                 Log::info('📋 Procesando producto', [
-                    'producto_id' => $producto_id,
+                    'producto_id'               => $producto_id,
                     'cantidad_reservada_actual' => $cantidadTotalReservada,
-                    'cantidad_esperada' => $cantidadEsperada,
-                    'cantidad_lotes' => $reservasDelProducto->count(),
+                    'cantidad_esperada'         => $cantidadEsperada,
+                    'cantidad_lotes'            => $reservasDelProducto->count(),
                 ]);
 
                 if ($cantidadEsperada === 0) {
                     // ❌ PRODUCTO REMOVIDO: Liberar TODOS los lotes de este producto
                     Log::info('📤 Producto removido de proforma, liberando TODOS los lotes', [
-                        'producto_id' => $producto_id,
+                        'producto_id'              => $producto_id,
                         'cantidad_total_a_liberar' => $cantidadTotalReservada,
-                        'cantidad_lotes' => $reservasDelProducto->count(),
+                        'cantidad_lotes'           => $reservasDelProducto->count(),
                     ]);
 
                     foreach ($reservasDelProducto as $reserva) {
@@ -3431,10 +3510,10 @@ class ApiProformaController extends Controller
                     $cantidadALiberar = $cantidadTotalReservada - $cantidadEsperada;
 
                     Log::info('📉 Cantidad de producto disminuyó, liberando desde lotes más recientes (LIFO)', [
-                        'producto_id' => $producto_id,
+                        'producto_id'              => $producto_id,
                         'cantidad_total_reservada' => $cantidadTotalReservada,
-                        'cantidad_esperada' => $cantidadEsperada,
-                        'cantidad_a_liberar' => $cantidadALiberar,
+                        'cantidad_esperada'        => $cantidadEsperada,
+                        'cantidad_a_liberar'       => $cantidadALiberar,
                     ]);
 
                     // Ordenar por ID DESC (más recientes primero) y iterar
@@ -3449,7 +3528,7 @@ class ApiProformaController extends Controller
                             // Liberar COMPLETAMENTE este lote
                             Log::info('🗑️ Liberando lote completamente', [
                                 'reserva_id' => $reserva->id,
-                                'cantidad' => $cantidadReservada,
+                                'cantidad'   => $cantidadReservada,
                             ]);
                             $this->liberarReservaConMovimiento(
                                 $reserva,
@@ -3460,8 +3539,8 @@ class ApiProformaController extends Controller
                         } else {
                             // Liberar PARCIALMENTE este lote
                             Log::info('⚠️ Liberando lote parcialmente', [
-                                'reserva_id' => $reserva->id,
-                                'cantidad_a_liberar' => $cantidadALiberar,
+                                'reserva_id'               => $reserva->id,
+                                'cantidad_a_liberar'       => $cantidadALiberar,
                                 'cantidad_total_reservada' => $cantidadReservada,
                             ]);
                             $this->liberarExcesoReserva(
@@ -3481,30 +3560,30 @@ class ApiProformaController extends Controller
                     $diferencia = $cantidadEsperada - $cantidadTotalReservada;
 
                     Log::info('📈 Cantidad de producto aumentó, reservando nuevos lotes con FIFO', [
-                        'producto_id' => $producto_id,
+                        'producto_id'               => $producto_id,
                         'cantidad_reservada_actual' => $cantidadTotalReservada,
-                        'cantidad_esperada' => $cantidadEsperada,
-                        'cantidad_a_reservar' => $diferencia,
+                        'cantidad_esperada'         => $cantidadEsperada,
+                        'cantidad_a_reservar'       => $diferencia,
                     ]);
 
                     $resultado = $reservaService->distribuirReserva(
                         $proforma,
                         $producto_id,
                         $diferencia,
-                        3  // dias_vencimiento por defecto
+                        3// dias_vencimiento por defecto
                     );
 
-                    if (!$resultado['success']) {
+                    if (! $resultado['success']) {
                         Log::warning('⚠️ No se pudo reservar la cantidad completa (FIFO)', [
-                            'producto_id' => $producto_id,
+                            'producto_id'         => $producto_id,
                             'cantidad_solicitada' => $diferencia,
-                            'error' => $resultado['error'],
+                            'error'               => $resultado['error'],
                         ]);
                     } else {
                         Log::info('✅ Nuevas reservas creadas con FIFO', [
-                            'producto_id' => $producto_id,
+                            'producto_id'        => $producto_id,
                             'cantidad_reservada' => $resultado['resumen']['cantidad_reservada'],
-                            'cantidad_lotes' => $resultado['resumen']['cantidad_lotes'],
+                            'cantidad_lotes'     => $resultado['resumen']['cantidad_lotes'],
                         ]);
                     }
 
@@ -3512,7 +3591,7 @@ class ApiProformaController extends Controller
                     // ✅ Cantidad igual: no hacer nada
                     Log::info('✅ Cantidad de producto sin cambios', [
                         'producto_id' => $producto_id,
-                        'cantidad' => $cantidadTotalReservada,
+                        'cantidad'    => $cantidadTotalReservada,
                     ]);
                 }
 
@@ -3525,27 +3604,27 @@ class ApiProformaController extends Controller
                 if ($cantidad > 0) {
                     Log::info('➕ Creando reservas para producto agregado', [
                         'producto_id' => $producto_id,
-                        'cantidad' => $cantidad,
+                        'cantidad'    => $cantidad,
                     ]);
 
                     $resultado = $reservaService->distribuirReserva(
                         $proforma,
                         $producto_id,
                         $cantidad,
-                        3  // dias_vencimiento por defecto
+                        3// dias_vencimiento por defecto
                     );
 
-                    if (!$resultado['success']) {
+                    if (! $resultado['success']) {
                         Log::warning('⚠️ No se pudo reservar producto agregado', [
-                            'producto_id' => $producto_id,
+                            'producto_id'         => $producto_id,
                             'cantidad_solicitada' => $cantidad,
-                            'error' => $resultado['error'],
+                            'error'               => $resultado['error'],
                         ]);
                     } else {
                         Log::info('✅ Reservas creadas para producto agregado', [
-                            'producto_id' => $producto_id,
+                            'producto_id'        => $producto_id,
                             'cantidad_reservada' => $resultado['resumen']['cantidad_reservada'],
-                            'cantidad_lotes' => $resultado['resumen']['cantidad_lotes'],
+                            'cantidad_lotes'     => $resultado['resumen']['cantidad_lotes'],
                         ]);
                     }
                 }
@@ -3558,8 +3637,8 @@ class ApiProformaController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error ajustando reservaciones', [
                 'proforma_id' => $proforma->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
             ]);
             // No lanzar excepción: solo registrar en log para no bloquear la actualización
         }
@@ -3576,20 +3655,20 @@ class ApiProformaController extends Controller
 
         try {
             // 1️⃣ Obtener stock ANTES de cambios
-            $stockProducto = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
-            $cantidadAnterior = $stockProducto->cantidad_disponible;
+            $stockProducto             = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
+            $cantidadAnterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaAnterior = $stockProducto->cantidad_reservada;
 
             // 2️⃣ Actualizar stock_productos (liberar cantidad_reservada → cantidad_disponible)
             $cantidadALiberar = $reserva->cantidad_reservada;
             $stockProducto->update([
                 'cantidad_disponible' => $stockProducto->cantidad_disponible + $cantidadALiberar,
-                'cantidad_reservada' => $stockProducto->cantidad_reservada - $cantidadALiberar,
+                'cantidad_reservada'  => $stockProducto->cantidad_reservada - $cantidadALiberar,
             ]);
 
             // 3️⃣ Obtener valores DESPUÉS
             $stockProducto->refresh();
-            $cantidadPosterior = $stockProducto->cantidad_disponible;
+            $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
 
             // 4️⃣ Actualizar estado de la reserva
@@ -3597,36 +3676,36 @@ class ApiProformaController extends Controller
 
             // 5️⃣ Registrar movimiento con cantidad_anterior y cantidad_posterior
             \App\Models\MovimientoInventario::create([
-                'stock_producto_id' => $reserva->stock_producto_id,
-                'cantidad' => $cantidadALiberar,  // Positivo: liberado
-                'cantidad_anterior' => $cantidadAnterior,  // ✅ ANTES
-                'cantidad_posterior' => $cantidadPosterior,  // ✅ DESPUÉS
-                'fecha' => now(),
-                'observacion' => json_encode([
-                    'evento' => 'Liberación de reserva de proforma',
-                    'motivo' => $motivo,
-                    'reserva_id' => $reserva->id,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'stock_producto_id'  => $reserva->stock_producto_id,
+                'cantidad'           => $cantidadALiberar,  // Positivo: liberado
+                'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
+                'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                'fecha'              => now(),
+                'observacion'        => json_encode([
+                    'evento'                       => 'Liberación de reserva de proforma',
+                    'motivo'                       => $motivo,
+                    'reserva_id'                   => $reserva->id,
+                    'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 ]),
-                'numero_documento' => $numeroProforma,
-                'tipo' => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                'referencia_tipo' => 'proforma',
-                'referencia_id' => $reserva->proforma_id,
+                'numero_documento'   => $numeroProforma,
+                'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                'user_id'            => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo'    => 'proforma',
+                'referencia_id'      => $reserva->proforma_id,
             ]);
 
             \Illuminate\Support\Facades\Log::info('✅ Reserva liberada completamente', [
-                'reserva_id' => $reserva->id,
-                'cantidad_liberada' => $cantidadALiberar,
-                'cantidad_disponible_antes' => $cantidadAnterior,
+                'reserva_id'                  => $reserva->id,
+                'cantidad_liberada'           => $cantidadALiberar,
+                'cantidad_disponible_antes'   => $cantidadAnterior,
                 'cantidad_disponible_despues' => $cantidadPosterior,
-                'motivo' => $motivo,
+                'motivo'                      => $motivo,
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error liberando reserva', [
                 'reserva_id' => $reserva->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -3642,9 +3721,9 @@ class ApiProformaController extends Controller
 
         try {
             // 1️⃣ Obtener stock ANTES de cambios
-            $stockProducto = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
+            $stockProducto              = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
             $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
-            $cantidadReservadaAnterior = $reserva->cantidad_reservada;
+            $cantidadReservadaAnterior  = $reserva->cantidad_reservada;
 
             // 2️⃣ Actualizar cantidad de la reserva
             $reserva->update(['cantidad_reservada' => $cantidadNueva]);
@@ -3653,7 +3732,7 @@ class ApiProformaController extends Controller
             $diferencia = $cantidadReservadaAnterior - $cantidadNueva;
             $stockProducto->update([
                 'cantidad_disponible' => $stockProducto->cantidad_disponible + $diferencia,
-                'cantidad_reservada' => $stockProducto->cantidad_reservada - $diferencia,
+                'cantidad_reservada'  => $stockProducto->cantidad_reservada - $diferencia,
             ]);
 
             // 4️⃣ Obtener valores DESPUÉS
@@ -3662,36 +3741,36 @@ class ApiProformaController extends Controller
 
             // 5️⃣ Registrar movimiento con cantidad_anterior y cantidad_posterior
             \App\Models\MovimientoInventario::create([
-                'stock_producto_id' => $reserva->stock_producto_id,
-                'cantidad' => $diferencia,  // Positivo: liberado
-                'cantidad_anterior' => $cantidadDisponibleAnterior,  // ✅ ANTES
-                'cantidad_posterior' => $cantidadDisponiblePosterior,  // ✅ DESPUÉS
-                'fecha' => now(),
-                'observacion' => json_encode([
-                    'evento' => 'Reducción de cantidad de reserva',
-                    'reserva_id' => $reserva->id,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'stock_producto_id'  => $reserva->stock_producto_id,
+                'cantidad'           => $diferencia,                  // Positivo: liberado
+                'cantidad_anterior'  => $cantidadDisponibleAnterior,  // ✅ ANTES
+                'cantidad_posterior' => $cantidadDisponiblePosterior, // ✅ DESPUÉS
+                'fecha'              => now(),
+                'observacion'        => json_encode([
+                    'evento'                       => 'Reducción de cantidad de reserva',
+                    'reserva_id'                   => $reserva->id,
+                    'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadNueva,
                 ]),
-                'numero_documento' => $reserva->proforma->numero ?? null,
-                'tipo' => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                'referencia_tipo' => 'proforma',
-                'referencia_id' => $reserva->proforma_id,
+                'numero_documento'   => $reserva->proforma->numero ?? null,
+                'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                'user_id'            => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo'    => 'proforma',
+                'referencia_id'      => $reserva->proforma_id,
             ]);
 
             \Illuminate\Support\Facades\Log::info('✅ Reserva reducida correctamente', [
-                'reserva_id' => $reserva->id,
+                'reserva_id'                  => $reserva->id,
                 'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
-                'cantidad_reservada_nueva' => $cantidadNueva,
-                'cantidad_disponible_antes' => $cantidadDisponibleAnterior,
+                'cantidad_reservada_nueva'    => $cantidadNueva,
+                'cantidad_disponible_antes'   => $cantidadDisponibleAnterior,
                 'cantidad_disponible_despues' => $cantidadDisponiblePosterior,
-                'diferencia' => $diferencia,
+                'diferencia'                  => $diferencia,
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error reduciendo reserva', [
                 'reserva_id' => $reserva->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -3703,53 +3782,53 @@ class ApiProformaController extends Controller
     {
         try {
             // 1️⃣ Obtener stock ANTES de cambios
-            $stockProducto = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
-            $cantidadAnterior = $stockProducto->cantidad_disponible;
+            $stockProducto             = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
+            $cantidadAnterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaAnterior = $stockProducto->cantidad_reservada;
 
             // 2️⃣ Actualizar stock_productos (liberar cantidad_reservada → cantidad_disponible)
             $stockProducto->update([
                 'cantidad_disponible' => $stockProducto->cantidad_disponible + $exceso,
-                'cantidad_reservada' => $stockProducto->cantidad_reservada - $exceso,
+                'cantidad_reservada'  => $stockProducto->cantidad_reservada - $exceso,
             ]);
 
             // 3️⃣ Obtener valores DESPUÉS
             $stockProducto->refresh();
-            $cantidadPosterior = $stockProducto->cantidad_disponible;
+            $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
 
             // 4️⃣ Registrar movimiento con cantidad_anterior y cantidad_posterior
             \App\Models\MovimientoInventario::create([
-                'stock_producto_id' => $reserva->stock_producto_id,
-                'cantidad' => $exceso,  // Positivo: liberado
-                'cantidad_anterior' => $cantidadAnterior,  // ✅ ANTES
-                'cantidad_posterior' => $cantidadPosterior,  // ✅ DESPUÉS
-                'fecha' => now(),
-                'observacion' => json_encode([
-                    'evento' => 'Liberación de exceso de reserva',
-                    'motivo' => $motivo,
-                    'reserva_id' => $reserva->id,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'stock_producto_id'  => $reserva->stock_producto_id,
+                'cantidad'           => $exceso,            // Positivo: liberado
+                'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
+                'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                'fecha'              => now(),
+                'observacion'        => json_encode([
+                    'evento'                       => 'Liberación de exceso de reserva',
+                    'motivo'                       => $motivo,
+                    'reserva_id'                   => $reserva->id,
+                    'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 ]),
-                'numero_documento' => $numeroProforma,
-                'tipo' => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                'referencia_tipo' => 'proforma',
-                'referencia_id' => $reserva->proforma_id,
+                'numero_documento'   => $numeroProforma,
+                'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
+                'user_id'            => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo'    => 'proforma',
+                'referencia_id'      => $reserva->proforma_id,
             ]);
 
             \Illuminate\Support\Facades\Log::info('✅ Exceso liberado correctamente', [
-                'reserva_id' => $reserva->id,
-                'exceso' => $exceso,
-                'cantidad_disponible_antes' => $cantidadAnterior,
+                'reserva_id'                  => $reserva->id,
+                'exceso'                      => $exceso,
+                'cantidad_disponible_antes'   => $cantidadAnterior,
                 'cantidad_disponible_despues' => $cantidadPosterior,
-                'motivo' => $motivo,
+                'motivo'                      => $motivo,
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error liberando exceso', [
                 'reserva_id' => $reserva->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -3757,7 +3836,7 @@ class ApiProformaController extends Controller
     /**
      * Ampliar cantidad de una reserva existente
      */
-    private function ampliarReserva(\App\Models\ReservaProforma $reserva, int $cantidadNueva, ?\App\Models\Proforma $proforma = null)
+    private function ampliarReserva(\App\Models\ReservaProforma $reserva, int $cantidadNueva,  ? \App\Models\Proforma $proforma = null)
     {
         if ($reserva->cantidad_reservada === $cantidadNueva) {
             return; // No hay cambio
@@ -3765,9 +3844,9 @@ class ApiProformaController extends Controller
 
         try {
             // 1️⃣ Obtener stock ANTES de cambios
-            $stockProducto = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
+            $stockProducto              = \App\Models\StockProducto::lockForUpdate()->findOrFail($reserva->stock_producto_id);
             $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
-            $cantidadReservadaAnterior = $reserva->cantidad_reservada;
+            $cantidadReservadaAnterior  = $reserva->cantidad_reservada;
 
             // 2️⃣ Validar disponibilidad
             $diferencia = $cantidadNueva - $cantidadReservadaAnterior;
@@ -3781,7 +3860,7 @@ class ApiProformaController extends Controller
             // 4️⃣ Actualizar stock_productos (reducir cantidad_disponible y aumentar cantidad_reservada)
             $stockProducto->update([
                 'cantidad_disponible' => $stockProducto->cantidad_disponible - $diferencia,
-                'cantidad_reservada' => $stockProducto->cantidad_reservada + $diferencia,
+                'cantidad_reservada'  => $stockProducto->cantidad_reservada + $diferencia,
             ]);
 
             // 5️⃣ Obtener valores DESPUÉS
@@ -3790,36 +3869,36 @@ class ApiProformaController extends Controller
 
             // 6️⃣ Registrar movimiento en inventario con cantidad_anterior/posterior
             \App\Models\MovimientoInventario::create([
-                'stock_producto_id' => $reserva->stock_producto_id,
-                'cantidad' => -$diferencia,  // Negativo: reservar
-                'cantidad_anterior' => $cantidadDisponibleAnterior,  // ✅ ANTES
-                'cantidad_posterior' => $cantidadDisponiblePosterior,  // ✅ DESPUÉS
-                'fecha' => now(),
-                'observacion' => json_encode([
-                    'evento' => 'Aumento de cantidad de reserva',
-                    'reserva_id' => $reserva->id,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'stock_producto_id'  => $reserva->stock_producto_id,
+                'cantidad'           => -$diferencia,                 // Negativo: reservar
+                'cantidad_anterior'  => $cantidadDisponibleAnterior,  // ✅ ANTES
+                'cantidad_posterior' => $cantidadDisponiblePosterior, // ✅ DESPUÉS
+                'fecha'              => now(),
+                'observacion'        => json_encode([
+                    'evento'                       => 'Aumento de cantidad de reserva',
+                    'reserva_id'                   => $reserva->id,
+                    'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadNueva,
                 ]),
-                'numero_documento' => $proforma?->numero,
-                'tipo' => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                'referencia_tipo' => 'proforma',
-                'referencia_id' => $proforma?->id,
+                'numero_documento'   => $proforma?->numero,
+                'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                'user_id'            => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo'    => 'proforma',
+                'referencia_id'      => $proforma?->id,
             ]);
 
             \Illuminate\Support\Facades\Log::info('✅ Reserva ampliada correctamente', [
-                'reserva_id' => $reserva->id,
+                'reserva_id'                  => $reserva->id,
                 'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
-                'cantidad_reservada_nueva' => $cantidadNueva,
-                'cantidad_disponible_antes' => $cantidadDisponibleAnterior,
+                'cantidad_reservada_nueva'    => $cantidadNueva,
+                'cantidad_disponible_antes'   => $cantidadDisponibleAnterior,
                 'cantidad_disponible_despues' => $cantidadDisponiblePosterior,
-                'diferencia' => $diferencia,
+                'diferencia'                  => $diferencia,
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error ampliando reserva', [
                 'reserva_id' => $reserva->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -3832,8 +3911,8 @@ class ApiProformaController extends Controller
     {
         try {
             // 1️⃣ Obtener stock ANTES de cambios
-            $stockProducto = \App\Models\StockProducto::lockForUpdate()->findOrFail($stock_producto_id);
-            $cantidadAnterior = $stockProducto->cantidad_disponible;
+            $stockProducto             = \App\Models\StockProducto::lockForUpdate()->findOrFail($stock_producto_id);
+            $cantidadAnterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaAnterior = $stockProducto->cantidad_reservada;
 
             // 2️⃣ Validar disponibilidad
@@ -3847,58 +3926,58 @@ class ApiProformaController extends Controller
 
             // 3️⃣ Crear nueva reserva
             $reserva = \App\Models\ReservaProforma::create([
-                'proforma_id' => $proforma->id,
-                'stock_producto_id' => $stock_producto_id,
+                'proforma_id'        => $proforma->id,
+                'stock_producto_id'  => $stock_producto_id,
                 'cantidad_reservada' => $cantidad,
-                'fecha_reserva' => now(),
-                'fecha_expiracion' => now()->addDays(3),
-                'estado' => \App\Models\ReservaProforma::ACTIVA,
+                'fecha_reserva'      => now(),
+                'fecha_expiracion'   => now()->addDays(3),
+                'estado'             => \App\Models\ReservaProforma::ACTIVA,
             ]);
 
             // 4️⃣ Actualizar stock_productos
             $stockProducto->update([
                 'cantidad_disponible' => $cantidadAnterior - $cantidad,
-                'cantidad_reservada' => $cantidadReservadaAnterior + $cantidad,
+                'cantidad_reservada'  => $cantidadReservadaAnterior + $cantidad,
             ]);
 
             // 5️⃣ Obtener valores DESPUÉS
             $stockProducto->refresh();
-            $cantidadPosterior = $stockProducto->cantidad_disponible;
+            $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
 
             // 6️⃣ Registrar movimiento en inventario con cantidad_anterior/posterior
             \App\Models\MovimientoInventario::create([
-                'stock_producto_id' => $stock_producto_id,
-                'cantidad' => -$cantidad,  // Negativo: reservar
-                'cantidad_anterior' => $cantidadAnterior,  // ✅ ANTES
-                'cantidad_posterior' => $cantidadPosterior,  // ✅ DESPUÉS
-                'fecha' => now(),
-                'observacion' => json_encode([
-                    'evento' => 'Nueva reserva adicional creada',
-                    'reserva_id' => $reserva->id,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'stock_producto_id'  => $stock_producto_id,
+                'cantidad'           => -$cantidad,         // Negativo: reservar
+                'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
+                'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                'fecha'              => now(),
+                'observacion'        => json_encode([
+                    'evento'                       => 'Nueva reserva adicional creada',
+                    'reserva_id'                   => $reserva->id,
+                    'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 ]),
-                'numero_documento' => $proforma->numero,
-                'tipo' => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                'referencia_tipo' => 'proforma',
-                'referencia_id' => $proforma->id,
+                'numero_documento'   => $proforma->numero,
+                'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
+                'user_id'            => \Illuminate\Support\Facades\Auth::id(),
+                'referencia_tipo'    => 'proforma',
+                'referencia_id'      => $proforma->id,
             ]);
 
             \Illuminate\Support\Facades\Log::info('✅ Reserva adicional creada correctamente', [
-                'reserva_id' => $reserva->id,
-                'proforma_id' => $proforma->id,
-                'stock_producto_id' => $stock_producto_id,
-                'cantidad_reservada' => $cantidad,
-                'cantidad_disponible_antes' => $cantidadAnterior,
+                'reserva_id'                  => $reserva->id,
+                'proforma_id'                 => $proforma->id,
+                'stock_producto_id'           => $stock_producto_id,
+                'cantidad_reservada'          => $cantidad,
+                'cantidad_disponible_antes'   => $cantidadAnterior,
                 'cantidad_disponible_despues' => $cantidadPosterior,
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error creando reserva adicional', [
-                'proforma_id' => $proforma->id,
+                'proforma_id'       => $proforma->id,
                 'stock_producto_id' => $stock_producto_id,
-                'error' => $e->getMessage(),
+                'error'             => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -3913,33 +3992,33 @@ class ApiProformaController extends Controller
             // Usar ReservaDistribucionService para distribuir automáticamente entre múltiples lotes (FIFO)
             // El servicio obtiene el almacén internamente de la empresa del usuario autenticado
             $distribucionService = new \App\Services\Reservas\ReservaDistribucionService();
-            $resultado = $distribucionService->distribuirReserva(
+            $resultado           = $distribucionService->distribuirReserva(
                 $proforma,
                 $producto_id,
                 $cantidad,
-                3  // días de vencimiento
+                3// días de vencimiento
             );
 
             // Validar resultado de distribución
-            if (!$resultado['success']) {
+            if (! $resultado['success']) {
                 throw new \Exception($resultado['error'] ?? 'Error distribuiendo reservas');
             }
 
             // Log de éxito con detalles de distribución
             \Illuminate\Support\Facades\Log::info('✅ Reservas distribuidas exitosamente (FIFO)', [
-                'proforma_id' => $proforma->id,
-                'producto_id' => $producto_id,
+                'proforma_id'         => $proforma->id,
+                'producto_id'         => $producto_id,
                 'cantidad_solicitada' => $cantidad,
-                'cantidad_reservada' => $resultado['resumen']['cantidad_reservada'] ?? $cantidad,
-                'cantidad_lotes' => $resultado['resumen']['cantidad_lotes'] ?? 1,
-                'distribucion' => $resultado['distribucion'],
+                'cantidad_reservada'  => $resultado['resumen']['cantidad_reservada'] ?? $cantidad,
+                'cantidad_lotes'      => $resultado['resumen']['cantidad_lotes'] ?? 1,
+                'distribucion'        => $resultado['distribucion'],
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('❌ Error distribuiendo reservas', [
                 'proforma_id' => $proforma->id,
                 'producto_id' => $producto_id,
-                'cantidad' => $cantidad,
-                'error' => $e->getMessage(),
+                'cantidad'    => $cantidad,
+                'error'       => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -3965,28 +4044,28 @@ class ApiProformaController extends Controller
 
         $request->validate([
             // ✅ Cliente (ahora actualizable en edición)
-            'cliente_id' => 'nullable|exists:clientes,id',
-            'detalles' => 'required|array|min:1',
-            'detalles.*.producto_id' => 'required|exists:productos,id',
-            'detalles.*.cantidad' => 'required|numeric|min:0.01',
+            'cliente_id'                 => 'nullable|exists:clientes,id',
+            'detalles'                   => 'required|array|min:1',
+            'detalles.*.producto_id'     => 'required|exists:productos,id',
+            'detalles.*.cantidad'        => 'required|numeric|min:0.01',
             'detalles.*.precio_unitario' => 'required|numeric|min:0',
-            'detalles.*.subtotal' => 'required|numeric|min:0',
+            'detalles.*.subtotal'        => 'required|numeric|min:0',
             // ✅ NUEVO: Campos adicionales opcionales para edición completa
-            'fecha' => 'nullable|date',
-            'fecha_vencimiento' => 'nullable|date',
-            'fecha_entrega_solicitada' => 'nullable|date',
-            'tipo_entrega' => 'nullable|in:DELIVERY,PICKUP',
-            'canal' => 'nullable|in:PRESENCIAL,ONLINE,TELEFONO',
-            'politica_pago' => 'nullable|in:CONTRA_ENTREGA,ANTICIPADO_100',
-            'observaciones' => 'nullable|string|max:1000',
+            'fecha'                      => 'nullable|date',
+            'fecha_vencimiento'          => 'nullable|date',
+            'fecha_entrega_solicitada'   => 'nullable|date',
+            'tipo_entrega'               => 'nullable|in:DELIVERY,PICKUP',
+            'canal'                      => 'nullable|in:PRESENCIAL,ONLINE,TELEFONO',
+            'politica_pago'              => 'nullable|in:CONTRA_ENTREGA,ANTICIPADO_100',
+            'observaciones'              => 'nullable|string|max:1000',
             // ✅ NUEVO: Estado y preventista para edición completa
-            'estado_inicial' => 'nullable|in:BORRADOR,PENDIENTE',
-            'preventista_id' => 'nullable|exists:users,id',
+            'estado_inicial'             => 'nullable|in:BORRADOR,PENDIENTE',
+            'preventista_id'             => 'nullable|exists:users,id',
         ]);
 
         try {
             // ✅ ACTUALIZADO: Permitir actualizar proformas en estado PENDIENTE o BORRADOR
-            if (!in_array($proforma->estado, ['PENDIENTE', 'BORRADOR'])) {
+            if (! in_array($proforma->estado, ['PENDIENTE', 'BORRADOR'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Solo se pueden actualizar proformas en estado PENDIENTE o BORRADOR',
@@ -3998,28 +4077,28 @@ class ApiProformaController extends Controller
 
             // ✅ DEBUG: Ver exactamente qué datos llegaron
             Log::info('🔍 [actualizarDetalles] Detalles recibidos del frontend:', [
-                'cantidad_detalles' => count($detallesActualizados),
+                'cantidad_detalles'  => count($detallesActualizados),
                 'detalles_completos' => $detallesActualizados,
             ]);
 
             // Inicializar contadores
-            $subtotalNuevo = 0;
+            $subtotalNuevo     = 0;
             $detallesGuardados = [];
 
             // Procesar cada detalle
             foreach ($detallesActualizados as $i => $detalleData) {
-                $producto_id = $detalleData['producto_id'];
-                $cantidad = (float) $detalleData['cantidad'];
+                $producto_id     = $detalleData['producto_id'];
+                $cantidad        = (float) $detalleData['cantidad'];
                 $precio_unitario = (float) $detalleData['precio_unitario'];
-                $subtotal = (float) $detalleData['subtotal'];
+                $subtotal        = (float) $detalleData['subtotal'];
 
                 // ✅ DEBUG: Ver qué se procesa por detalle
                 Log::info("📋 [actualizarDetalles] Procesando detalle #$i:", [
-                    'producto_id' => $producto_id,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precio_unitario,
+                    'producto_id'       => $producto_id,
+                    'cantidad'          => $cantidad,
+                    'precio_unitario'   => $precio_unitario,
                     'tiene_combo_items' => isset($detalleData['combo_items_seleccionados']),
-                    'combo_items' => $detalleData['combo_items_seleccionados'] ?? null,
+                    'combo_items'       => $detalleData['combo_items_seleccionados'] ?? null,
                 ]);
 
                 // Validar que el producto existe
@@ -4034,17 +4113,17 @@ class ApiProformaController extends Controller
                     ], 422);
                 }
 
-                $subtotalNuevo += $subtotal;
+                $subtotalNuevo       += $subtotal;
                 $detallesGuardados[] = [
-                    'producto_id' => $producto_id,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => $precio_unitario,
-                    'descuento' => 0,
-                    'subtotal' => $subtotal,
-                    'unidad_medida_id' => $detalleData['unidad_medida_id'] ?? null,
+                    'producto_id'               => $producto_id,
+                    'cantidad'                  => $cantidad,
+                    'precio_unitario'           => $precio_unitario,
+                    'descuento'                 => 0,
+                    'subtotal'                  => $subtotal,
+                    'unidad_medida_id'          => $detalleData['unidad_medida_id'] ?? null,
                     // ✅ NUEVO: Agregar campos faltantes para coincidencia con DetalleVenta
-                    'tipo_precio_id' => $detalleData['tipo_precio_id'] ?? null,
-                    'tipo_precio_nombre' => $detalleData['tipo_precio_nombre'] ?? null,
+                    'tipo_precio_id'            => $detalleData['tipo_precio_id'] ?? null,
+                    'tipo_precio_nombre'        => $detalleData['tipo_precio_nombre'] ?? null,
                     'combo_items_seleccionados' => $detalleData['combo_items_seleccionados'] ?? null,
                 ];
             }
@@ -4052,8 +4131,8 @@ class ApiProformaController extends Controller
             // Calcular totales
             // ✅ CAMBIO: Impuesto se calcula pero NO se suma al total (es solo informativo)
             $impuestoOriginal = $proforma->total > 0 ? ($proforma->impuesto / $proforma->subtotal) : 0.13;
-            $impuestoNuevo = $subtotalNuevo * $impuestoOriginal;
-            $totalNuevo = $subtotalNuevo;  // ✅ Total SIN impuesto
+            $impuestoNuevo    = $subtotalNuevo * $impuestoOriginal;
+            $totalNuevo       = $subtotalNuevo; // ✅ Total SIN impuesto
 
             // Eliminar detalles antiguos
             $proforma->detalles()->delete();
@@ -4064,7 +4143,7 @@ class ApiProformaController extends Controller
                 $comboItemsSeleccionados = null;
                 if (isset($detalle['combo_items_seleccionados']) && is_array($detalle['combo_items_seleccionados'])) {
                     // Filtrar solo items que están incluidos (incluido = true)
-                    $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function($item) {
+                    $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function ($item) {
                         return ($item['incluido'] ?? false) === true;
                     });
                     // Reindexar array después de filter
@@ -4072,12 +4151,12 @@ class ApiProformaController extends Controller
                 }
 
                 // Crear detalle con combo items procesados
-                $detalleData = $detalle;
-                $detalleData['combo_items_seleccionados'] = $comboItemsSeleccionados ? array_map(function($item) {
+                $detalleData                              = $detalle;
+                $detalleData['combo_items_seleccionados'] = $comboItemsSeleccionados ? array_map(function ($item) {
                     return [
                         'combo_item_id' => $item['combo_item_id'] ?? null,
-                        'producto_id' => $item['producto_id'] ?? null,
-                        'incluido' => $item['incluido'] ?? false,
+                        'producto_id'   => $item['producto_id'] ?? null,
+                        'incluido'      => $item['incluido'] ?? false,
                     ];
                 }, $comboItemsSeleccionados) : null;
 
@@ -4085,10 +4164,10 @@ class ApiProformaController extends Controller
             }
 
             // Actualizar la proforma con los nuevos totales y campos adicionales opcionales
-            $updateData = [
+            $updateData  = [
                 'subtotal' => $subtotalNuevo,
                 'impuesto' => $impuestoNuevo,
-                'total' => $totalNuevo,
+                'total'    => $totalNuevo,
             ];
 
             // ✅ NUEVO: Agregar campos opcionales si están presentes en la request
@@ -4102,7 +4181,7 @@ class ApiProformaController extends Controller
             // ✅ NUEVO: Actualizar estado si se envía estado_inicial
             if ($request->has('estado_inicial') && $request->input('estado_inicial') !== null) {
                 $nuevoEstado = $request->input('estado_inicial');
-                $estadoId = Proforma::obtenerIdEstado($nuevoEstado, 'proforma');
+                $estadoId    = Proforma::obtenerIdEstado($nuevoEstado, 'proforma');
                 if ($estadoId && $proforma->estado !== $nuevoEstado) {
                     $updateData['estado_proforma_id'] = $estadoId;
 
@@ -4125,19 +4204,19 @@ class ApiProformaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Detalles actualizados correctamente',
-                'data' => [
-                    'proforma' => $proforma,
+                'data'    => [
+                    'proforma'          => $proforma,
                     'subtotal_anterior' => $proforma->getOriginal('subtotal'),
-                    'subtotal_nuevo' => $subtotalNuevo,
-                    'total_anterior' => $proforma->getOriginal('total'),
-                    'total_nuevo' => $totalNuevo,
+                    'subtotal_nuevo'    => $subtotalNuevo,
+                    'total_anterior'    => $proforma->getOriginal('total'),
+                    'total_nuevo'       => $totalNuevo,
                 ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Error actualizando detalles de proforma:', [
                 'proforma_id' => $proforma->id,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -4180,11 +4259,11 @@ class ApiProformaController extends Controller
     public function obtenerSiguientePendiente(Request $request)
     {
         try {
-            $currentId = $request->input('current_id');
+            $currentId    = $request->input('current_id');
             $incluirStats = $request->boolean('incluir_stats', false);
-            $usuario = Auth::user();
+            $usuario      = Auth::user();
 
-            if (!$currentId) {
+            if (! $currentId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'current_id es requerido',
@@ -4221,42 +4300,42 @@ class ApiProformaController extends Controller
 
                 $stats = [
                     'pendientes_restantes' => max(0, $totalPendientes - $indiceActual),
-                    'indice' => "{$indiceActual} de {$totalPendientes}",
+                    'indice'               => "{$indiceActual} de {$totalPendientes}",
                 ];
             }
 
             // Responder
             if ($siguienteProforma) {
                 // Eager load relación cliente y localidad si no está cargada
-                if (!$siguienteProforma->relationLoaded('cliente')) {
+                if (! $siguienteProforma->relationLoaded('cliente')) {
                     $siguienteProforma->load('cliente.localidad');
                 }
 
                 return response()->json([
-                    'success' => true,
+                    'success'          => true,
                     'existe_siguiente' => true,
-                    'proforma' => [
-                        'id' => $siguienteProforma->id,
-                        'numero' => $siguienteProforma->numero,
+                    'proforma'         => [
+                        'id'             => $siguienteProforma->id,
+                        'numero'         => $siguienteProforma->numero,
                         'cliente_nombre' => $siguienteProforma->cliente->nombre ?? 'Sin cliente',
-                        'total' => (float) $siguienteProforma->total,
+                        'total'          => (float) $siguienteProforma->total,
                         'fecha_creacion' => $siguienteProforma->created_at->format('d/m/Y H:i'),
                     ],
-                    'stats' => $stats,
+                    'stats'            => $stats,
                 ]);
             } else {
                 return response()->json([
-                    'success' => true,
+                    'success'          => true,
                     'existe_siguiente' => false,
-                    'mensaje' => 'No hay más proformas pendientes',
-                    'stats' => null,
+                    'mensaje'          => 'No hay más proformas pendientes',
+                    'stats'            => null,
                 ]);
             }
 
         } catch (\Exception $e) {
             Log::error('Error al obtener siguiente proforma pendiente:', [
                 'current_id' => $request->input('current_id'),
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -4292,22 +4371,22 @@ class ApiProformaController extends Controller
         string $politica,
         float $montoPagado,
         \App\Models\User $usuario
-    ): void {
+    ) : void {
         // 📊 LOG: INICIO DEL REGISTRO EN CAJA
         Log::info('🏪 [registrarMovimientoCajaParaPago] INICIANDO REGISTRO EN CAJA', [
-            'venta_id' => $venta->id,
-            'venta_numero' => $venta->numero,
-            'proforma_id' => $proforma->id,
-            'usuario_id' => $usuario->id,
+            'venta_id'       => $venta->id,
+            'venta_numero'   => $venta->numero,
+            'proforma_id'    => $proforma->id,
+            'usuario_id'     => $usuario->id,
             'usuario_nombre' => $usuario->name,
-            'politica' => $politica,
-            'monto_pagado' => $montoPagado,
+            'politica'       => $politica,
+            'monto_pagado'   => $montoPagado,
         ]);
 
         // ✅ Solo registrar para políticas que requieren registro en caja
         // Incluye: pagos anticipados (100%, 50%) y créditos
         $politicasARegistrar = ['ANTICIPADO_100', 'MEDIO_MEDIO', 'CREDITO'];
-        if (!in_array($politica, $politicasARegistrar)) {
+        if (! in_array($politica, $politicasARegistrar)) {
             Log::info('⏭️ [registrarMovimientoCajaParaPago] Política no requiere registro', [
                 'venta_id' => $venta->id,
                 'politica' => $politica,
@@ -4319,11 +4398,11 @@ class ApiProformaController extends Controller
         // Para crédito, puede ser 0
         if ($politica !== 'CREDITO' && $montoPagado <= 0) {
             Log::info('⏭️ [registrarMovimientoCajaParaPago] Sin monto a pagar, no registra movimiento', [
-                'venta_id' => $venta->id,
-                'proforma_id' => $proforma->id,
+                'venta_id'     => $venta->id,
+                'proforma_id'  => $proforma->id,
                 'monto_pagado' => $montoPagado,
-                'politica' => $politica,
-                'detalle' => 'Para política ' . $politica . ' se requiere monto positivo',
+                'politica'     => $politica,
+                'detalle'      => 'Para política ' . $politica . ' se requiere monto positivo',
             ]);
             return;
         }
@@ -4332,7 +4411,7 @@ class ApiProformaController extends Controller
             // ✅ MEJORADO: Buscar caja abierta IGUAL QUE EL MIDDLEWARE
             // 1️⃣ Buscar caja abierta de HOY
             Log::info('🔍 [registrarMovimientoCajaParaPago] Buscando caja abierta de HOY', [
-                'usuario_id' => $usuario->id,
+                'usuario_id'     => $usuario->id,
                 'fecha_busqueda' => today(),
             ]);
 
@@ -4346,14 +4425,14 @@ class ApiProformaController extends Controller
             if ($cajaAbierta) {
                 Log::info('✅ [registrarMovimientoCajaParaPago] Caja de HOY encontrada', [
                     'apertura_caja_id' => $cajaAbierta->id,
-                    'caja_id' => $cajaAbierta->caja_id,
-                    'caja_nombre' => $cajaAbierta->caja?->nombre,
-                    'fecha_apertura' => $cajaAbierta->fecha,
+                    'caja_id'          => $cajaAbierta->caja_id,
+                    'caja_nombre'      => $cajaAbierta->caja?->nombre,
+                    'fecha_apertura'   => $cajaAbierta->fecha,
                 ]);
             }
 
             // 2️⃣ Si no hay caja de hoy, buscar la más reciente (posiblemente de ayer)
-            if (!$cajaAbierta) {
+            if (! $cajaAbierta) {
                 Log::info('🔍 [registrarMovimientoCajaParaPago] No hay caja de HOY, buscando más reciente', [
                     'usuario_id' => $usuario->id,
                 ]);
@@ -4367,63 +4446,63 @@ class ApiProformaController extends Controller
                 // ✅ Registrar advertencia si es caja de día anterior
                 if ($cajaAbierta && $cajaAbierta->fecha < today()) {
                     Log::warning('⚠️ [registrarMovimientoCajaParaPago] USANDO CAJA DE DÍA ANTERIOR', [
-                        'usuario_id' => $usuario->id,
-                        'usuario_nombre' => $usuario->name,
+                        'usuario_id'       => $usuario->id,
+                        'usuario_nombre'   => $usuario->name,
                         'apertura_caja_id' => $cajaAbierta->id,
-                        'apertura_fecha' => $cajaAbierta->fecha,
-                        'dias_atras' => $cajaAbierta->fecha->diffInDays(today()),
-                        'caja_id' => $cajaAbierta->caja_id,
-                        'caja_nombre' => $cajaAbierta->caja?->nombre,
-                        'venta_id' => $venta->id,
-                        'venta_numero' => $venta->numero,
-                        'politica' => $politica,
-                        'advertencia' => 'Se está usando una caja abierta de un día anterior',
+                        'apertura_fecha'   => $cajaAbierta->fecha,
+                        'dias_atras'       => $cajaAbierta->fecha->diffInDays(today()),
+                        'caja_id'          => $cajaAbierta->caja_id,
+                        'caja_nombre'      => $cajaAbierta->caja?->nombre,
+                        'venta_id'         => $venta->id,
+                        'venta_numero'     => $venta->numero,
+                        'politica'         => $politica,
+                        'advertencia'      => 'Se está usando una caja abierta de un día anterior',
                     ]);
                 } elseif ($cajaAbierta) {
                     Log::info('ℹ️ [registrarMovimientoCajaParaPago] Caja más reciente encontrada (mismo día)', [
                         'apertura_caja_id' => $cajaAbierta->id,
-                        'caja_id' => $cajaAbierta->caja_id,
-                        'caja_nombre' => $cajaAbierta->caja?->nombre,
-                        'fecha_apertura' => $cajaAbierta->fecha,
+                        'caja_id'          => $cajaAbierta->caja_id,
+                        'caja_nombre'      => $cajaAbierta->caja?->nombre,
+                        'fecha_apertura'   => $cajaAbierta->fecha,
                     ]);
                 }
             }
 
-            if (!$cajaAbierta) {
+            if (! $cajaAbierta) {
                 Log::error('❌ [registrarMovimientoCajaParaPago] ERROR CRÍTICO: No hay caja abierta', [
-                    'usuario_id' => $usuario->id,
-                    'usuario_nombre' => $usuario->name,
-                    'usuario_roles' => $usuario->getRoleNames()->toArray(),
+                    'usuario_id'       => $usuario->id,
+                    'usuario_nombre'   => $usuario->name,
+                    'usuario_roles'    => $usuario->getRoleNames()->toArray(),
                     'usuario_empleado' => $usuario->empleado?->id,
-                    'venta_id' => $venta->id,
-                    'venta_numero' => $venta->numero,
-                    'proforma_id' => $proforma->id,
-                    'proforma_numero' => $proforma->numero,
-                    'politica' => $politica,
-                    'monto' => $montoPagado,
-                    'detalle_error' => 'No hay apertura de caja abierta para este usuario, ni hoy ni en días anteriores sin cerrar',
+                    'venta_id'         => $venta->id,
+                    'venta_numero'     => $venta->numero,
+                    'proforma_id'      => $proforma->id,
+                    'proforma_numero'  => $proforma->numero,
+                    'politica'         => $politica,
+                    'monto'            => $montoPagado,
+                    'detalle_error'    => 'No hay apertura de caja abierta para este usuario, ni hoy ni en días anteriores sin cerrar',
                 ]);
 
                 // ✅ REGISTRAR EN AUDITORÍA: Intento fallido
                 \App\Models\AuditoriaCaja::create([
-                    'user_id' => $usuario->id,
-                    'caja_id' => null,
-                    'apertura_caja_id' => null,
-                    'accion' => 'INTENTO_PAGO_SIN_CAJA',
+                    'user_id'             => $usuario->id,
+                    'caja_id'             => null,
+                    'apertura_caja_id'    => null,
+                    'accion'              => 'INTENTO_PAGO_SIN_CAJA',
                     'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                    'operacion_tipo' => 'VENTA',
-                    'exitosa' => false,
-                    'detalle_operacion' => [
-                        'venta_id' => $venta->id,
-                        'proforma_id' => $proforma->id,
-                        'politica' => $politica,
+                    'operacion_tipo'      => 'VENTA',
+                    'exitosa'             => false,
+                    'detalle_operacion'   => [
+                        'venta_id'     => $venta->id,
+                        'proforma_id'  => $proforma->id,
+                        'politica'     => $politica,
                         'monto_pagado' => $montoPagado,
-                        'motivo' => 'Usuario no tiene caja abierta HOY',
+                        'motivo'       => 'Usuario no tiene caja abierta HOY',
                     ],
-                    'codigo_http' => 422,
-                    'mensaje_error' => 'Usuario no tiene caja abierta para registrar pago',
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                    'codigo_http'         => 422,
+                    'mensaje_error'       => 'Usuario no tiene caja abierta para registrar pago',
+                    'ip_address'          => request()->ip(),
+                    'user_agent'          => request()->userAgent(),
                 ]);
 
                 return;
@@ -4432,145 +4511,145 @@ class ApiProformaController extends Controller
             // Obtener el tipo de operación VENTA
             $tipoOperacion = \App\Models\TipoOperacionCaja::where('codigo', 'VENTA')->first();
 
-            if (!$tipoOperacion) {
+            if (! $tipoOperacion) {
                 Log::error('❌ [registrarMovimientoCajaParaPago] Tipo operación VENTA no existe', [
                     'venta_id' => $venta->id,
                 ]);
 
                 // ✅ REGISTRAR EN AUDITORÍA: Error de configuración
                 \App\Models\AuditoriaCaja::create([
-                    'user_id' => $usuario->id,
-                    'caja_id' => $cajaAbierta->caja_id,
-                    'apertura_caja_id' => $cajaAbierta->id,
-                    'accion' => 'ERROR_OPERACION_NO_EXISTE',
+                    'user_id'             => $usuario->id,
+                    'caja_id'             => $cajaAbierta->caja_id,
+                    'apertura_caja_id'    => $cajaAbierta->id,
+                    'accion'              => 'ERROR_OPERACION_NO_EXISTE',
                     'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                    'operacion_tipo' => 'VENTA',
-                    'exitosa' => false,
-                    'detalle_operacion' => [
-                        'venta_id' => $venta->id,
+                    'operacion_tipo'      => 'VENTA',
+                    'exitosa'             => false,
+                    'detalle_operacion'   => [
+                        'venta_id'    => $venta->id,
                         'proforma_id' => $proforma->id,
-                        'motivo' => 'TipoOperacionCaja VENTA no existe en la BD',
+                        'motivo'      => 'TipoOperacionCaja VENTA no existe en la BD',
                     ],
-                    'codigo_http' => 500,
-                    'mensaje_error' => 'Tipo operación VENTA no encontrado',
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                    'codigo_http'         => 500,
+                    'mensaje_error'       => 'Tipo operación VENTA no encontrado',
+                    'ip_address'          => request()->ip(),
+                    'user_agent'          => request()->userAgent(),
                 ]);
 
                 return;
             }
 
             // Determinar descripción según la política
-            $descripcionPolitica = match($politica) {
+            $descripcionPolitica = match ($politica) {
                 'ANTICIPADO_100' => '100% ANTICIPADO',
-                'MEDIO_MEDIO' => '50% ANTICIPO',
-                'CREDITO' => 'VENTA A CRÉDITO',
-                default => 'ANTICIPO'
+                'MEDIO_MEDIO'    => '50% ANTICIPO',
+                'CREDITO'        => 'VENTA A CRÉDITO',
+                default          => 'ANTICIPO'
             };
 
             // 📝 LOG: Preparando movimiento en caja
             Log::info('📝 [registrarMovimientoCajaParaPago] Preparando movimiento en caja', [
-                'venta_numero' => $venta->numero,
-                'caja_id' => $cajaAbierta->caja_id,
-                'caja_nombre' => $cajaAbierta->caja?->nombre,
-                'usuario_id' => $usuario->id,
-                'tipo_operacion_id' => $tipoOperacion->id,
-                'monto' => $montoPagado,
+                'venta_numero'         => $venta->numero,
+                'caja_id'              => $cajaAbierta->caja_id,
+                'caja_nombre'          => $cajaAbierta->caja?->nombre,
+                'usuario_id'           => $usuario->id,
+                'tipo_operacion_id'    => $tipoOperacion->id,
+                'monto'                => $montoPagado,
                 'descripcion_politica' => $descripcionPolitica,
             ]);
 
             // ✅ Crear movimiento de caja
             $movimiento = \App\Models\MovimientoCaja::create([
-                'caja_id' => $cajaAbierta->caja_id,
-                'user_id' => $usuario->id,
+                'caja_id'           => $cajaAbierta->caja_id,
+                'user_id'           => $usuario->id,
                 'tipo_operacion_id' => $tipoOperacion->id,
-                'numero_documento' => $venta->numero,
-                'monto' => $montoPagado,
-                'fecha' => now(),
-                'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Convertida desde proforma #{$proforma->numero}",
+                'numero_documento'  => $venta->numero,
+                'monto'             => $montoPagado,
+                'fecha'             => now(),
+                'observaciones'     => "Venta #{$venta->numero} ({$descripcionPolitica}) - Convertida desde proforma #{$proforma->numero}",
             ]);
 
             // 💾 LOG: Movimiento creado
             Log::info('💾 [registrarMovimientoCajaParaPago] Movimiento creado en BD', [
                 'movimiento_id' => $movimiento->id,
-                'venta_numero' => $venta->numero,
-                'monto' => $movimiento->monto,
-                'caja_id' => $movimiento->caja_id,
+                'venta_numero'  => $venta->numero,
+                'monto'         => $movimiento->monto,
+                'caja_id'       => $movimiento->caja_id,
             ]);
 
             // ✅ REGISTRAR EN AUDITORÍA: Éxito
             \App\Models\AuditoriaCaja::create([
-                'user_id' => $usuario->id,
-                'caja_id' => $cajaAbierta->caja_id,
-                'apertura_caja_id' => $cajaAbierta->id,
-                'accion' => 'PAGO_REGISTRADO',
+                'user_id'             => $usuario->id,
+                'caja_id'             => $cajaAbierta->caja_id,
+                'apertura_caja_id'    => $cajaAbierta->id,
+                'accion'              => 'PAGO_REGISTRADO',
                 'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                'operacion_tipo' => 'VENTA',
-                'exitosa' => true,
-                'detalle_operacion' => [
-                    'venta_id' => $venta->id,
-                    'proforma_id' => $proforma->id,
-                    'movimiento_caja_id' => $movimiento->id,
-                    'caja_numero' => $cajaAbierta->caja?->nombre,
-                    'politica' => $politica,
-                    'monto_pagado' => $montoPagado,
+                'operacion_tipo'      => 'VENTA',
+                'exitosa'             => true,
+                'detalle_operacion'   => [
+                    'venta_id'             => $venta->id,
+                    'proforma_id'          => $proforma->id,
+                    'movimiento_caja_id'   => $movimiento->id,
+                    'caja_numero'          => $cajaAbierta->caja?->nombre,
+                    'politica'             => $politica,
+                    'monto_pagado'         => $montoPagado,
                     'descripcion_politica' => $descripcionPolitica,
                 ],
-                'codigo_http' => 201,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
+                'codigo_http'         => 201,
+                'ip_address'          => request()->ip(),
+                'user_agent'          => request()->userAgent(),
             ]);
 
             Log::info('✅ [registrarMovimientoCajaParaPago] MOVIMIENTO EN CAJA REGISTRADO EXITOSAMENTE', [
-                'venta_id' => $venta->id,
-                'venta_numero' => $venta->numero,
-                'proforma_id' => $proforma->id,
-                'proforma_numero' => $proforma->numero,
-                'caja_id' => $cajaAbierta->caja_id,
-                'caja_nombre' => $cajaAbierta->caja?->nombre,
-                'apertura_caja_id' => $cajaAbierta->id,
-                'usuario_id' => $usuario->id,
-                'usuario_nombre' => $usuario->name,
-                'monto_registrado' => $montoPagado,
-                'politica_pago' => $politica,
+                'venta_id'             => $venta->id,
+                'venta_numero'         => $venta->numero,
+                'proforma_id'          => $proforma->id,
+                'proforma_numero'      => $proforma->numero,
+                'caja_id'              => $cajaAbierta->caja_id,
+                'caja_nombre'          => $cajaAbierta->caja?->nombre,
+                'apertura_caja_id'     => $cajaAbierta->id,
+                'usuario_id'           => $usuario->id,
+                'usuario_nombre'       => $usuario->name,
+                'monto_registrado'     => $montoPagado,
+                'politica_pago'        => $politica,
                 'descripcion_politica' => $descripcionPolitica,
-                'movimiento_id' => $movimiento->id,
-                'fecha_movimiento' => $movimiento->fecha,
+                'movimiento_id'        => $movimiento->id,
+                'fecha_movimiento'     => $movimiento->fecha,
             ]);
 
         } catch (\Exception $e) {
             // No bloquear la conversión si falla el registro en cajas
             Log::error('❌ [registrarMovimientoCajaParaPago] Error al registrar movimiento de caja', [
-                'venta_id' => $venta->id,
-                'proforma_id' => $proforma->id,
-                'usuario_id' => $usuario->id,
+                'venta_id'       => $venta->id,
+                'proforma_id'    => $proforma->id,
+                'usuario_id'     => $usuario->id,
                 'usuario_nombre' => $usuario->name,
-                'monto' => $montoPagado,
-                'politica' => $politica,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'monto'          => $montoPagado,
+                'politica'       => $politica,
+                'error'          => $e->getMessage(),
+                'trace'          => $e->getTraceAsString(),
             ]);
 
             // ✅ REGISTRAR EN AUDITORÍA: Error al registrar
             try {
                 \App\Models\AuditoriaCaja::create([
-                    'user_id' => $usuario->id,
-                    'caja_id' => null,
-                    'apertura_caja_id' => null,
-                    'accion' => 'ERROR_REGISTRO_PAGO',
+                    'user_id'             => $usuario->id,
+                    'caja_id'             => null,
+                    'apertura_caja_id'    => null,
+                    'accion'              => 'ERROR_REGISTRO_PAGO',
                     'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                    'operacion_tipo' => 'VENTA',
-                    'exitosa' => false,
-                    'detalle_operacion' => [
-                        'venta_id' => $venta->id,
-                        'proforma_id' => $proforma->id,
-                        'politica' => $politica,
+                    'operacion_tipo'      => 'VENTA',
+                    'exitosa'             => false,
+                    'detalle_operacion'   => [
+                        'venta_id'     => $venta->id,
+                        'proforma_id'  => $proforma->id,
+                        'politica'     => $politica,
                         'monto_pagado' => $montoPagado,
                     ],
-                    'codigo_http' => 500,
-                    'mensaje_error' => $e->getMessage(),
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                    'codigo_http'         => 500,
+                    'mensaje_error'       => $e->getMessage(),
+                    'ip_address'          => request()->ip(),
+                    'user_agent'          => request()->userAgent(),
                 ]);
             } catch (\Exception $auditError) {
                 Log::error('❌ [registrarMovimientoCajaParaPago] Error al registrar auditoría', [
@@ -4604,19 +4683,19 @@ class ApiProformaController extends Controller
     ): void {
         try {
             // ✅ Determinar monto a registrar según política
-            $montoRegistro = match($politica) {
+            $montoRegistro = match ($politica) {
                 // Para anticipados: Registrar el monto pagado
                 'ANTICIPADO_100' => $montoPagado,
-                'MEDIO_MEDIO' => $montoPagado,
+                'MEDIO_MEDIO'    => $montoPagado,
                 // Para CREDITO y CONTRA_ENTREGA: Registrar 0 (no hay pago inmediato)
-                'CREDITO' => 0,
+                'CREDITO'        => 0,
                 'CONTRA_ENTREGA' => 0,
-                default => 0,
+                default          => 0,
             };
 
             // ✅ Determinar tipo de pago según política si no se proporciona
             $tipoPagoFinal = $tipoPagoId;
-            if (!$tipoPagoFinal && in_array($politica, ['CREDITO', 'CONTRA_ENTREGA'])) {
+            if (! $tipoPagoFinal && in_array($politica, ['CREDITO', 'CONTRA_ENTREGA'])) {
                 // Para CREDITO y CONTRA_ENTREGA, obtener tipo de pago "PENDIENTE" o similar
                 $tipoPagoDefault = \App\Models\TipoPago::where('codigo', 'PENDIENTE')
                     ->orWhere('nombre', 'Pendiente')
@@ -4625,91 +4704,91 @@ class ApiProformaController extends Controller
             }
 
             // Si aún no hay tipo_pago y el monto es 0, asignar tipo genérico
-            if (!$tipoPagoFinal && $montoRegistro === 0) {
+            if (! $tipoPagoFinal && $montoRegistro === 0) {
                 $tipoPagoDefault = \App\Models\TipoPago::first();
-                $tipoPagoFinal = $tipoPagoDefault?->id;
+                $tipoPagoFinal   = $tipoPagoDefault?->id;
             }
 
             // ✅ Crear registro en tabla pagos
             $pago = \App\Models\Pago::create([
-                'venta_id' => $venta->id,
-                'tipo_pago_id' => $tipoPagoFinal,
-                'monto' => $montoRegistro,
-                'fecha' => now(),
-                'fecha_pago' => now()->toDateString(),
+                'venta_id'      => $venta->id,
+                'tipo_pago_id'  => $tipoPagoFinal,
+                'monto'         => $montoRegistro,
+                'fecha'         => now(),
+                'fecha_pago'    => now()->toDateString(),
                 'observaciones' => "Pago por {$politica} - Convertida desde proforma #{$proforma->numero}",
                 'usuario_id' => $usuario->id,
-                'moneda_id' => $venta->moneda_id,
+                'moneda_id'  => $venta->moneda_id,
             ]);
 
             // ✅ REGISTRAR EN AUDITORÍA: Pago registrado exitosamente
             \App\Models\AuditoriaCaja::create([
-                'user_id' => $usuario->id,
-                'caja_id' => null,
-                'apertura_caja_id' => null,
-                'accion' => 'PAGO_REGISTRADO_EN_VENTA',
+                'user_id'             => $usuario->id,
+                'caja_id'             => null,
+                'apertura_caja_id'    => null,
+                'accion'              => 'PAGO_REGISTRADO_EN_VENTA',
                 'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                'operacion_tipo' => 'VENTA',
-                'exitosa' => true,
-                'detalle_operacion' => [
-                    'venta_id' => $venta->id,
-                    'proforma_id' => $proforma->id,
-                    'pago_id' => $pago->id,
-                    'politica' => $politica,
-                    'monto_pagado' => $montoPagado,
+                'operacion_tipo'      => 'VENTA',
+                'exitosa'             => true,
+                'detalle_operacion'   => [
+                    'venta_id'                     => $venta->id,
+                    'proforma_id'                  => $proforma->id,
+                    'pago_id'                      => $pago->id,
+                    'politica'                     => $politica,
+                    'monto_pagado'                 => $montoPagado,
                     'monto_registrado_tabla_pagos' => $montoRegistro,
-                    'tipo_pago_id' => $tipoPagoFinal,
+                    'tipo_pago_id'                 => $tipoPagoFinal,
                 ],
-                'codigo_http' => 201,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
+                'codigo_http'         => 201,
+                'ip_address'          => request()->ip(),
+                'user_agent'          => request()->userAgent(),
             ]);
 
             Log::info('✅ [registrarPagoEnVenta] Pago registrado en tabla pagos', [
-                'venta_id' => $venta->id,
-                'proforma_id' => $proforma->id,
-                'pago_id' => $pago->id,
-                'usuario_id' => $usuario->id,
-                'usuario_nombre' => $usuario->name,
-                'politica' => $politica,
-                'monto_pagado' => $montoPagado,
+                'venta_id'         => $venta->id,
+                'proforma_id'      => $proforma->id,
+                'pago_id'          => $pago->id,
+                'usuario_id'       => $usuario->id,
+                'usuario_nombre'   => $usuario->name,
+                'politica'         => $politica,
+                'monto_pagado'     => $montoPagado,
                 'monto_registrado' => $montoRegistro,
-                'tipo_pago_id' => $tipoPagoFinal,
+                'tipo_pago_id'     => $tipoPagoFinal,
             ]);
 
         } catch (\Exception $e) {
             Log::error('❌ [registrarPagoEnVenta] Error al registrar pago en tabla pagos', [
-                'venta_id' => $venta->id,
-                'proforma_id' => $proforma->id,
-                'usuario_id' => $usuario->id,
+                'venta_id'       => $venta->id,
+                'proforma_id'    => $proforma->id,
+                'usuario_id'     => $usuario->id,
                 'usuario_nombre' => $usuario->name,
-                'politica' => $politica,
-                'monto_pagado' => $montoPagado,
-                'tipo_pago_id' => $tipoPagoId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'politica'       => $politica,
+                'monto_pagado'   => $montoPagado,
+                'tipo_pago_id'   => $tipoPagoId,
+                'error'          => $e->getMessage(),
+                'trace'          => $e->getTraceAsString(),
             ]);
 
             // ✅ REGISTRAR EN AUDITORÍA: Error al registrar pago
             try {
                 \App\Models\AuditoriaCaja::create([
-                    'user_id' => $usuario->id,
-                    'caja_id' => null,
-                    'apertura_caja_id' => null,
-                    'accion' => 'ERROR_REGISTRAR_PAGO_VENTA',
+                    'user_id'             => $usuario->id,
+                    'caja_id'             => null,
+                    'apertura_caja_id'    => null,
+                    'accion'              => 'ERROR_REGISTRAR_PAGO_VENTA',
                     'operacion_intentada' => 'POST /api/proformas/{id}/convertir-venta',
-                    'operacion_tipo' => 'VENTA',
-                    'exitosa' => false,
-                    'detalle_operacion' => [
-                        'venta_id' => $venta->id,
-                        'proforma_id' => $proforma->id,
-                        'politica' => $politica,
+                    'operacion_tipo'      => 'VENTA',
+                    'exitosa'             => false,
+                    'detalle_operacion'   => [
+                        'venta_id'     => $venta->id,
+                        'proforma_id'  => $proforma->id,
+                        'politica'     => $politica,
                         'monto_pagado' => $montoPagado,
                     ],
-                    'codigo_http' => 500,
-                    'mensaje_error' => $e->getMessage(),
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                    'codigo_http'         => 500,
+                    'mensaje_error'       => $e->getMessage(),
+                    'ip_address'          => request()->ip(),
+                    'user_agent'          => request()->userAgent(),
                 ]);
             } catch (\Exception $auditError) {
                 Log::error('❌ [registrarPagoEnVenta] Error al registrar auditoría', [
@@ -4719,5 +4798,187 @@ class ApiProformaController extends Controller
 
             // ⚠️ No relanzar excepción para no bloquear la conversión
         }
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-21: Buscar clientes por término de búsqueda (nombre, email, ID, etc)
+     * GET /api/proformas/search/clientes?q=texto
+     */
+    public function searchClientes(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        if (strlen($query) < 1) {
+            return response()->json([
+                'data' => [],
+            ]);
+        }
+
+        $clientes = Cliente::where('activo', true)
+            ->where(function ($q) use ($query) {
+                // Buscar por ID si es numérico
+                if (is_numeric($query)) {
+                    $q->orWhere('id', intval($query));
+                }
+
+                // Búsqueda texto
+                $q->orWhere('nombre', 'ilike', "%{$query}%")
+                    ->orWhere('email', 'ilike', "%{$query}%")
+                    ->orWhere('telefono', 'ilike', "%{$query}%")
+                    ->orWhere('razon_social', 'ilike', "%{$query}%");
+            })
+            ->select('id', 'nombre', 'email', 'telefono')
+            ->orderBy('nombre', 'asc')
+            ->limit(20)
+            ->get()
+            ->map(function ($cliente) {
+                return [
+                    'id'       => $cliente->id,
+                    'nombre'   => $cliente->nombre,
+                    'email'    => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                ];
+            });
+
+        return response()->json([
+            'data' => $clientes,
+        ]);
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-21: Buscar usuarios (preventistas/creadores) por término de búsqueda (nombre, email, ID, etc)
+     * GET /api/proformas/search/usuarios?q=texto
+     */
+    public function searchUsuarios(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        if (strlen($query) < 1) {
+            return response()->json([
+                'data' => [],
+            ]);
+        }
+
+        $usuarios = \App\Models\User::where('activo', true)
+            ->where(function ($q) use ($query) {
+                // Buscar por ID si es numérico
+                if (is_numeric($query)) {
+                    $q->orWhere('id', intval($query));
+                }
+
+                // Búsqueda texto
+                $q->orWhere('name', 'ilike', "%{$query}%")
+                    ->orWhere('email', 'ilike', "%{$query}%")
+                    ->orWhere('phone', 'ilike', "%{$query}%");
+            })
+            ->select('id', 'name', 'email', 'phone')
+            ->orderBy('name', 'asc')
+            ->limit(20)
+            ->get()
+            ->map(function ($usuario) {
+                return [
+                    'id'    => $usuario->id,
+                    'name'  => $usuario->name,
+                    'email' => $usuario->email,
+                    'phone' => $usuario->phone,
+                ];
+            });
+
+        return response()->json([
+            'data' => $usuarios,
+        ]);
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-21: Preparar impresión de proformas filtradas
+     * POST /api/proformas/preparar-impresion
+     *
+     * Recibe filtros y los guarda en sesión para luego generar el reporte
+     */
+    public function prepararImpresion(Request $request)
+    {
+        $filtros = $request->input('filtros', []);
+        $formato = $request->input('formato', 'A4');
+
+        // Obtener todas las proformas del usuario (según su rol)
+        $query = Proforma::with(['cliente', 'usuarioCreador', 'detalles', 'venta']);
+
+        // Aplicar filtros igual que en el frontend
+        if (! empty($filtros['searchTerm'])) {
+            $search = $filtros['searchTerm'];
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'ilike', "%{$search}%")
+                    ->orWhere('numero', 'ilike', "%{$search}%")
+                    ->orWhereHas('cliente', function ($q) use ($search) {
+                        $q->where('nombre', 'ilike', "%{$search}%");
+                    });
+            });
+        }
+
+        if (! empty($filtros['filtroEstado']) && $filtros['filtroEstado'] !== 'TODOS') {
+            $estadoCode = strtoupper($filtros['filtroEstado']);
+            $estadoId = DB::table('estados_logistica')
+                ->where('codigo', $estadoCode)
+                ->where('categoria', 'proforma')
+                ->value('id');
+
+            if ($estadoId) {
+                $query->where('estado_proforma_id', $estadoId);
+            }
+        }
+
+        if (! empty($filtros['filtroCliente']) && $filtros['filtroCliente'] !== 'TODOS') {
+            $query->where('cliente_id', $filtros['filtroCliente']);
+        }
+
+        if (! empty($filtros['filtroUsuario']) && $filtros['filtroUsuario'] !== 'TODOS') {
+            $query->where('usuario_creador_id', intval($filtros['filtroUsuario']));
+        }
+
+        if (! empty($filtros['fechaDesde'])) {
+            $query->whereDate('created_at', '>=', $filtros['fechaDesde']);
+        }
+
+        if (! empty($filtros['fechaHasta'])) {
+            $query->whereDate('created_at', '<=', $filtros['fechaHasta']);
+        }
+
+        if (! empty($filtros['totalMin'])) {
+            $query->where('total', '>=', floatval($filtros['totalMin']));
+        }
+
+        if (! empty($filtros['totalMax'])) {
+            $query->where('total', '<=', floatval($filtros['totalMax']));
+        }
+
+        // Filtro de proformas vencidas
+        if (! empty($filtros['filtroVencidas'])) {
+            $hoy = now()->startOfDay();
+            if ($filtros['filtroVencidas'] === 'VENCIDAS') {
+                $query->whereDate('fecha_vencimiento', '<', $hoy);
+            } elseif ($filtros['filtroVencidas'] === 'VIGENTES') {
+                $query->where(function ($q) use ($hoy) {
+                    $q->whereDate('fecha_vencimiento', '>=', $hoy)
+                        ->orWhereNull('fecha_vencimiento');
+                });
+            }
+        }
+
+        // Obtener las proformas filtradas
+        $proformas = $query->get();
+
+        // Guardar en sesión para usar en la vista de impresión
+        session([
+            'impresion_proformas' => $proformas->pluck('id')->toArray(),
+            'impresion_formato'   => $formato,
+            'impresion_filtros'   => $filtros,
+        ]);
+
+        return response()->json([
+            'success'            => true,
+            'message'            => 'Impresión preparada correctamente',
+            'cantidad_proformas' => $proformas->count(),
+            'proforma_ids'       => $proformas->pluck('id')->toArray(),
+        ]);
     }
 }

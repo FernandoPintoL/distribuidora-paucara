@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
  * ✅ NUEVO: Servicio para generar reportes desde entregas_venta_confirmaciones
  *
  * Permite:
- * - Filtrar entregas por tipo (COMPLETA, NOVEDAD)
+ * - Filtrar entregas por tipo (COMPLETA, CON_NOVEDAD)
  * - Filtrar por tipo de novedad específico
  * - Generar reportes de entregas problemáticas
  * - Estadísticas de entregas
@@ -49,7 +49,7 @@ class EntregaReportesService
      */
     public static function obtenerEntregasConNovedades(Carbon $desde = null, Carbon $hasta = null)
     {
-        $query = EntregaVentaConfirmacion::where('tipo_entrega', 'NOVEDAD')
+        $query = EntregaVentaConfirmacion::where('tipo_entrega', 'CON_NOVEDAD')
             ->with(['entrega', 'venta', 'confirmadobPor']);
 
         if ($desde && $hasta) {
@@ -87,7 +87,7 @@ class EntregaReportesService
 
         return [
             'completas' => $query->where('tipo_entrega', 'COMPLETA')->count(),
-            'novedades' => $query->where('tipo_entrega', 'NOVEDAD')->count(),
+            'novedades' => $query->where('tipo_entrega', 'CON_NOVEDAD')->count(),
             'total' => $query->count(),
         ];
     }
@@ -97,7 +97,7 @@ class EntregaReportesService
      */
     public static function contarPorTipoNovedad(Carbon $desde = null, Carbon $hasta = null): array
     {
-        $query = EntregaVentaConfirmacion::where('tipo_entrega', 'NOVEDAD');
+        $query = EntregaVentaConfirmacion::where('tipo_entrega', 'CON_NOVEDAD');
 
         if ($desde && $hasta) {
             $query->whereBetween('confirmado_en', [$desde, $hasta]);
@@ -106,7 +106,7 @@ class EntregaReportesService
         return [
             'cliente_cerrado' => $query->where('tipo_novedad', 'CLIENTE_CERRADO')->count(),
             'devolucion_parcial' => $query->where('tipo_novedad', 'DEVOLUCION_PARCIAL')->count(),
-            'rechazado' => $query->where('tipo_novedad', 'RECHAZADO')->count(),
+            'rechazada' => $query->where('tipo_novedad', 'RECHAZADA')->count(),
         ];
     }
 
@@ -175,7 +175,7 @@ class EntregaReportesService
             'novedades_detalles' => [
                 'cliente_cerrado' => $countsByNovedad['cliente_cerrado'],
                 'devolucion_parcial' => $countsByNovedad['devolucion_parcial'],
-                'rechazado' => $countsByNovedad['rechazado'],
+                'rechazada' => $countsByNovedad['rechazada'],
             ],
         ];
     }
@@ -195,11 +195,11 @@ class EntregaReportesService
                 'data' => [$completas, $novedades],
             ],
             'tipo_novedad' => [
-                'labels' => ['Cliente Cerrado', 'Devolución Parcial', 'Rechazado'],
+                'labels' => ['Cliente Cerrado', 'Devolución Parcial', 'Rechazada'],
                 'data' => [
                     $tipos['cliente_cerrado'],
                     $tipos['devolucion_parcial'],
-                    $tipos['rechazado'],
+                    $tipos['rechazada'],
                 ],
             ],
         ];

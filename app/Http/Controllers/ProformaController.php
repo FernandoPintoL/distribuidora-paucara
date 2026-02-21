@@ -17,6 +17,7 @@ use App\Services\Venta\ProformaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -52,23 +53,143 @@ class ProformaController extends Controller
     public function index(Request $request): JsonResponse | InertiaResponse
     {
         try {
+            // ✅ NUEVO 2026-02-21: Usar la misma lógica de filtrado que en ApiProformaController
+            $user = auth()->user();
+
+            // Construir query base
+            $query = Proforma::query();
+
+            // Filtrado por rol (se puede sobrescribir con parámetros de filtro)
+            if ($user->hasRole('cliente') || $user->cliente_id) {
+                $clienteId = $user->cliente_id ?? $user->cliente->id ?? null;
+                if (!$clienteId) {
+                    return $this->respondError('Usuario no tiene un cliente asociado', 403);
+                }
+                // Solo aplica si no hay filtro manual de cliente
+                if (!$request->filled('cliente_id')) {
+                    $query->where('cliente_id', $clienteId);
+                }
+            } elseif ($user->hasRole('Preventista')) {
+                // Solo aplica si no hay filtro manual de usuario_creador_id
+                if (!$request->filled('usuario_creador_id')) {
+                    $query->where('usuario_creador_id', $user->id);
+                }
+            } elseif (!$user->hasAnyRole(['Gestor de Logística', 'Admin', 'Cajero', 'Manager', 'Chofer', 'Encargado'])) {
+                return $this->respondError('No tiene permisos para ver proformas', 403);
+            }
+
+            // Búsqueda general (ID, número, cliente)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('id', 'like', "%{$search}%")
+                      ->orWhere('numero', 'like', "%{$search}%")
+                      ->orWhereHas('cliente', function ($q) use ($search) {
+                          $q->whereRaw('LOWER(nombre) like ?', ["%{$search}%"]);
+                      });
+                });
+            }
+
+            // Filtro por estado
+            if ($request->filled('estado')) {
+                $estadoCode = strtoupper($request->estado);
+                $estadoId = DB::table('estados_logistica')
+                    ->where('codigo', $estadoCode)
+                    ->where('categoria', 'proforma')
+                    ->value('id');
+
+                if ($estadoId) {
+                    $query->where('estado_proforma_id', $estadoId);
+                }
+            }
+
+            // Filtro por cliente_id
+            if ($request->filled('cliente_id')) {
+                $query->where('cliente_id', $request->cliente_id);
+            }
+
+            // Filtro por usuario_creador_id
+            if ($request->filled('usuario_creador_id')) {
+                $query->where('usuario_creador_id', $request->usuario_creador_id);
+            }
+
+            // Filtro por monto mínimo
+            if ($request->filled('total_min')) {
+                $query->where('total', '>=', floatval($request->total_min));
+            }
+
+            // Filtro por monto máximo
+            if ($request->filled('total_max')) {
+                $query->where('total', '<=', floatval($request->total_max));
+            }
+
+            // Filtro por proformas vencidas/vigentes
+            if ($request->filled('filtro_vencidas')) {
+                $hoy = now()->startOfDay();
+                if ($request->filtro_vencidas === 'VENCIDAS') {
+                    $query->whereDate('fecha_vencimiento', '<', $hoy);
+                } elseif ($request->filtro_vencidas === 'VIGENTES') {
+                    $query->where(function ($q) use ($hoy) {
+                        $q->whereDate('fecha_vencimiento', '>=', $hoy)
+                          ->orWhereNull('fecha_vencimiento');
+                    });
+                }
+            }
+
+            // Filtro por fecha desde
+            if ($request->filled('fecha_desde')) {
+                $query->whereDate('created_at', '>=', $request->fecha_desde);
+            }
+
+            // Filtro por fecha hasta
+            if ($request->filled('fecha_hasta')) {
+                $query->whereDate('created_at', '<=', $request->fecha_hasta);
+            }
+
+            // Eager loading y paginación
+            $proformas = $query->with([
+                'cliente',
+                'usuarioCreador',
+                'detalles.producto',
+                'direccionSolicitada',
+                'direccionConfirmada',
+                'estadoLogistica',
+                'venta',
+            ])
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->input('per_page', 15));
+
             $filtros = [
-                'estado'     => $request->input('estado'),
+                'search' => $request->input('search'),
+                'estado' => $request->input('estado'),
                 'cliente_id' => $request->input('cliente_id'),
+                'usuario_creador_id' => $request->input('usuario_creador_id'),
+                'total_min' => $request->input('total_min'),
+                'total_max' => $request->input('total_max'),
+                'filtro_vencidas' => $request->input('filtro_vencidas'),
+                'fecha_desde' => $request->input('fecha_desde'),
+                'fecha_hasta' => $request->input('fecha_hasta'),
             ];
 
-            $proformasPaginadas = $this->proformaService->listar(
-                perPage: $request->input('per_page', 15),
-                filtros: array_filter($filtros)
-            );
+            // ✅ NUEVO 2026-02-21: Traer clientes y usuarios fijos para los filtros
+            $clientes = Cliente::activos()->select('id', 'nombre', 'email')->get();
+            $usuarios = User::whereHas('roles', function ($query) {
+                $query->where('name', 'preventista');
+            })->select('id', 'name', 'email')->get();
 
             return $this->respondPaginated(
-                $proformasPaginadas,
+                $proformas,
                 'proformas/Index',
-                ['proformas' => $proformasPaginadas, 'filtros' => $filtros]
+                [
+                    'proformas' => $proformas,
+                    'filtros' => $filtros,
+                    'clientes' => $clientes,
+                    'usuarios' => $usuarios,
+                ]
             );
 
         } catch (\Exception $e) {
+            \Log::error('Error en ProformaController::index', ['error' => $e->getMessage()]);
             return $this->respondError('Error al obtener proformas');
         }
     }
@@ -983,5 +1104,76 @@ class ProformaController extends Controller
                 'error'   => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-21: Generar reporte imprimible de proformas filtradas
+     * GET /proformas/imprimir?formato=A4&accion=stream
+     *
+     * Obtiene los IDs de sesión y genera el reporte en el formato especificado
+     */
+    public function imprimirFiltrado(Request $request)
+    {
+        $formato = $request->get('formato', 'A4');
+        $accion = $request->get('accion', 'stream'); // stream o download
+
+        // ✅ NUEVO 2026-02-21: Aceptar IDs desde parámetro URL
+        $idsParam = $request->get('ids');
+
+        if ($idsParam) {
+            // Parámetro URL: convertir string de IDs a array
+            $proformaIds = array_map('intval', explode(',', $idsParam));
+        } else {
+            // Fallback: obtener de sesión (para compatibilidad)
+            $proformaIds = session('impresion_proformas', []);
+        }
+
+        if (empty($proformaIds)) {
+            return view('error', [
+                'title' => 'Error de Impresión',
+                'message' => 'No hay proformas para imprimir. Por favor, intenta de nuevo.'
+            ]);
+        }
+
+        // Obtener proformas con relaciones necesarias
+        $proformas = Proforma::whereIn('id', $proformaIds)
+            ->with([
+                'cliente',
+                'usuarioCreador',
+                'detalles.producto',
+                'venta.cliente',
+                'venta.detalles.producto',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // ✅ NUEVO: Usar vista específica para filtrado (listado) vs individual
+        $viewName = match ($formato) {
+            'TICKET_80' => 'proformas.imprimir.ticket-80',
+            'TICKET_58' => 'proformas.imprimir.ticket-58',
+            default => 'proformas.imprimir.listado-a4',
+        };
+
+        \Log::info('📄 [imprimirFiltrado] Renderizando vista', [
+            'view' => $viewName,
+            'cantidad_proformas' => $proformas->count(),
+            'proforma_ids' => $proformas->pluck('id')->toArray(),
+        ]);
+
+        // Si es descarga, generar PDF
+        if ($accion === 'download') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, [
+                'proformas' => $proformas,
+                'titulo' => 'Reporte de Proformas',
+            ]);
+
+            return $pdf->download('reporte-proformas-' . now()->format('Y-m-d-Hi') . '.pdf');
+        }
+
+        // Si es stream, mostrar HTML
+        return view($viewName, [
+            'proformas' => $proformas,
+            'titulo' => 'Reporte de Proformas',
+        ]);
     }
 }

@@ -671,6 +671,7 @@ class EntregaPdfController extends Controller
                 'pagos' => [],
                 'sin_registrar' => [],
                 'total_recibido' => 0,
+                'confirmaciones' => [],  // ✅ NUEVO 2026-02-21: Información de confirmaciones para el ticket
             ];
 
             // Procesar confirmaciones agrupadas por tipo de pago
@@ -741,6 +742,19 @@ class EntregaPdfController extends Controller
 
                     $resumen['total_recibido'] += $totalPago;
                 }
+            }
+
+            // ✅ NUEVO 2026-02-21: Agregar información de confirmaciones (tipo_entrega, tipo_novedad, etc.)
+            foreach ($confirmaciones as $confirmacion) {
+                $resumen['confirmaciones'][] = [
+                    'venta_id' => $confirmacion->venta_id,
+                    'tipo_entrega' => $confirmacion->tipo_entrega ?? 'COMPLETA',
+                    'tipo_novedad' => $confirmacion->tipo_novedad,
+                    'tuvo_problema' => $confirmacion->tuvo_problema,
+                    'productos_devueltos' => $confirmacion->productos_devueltos,  // JSON array
+                    'monto_devuelto' => (float) ($confirmacion->monto_devuelto ?? 0),
+                    'monto_aceptado' => (float) ($confirmacion->monto_aceptado ?? 0),
+                ];
             }
 
             // Ventas sin confirmación de pago (SOLO NO crédito)

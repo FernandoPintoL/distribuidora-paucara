@@ -1028,7 +1028,7 @@ class EntregaController extends Controller
             $observacionesLogistica = $validated['observaciones_logistica'] ?? null;
 
             if ($observacionesLogistica && $observacionesLogistica !== 'Entrega completa') {
-                $tipoEntrega = 'NOVEDAD';
+                $tipoEntrega = 'CON_NOVEDAD';
                 $tuvoProblema = true;
 
                 // Extraer tipo de novedad (primeras palabras antes del guion)
@@ -1040,7 +1040,10 @@ class EntregaController extends Controller
                     $tipoNovedad = 'DEVOLUCION_PARCIAL';
                 } elseif (strpos($observacionesLogistica, 'RECHAZADO') !== false ||
                           strpos($observacionesLogistica, 'Rechazo') !== false) {
-                    $tipoNovedad = 'RECHAZADO';
+                    $tipoNovedad = 'RECHAZADA';
+                } elseif (strpos($observacionesLogistica, 'NO_CONTACTADO') !== false ||
+                          strpos($observacionesLogistica, 'No Contactado') !== false) {
+                    $tipoNovedad = 'NO_CONTACTADO';
                 }
             }
 
@@ -3006,6 +3009,80 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener información de entrega',
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO 2026-02-21: Cambiar tipo de entrega de una venta
+     * PATCH /api/entregas/{entrega}/ventas/{venta}/cambiar-tipo-entrega
+     *
+     * Permite cambiar el tipo de entrega (COMPLETA ↔ CON_NOVEDAD) de una venta ya confirmada
+     *
+     * @param Request $request
+     * @param int $entregaId
+     * @param int $ventaId
+     * @return JsonResponse
+     */
+    public function cambiarTipoEntrega(Request $request, int $entregaId, int $ventaId)
+    {
+        try {
+            $validated = $request->validate([
+                'tipo_entrega' => 'required|in:COMPLETA,CON_NOVEDAD',
+                'tipo_novedad' => 'required_if:tipo_entrega,CON_NOVEDAD|in:DEVOLUCION_PARCIAL,RECHAZADA,NO_CONTACTADO,CLIENTE_CERRADO',
+            ]);
+
+            $confirmacion = EntregaVentaConfirmacion::where('entrega_id', $entregaId)
+                ->where('venta_id', $ventaId)
+                ->firstOrFail();
+
+            $tipoEntrega = $validated['tipo_entrega'];
+            $tipoNovedad = $validated['tipo_novedad'] ?? null;
+
+            // Actualizar confirmación con nuevo tipo de entrega
+            $confirmacion->update([
+                'tipo_entrega' => $tipoEntrega,
+                'tipo_novedad' => $tipoNovedad,
+            ]);
+
+            // Log de auditoría
+            Log::info('✅ Tipo de entrega actualizado', [
+                'entrega_id' => $entregaId,
+                'venta_id' => $ventaId,
+                'tipo_entrega' => $tipoEntrega,
+                'tipo_novedad' => $tipoNovedad,
+                'user_id' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $tipoEntrega === 'COMPLETA'
+                    ? 'Entrega marcada como completa'
+                    : 'Entrega marcada con novedad',
+                'data' => $confirmacion->fresh(),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validación fallida',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Confirmación de entrega no encontrada',
+            ], 404);
+        } catch (\Throwable $e) {
+            \Log::error('Error al cambiar tipo de entrega', [
+                'entrega_id' => $entregaId,
+                'venta_id' => $ventaId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cambiar tipo de entrega',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
