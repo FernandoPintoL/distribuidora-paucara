@@ -225,7 +225,7 @@ export default function AjusteTabla() {
                     if (stockProducto) {
                         actualizado.producto = stockProducto;
                         actualizado.cantidad_actual =
-                            parseFloat(stockProducto.cantidad_disponible) || 0;
+                            parseFloat(stockProducto.cantidad) || 0;  // ✅ Usar cantidad (stock total), no cantidad_disponible
                         actualizado.cantidad_nueva = actualizado.cantidad_actual;
                     }
 
@@ -333,7 +333,7 @@ export default function AjusteTabla() {
                         if (stockProducto) {
                             actualizado.producto = stockProducto;
                             actualizado.cantidad_actual =
-                                parseFloat(stockProducto.cantidad_disponible) || 0;
+                                parseFloat(stockProducto.cantidad) || 0;  // ✅ Usar cantidad (stock total), no cantidad_disponible
                             actualizado.cantidad_nueva = actualizado.cantidad_actual;
                             // Actualizar término de búsqueda con el nombre del producto
                             setSearchTerms((prev) => ({
