@@ -27,7 +27,8 @@ class ImpresionStockController extends Controller
             $busquedaFiltro = session('busqueda_filtro', null);
 
             // Convertir a Collection para poder usar métodos como sum()
-            $stock = collect($stock);
+            // Ordenar alfabéticamente por nombre del producto
+            $stock = collect($stock)->sortBy('producto_nombre');
 
             // Obtener empresa del usuario autenticado
             $empresa = auth()->user()->empresa ?? Empresa::first();

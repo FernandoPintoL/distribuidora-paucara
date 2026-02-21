@@ -10,10 +10,10 @@
             <h2 style="color: #3498db;">LISTADO DE STOCK</h2>
             <p><strong>Fecha de generación:</strong> {{ now()->format('d/m/Y H:i') }}</p>
             @if($almacenFiltro)
-                <p><strong>Almacén:</strong> {{ $almacenFiltro }}</p>
+            <p><strong>Almacén:</strong> {{ $almacenFiltro }}</p>
             @endif
             @if($busquedaFiltro)
-                <p><strong>Búsqueda:</strong> {{ $busquedaFiltro }}</p>
+            <p><strong>Búsqueda:</strong> {{ $busquedaFiltro }}</p>
             @endif
         </div>
         <div class="documento-info-seccion" style="text-align: right;">
@@ -27,9 +27,9 @@
 <table class="tabla-productos mt-2">
     <thead>
         <tr>
-            <th style="width: 2%;">#</th>
+            <th style="width: 2%;">ID</th>
             <th style="width: 25%;">Producto</th>
-            <th style="width: 8%;">Código</th>
+            {{-- <th style="width: 8%;">Código</th> --}}
             <th style="width: 8%;">SKU</th>
             <th style="width: 12%;">Almacén</th>
             <th style="width: 9%;">Total</th>
@@ -45,7 +45,7 @@
             <td>
                 <strong>{{ $item['producto_nombre'] }}</strong>
             </td>
-            <td>{{ $item['producto_codigo'] }}</td>
+            {{-- <td>{{ $item['producto_codigo'] }}</td> --}}
             <td>{{ $item['producto_sku'] }}</td>
             <td>{{ $item['almacen_nombre'] }}</td>
             <td><strong>{{ number_format($item['cantidad'], 2) }}</strong></td>
