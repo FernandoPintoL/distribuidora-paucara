@@ -1041,9 +1041,18 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
             editableDetalles.length !== proforma.detalles.length ||
             editableDetalles.some((d, i) => {
                 const original = proforma.detalles[i];
-                return !original ||
-                    d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad) ||
-                    d.precio_unitario !== original.precio_unitario;
+                if (!original) return true;
+
+                // ✅ Comparar cantidad
+                const cantidadCambió = d.cantidad !== (typeof original.cantidad === 'string' ? parseFloat(original.cantidad) : original.cantidad);
+
+                // ✅ Comparar precio
+                const precioCambió = d.precio_unitario !== original.precio_unitario;
+
+                // ✅ NUEVO: Comparar combo_items_seleccionados (para combos)
+                const comboItemsCambió = JSON.stringify(d.combo_items_seleccionados) !== JSON.stringify(original.combo_items_seleccionados);
+
+                return cantidadCambió || precioCambió || comboItemsCambió;
             })
         );
 
@@ -1063,6 +1072,10 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 cantidad: d.cantidad,
                 precio_unitario: d.precio_unitario,
                 subtotal: d.subtotal,
+                // ✅ NUEVO: Incluir combo_items_seleccionados para combos
+                ...(d.combo_items_seleccionados && {
+                    combo_items_seleccionados: d.combo_items_seleccionados
+                })
             }));
 
             // Realizar petición POST
