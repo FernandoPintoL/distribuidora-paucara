@@ -203,7 +203,7 @@ const RegistrarMermaPage: React.FC = () => {
 
         for (const producto of productos) {
             if (producto.cantidad <= 0) {
-                NotificationService.error(`La cantidad del producto ${producto.producto?.nombre} debe ser mayor a 0`);
+                NotificationService.error(`La cantidad del producto ${producto.nombre} debe ser mayor a 0`);
                 return false;
             }
         }
@@ -522,10 +522,10 @@ const RegistrarMermaPage: React.FC = () => {
                                         >
                                             <div className="flex-1">
                                                 <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                                                    {producto.producto?.nombre}
+                                                    {producto.nombre}
                                                 </h4>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    Código: {producto.producto?.codigo}
+                                                    Código: {producto.codigo}
                                                 </p>
                                             </div>
 
