@@ -902,16 +902,39 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
         }
 
-        // ✅ NUEVO 2026-02-21: Búsqueda general (ID, número, cliente)
+        // ✅ NUEVO 2026-02-21: Búsqueda general con PRIORIDAD en ID y número
+        // ✅ ACTUALIZADO 2026-02-21: Agregar búsqueda por código y nombre de cliente
         if ($request->filled('search')) {
             $search = $request->search;
+
+            // ✅ PRIORIDAD: ID y número > Cliente (nombre y código)
+            // Usar CASE WHEN para scoring: así se filtran por ID/número primero en resultados
             $query->where(function ($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
                   ->orWhere('numero', 'like', "%{$search}%")
                   ->orWhereHas('cliente', function ($q) use ($search) {
-                      $q->whereRaw('LOWER(nombre) like ?', ["%{$search}%"]);
+                      $q->whereRaw('LOWER(nombre) like ?', ["%{$search}%"])
+                        ->orWhere('codigo_cliente', 'like', "%{$search}%")
+                        ->orWhere('nit', 'like', "%{$search}%")
+                        ->orWhere('telefono', 'like', "%{$search}%");
                   });
-            });
+            })
+            // Agregar orden de relevancia: ID exacto > número exacto > ID parcial > número parcial > cliente
+            ->orderByRaw(
+                "CASE
+                    WHEN CAST(id AS VARCHAR) = ? THEN 1
+                    WHEN numero = ? THEN 2
+                    WHEN CAST(id AS VARCHAR) LIKE ? THEN 3
+                    WHEN numero LIKE ? THEN 4
+                    ELSE 5
+                END",
+                [
+                    $search,
+                    $search,
+                    "%{$search}%",
+                    "%{$search}%",
+                ]
+            );
         }
 
         // Búsqueda por número de proforma
@@ -979,7 +1002,15 @@ class ApiProformaController extends Controller
             'venta', // ✅ NUEVO: Cargar venta relacionada si está convertida
         ]);
 
-        $query->orderBy('created_at', 'desc');
+        // ✅ Si hay búsqueda, ya se agregó orderByRaw para relevancia
+        // Si no hay búsqueda, ordenar por fecha de creación descendente (más recientes primero)
+        if (!$request->filled('search')) {
+            $query->orderBy('created_at', 'desc');
+        } else {
+            // Cuando hay búsqueda, el ordenamiento de relevancia ya está agregado
+            // Agregar created_at como ordenamiento secundario (después de relevancia)
+            $query->orderBy('created_at', 'desc');
+        }
 
         // ========================================
         // PAGINACIÓN
