@@ -1112,11 +1112,13 @@ class ProformaController extends Controller
      *
      * Obtiene los IDs de sesión y genera el reporte en el formato especificado
      */
+    /**
+     * Preparar impresión de proformas filtradas
+     * Guarda en sesión y redirige a ImpresionProformasController
+     * Sigue el mismo patrón que ventas
+     */
     public function imprimirFiltrado(Request $request)
     {
-        $formato = $request->get('formato', 'A4');
-        $accion = $request->get('accion', 'stream'); // stream o download
-
         // ✅ NUEVO 2026-02-21: Aceptar IDs desde parámetro URL
         $idsParam = $request->get('ids');
 
@@ -1125,14 +1127,14 @@ class ProformaController extends Controller
             $proformaIds = array_map('intval', explode(',', $idsParam));
         } else {
             // Fallback: obtener de sesión (para compatibilidad)
-            $proformaIds = session('impresion_proformas', []);
+            $proformaIds = session('proformas_impresion_ids', []);
         }
 
         if (empty($proformaIds)) {
-            return view('error', [
-                'title' => 'Error de Impresión',
-                'message' => 'No hay proformas para imprimir. Por favor, intenta de nuevo.'
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay proformas para imprimir.'
+            ], 400);
         }
 
         // Obtener proformas con relaciones necesarias
@@ -1143,37 +1145,33 @@ class ProformaController extends Controller
                 'detalles.producto',
                 'venta.cliente',
                 'venta.detalles.producto',
+                'estadoLogistica',
             ])
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // ✅ NUEVO: Usar vista específica para filtrado (listado) vs individual
-        $viewName = match ($formato) {
-            'TICKET_80' => 'proformas.imprimir.ticket-80',
-            'TICKET_58' => 'proformas.imprimir.ticket-58',
-            default => 'proformas.imprimir.listado-a4',
-        };
+        if ($proformas->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontraron proformas con los IDs especificados.'
+            ], 404);
+        }
 
-        \Log::info('📄 [imprimirFiltrado] Renderizando vista', [
-            'view' => $viewName,
+        // ✅ NUEVO: Guardar en sesión (como en ventas)
+        session([
+            'proformas_impresion' => $proformas,
+            'proformas_filtros'   => $request->all(),
+        ]);
+
+        \Log::info('📄 [imprimirFiltrado] Proformas guardadas en sesión', [
             'cantidad_proformas' => $proformas->count(),
             'proforma_ids' => $proformas->pluck('id')->toArray(),
         ]);
 
-        // Si es descarga, generar PDF
-        if ($accion === 'download') {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, [
-                'proformas' => $proformas,
-                'titulo' => 'Reporte de Proformas',
-            ]);
+        // Redirigir a ImpresionProformasController
+        $formato = $request->get('formato', 'A4');
+        $accion = $request->get('accion', 'stream');
 
-            return $pdf->download('reporte-proformas-' . now()->format('Y-m-d-Hi') . '.pdf');
-        }
-
-        // Si es stream, mostrar HTML
-        return view($viewName, [
-            'proformas' => $proformas,
-            'titulo' => 'Reporte de Proformas',
-        ]);
+        return redirect("/proformas/imprimir?formato={$formato}&accion={$accion}");
     }
 }

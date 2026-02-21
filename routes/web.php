@@ -402,8 +402,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // ==========================================
         // RUTAS DE IMPRESIÓN (DEBEN ir ANTES de rutas con parámetros dinámicos)
         // ==========================================
-        // ✅ Impresión de proformas filtradas (con parámetros query)
+        // ✅ Preparación de impresión de proformas filtradas (guarda en sesión)
         Route::get('/imprimir-filtrado', [\App\Http\Controllers\ProformaController::class, 'imprimirFiltrado'])->name('imprimir-filtrado');
+
+        // ✅ Renderizado de PDF (obtiene de sesión) - Sigue patrón de ventas
+        Route::get('/imprimir', [\App\Http\Controllers\ImpresionProformasController::class, 'imprimir'])->name('imprimir');
 
         // ✅ Impresión individual (con ID en path)
         Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])->name('imprimir');
