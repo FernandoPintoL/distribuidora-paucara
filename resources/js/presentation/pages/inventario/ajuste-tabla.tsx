@@ -116,17 +116,23 @@ function DropdownPortal({
                         {producto.nombre}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                        <span className="font-semibold">{producto.sku}</span>
-                        {' | Stock: '}
-                        {parseFloat(producto.cantidad_disponible).toFixed(2)}
+                        <div className="font-semibold">{producto.sku}</div>
+                        {/* ✅ Mostrar ambos stocks */}
+                        <div className="mt-1 space-y-0.5">
+                            <span className="block">
+                                📦 Stock Actual: <span className="font-semibold text-blue-600 dark:text-blue-400">{parseFloat(producto.cantidad_actual || 0).toFixed(2)}</span>
+                            </span>
+                            <span className="block">
+                                ✓ Disponible: <span className="font-semibold text-green-600 dark:text-green-400">{parseFloat(producto.cantidad_disponible || 0).toFixed(2)}</span>
+                            </span>
+                        </div>
                         {/* ✅ Mostrar lote si existe */}
                         {producto.lote && (
-                            <>
-                                {' | 📦 '}
+                            <div className="mt-1 pt-1 border-t border-gray-300 dark:border-gray-600">
                                 <span className="text-blue-600 dark:text-blue-400 font-medium">
-                                    {producto.lote}
+                                    📋 Lote: {producto.lote}
                                 </span>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -896,10 +902,17 @@ export default function AjusteTabla() {
                                                 </td>
 
                                                 {/* Stock Actual */}
-                                                <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">
-                                                    {ajuste.cantidad_actual.toFixed(
-                                                        2
-                                                    )}
+                                                <td className="px-4 py-3">
+                                                    <div className="text-sm font-medium dark:text-gray-200">
+                                                        <div className="font-semibold text-blue-600 dark:text-blue-400">
+                                                            {ajuste.cantidad_actual.toFixed(2)}
+                                                        </div>
+                                                        {ajuste.producto && (
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                📦 Disp: {parseFloat(ajuste.producto.cantidad_disponible || 0).toFixed(2)}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 {/* Cantidad Ajuste */}

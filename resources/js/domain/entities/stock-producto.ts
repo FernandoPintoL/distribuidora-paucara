@@ -9,6 +9,7 @@ export interface StockProducto extends BaseEntity {
     producto_id: Id;
     almacen_id: Id;
     cantidad: number;
+    cantidad_disponible?: number; // ✅ Stock disponible (cantidad - reservadas)
     stock_minimo: number;
     fecha_vencimiento?: string | null;
     lote?: string | null;
