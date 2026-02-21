@@ -43,9 +43,12 @@ class ImpresionProformasController extends Controller
 
             $vista = $vistaMap[$formato] ?? 'proformas.imprimir.listado-a4';
 
+            // ✅ Ordenar ascendentemente por ID
+            $proformasOrdenadas = $proformas->sortBy('id');
+
             // Renderizar vista HTML con las proformas
             $html = view($vista, [
-                'proformas' => $proformas,
+                'proformas' => $proformasOrdenadas,
                 'filtros' => $filtros,
                 'empresa' => $empresa,
                 'titulo' => 'Reporte de Proformas',

@@ -85,9 +85,12 @@ class ImpresionVentasController extends Controller
 
             $vista = $vistaMap[$formato] ?? 'impresion.ventas.hoja-completa-ventas';
 
+            // ✅ Ordenar ascendentemente por ID
+            $ventasOrdenadas = $ventas->sortBy('id');
+
             // Renderizar vista HTML con las ventas
             $html = view($vista, [
-                'ventas' => $ventas,
+                'ventas' => $ventasOrdenadas,
                 'filtros' => $filtros,
                 'empresa' => $empresa,
             ])->render();
