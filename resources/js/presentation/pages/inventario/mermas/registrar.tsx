@@ -560,7 +560,8 @@ const RegistrarMermaPage: React.FC = () => {
                                                         📌 Folio Lote: {lote.lote || 'Sin lote'}
                                                     </div>
                                                     <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        📊 Cantidad: <span className="font-medium">{(parseFloat(lote.cantidad_disponible) || 0).toFixed(2)}</span> unidades disponibles
+                                                        📊 Stock Total: <span className="font-medium text-blue-600 dark:text-blue-400">{(parseFloat(lote.cantidad) || 0).toFixed(2)}</span>
+                                                        <span className="text-gray-500"> | Disponible: {(parseFloat(lote.cantidad_disponible) || 0).toFixed(2)}</span>
                                                     </div>
                                                     {lote.fecha_vencimiento && (
                                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
