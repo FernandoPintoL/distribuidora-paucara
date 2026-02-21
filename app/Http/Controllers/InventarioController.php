@@ -1525,76 +1525,108 @@ class InventarioController extends Controller
 
             foreach ($data['productos'] as $productoData) {
                 // Encontrar el stock del producto - Preferir stock_producto_id si está especificado
-                $stockProducto = null;
+                $stockProductos = null;
+                $stockProductoPrincipal = null;
 
                 if (! empty($productoData['stock_producto_id'])) {
-                    $stockProducto = StockProducto::where('id', $productoData['stock_producto_id'])
+                    // Si se especifica un lote específico, usar ese
+                    $stockProductoPrincipal = StockProducto::where('id', $productoData['stock_producto_id'])
                         ->where('almacen_id', $data['almacen_id'])
                         ->first();
+
+                    if (! $stockProductoPrincipal) {
+                        DB::rollBack();
+                        Log::warning('⚠️ [REGISTRAR MERMA] Lote no encontrado', [
+                            'stock_producto_id' => $productoData['stock_producto_id'],
+                            'almacen_id'        => $data['almacen_id'],
+                        ]);
+                        return ApiResponse::error(
+                            "Lote no encontrado para el almacén seleccionado",
+                            422
+                        );
+                    }
+                    $stockProductos = [$stockProductoPrincipal];
                 } else {
-                    $stockProducto = StockProducto::where('producto_id', $productoData['producto_id'])
+                    // Si NO se especifica lote, buscar TODOS los lotes del producto en el almacén (FIFO)
+                    $stockProductos = StockProducto::where('producto_id', $productoData['producto_id'])
                         ->where('almacen_id', $data['almacen_id'])
-                        ->first();
+                        ->orderBy('created_at', 'asc') // FIFO: primero creado, primero usado
+                        ->get();
+
+                    if ($stockProductos->isEmpty()) {
+                        DB::rollBack();
+                        Log::warning('⚠️ [REGISTRAR MERMA] Stock no encontrado', [
+                            'producto_id' => $productoData['producto_id'],
+                            'almacen_id'  => $data['almacen_id'],
+                        ]);
+                        return ApiResponse::error(
+                            "Stock no encontrado para producto ID {$productoData['producto_id']} en almacén seleccionado",
+                            422
+                        );
+                    }
+
+                    $stockProductoPrincipal = $stockProductos->first();
                 }
 
-                if (! $stockProducto) {
-                    DB::rollBack();
-                    Log::warning('⚠️ [REGISTRAR MERMA] Stock no encontrado', [
-                        'producto_id' => $productoData['producto_id'],
-                        'almacen_id'  => $data['almacen_id'],
-                    ]);
-                    return ApiResponse::error(
-                        "Stock no encontrado para producto ID {$productoData['producto_id']} en almacén seleccionado",
-                        422
-                    );
-                }
+                // Validar cantidad disponible - sumar todos los lotes
+                $stockTotalDisponible = $stockProductos->sum('cantidad');
 
-                // Validar cantidad disponible
-                if ($stockProducto->cantidad < $productoData['cantidad']) {
+                if ($stockTotalDisponible < $productoData['cantidad']) {
                     DB::rollBack();
                     Log::warning('⚠️ [REGISTRAR MERMA] Stock insuficiente', [
                         'producto_id' => $productoData['producto_id'],
-                        'disponible'  => $stockProducto->cantidad,
+                        'disponible'  => $stockTotalDisponible,
                         'solicitado'  => $productoData['cantidad'],
                     ]);
                     return ApiResponse::error(
-                        "Stock insuficiente para {$stockProducto->producto->nombre}. Disponible: {$stockProducto->cantidad}",
+                        "Stock insuficiente para {$stockProductoPrincipal->producto->nombre}. Disponible: {$stockTotalDisponible}",
                         422
                     );
                 }
 
-                // Registrar movimiento de inventario
-                $movimiento = MovimientoInventario::registrar(
-                    $stockProducto,
-                    -$productoData['cantidad'],
-                    MovimientoInventario::TIPO_SALIDA_MERMA,
-                    $data['motivo'],
-                    'TEMP', // Se actualiza después
-                    auth()->id(),
-                    null,
-                    null,
-                    null,
-                    'MERMA',
-                    null
-                );
+                // Distribuir la merma entre los lotes usando FIFO
+                $cantidadFaltante = $productoData['cantidad'];
+                $costoUnitario = $productoData['costo_unitario'] ?? 0;
 
-                // PASO 3: Vincular movimiento con la merma maestra
-                $movimiento->update([
-                    'merma_inventario_id' => $mermaInventario->id,
-                    'numero_documento'    => 'TEMP', // Se actualiza después
-                ]);
+                foreach ($stockProductos as $lote) {
+                    if ($cantidadFaltante <= 0) break;
 
-                $movimientosRegistrados[] = $movimiento;
+                    $cantidadAMermar = min($cantidadFaltante, $lote->cantidad);
+                    $cantidadFaltante -= $cantidadAMermar;
 
-                // Calcular costo total de merma
-                $costoUnitario   = $productoData['costo_unitario'] ?? 0;
-                $costTotalMerma += ($productoData['cantidad'] * $costoUnitario);
+                    // Registrar movimiento de inventario para este lote
+                    $movimiento = MovimientoInventario::registrar(
+                        $lote,
+                        -$cantidadAMermar,
+                        MovimientoInventario::TIPO_SALIDA_MERMA,
+                        $data['motivo'],
+                        'TEMP', // Se actualiza después
+                        auth()->id(),
+                        null,
+                        null,
+                        null,
+                        'MERMA',
+                        null
+                    );
 
-                Log::info('✅ [REGISTRAR MERMA] Movimiento registrado y vinculado', [
-                    'producto_id'         => $productoData['producto_id'],
-                    'cantidad'            => $productoData['cantidad'],
-                    'merma_inventario_id' => $mermaInventario->id,
-                ]);
+                    // Vincular movimiento con la merma maestra
+                    $movimiento->update([
+                        'merma_inventario_id' => $mermaInventario->id,
+                        'numero_documento'    => 'TEMP', // Se actualiza después
+                    ]);
+
+                    $movimientosRegistrados[] = $movimiento;
+
+                    // Sumar costo total de merma
+                    $costTotalMerma += ($cantidadAMermar * $costoUnitario);
+
+                    Log::info('✅ [REGISTRAR MERMA] Movimiento registrado por lote', [
+                        'producto_id'         => $productoData['producto_id'],
+                        'lote_id'             => $lote->id,
+                        'cantidad'            => $cantidadAMermar,
+                        'merma_inventario_id' => $mermaInventario->id,
+                    ]);
+                }
             }
 
             // PASO 4: Actualizar número de la merma usando el ID
