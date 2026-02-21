@@ -4983,6 +4983,124 @@ class ApiProformaController extends Controller
     }
 
     /**
+     * ✅ NUEVO: Descargar PDF de proformas con filtros (para app móvil)
+     * Busca TODOS los resultados que coincidan con los filtros (sin paginación)
+     * Genera PDF directamente sin usar sesión
+     * Accessible para preventistas del usuario autenticado
+     */
+    public function descargarPdfProformasConFiltros(Request $request)
+    {
+        try {
+            $formato = $request->input('formato', 'A4');
+
+            // Obtener proformas con los mismos filtros de búsqueda
+            $query = Proforma::with([
+                'cliente',
+                'usuarioCreador',
+                'detalles.producto',
+                'venta.cliente',
+                'venta.detalles.producto',
+                'estadoLogistica',
+            ]);
+
+            // Filtro de búsqueda
+            if ($request->filled('busqueda')) {
+                $search = $request->input('busqueda');
+                $query->where(function ($q) use ($search) {
+                    $q->where('id', 'ilike', "%{$search}%")
+                        ->orWhere('numero', 'ilike', "%{$search}%")
+                        ->orWhereHas('cliente', function ($q) use ($search) {
+                            $q->where('nombre', 'ilike', "%{$search}%")
+                              ->orWhere('nit', 'ilike', "%{$search}%")
+                              ->orWhere('telefono', 'ilike', "%{$search}%");
+                        });
+                });
+            }
+
+            // Filtro por estado
+            if ($request->filled('estado')) {
+                $estadoCode = strtoupper($request->input('estado'));
+                $estadoId = DB::table('estados_logistica')
+                    ->where('codigo', $estadoCode)
+                    ->where('categoria', 'proforma')
+                    ->value('id');
+
+                if ($estadoId) {
+                    $query->where('estado_proforma_id', $estadoId);
+                }
+            }
+
+            // Filtros de fechas de creación
+            if ($request->filled('fecha_desde')) {
+                $query->whereDate('created_at', '>=', $request->input('fecha_desde'));
+            }
+            if ($request->filled('fecha_hasta')) {
+                $query->whereDate('created_at', '<=', $request->input('fecha_hasta'));
+            }
+
+            // Filtros de fechas de vencimiento
+            if ($request->filled('fecha_vencimiento_desde')) {
+                $query->whereDate('fecha_vencimiento', '>=', $request->input('fecha_vencimiento_desde'));
+            }
+            if ($request->filled('fecha_vencimiento_hasta')) {
+                $query->whereDate('fecha_vencimiento', '<=', $request->input('fecha_vencimiento_hasta'));
+            }
+
+            // Filtros de fechas de entrega solicitada
+            if ($request->filled('fecha_entrega_solicitada_desde')) {
+                $query->whereDate('fecha_entrega_solicitada', '>=', $request->input('fecha_entrega_solicitada_desde'));
+            }
+            if ($request->filled('fecha_entrega_solicitada_hasta')) {
+                $query->whereDate('fecha_entrega_solicitada', '<=', $request->input('fecha_entrega_solicitada_hasta'));
+            }
+
+            // Obtener TODOS los resultados (sin paginación)
+            $proformas = $query->orderBy('id', 'asc')->get();
+
+            if ($proformas->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron proformas con los filtros especificados'
+                ], 404);
+            }
+
+            // Mapear formato a vista específica
+            $vistaMap = [
+                'A4'        => 'proformas.imprimir.listado-a4',
+                'TICKET_80' => 'proformas.imprimir.ticket-80',
+                'TICKET_58' => 'proformas.imprimir.ticket-58',
+            ];
+
+            $vista = $vistaMap[$formato] ?? 'proformas.imprimir.listado-a4';
+
+            // Renderizar HTML
+            $html = view($vista, [
+                'proformas' => $proformas,
+                'filtros' => $request->all(),
+                'titulo' => 'Reporte de Proformas',
+            ])->render();
+
+            // Convertir a PDF usando DomPDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+
+            // Retornar PDF como descarga
+            $nombreArchivo = 'proformas-filtrado-' . now()->format('YmdHis') . '.pdf';
+            return $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            \Log::error('❌ Error al descargar PDF con filtros', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar el PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * ✅ NUEVO: Descargar PDF de proformas filtradas (para app móvil)
      * Genera PDF directamente sin usar sesión
      * Accessible para preventistas del usuario autenticado

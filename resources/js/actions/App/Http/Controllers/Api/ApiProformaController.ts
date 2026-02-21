@@ -368,7 +368,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
     prepararImpresion.form = prepararImpresionForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
 export const descargarPdfProformas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -383,7 +383,7 @@ descargarPdfProformas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.url = (options?: RouteQueryOptions) => {
@@ -392,7 +392,7 @@ descargarPdfProformas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -401,7 +401,7 @@ descargarPdfProformas.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -411,7 +411,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
     const descargarPdfProformasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -421,7 +421,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
         descargarPdfProformasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -430,7 +430,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:4990
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5108
  * @route '/api/proformas/descargar-pdf'
  */
         descargarPdfProformasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -444,6 +444,84 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
     
     descargarPdfProformas.form = descargarPdfProformasForm
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+export const descargarPdfProformasConFiltros = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarPdfProformasConFiltros.url(options),
+    method: 'get',
+})
+
+descargarPdfProformasConFiltros.definition = {
+    methods: ["get","head"],
+    url: '/api/proformas/descargar-pdf-con-filtros',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+descargarPdfProformasConFiltros.url = (options?: RouteQueryOptions) => {
+    return descargarPdfProformasConFiltros.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+descargarPdfProformasConFiltros.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: descargarPdfProformasConFiltros.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+descargarPdfProformasConFiltros.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: descargarPdfProformasConFiltros.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+    const descargarPdfProformasConFiltrosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: descargarPdfProformasConFiltros.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+        descargarPdfProformasConFiltrosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarPdfProformasConFiltros.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4991
+ * @route '/api/proformas/descargar-pdf-con-filtros'
+ */
+        descargarPdfProformasConFiltrosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: descargarPdfProformasConFiltros.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    descargarPdfProformasConFiltros.form = descargarPdfProformasConFiltrosForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::store
  * @see app/Http/Controllers/Api/ApiProformaController.php:26
@@ -2083,6 +2161,6 @@ obtenerUltimoCarrito.head = (args: { usuarioId: string | number } | [usuarioId: 
         })
     
     obtenerUltimoCarrito.form = obtenerUltimoCarritoForm
-const ApiProformaController = { index, stats, searchClientes, searchUsuarios, prepararImpresion, descargarPdfProformas, store, show, update, aprobar, rechazar, convertirAVenta, confirmarProforma, extenderVencimiento, coordinarEntrega, actualizarDetalles, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, obtenerSiguientePendiente, crearPedidoDesdeApp, obtenerDetallePedido, obtenerEstadoPedido, obtenerUltimoCarrito }
+const ApiProformaController = { index, stats, searchClientes, searchUsuarios, prepararImpresion, descargarPdfProformas, descargarPdfProformasConFiltros, store, show, update, aprobar, rechazar, convertirAVenta, confirmarProforma, extenderVencimiento, coordinarEntrega, actualizarDetalles, verificarEstado, verificarReservas, extenderReservas, verificarStock, obtenerProductosDisponibles, obtenerSiguientePendiente, crearPedidoDesdeApp, obtenerDetallePedido, obtenerEstadoPedido, obtenerUltimoCarrito }
 
 export default ApiProformaController

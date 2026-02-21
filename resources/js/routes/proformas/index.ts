@@ -469,74 +469,74 @@ imprimirFiltrado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
     
     imprimirFiltrado.form = imprimirFiltradoForm
 /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-export const imprimir = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
+export const imprimirBatch = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirBatch.url(options),
     method: 'get',
 })
 
-imprimir.definition = {
+imprimirBatch.definition = {
     methods: ["get","head"],
     url: '/proformas/imprimir',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-imprimir.url = (options?: RouteQueryOptions) => {
-    return imprimir.definition.url + queryParams(options)
+imprimirBatch.url = (options?: RouteQueryOptions) => {
+    return imprimirBatch.definition.url + queryParams(options)
 }
 
 /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-imprimir.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: imprimir.url(options),
+imprimirBatch.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirBatch.url(options),
     method: 'get',
 })
 /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: imprimir.url(options),
+imprimirBatch.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimirBatch.url(options),
     method: 'head',
 })
 
     /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-    const imprimirForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: imprimir.url(options),
+    const imprimirBatchForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimirBatch.url(options),
         method: 'get',
     })
 
             /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-        imprimirForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url(options),
+        imprimirBatchForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirBatch.url(options),
             method: 'get',
         })
             /**
-* @see \App\Http\Controllers\ImpresionProformasController::imprimir
+* @see \App\Http\Controllers\ImpresionProformasController::imprimirBatch
  * @see app/Http/Controllers/ImpresionProformasController.php:16
  * @route '/proformas/imprimir'
  */
-        imprimirForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: imprimir.url({
+        imprimirBatchForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirBatch.url({
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
                             ...(options?.query ?? options?.mergeQuery ?? {}),
@@ -545,7 +545,7 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
     
-    imprimir.form = imprimirForm
+    imprimirBatch.form = imprimirBatchForm
 /**
 * @see \App\Http\Controllers\ProformaController::imprimir
  * @see app/Http/Controllers/ProformaController.php:951
@@ -1224,6 +1224,7 @@ store,
 formatosDisponibles,
 edit,
 imprimirFiltrado,
+imprimirBatch,
 imprimir,
 preview,
 show,
