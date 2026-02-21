@@ -1550,7 +1550,7 @@ class InventarioController extends Controller
                     // Si NO se especifica lote, buscar TODOS los lotes del producto en el almacén (FIFO)
                     $stockProductos = StockProducto::where('producto_id', $productoData['producto_id'])
                         ->where('almacen_id', $data['almacen_id'])
-                        ->orderBy('created_at', 'asc') // FIFO: primero creado, primero usado
+                        ->orderBy('id', 'asc') // FIFO: primero creado (menor ID), primero usado
                         ->get();
 
                     if ($stockProductos->isEmpty()) {
