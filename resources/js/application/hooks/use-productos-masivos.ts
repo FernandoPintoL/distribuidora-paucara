@@ -273,6 +273,8 @@ export function useProductosMasivos() {
         const productosParaProcesar = filasValidas.map((fila) => ({
           nombre: fila.nombre,
           descripcion: fila.descripcion,
+          principio_activo: fila.principio_activo,
+          uso_de_medicacion: fila.uso_de_medicacion,
           sku: fila.sku,
           codigo_barra: fila.codigo_barra,
           proveedor_nombre: fila.proveedor_nombre,

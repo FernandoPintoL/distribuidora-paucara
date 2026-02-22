@@ -113,9 +113,20 @@ export interface ResultadoProductosMasivos {
   cantidad_total: number;
   cantidad_procesados: number;
   cantidad_errores: number;
+  resumen?: {
+    cantidad_total: number;
+    cantidad_procesados: number;
+    cantidad_saltadas: number;
+    cantidad_errores: number;
+  };
   errores: Array<{
     fila: number;
     mensaje: string;
+  }>;
+  saltados_detalle?: Array<{
+    fila: number;
+    producto_nombre: string;
+    motivo: string;
   }>;
   mensaje: string;
 }

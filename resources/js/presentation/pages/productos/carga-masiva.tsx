@@ -90,6 +90,10 @@ export default function CargaMasivaProductos({
     window.location.href = '/productos/historial-cargas';
   };
 
+  const irAlListadoProductos = () => {
+    window.location.href = productosService.indexUrl();
+  };
+
   return (
     <AppLayout breadcrumbs={[
       { title: 'Dashboard', href: productosService.indexUrl() },
@@ -218,6 +222,7 @@ export default function CargaMasivaProductos({
                 error={mensajeError}
                 onNuevamente={limpiar}
                 onIrHistorial={irAlHistorial}
+                onIrProductos={irAlListadoProductos}
               />
             </div>
           )}

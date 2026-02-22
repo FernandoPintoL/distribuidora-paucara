@@ -10,6 +10,7 @@ import {
 } from '@/domain/entities/productos-masivos';
 import { router } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
+import axios from 'axios';
 
 /**
  * Servicio para procesar CSVs de productos
@@ -325,37 +326,76 @@ export const productosCSVService = {
   },
 
   /**
+   * Obtener token CSRF de forma segura con multiple fallbacks
+   */
+  getCsrfToken(): string {
+    // Intento 1: Meta tag estándar
+    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (token) {
+      console.debug('✅ CSRF token obtenido desde meta tag');
+      return token;
+    }
+
+    // Intento 2: Buscar en document.head
+    const allMetas = document.querySelectorAll('meta');
+    for (const meta of allMetas) {
+      const name = meta.getAttribute('name');
+      const content = meta.getAttribute('content');
+      if (name === 'csrf-token' && content) {
+        console.debug('✅ CSRF token obtenido desde meta alternativo');
+        return content;
+      }
+    }
+
+    // Intento 3: Buscar en window._token (algunos frameworks lo ponen aquí)
+    if ((window as any)._token) {
+      console.debug('✅ CSRF token obtenido desde window._token');
+      return (window as any)._token;
+    }
+
+    // Intento 4: Buscar en variable global
+    if ((window as any).CSRF_TOKEN) {
+      console.debug('✅ CSRF token obtenido desde window.CSRF_TOKEN');
+      return (window as any).CSRF_TOKEN;
+    }
+
+    console.error('❌ CSRF token NO ENCONTRADO en ninguna ubicación');
+    console.warn('Meta tags disponibles:', {
+      csrfMeta: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+      allMetas: Array.from(allMetas).map(m => ({ name: m.getAttribute('name'), content: m.getAttribute('content')?.substring(0, 20) + '...' }))
+    });
+
+    return '';
+  },
+
+  /**
    * Procesar productos masivos en el servidor
    */
   async procesarProductosMasivos(datos: DatosProductosMasivos): Promise<ResultadoProductosMasivos> {
     try {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      console.log('📤 Enviando solicitud de importación masiva a /api/productos/importar-masivo');
 
-      const response = await fetch('/api/productos/importar-masivo', {
-        method: 'POST',
+      // Usar axios que maneja automáticamente CSRF token
+      const response = await axios.post('/api/productos/importar-masivo', datos, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfToken,
         },
-        body: JSON.stringify(datos),
+        withCredentials: true, // Enviar cookies
       });
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        // Capturar el mensaje de error del backend
-        const errorMessage = responseData.message || 'Error procesando carga masiva';
-        const error = new Error(errorMessage);
-        (error as any).status = response.status;
-        (error as any).data = responseData.data;
-        throw error;
-      }
-
-      return responseData as ResultadoProductosMasivos;
+      console.log('✅ Importación masiva exitosa:', response.data);
+      // ApiResponse::success() envuelve los datos en { success, message, data: {...} }
+      const resultado = response.data.data || response.data;
+      return resultado as ResultadoProductosMasivos;
     } catch (error: any) {
-      console.error('Error en procesarProductosMasivos:', error.message);
-      throw error;
+      const errorMessage = error.response?.data?.message || error.message || 'Error procesando carga masiva';
+      console.error('❌ Error en procesarProductosMasivos:', errorMessage);
+
+      const customError = new Error(errorMessage);
+      (customError as any).status = error.response?.status;
+      (customError as any).data = error.response?.data;
+      throw customError;
     }
   },
 
@@ -508,27 +548,23 @@ export const productosCSVService = {
         })),
       };
 
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      console.log('📤 Validando CSV con backend...');
 
-      const response = await fetch('/api/productos/validar-csv', {
-        method: 'POST',
+      // Usar axios que maneja automáticamente CSRF token
+      const response = await axios.post('/api/productos/validar-csv', payload, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfToken,
         },
-        body: JSON.stringify(payload),
+        withCredentials: true, // Enviar cookies
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error en validación backend');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error en validarConBackend:', error);
-      throw error;
+      console.log('✅ Validación backend exitosa');
+      return response.data as ValidacionBackendResponse;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error en validación backend';
+      console.error('❌ Error en validarConBackend:', errorMessage);
+      throw new Error(errorMessage);
     }
   },
 };

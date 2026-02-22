@@ -162,7 +162,7 @@ interface VistaPreviewaProductosProps {
   onAnalizarErrores?: () => void;
   onConfirmar?: () => void;
   onCancelar?: () => void;
-  onEditarFila?: (filaIndex: number, campo: string, valor: any) => void;
+  onEditarFila?: (filaIndex: number, campo: keyof FilaProductoValidada, valor: any) => void;
   onEliminarFila?: (filaIndex: number) => void;
   onCambiarAccionStock?: (filaIndex: number, accion: 'sumar' | 'reemplazar') => void;
   onDetectarSKUsDuplicados?: () => { [sku: string]: FilaProductoValidada[] };
@@ -503,7 +503,7 @@ export default function VistaPreviewaProductos({
                     <input
                       type="text"
                       value={fila.codigo_barra || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'codigo_barra', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'codigo_barra', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                       placeholder="📦"
@@ -518,7 +518,7 @@ export default function VistaPreviewaProductos({
                     <input
                       type="text"
                       value={fila.sku || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'sku', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'sku', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                     />
@@ -530,7 +530,7 @@ export default function VistaPreviewaProductos({
                     <input
                       type="text"
                       value={fila.proveedor_nombre || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'proveedor_nombre', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'proveedor_nombre', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                     />
@@ -544,7 +544,7 @@ export default function VistaPreviewaProductos({
                       searchPlaceholder="Buscar unidad..."
                       value={fila.unidad_medida_nombre || ''}
                       options={unidadesOptions}
-                      onChange={(value) => onEditarFila?.(indiceReal, 'unidad_medida_nombre', value || null)}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'unidad_medida_nombre', value || undefined)}
                       disabled={cargando}
                       allowClear={true}
                     />
@@ -589,7 +589,7 @@ export default function VistaPreviewaProductos({
                       searchPlaceholder="Buscar categoría..."
                       value={fila.categoria_nombre || ''}
                       options={categoriasOptions}
-                      onChange={(value) => onEditarFila?.(indiceReal, 'categoria_nombre', value || null)}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'categoria_nombre', value || undefined)}
                       disabled={cargando}
                       allowClear={true}
                     />
@@ -608,7 +608,7 @@ export default function VistaPreviewaProductos({
                       searchPlaceholder="Buscar marca..."
                       value={fila.marca_nombre || ''}
                       options={marcasOptions}
-                      onChange={(value) => onEditarFila?.(indiceReal, 'marca_nombre', value || null)}
+                      onChange={(value) => onEditarFila?.(indiceReal, 'marca_nombre', value || undefined)}
                       disabled={cargando}
                       allowClear={true}
                     />
@@ -625,7 +625,7 @@ export default function VistaPreviewaProductos({
                     <input
                       type="text"
                       value={fila.lote || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'lote', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'lote', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                     />
@@ -637,7 +637,7 @@ export default function VistaPreviewaProductos({
                     <input
                       type="date"
                       value={fila.fecha_vencimiento || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'fecha_vencimiento', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'fecha_vencimiento', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                     />
@@ -648,10 +648,36 @@ export default function VistaPreviewaProductos({
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
                     <textarea
                       value={fila.descripcion || ''}
-                      onChange={(e) => onEditarFila?.(indiceReal, 'descripcion', e.target.value || null)}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'descripcion', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                       disabled={cargando}
                       rows={2}
+                    />
+                  </div>
+
+                  {/* Principio activo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Principio activo</label>
+                    <input
+                      type="text"
+                      value={fila.principio_activo || ''}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'principio_activo', e.target.value || undefined)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      disabled={cargando}
+                      placeholder="Ej: Paracetamol"
+                    />
+                  </div>
+
+                  {/* Uso de medicación */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Uso de medicación</label>
+                    <textarea
+                      value={fila.uso_de_medicacion || ''}
+                      onChange={(e) => onEditarFila?.(indiceReal, 'uso_de_medicacion', e.target.value || undefined)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      disabled={cargando}
+                      rows={2}
+                      placeholder="Ej: Alivio de dolor y fiebre"
                     />
                   </div>
                 </div>

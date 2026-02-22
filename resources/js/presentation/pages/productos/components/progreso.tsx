@@ -7,6 +7,7 @@ interface ProgresoProductosProps {
   error?: string;
   onNuevamente?: () => void;
   onIrHistorial?: () => void;
+  onIrProductos?: () => void;
 }
 
 export default function ProgresoProductos({
@@ -16,6 +17,7 @@ export default function ProgresoProductos({
   error,
   onNuevamente,
   onIrHistorial,
+  onIrProductos,
 }: ProgresoProductosProps) {
   const mostrarResultado = !cargando && resultado;
   const exitoso = resultado?.cantidad_procesados === resultado?.cantidad_total;
@@ -75,6 +77,27 @@ export default function ProgresoProductos({
             </div>
           )}
 
+          {(resultado?.saltados_detalle && resultado.saltados_detalle.length > 0) && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <h3 className="font-bold text-yellow-900 dark:text-yellow-300 mb-2">
+                ⏭️ Productos saltados ({resultado.saltados_detalle.length}):
+              </h3>
+              <ul className="space-y-2 text-sm text-yellow-800 dark:text-yellow-400">
+                {resultado.saltados_detalle.slice(0, 10).map((saltado, idx) => (
+                  <li key={idx} className="flex gap-2">
+                    <span className="font-medium">Fila {saltado.fila}:</span>
+                    <span>{saltado.producto_nombre} - {saltado.motivo}</span>
+                  </li>
+                ))}
+              </ul>
+              {resultado.saltados_detalle.length > 10 && (
+                <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-2">
+                  ...y {resultado.saltados_detalle.length - 10} más
+                </p>
+              )}
+            </div>
+          )}
+
           {resultado!.cantidad_errores > 0 && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <h3 className="font-bold text-red-900 dark:text-red-300 mb-2">Errores detectados:</h3>
@@ -108,6 +131,13 @@ export default function ProgresoProductos({
               onClick={onNuevamente}
             >
               Cargar más productos
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-800 font-medium transition"
+              onClick={onIrProductos}
+            >
+              Ver productos importados
             </button>
             <button
               type="button"

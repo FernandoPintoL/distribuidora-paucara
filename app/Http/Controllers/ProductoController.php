@@ -2194,6 +2194,10 @@ class ProductoController extends Controller
     public function importarProductosMasivos(Request $request): JsonResponse
     {
         try {
+            // ⚡ OPTIMIZACIONES PARA CARGA MASIVA
+            set_time_limit(300); // 5 minutos para carga masiva
+            ini_set('memory_limit', '512M');
+
             // Validar request
             $validated = $request->validate([
                 'nombre_archivo' => 'required|string|max:255',
@@ -2242,10 +2246,14 @@ class ProductoController extends Controller
                 'datos_json' => $validated['datos_csv'],
             ]);
 
+            // ⚡ Flag para deshabilitar logging en observadores durante carga masiva
+            $GLOBALS['cargando_masiva'] = true;
+
             // Iniciar transacción
             DB::beginTransaction();
 
             try {
+
                 $cambios = [];
                 $errores = [];
                 $cantidadValidas = 0;
@@ -2284,6 +2292,28 @@ class ProductoController extends Controller
                     ]);
                 }
 
+                // ⚡ PRE-CARGAR TODAS LAS REFERENCIAS EN CACHÉ (Optimización crítica)
+                // IMPORTANTE: NO usar toArray() para mantener objetos Eloquent
+                $cacheMarcas = Marca::where('activo', true)->get()->keyBy(function($m) {
+                    return $this->normalizarTexto($m->nombre);
+                });
+
+                $cacheUnidades = UnidadMedida::where('activo', true)->get()->keyBy(function($u) {
+                    return $this->normalizarTexto($u->nombre);
+                });
+
+                $cacheCategorias = Categoria::where('activo', true)->get()->keyBy(function($c) {
+                    return $this->normalizarTexto($c->nombre);
+                });
+
+                $cacheProveedores = Proveedor::get()->keyBy(function($p) {
+                    return $this->normalizarTexto($p->nombre);
+                });
+
+                $cacheAlmacenes = Almacen::where('activo', true)->get()->keyBy(function($a) {
+                    return strtolower(trim($a->nombre));
+                });
+
                 // Procesar cada producto
                 foreach ($validated['productos'] as $index => $datosFila) {
                     // Crear savepoint para cada fila (permite rollback parcial)
@@ -2302,28 +2332,58 @@ class ProductoController extends Controller
                                 $datosFila[$campo] = $this->limpiarUTF8($datosFila[$campo]);
                             }
                         }
-                        // Buscar/crear proveedor
+                        // ⚡ Buscar en caché primero, luego en BD si no está
                         $proveedor = null;
                         if (!empty($datosFila['proveedor_nombre'])) {
-                            $proveedor = $this->buscarOCrearProveedor($datosFila['proveedor_nombre']);
+                            $provNorm = $this->normalizarTexto($datosFila['proveedor_nombre']);
+                            if (isset($cacheProveedores[$provNorm])) {
+                                $proveedor = $cacheProveedores[$provNorm];
+                            } else {
+                                $proveedor = $this->buscarOCrearProveedor($datosFila['proveedor_nombre']);
+                                $cacheProveedores[$provNorm] = $proveedor;
+                            }
                         }
 
-                        // Buscar/crear unidad de medida
+                        // ⚡ Buscar unidad en caché
                         $unidadMedida = null;
                         if (!empty($datosFila['unidad_medida_nombre'])) {
-                            $unidadMedida = $this->buscarOCrearUnidadMedida($datosFila['unidad_medida_nombre']);
+                            $unitNorm = $this->normalizarTexto($datosFila['unidad_medida_nombre']);
+                            if (isset($cacheUnidades[$unitNorm])) {
+                                $unidadMedida = $cacheUnidades[$unitNorm];
+                            } else {
+                                $unidadMedida = $this->buscarOCrearUnidadMedida($datosFila['unidad_medida_nombre']);
+                                if ($unidadMedida) {
+                                    $cacheUnidades[$unitNorm] = $unidadMedida;
+                                }
+                            }
                         }
 
-                        // Buscar/crear categoría (con búsqueda inteligente por ID, nombre)
+                        // ⚡ Buscar categoría en caché
                         $categoria = null;
                         if (!empty($datosFila['categoria_nombre'])) {
-                            $categoria = $this->buscarOCrearCategoria($datosFila['categoria_nombre']);
+                            $catNorm = $this->normalizarTexto($datosFila['categoria_nombre']);
+                            if (isset($cacheCategorias[$catNorm])) {
+                                $categoria = $cacheCategorias[$catNorm];
+                            } else {
+                                $categoria = $this->buscarOCrearCategoria($datosFila['categoria_nombre']);
+                                if ($categoria) {
+                                    $cacheCategorias[$catNorm] = $categoria;
+                                }
+                            }
                         }
 
-                        // Buscar/crear marca (con búsqueda inteligente por ID, nombre)
+                        // ⚡ Buscar marca en caché
                         $marca = null;
                         if (!empty($datosFila['marca_nombre'])) {
-                            $marca = $this->buscarOCrearMarca($datosFila['marca_nombre']);
+                            $marcaNorm = $this->normalizarTexto($datosFila['marca_nombre']);
+                            if (isset($cacheMarcas[$marcaNorm])) {
+                                $marca = $cacheMarcas[$marcaNorm];
+                            } else {
+                                $marca = $this->buscarOCrearMarca($datosFila['marca_nombre']);
+                                if ($marca) {
+                                    $cacheMarcas[$marcaNorm] = $marca;
+                                }
+                            }
                         }
 
                         // Buscar almacén (con búsqueda inteligente por ID, nombre)
@@ -2379,6 +2439,7 @@ class ProductoController extends Controller
                                 'marca_id' => $marca?->id,
                                 'proveedor_id' => $proveedor?->id,
                                 'unidad_medida_id' => $unidadMedida?->id,
+                                'empresa_id' => auth()->user()?->empresa_id,
                                 'activo' => true,
                             ]);
 
@@ -2409,6 +2470,22 @@ class ProductoController extends Controller
                                 ]);
                             }
                         }
+
+                        // Validar cantidad - permitir 0, pero rechazar null o negativo
+                        $cantidad = $datosFila['cantidad'] ?? 0;
+                        if ($cantidad < 0) {
+                            // Saltar productos con cantidad negativa (no válida)
+                            $cambios[] = [
+                                'fila' => $index + 2,
+                                'producto_id' => $producto->id,
+                                'producto_nombre' => $this->limpiarUTF8($producto->nombre),
+                                'accion' => 'saltado',
+                                'motivo' => 'Cantidad negativa (no válida)',
+                            ];
+                            continue;
+                        }
+                        // Asignar la cantidad validada (0 si es null/vacía)
+                        $datosFila['cantidad'] = $cantidad;
 
                         // Crear/actualizar stock en almacén seleccionado
                         $stockAnterior = 0;
@@ -2457,6 +2534,11 @@ class ProductoController extends Controller
                                 'fecha_vencimiento' => $this->parsearFechaVencimiento($datosFila['fecha_vencimiento'] ?? null),
                             ]);
                             $stockAnterior = 0;
+                        }
+
+                        // Validar que el stock tenga ID antes de crear movimiento
+                        if (!$stock || !$stock->id) {
+                            throw new \Exception("Error al guardar stock del producto '{$producto->nombre}': No se generó el ID del registro");
                         }
 
                         // Crear movimiento de inventario
@@ -2520,16 +2602,45 @@ class ProductoController extends Controller
 
                 DB::commit();
 
-                return ApiResponse::success([
-                    'cargo_id' => $cargo->id,
+                // ⚡ Limpiar flag de carga masiva
+                unset($GLOBALS['cargando_masiva']);
+
+                // Separar cambios procesados y saltados
+                $cambiosProcesados = array_filter($cambios, function($c) {
+                    return $c['accion'] !== 'saltado';
+                });
+                $cambiosSaltados = array_filter($cambios, function($c) {
+                    return $c['accion'] === 'saltado';
+                });
+
+                $cantidadSaltadas = count($cambiosSaltados);
+
+                // Construir resumen
+                $resumen = [
                     'cantidad_total' => count($validated['productos']),
                     'cantidad_procesados' => $cantidadValidas,
+                    'cantidad_saltadas' => $cantidadSaltadas,
                     'cantidad_errores' => count($errores),
+                ];
+
+                return ApiResponse::success([
+                    'cargo_id' => $cargo->id,
+                    'resumen' => $resumen,
                     'errores' => $errores,
-                    'mensaje' => "Se procesaron {$cantidadValidas} productos con éxito",
+                    'cambios_detalle' => array_values($cambiosProcesados),
+                    'saltados_detalle' => array_values($cambiosSaltados), // ✅ NUEVO: Detalle de saltados
+                    'mensajes' => [
+                        'exitoso' => "✅ {$cantidadValidas} productos creados/actualizados",
+                        'saltado' => "⏭️ {$cantidadSaltadas} productos saltados",
+                        'errores' => count($errores) > 0 ? "❌ " . count($errores) . " productos con error" : "✅ Sin errores",
+                    ],
+                    'mensaje' => "Carga completada: {$cantidadValidas} procesados, {$cantidadSaltadas} saltados" . (count($errores) > 0 ? ", " . count($errores) . " errores" : ""),
                 ]);
             } catch (\Exception $e) {
                 DB::rollBack();
+
+                // ⚡ Limpiar flag de carga masiva en caso de error
+                unset($GLOBALS['cargando_masiva']);
                 Log::error("Error en importación de productos: {$e->getMessage()}", [
                     'cargo_id' => $cargo->id,
                     'trace' => $e->getTraceAsString(),
@@ -2849,18 +2960,26 @@ class ProductoController extends Controller
             }
         }
 
-        // Buscar por código o nombre (case-insensitive)
-        $unidad = UnidadMedida::where(function ($q) use ($valorNormalizado) {
-            $q->whereRaw('LOWER(codigo) = ?', [$valorNormalizado])
-              ->orWhereRaw('LOWER(nombre) = ?', [$valorNormalizado]);
-        })->where('activo', true)->first();
-
-        if ($unidad) {
-            return $unidad;
+        // Buscar por nombre (comparación normalizada para evitar duplicados con acentos)
+        $unidades = UnidadMedida::where('activo', true)->get();
+        foreach ($unidades as $unidad) {
+            if ($this->normalizarTexto($unidad->nombre) === $valorNormalizado ||
+                $this->normalizarTexto($unidad->codigo) === $valorNormalizado) {
+                return $unidad;
+            }
         }
 
-        // Crear nueva unidad de medida
-        $codigo = strtoupper(substr($valor, 0, 3));
+        // ⚡ Crear nueva unidad de medida con código UTF-8 seguro
+        // Usar mb_substr para respetar caracteres multi-byte
+        $codigo = strtoupper(mb_substr($this->limpiarUTF8($valor) ?? $valor, 0, 3));
+
+        // Verificar que el código no exista (evitar violación de unique)
+        $codigoExiste = UnidadMedida::where('codigo', $codigo)->exists();
+        if ($codigoExiste) {
+            // Si el código existe, buscar la unidad existente
+            return UnidadMedida::where('codigo', $codigo)->first();
+        }
+
         $unidad = UnidadMedida::create([
             'codigo' => $codigo,
             'nombre' => $valor,
@@ -2889,13 +3008,12 @@ class ProductoController extends Controller
             }
         }
 
-        // Buscar por nombre (case-insensitive)
-        $categoria = Categoria::whereRaw('LOWER(nombre) = ?', [$valorNormalizado])
-            ->where('activo', true)
-            ->first();
-
-        if ($categoria) {
-            return $categoria;
+        // Buscar por nombre (comparación normalizada para evitar duplicados con acentos)
+        $categorias = Categoria::where('activo', true)->get();
+        foreach ($categorias as $categoria) {
+            if ($this->normalizarTexto($categoria->nombre) === $valorNormalizado) {
+                return $categoria;
+            }
         }
 
         // Crear nueva categoría
@@ -2926,13 +3044,12 @@ class ProductoController extends Controller
             }
         }
 
-        // Buscar por nombre (case-insensitive)
-        $marca = Marca::whereRaw('LOWER(nombre) = ?', [$valorNormalizado])
-            ->where('activo', true)
-            ->first();
-
-        if ($marca) {
-            return $marca;
+        // Buscar por nombre (comparación normalizada para evitar duplicados con acentos)
+        $marcas = Marca::where('activo', true)->get();
+        foreach ($marcas as $marca) {
+            if ($this->normalizarTexto($marca->nombre) === $valorNormalizado) {
+                return $marca;
+            }
         }
 
         // Crear nueva marca

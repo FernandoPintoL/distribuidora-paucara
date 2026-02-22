@@ -371,6 +371,11 @@ class StockProducto extends Model
     {
         // Validar antes de guardar
         static::saving(function ($stockProducto) {
+            // ⚡ Saltear validaciones si estamos en carga masiva (optimización)
+            if (!empty($GLOBALS['cargando_masiva'])) {
+                return; // No loguear durante carga masiva
+            }
+
             // Validar que no haya cantidades negativas
             if ($stockProducto->cantidad < 0) {
                 \Illuminate\Support\Facades\Log::warning('Intento de guardar cantidad negativa', [
