@@ -221,6 +221,8 @@ export default function ProductoForm({
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
       limite_venta: data.limite_venta ? String(data.limite_venta) : '', // ✨ NUEVO - Enviar solo si tiene valor
+      principio_activo: data.principio_activo ?? '', // ✨ NUEVO - Campos de medicamento para farmacias
+      uso_de_medicacion: data.uso_de_medicacion ?? '', // ✨ NUEVO - Campos de medicamento para farmacias
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
     // Imágenes (desde estado separado)

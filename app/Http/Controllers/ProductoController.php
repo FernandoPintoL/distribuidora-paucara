@@ -599,6 +599,8 @@ class ProductoController extends Controller
             'stock_minimo'      => $producto->stock_minimo ? (int) $producto->stock_minimo : null,
             'stock_maximo'      => $producto->stock_maximo ? (int) $producto->stock_maximo : null,
             'limite_venta'      => $producto->limite_venta ? (int) $producto->limite_venta : null, // ✨ NUEVO
+            'principio_activo'  => $producto->principio_activo ?? null, // ✨ NUEVO - Medicamento
+            'uso_de_medicacion' => $producto->uso_de_medicacion ?? null, // ✨ NUEVO - Medicamento
             'perfil'            => $perfil ? ['id' => $perfil->id, 'url' => $perfil->url] : null,
             'galeria'           => $galeria,
             'precios'           => $precios,
