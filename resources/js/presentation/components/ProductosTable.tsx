@@ -78,6 +78,7 @@ interface ProductosTableProps {
     default_tipo_precio_id?: number | string; // ✅ NUEVO: ID del tipo de precio por defecto (fallback cuando no hay tipo asignado)
     carritoCalculado?: any; // ✅ NUEVO (2026-02-17): Datos de rangos aplicados para actualizar precios automáticamente
     onDetallesActualizados?: (detalles: DetalleProducto[]) => void; // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles por cambios de rangos
+    es_farmacia?: boolean; // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos en sugerencias
 }
 
 export default function ProductosTable({
@@ -97,7 +98,8 @@ export default function ProductosTable({
     onComboItemsChange, // ✅ NUEVO: Notificar cambios en items opcionales del combo
     default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto (fallback)
     carritoCalculado, // ✅ NUEVO (2026-02-17): Datos de rangos para actualizar precios
-    onDetallesActualizados // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles
+    onDetallesActualizados, // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles
+    es_farmacia = false // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
 }: ProductosTableProps) {
     
     // ✅ DEBUG: Loguear props recibidos
@@ -118,6 +120,8 @@ export default function ProductosTable({
     const [expandedCombos, setExpandedCombos] = useState<Record<number, boolean>>({});
     // ✅ NUEVO: Mapa de combo_items actualizados por COMBO_ID (no por índice) para evitar conflictos
     const [comboItemsMap, setComboItemsMap] = useState<Record<number, Array<any>>>({});
+    // ✅ NUEVO: Estado para mostrar modal con info de medicamentos (farmacia)
+    const [farmaciaProdutoSeleccionado, setFarmaciaProdutoSeleccionado] = useState<Producto | null>(null);
 
     // ✅ NUEVO: useEffect para expandir automáticamente combos recién agregados
     useEffect(() => {
@@ -819,26 +823,60 @@ export default function ProductosTable({
                         {/* ✅ ESTADO: Resultados encontrados */}
                         {!isLoading && productosDisponibles.length > 0 && (
                             productosDisponibles.map((producto) => (
-                                <button
+                                <div
                                     key={producto.id}
-                                    type="button"
-                                    disabled={readOnly}
-                                    onClick={() => handleAgregarProductoYLimpiar(producto)}
-                                    className="w-full text-left px-2.5 py-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-zinc-700 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
                                 >
-                                    <div className="font-medium text-xs text-gray-900 dark:text-white">
-                                        {producto.nombre}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {producto.codigo} | {formatCurrency(producto.precio_venta || 0)}
-                                        {/* ✅ CORREGIDO: Mostrar stock para compras */}
-                                        {tipo === 'compra' ? (
-                                            ` | Stock: ${(producto as any).stock_disponible ?? (producto as any).stock ?? 0}`
-                                        ) : (
-                                            (producto as any).stock_disponible && ` | ${(producto as any).stock_disponible}`
-                                        )}
-                                    </div>
-                                </button>
+                                    <button
+                                        type="button"
+                                        disabled={readOnly}
+                                        onClick={() => handleAgregarProductoYLimpiar(producto)}
+                                        className="w-full text-left px-2.5 py-2 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {/* ✅ NUEVO: Nombre del producto */}
+                                        <div className="font-medium text-xs text-gray-900 dark:text-white">
+                                            {producto.nombre}
+                                        </div>
+                                        {/* ✅ NUEVO: Código, precio (redondeado a 2 decimales) y stock */}
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            <span>{producto.codigo} | {formatCurrencyWith2Decimals(producto.precio_venta || 0)}</span>
+                                            {/* ✅ Mostrar stock para compras */}
+                                            {tipo === 'compra' ? (
+                                                <span> | Stock: {(producto as any).stock_disponible ?? (producto as any).stock ?? 0}</span>
+                                            ) : (
+                                                (producto as any).stock_disponible && <span> | Stock: {(producto as any).stock_disponible}</span>
+                                            )}
+                                        </div>
+                                        {/* ✅ NUEVO: Metadatos del producto (unidad, marca, categoría) */}
+                                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex flex-wrap gap-2">
+                                            {producto.unidad && (
+                                                <span className="bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded text-blue-700 dark:text-blue-300">
+                                                    {producto.unidad.nombre}
+                                                </span>
+                                            )}
+                                            {producto.marca && (
+                                                <span className="bg-purple-50 dark:bg-purple-900/20 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300">
+                                                    {producto.marca.nombre}
+                                                </span>
+                                            )}
+                                            {producto.categoria && (
+                                                <span className="bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300">
+                                                    {producto.categoria.nombre}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </button>
+                                    {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
+                                    {es_farmacia && (producto.principio_activo || producto.uso_de_medicacion) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFarmaciaProdutoSeleccionado(producto)}
+                                            className="w-full text-left px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-t border-gray-100 dark:border-zinc-700 font-medium flex items-center gap-1"
+                                        >
+                                            <span>💊 Ver info medicamento</span>
+                                        </button>
+                                    )}
+                                </div>
                             ))
                         )}
 
@@ -1721,6 +1759,66 @@ export default function ProductosTable({
                 onActualizarPrecios={handleGuardarPreciosModal}
                 onSuccess={handlePreciosActualizados}
             />
+
+            {/* ✅ NUEVO: Modal de información de medicamentos (farmacia) */}
+            {farmaciaProdutoSeleccionado && (
+                <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-900 dark:to-blue-800 px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <span>💊</span> Información de Medicamento
+                            </h3>
+                            <button
+                                onClick={() => setFarmaciaProdutoSeleccionado(null)}
+                                className="text-white hover:text-gray-200 text-xl"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            {/* Nombre del producto */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Producto</h4>
+                                <p className="text-base text-gray-900 dark:text-white font-medium">{farmaciaProdutoSeleccionado.nombre}</p>
+                            </div>
+
+                            {/* Principio activo */}
+                            {farmaciaProdutoSeleccionado.principio_activo && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Principio Activo</h4>
+                                    <p className="text-sm text-gray-700 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded border border-blue-200 dark:border-blue-800">
+                                        {farmaciaProdutoSeleccionado.principio_activo}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Uso de medicación */}
+                            {farmaciaProdutoSeleccionado.uso_de_medicacion && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">Uso / Indicaciones</h4>
+                                    <p className="text-sm text-gray-700 dark:text-gray-200 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded border border-green-200 dark:border-green-800">
+                                        {farmaciaProdutoSeleccionado.uso_de_medicacion}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="bg-gray-50 dark:bg-zinc-700 px-6 py-4 flex justify-end rounded-b-lg">
+                            <button
+                                type="button"
+                                onClick={() => setFarmaciaProdutoSeleccionado(null)}
+                                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-400 dark:hover:bg-gray-500 font-medium text-sm"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

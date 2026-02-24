@@ -346,6 +346,7 @@ class VentaController extends Controller
             'tipos_precio'       => $tiposPrecio, // ✅ NUEVO: Tipos de precio para asignar por defecto
             'estados_documento'  => EstadoDocumento::where('activo', true)->select('id', 'codigo', 'nombre')->get(), // ✅ NUEVO: Estados de documento
             'almacen_id_empresa' => $almacenIdEmpresa,                                                               // ✅ NUEVO: Almacén de la empresa
+            'es_farmacia'        => (bool) $empresaPrincipal?->es_farmacia,                                          // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
         ]);
     }
 

@@ -50,6 +50,7 @@ interface PageProps extends InertiaPageProps {
     tipos_documento: TipoDocumento[];
     tipos_precio: TipoPrecio[]; // ✅ NUEVO: Tipos de precio para asignar por defecto
     almacen_id_empresa: number; // ✅ NUEVO: Almacén de la empresa principal
+    es_farmacia: boolean; // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
     auth: {
         user: {
             id: number;
@@ -60,7 +61,7 @@ interface PageProps extends InertiaPageProps {
 }
 
 export default function VentaForm() {
-    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, tipos_precio, almacen_id_empresa, auth, venta } = usePage<PageProps>().props;
+    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, tipos_precio, almacen_id_empresa, es_farmacia, auth, venta } = usePage<PageProps>().props;
     const isEditing = Boolean(venta);
     const { shouldShowBanner } = useCajaWarning();
 
@@ -1548,6 +1549,7 @@ export default function VentaForm() {
                             console.log('🔄 [create.tsx] ProductosTable notificó cambios en detalles por rangos');
                             setDetallesWithProducts(nuevosDetalles);
                         }} // ✅ NUEVO (2026-02-17): Notificar cuando rangos hacen cambios automáticos
+                        es_farmacia={es_farmacia} // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
                     />
                 </div>
                 {/* Totales */}

@@ -1087,7 +1087,7 @@ function Step2PreciosCodigos(props: Step2Props) {
                     <div className={compactCodigos ? 'grid gap-2 sm:grid-cols-2' : 'space-y-3'}>
                         {data.codigos.map((c: { codigo: string; es_principal?: boolean; tipo?: string }, i: number) => (
                             <div
-                                key={`codigo-${i}-${c.codigo || 'empty'}`}
+                                key={`codigo-${i}`}
                                 className={`rounded-lg border-2 ${compactCodigos ? 'p-3' : 'p-4'} ${c.es_principal ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-border bg-secondary'}`}
                             >
                                 <div className={compactCodigos ? 'space-y-2' : 'space-y-3'}>

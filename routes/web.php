@@ -352,6 +352,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('cuentas-por-cobrar', [\App\Http\Controllers\CuentaPorCobrarController::class, 'index'])->name('cuentas-por-cobrar.index');
         Route::get('cuentas-por-cobrar/{cuentaPorCobrar}/show', [\App\Http\Controllers\CuentaPorCobrarController::class, 'show'])->name('cuentas-por-cobrar.show');
         Route::get('cuentas-por-cobrar/{cuentaPorCobrar}/imprimir-ticket-80', [\App\Http\Controllers\CuentaPorCobrarController::class, 'imprimirTicket80'])->name('cuentas-por-cobrar.imprimir-ticket-80');
+        Route::put('cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento', [\App\Http\Controllers\CuentaPorCobrarController::class, 'actualizarFechaVencimiento'])->name('cuentas-por-cobrar.actualizar-fecha-vencimiento');
 
         // Acciones personalizadas (POST)
         Route::post('{venta}/anular', [\App\Http\Controllers\VentaController::class, 'anular'])->name('anular');

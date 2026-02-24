@@ -311,7 +311,13 @@ export default function ProductoForm({
         console.error('Error al guardar producto:', errors);
         Object.entries(errors).forEach(([field, message]) => {
           if (typeof message === 'string') {
-            NotificationService.error(`${field}: ${message}`);
+            // ✅ Manejo especial para error de códigos duplicados
+            if (field === 'codigos') {
+              NotificationService.error(message); // Ya tiene el emoji y mensaje
+              setActiveTab('precios'); // Cambiar a tab de precios/códigos
+            } else {
+              NotificationService.error(`${field}: ${message}`);
+            }
           }
         });
       },

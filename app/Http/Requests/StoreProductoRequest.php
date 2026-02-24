@@ -257,6 +257,7 @@ class StoreProductoRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->validarCodigosDuplicados($validator);
             $this->validarPrecioBase($validator);
             $this->validarCoherenciaPrecios($validator);
             $this->validarProveedorActivo($validator);
@@ -460,6 +461,46 @@ class StoreProductoRequest extends FormRequest
         if ($principalesCount > 1) {
             $validator->errors()->add('conversiones',
                 'Solo puede existir una conversión principal.'
+            );
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Validar que no haya códigos duplicados
+     */
+    private function validarCodigosDuplicados(Validator $validator): void
+    {
+        $codigos = $this->input('codigos', []);
+
+        if (empty($codigos) || !is_array($codigos)) {
+            return;
+        }
+
+        // Filtrar códigos válidos
+        $codigosValidos = array_filter(array_map(function ($c) {
+            if (is_string($c)) {
+                return trim($c);
+            }
+            if (is_array($c) && isset($c['codigo'])) {
+                return trim($c['codigo']);
+            }
+            return null;
+        }, $codigos));
+
+        if (empty($codigosValidos)) {
+            return;
+        }
+
+        // Buscar códigos duplicados en la BD (para esta empresa)
+        $codigosDuplicados = \App\Models\CodigoBarra::whereIn('codigo', $codigosValidos)
+            ->where('activo', true)
+            ->pluck('codigo')
+            ->toArray();
+
+        if (!empty($codigosDuplicados)) {
+            $codigosStr = implode(', ', $codigosDuplicados);
+            $validator->errors()->add('codigos',
+                "❌ El código de barra '{$codigosStr}' ya existe. Por favor, usa un código único."
             );
         }
     }

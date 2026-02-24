@@ -1723,7 +1723,8 @@ class ProductoController extends Controller
                 ->select([
                     'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
                     'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-                    'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo'
+                    'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo',
+                    'principio_activo', 'uso_de_medicacion' // ✅ NUEVO: Campos para medicamentos (farmacia)
                 ])
                 ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
                 ->where('activo', true)
@@ -1767,7 +1768,8 @@ class ProductoController extends Controller
             ->select([
                 'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
                 'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
-                'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo'
+                'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo',
+                'principio_activo', 'uso_de_medicacion' // ✅ NUEVO: Campos para medicamentos (farmacia)
             ])
             ->where('activo', true)
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
@@ -2152,12 +2154,25 @@ class ProductoController extends Controller
                     'limite_venta'     => $producto->limite_venta ? (int) $producto->limite_venta : null,
                     'limite_productos' => $producto->limite_productos ? (int) $producto->limite_productos : null,
                     'peso'             => $producto->peso,
-                    'categoria'        => $producto->categoria?->nombre ?? '',
-                    'marca'            => $producto->marca?->nombre ?? '',
+                    'categoria'        => $producto->categoria ? [
+                        'id' => $producto->categoria->id,
+                        'nombre' => $producto->categoria->nombre,
+                    ] : null, // ✅ MEJORADO: Retornar objeto completo en lugar de string
+                    'marca'            => $producto->marca ? [
+                        'id' => $producto->marca->id,
+                        'nombre' => $producto->marca->nombre,
+                    ] : null, // ✅ MEJORADO: Retornar objeto completo en lugar de string
                     'es_fraccionado'   => (bool) $producto->es_fraccionado,
                     'es_combo'         => (bool) $producto->es_combo,
                     'unidad_medida_id' => $producto->unidad_medida_id,
+                    'unidad'           => $producto->unidad ? [
+                        'id' => $producto->unidad->id,
+                        'nombre' => $producto->unidad->nombre,
+                        'codigo' => $producto->unidad->codigo,
+                    ] : null, // ✅ NUEVO: Retornar objeto completo de unidad
                     'unidad_medida_nombre' => $producto->unidad?->nombre ?? null,
+                    'principio_activo'     => $producto->principio_activo, // ✅ NUEVO: Campo para medicamentos (farmacia)
+                    'uso_de_medicacion'    => $producto->uso_de_medicacion, // ✅ NUEVO: Campo para medicamentos (farmacia)
                     'conversiones'     => $producto->conversiones
                         ->where('activo', true)
                         ->map(fn($c) => [

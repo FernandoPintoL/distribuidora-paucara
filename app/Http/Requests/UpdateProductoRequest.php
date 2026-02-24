@@ -287,6 +287,7 @@ class UpdateProductoRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->validarCodigosDuplicados($validator);
             $this->validarPrecioBase($validator);
             $this->validarCoherenciaPrecios($validator);
             $this->validarProveedorActivo($validator);
@@ -490,6 +491,48 @@ class UpdateProductoRequest extends FormRequest
         if ($principalesCount > 1) {
             $validator->errors()->add('conversiones',
                 'Solo puede existir una conversión principal.'
+            );
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Validar que no haya códigos duplicados (excluyendo el producto actual)
+     */
+    private function validarCodigosDuplicados(Validator $validator): void
+    {
+        $codigos = $this->input('codigos', []);
+        $productoId = $this->route('producto')?->id; // Obtener ID del producto siendo editado
+
+        if (empty($codigos) || !is_array($codigos) || !$productoId) {
+            return;
+        }
+
+        // Filtrar códigos válidos
+        $codigosValidos = array_filter(array_map(function ($c) {
+            if (is_string($c)) {
+                return trim($c);
+            }
+            if (is_array($c) && isset($c['codigo'])) {
+                return trim($c['codigo']);
+            }
+            return null;
+        }, $codigos));
+
+        if (empty($codigosValidos)) {
+            return;
+        }
+
+        // Buscar códigos duplicados en la BD (EXCLUYENDO el producto actual)
+        $codigosDuplicados = \App\Models\CodigoBarra::whereIn('codigo', $codigosValidos)
+            ->where('activo', true)
+            ->where('producto_id', '!=', $productoId) // ✅ Excluir este producto
+            ->pluck('codigo')
+            ->toArray();
+
+        if (!empty($codigosDuplicados)) {
+            $codigosStr = implode(', ', $codigosDuplicados);
+            $validator->errors()->add('codigos',
+                "❌ El código de barra '{$codigosStr}' ya existe en otro producto. Por favor, usa un código único."
             );
         }
     }

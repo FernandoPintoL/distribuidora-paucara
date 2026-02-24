@@ -33,13 +33,29 @@ class CuentaPorCobrarController extends Controller
                 $q->where('cliente_id', $request->cliente_id);
             })
             ->when($request->q, function ($q) use ($request) {
-                $q->where(function ($subQ) use ($request) {
-                    $subQ->whereHas('venta', function ($ventaQ) use ($request) {
-                        $ventaQ->where('numero', 'LIKE', "%{$request->q}%");
-                    })->orWhereHas('cliente', function ($clienteQ) use ($request) {
-                        $clienteQ->where('nombre', 'LIKE', "%{$request->q}%")
-                            ->orWhere('codigo_cliente', 'LIKE', "%{$request->q}%");
-                    });
+                $searchTerm = "%{$request->q}%";
+                // Si es un número, también buscar por ID exacto
+                $isNumeric = is_numeric($request->q);
+
+                $q->where(function ($subQ) use ($searchTerm, $isNumeric, $request) {
+                    $subQ
+                        // Buscar por ID de la cuenta
+                        ->where('id', $searchTerm)
+                        // Buscar por ID de venta (si es numérico)
+                        ->when($isNumeric, function ($sq) use ($request) {
+                            $sq->orWhere('venta_id', $request->q);
+                        })
+                        // Buscar por referencia_documento
+                        ->orWhere('referencia_documento', 'LIKE', $searchTerm)
+                        // Buscar por número de venta
+                        ->orWhereHas('venta', function ($ventaQ) use ($searchTerm) {
+                            $ventaQ->where('numero', 'LIKE', $searchTerm);
+                        })
+                        // Buscar por nombre del cliente
+                        ->orWhereHas('cliente', function ($clienteQ) use ($searchTerm) {
+                            $clienteQ->where('nombre', 'LIKE', $searchTerm)
+                                ->orWhere('codigo_cliente', 'LIKE', $searchTerm);
+                        });
                 });
             })
             ->when($request->fecha_vencimiento_desde && $request->fecha_vencimiento_hasta, function ($q) use ($request) {
@@ -401,6 +417,68 @@ class CuentaPorCobrarController extends Controller
 
             return response()->json([
                 'message' => 'Error al anular el pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Actualizar fecha de vencimiento de una cuenta por cobrar
+     */
+    public function actualizarFechaVencimiento(Request $request, CuentaPorCobrar $cuentaPorCobrar)
+    {
+        try {
+            // Validar la nueva fecha
+            $validated = $request->validate([
+                'fecha_vencimiento' => 'required|date|after_or_equal:today',
+            ], [
+                'fecha_vencimiento.required' => 'La fecha de vencimiento es requerida',
+                'fecha_vencimiento.date' => 'Debe ser una fecha válida',
+                'fecha_vencimiento.after_or_equal' => 'La fecha debe ser hoy o una fecha futura',
+            ]);
+
+            $fechaAntigua = $cuentaPorCobrar->fecha_vencimiento;
+
+            // Actualizar la fecha de vencimiento
+            $cuentaPorCobrar->update([
+                'fecha_vencimiento' => $validated['fecha_vencimiento'],
+            ]);
+
+            // Recalcular días vencido (asegurar que sea integer)
+            $cuentaPorCobrar->dias_vencido = (int) now()->diffInDays($cuentaPorCobrar->fecha_vencimiento, false);
+            $cuentaPorCobrar->save();
+
+            Log::info('✅ Fecha de vencimiento actualizada', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'fecha_antigua' => $fechaAntigua,
+                'fecha_nueva' => $validated['fecha_vencimiento'],
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Fecha de vencimiento actualizada exitosamente',
+                'data' => [
+                    'id' => $cuentaPorCobrar->id,
+                    'fecha_vencimiento' => $cuentaPorCobrar->fecha_vencimiento->format('Y-m-d'),
+                    'dias_vencido' => $cuentaPorCobrar->dias_vencido,
+                ],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error actualizando fecha de vencimiento', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'error' => $e->getMessage(),
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la fecha: ' . $e->getMessage(),
             ], 500);
         }
     }

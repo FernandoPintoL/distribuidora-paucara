@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import SearchSelect from '@/presentation/components/ui/search-select'; // ✅ NUEVO
-import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer } from 'lucide-react';
+import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
@@ -142,6 +142,12 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     const [modalImpresionPagoOpen, setModalImpresionPagoOpen] = useState(false);
     const [pagoAImprimir, setPagoAImprimir] = useState<Pago | null>(null);
 
+    // Estados para modal de editar fecha de vencimiento
+    const [modalEditarFechaOpen, setModalEditarFechaOpen] = useState(false);
+    const [cuentaEditarFecha, setCuentaEditarFecha] = useState<CuentaPorCobrar | null>(null);
+    const [nuevaFechaVencimiento, setNuevaFechaVencimiento] = useState('');
+    const [editandoFecha, setEditandoFecha] = useState(false);
+
     // Validación defensiva para evitar errores si cuentasPorCobrar es undefined
     if (!cuentasPorCobrar || !cuentasPorCobrar.filtros) {
         return (
@@ -255,6 +261,42 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         }
     };
 
+    // ✅ NUEVO: Guardar nueva fecha de vencimiento
+    const handleGuardarFechaVencimiento = async () => {
+        if (!cuentaEditarFecha || !nuevaFechaVencimiento) return;
+
+        try {
+            setEditandoFecha(true);
+            const response = await fetch(`/ventas/cuentas-por-cobrar/${cuentaEditarFecha.id}/actualizar-fecha-vencimiento`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    fecha_vencimiento: nuevaFechaVencimiento,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`✅ Fecha de vencimiento actualizada a ${new Date(nuevaFechaVencimiento).toLocaleDateString('es-BO')}`);
+                setModalEditarFechaOpen(false);
+                setCuentaEditarFecha(null);
+                setNuevaFechaVencimiento('');
+                router.get('/ventas/cuentas-por-cobrar');
+            } else {
+                toast.error(data.message || 'Error al actualizar la fecha');
+            }
+        } catch (error) {
+            console.error('Error actualizando fecha:', error);
+            toast.error('Error al actualizar la fecha de vencimiento');
+        } finally {
+            setEditandoFecha(false);
+        }
+    };
+
     const getEstadoBadge = (estado: string) => {
         const colores = {
             'PENDIENTE': 'default',
@@ -283,6 +325,32 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
             'PROCESANDO': 'outline'
         };
         return colores[estado as keyof typeof colores] || 'default';
+    };
+
+    // ✅ NUEVO: Función para obtener color de fila según días vencido
+    const getRowColorClass = (diasVencido: number, estado: string) => {
+        // Si está pagado, color normal
+        if (estado === 'PAGADO') {
+            return 'bg-green-50 dark:bg-green-950/10 border-l-4 border-l-green-500 hover:bg-green-100 dark:hover:bg-green-950/20';
+        }
+
+        // Si está vencido por más de 30 días - CRÍTICO
+        if (diasVencido > 30) {
+            return 'bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-600 hover:bg-red-100 dark:hover:bg-red-950/30 shadow-md';
+        }
+
+        // Si está vencido por 15-30 días - ALTO
+        if (diasVencido > 15) {
+            return 'bg-orange-50 dark:bg-orange-950/20 border-l-4 border-l-orange-500 hover:bg-orange-100 dark:hover:bg-orange-950/30';
+        }
+
+        // Si está vencido por 1-15 días - MEDIO
+        if (diasVencido > 0) {
+            return 'bg-yellow-50 dark:bg-yellow-950/20 border-l-4 border-l-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-950/30';
+        }
+
+        // Si está al día - NORMAL
+        return 'bg-blue-50 dark:bg-blue-950/10 border-l-4 border-l-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/20';
     };
 
     return (
@@ -378,19 +446,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                 {/* Filtros */}
                 <Card>
                     <CardContent className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
-                                <Input
-                                    value={filtros.q || ''}
-                                    onChange={(e) => handleFiltroChange('q', e.target.value)}
-                                    placeholder="Buscar por cliente, número..."
-                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                />
-                            </div>
-
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             {/* ✅ ACTUALIZADO: SearchSelect para cliente */}
                             <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Cliente</label>
                                 <SearchSelect
                                     id="cliente"
                                     label="Cliente"
@@ -407,7 +466,18 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                     searchPlaceholder="Buscar clientes..."
                                 />
                             </div>
-
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
+                                <Input
+                                    value={filtros.q || ''}
+                                    onChange={(e) => handleFiltroChange('q', e.target.value)}
+                                    placeholder="ID cuenta, ID venta, referencia, número, cliente..."
+                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    ID cuenta, ID venta, referencia documento, número de venta o nombre cliente
+                                </p>
+                            </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
                                 <select
@@ -422,39 +492,95 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                     <option value="PARCIAL">Parcial</option>
                                 </select>
                             </div>
-
-                            <div className="flex items-end space-x-2">
-                                <label className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={filtros.solo_vencidas || false}
-                                        onChange={(e) => handleFiltroChange('solo_vencidas', e.target.checked)}
-                                        className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800"
-                                    />
-                                    <span className="text-sm text-gray-700 dark:text-gray-300">Solo vencidas</span>
-                                </label>
-                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha vencimiento desde</label>
-                                <Input
-                                    type="date"
-                                    value={filtros.fecha_vencimiento_desde || ''}
-                                    onChange={(e) => handleFiltroChange('fecha_vencimiento_desde', e.target.value)}
-                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                />
+                        {/* Rango de Fechas de Vencimiento */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <label className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                    Rango de Fecha de Vencimiento
+                                </label>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha vencimiento hasta</label>
-                                <Input
-                                    type="date"
-                                    value={filtros.fecha_vencimiento_hasta || ''}
-                                    onChange={(e) => handleFiltroChange('fecha_vencimiento_hasta', e.target.value)}
-                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900/30">
+                                {/* Fecha Desde */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                                        Desde
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={filtros.fecha_vencimiento_desde || ''}
+                                        onChange={(e) => handleFiltroChange('fecha_vencimiento_desde', e.target.value)}
+                                        placeholder="Selecciona fecha inicial"
+                                        className="bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white border-blue-300 dark:border-blue-900 focus:ring-blue-500"
+                                    />
+                                    {filtros.fecha_vencimiento_desde && (
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            A partir de {new Date(filtros.fecha_vencimiento_desde).toLocaleDateString('es-BO')}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Fecha Hasta */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                                        Hasta
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={filtros.fecha_vencimiento_hasta || ''}
+                                        onChange={(e) => handleFiltroChange('fecha_vencimiento_hasta', e.target.value)}
+                                        placeholder="Selecciona fecha final"
+                                        className="bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white border-green-300 dark:border-green-900 focus:ring-green-500"
+                                    />
+                                    {filtros.fecha_vencimiento_hasta && (
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            Hasta {new Date(filtros.fecha_vencimiento_hasta).toLocaleDateString('es-BO')}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
+                            {/* Filtro: Solo Vencidas - Card Interactivo */}
+                            <div
+                                onClick={() => handleFiltroChange('solo_vencidas', !filtros.solo_vencidas)}
+                                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${filtros.solo_vencidas
+                                    ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                    : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 hover:border-red-300'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${filtros.solo_vencidas
+                                            ? 'bg-red-500 border-red-500'
+                                            : 'border-gray-300 dark:border-gray-600'
+                                            }`}
+                                    >
+                                        {filtros.solo_vencidas && (
+                                            <CheckCircle2 className="w-4 h-4 text-white" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                                            🚨 Mostrar solo vencidas
+                                        </p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            Filtra cuentas con fecha vencimiento anterior a hoy
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Indicador de rango activo */}
+                            {filtros.fecha_vencimiento_desde && filtros.fecha_vencimiento_hasta && (
+                                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-lg">
+                                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    <span className="text-sm text-green-700 dark:text-green-300">
+                                        Filtrando: {new Date(filtros.fecha_vencimiento_desde).toLocaleDateString('es-BO')} → {new Date(filtros.fecha_vencimiento_hasta).toLocaleDateString('es-BO')}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end mt-4">
@@ -494,10 +620,14 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                 {cuentasPorCobrar.cuentas_por_cobrar.data.map((cuenta) => (
                                     <React.Fragment key={cuenta.id}>
-                                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <tr className={`${getRowColorClass(cuenta.dias_vencido, cuenta.estado)} transition-colors duration-200`}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-white">
-                                                    {cuenta.venta?.numero || `${cuenta.referencia_documento}`} | #{cuenta.id}
+                                                    <p>Folio Cuenta por Cobrar:  #{cuenta.id}</p>
+                                                    {cuenta.venta && (
+                                                        <p>Folio Venta: {cuenta.venta?.id}</p>
+                                                    )}
+                                                    <p>{cuenta.venta?.numero || `${cuenta.referencia_documento}`}</p>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -564,6 +694,19 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                     >
                                                         <Printer className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setCuentaEditarFecha(cuenta);
+                                                            setNuevaFechaVencimiento(cuenta.fecha_vencimiento);
+                                                            setModalEditarFechaOpen(true);
+                                                        }}
+                                                        title="Editar fecha de vencimiento"
+                                                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                                    >
+                                                        <Calendar className="w-4 h-4" />
                                                     </Button>
                                                     {cuenta.estado !== 'PAGADO' && (
                                                         <Button
@@ -884,6 +1027,95 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                         }}
                     />
                 )}
+
+                {/* Modal para Editar Fecha de Vencimiento */}
+                <Dialog open={modalEditarFechaOpen} onOpenChange={setModalEditarFechaOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                                📅 Editar Fecha de Vencimiento
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        {cuentaEditarFecha && (
+                            <div className="space-y-6 py-4">
+                                {/* Info de la cuenta */}
+                                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900/30">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Cuenta por Cobrar</p>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                        #{cuentaEditarFecha.id}
+                                    </p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+                                        Cliente: <span className="font-semibold">{cuentaEditarFecha.cliente?.nombre || cuentaEditarFecha.venta?.cliente?.nombre || 'Sin cliente'}</span>
+                                    </p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        Saldo: <span className="font-semibold text-amber-600">{formatCurrency(cuentaEditarFecha.saldo_pendiente)}</span>
+                                    </p>
+                                </div>
+
+                                {/* Fecha actual */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-gray-700 dark:text-gray-400">
+                                        Fecha Vencimiento Actual
+                                    </label>
+                                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {new Date(cuentaEditarFecha.fecha_vencimiento).toLocaleDateString('es-BO')}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Nueva fecha */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        Nueva Fecha de Vencimiento
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={nuevaFechaVencimiento}
+                                        onChange={(e) => setNuevaFechaVencimiento(e.target.value)}
+                                        className="bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    {nuevaFechaVencimiento && (
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            Nueva fecha: {new Date(nuevaFechaVencimiento).toLocaleDateString('es-BO')}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Alerta */}
+                                <div className="flex gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+                                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                                        Al cambiar la fecha, se recalcularán automáticamente los días vencidos.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setModalEditarFechaOpen(false);
+                                    setCuentaEditarFecha(null);
+                                    setNuevaFechaVencimiento('');
+                                }}
+                                disabled={editandoFecha}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                onClick={handleGuardarFechaVencimiento}
+                                disabled={!nuevaFechaVencimiento || editandoFecha}
+                                className="bg-blue-600 hover:bg-blue-700"
+                            >
+                                {editandoFecha ? 'Guardando...' : 'Guardar Cambios'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
