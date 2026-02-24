@@ -22,6 +22,7 @@ import { ChartWrapper } from '@/presentation/components/dashboard/chart-wrapper'
 import { AlertasStock } from '@/presentation/components/dashboard/alertas-stock';
 import { ProductosMasVendidos } from '@/presentation/components/dashboard/productos-mas-vendidos';
 import { PeriodSelector } from '@/presentation/components/dashboard/period-selector';
+import { AlertCircle, TrendingDown } from 'lucide-react';
 
 interface AdminDashboardProps {
     metricas: {
@@ -92,6 +93,17 @@ interface AdminDashboardProps {
         total: number;
         monto: number;
     }>;
+    cuentasVencidas?: Array<{
+        id: number;
+        cliente_nombre: string;
+        saldo_pendiente: number;
+        dias_vencido: number;
+        fecha_vencimiento: string;
+        referencia_documento: string;
+        estado: string;
+    }>;
+    totalCuentasVencidas?: number;
+    totalMontoVencido?: number;
     periodo: string;
     titulo: string;
     descripcion: string;
@@ -114,6 +126,9 @@ export default function AdminDashboard({
     productosMasVendidos,
     alertasStock,
     ventasPorCanal,
+    cuentasVencidas = [],
+    totalCuentasVencidas = 0,
+    totalMontoVencido = 0,
     periodo: initialPeriodo = 'mes_actual',
     titulo = 'Dashboard Administrativo',
     descripcion = 'Resumen completo del sistema',
@@ -190,6 +205,91 @@ export default function AdminDashboard({
                         onChange={handlePeriodChange}
                     />
                 </div>
+
+                {/* Cuentas por Cobrar Vencidas */}
+                {totalCuentasVencidas > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/30 dark:bg-amber-950/20">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                                    🚨 Cuentas por Cobrar Vencidas
+                                </h3>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                    Total: {totalCuentasVencidas} cuenta{totalCuentasVencidas !== 1 ? 's' : ''}
+                                </p>
+                                <p className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                                    Bs. {totalMontoVencido.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-amber-200 dark:border-amber-900/30">
+                                        <th className="px-3 py-2 text-left font-medium text-amber-800 dark:text-amber-200">
+                                            Cliente
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-medium text-amber-800 dark:text-amber-200">
+                                            Referencia
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-medium text-amber-800 dark:text-amber-200">
+                                            Saldo
+                                        </th>
+                                        <th className="px-3 py-2 text-center font-medium text-amber-800 dark:text-amber-200">
+                                            Días Vencido
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-medium text-amber-800 dark:text-amber-200">
+                                            Fecha Vencimiento
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {cuentasVencidas.map((cuenta) => (
+                                        <tr
+                                            key={cuenta.id}
+                                            className="border-b border-amber-100 hover:bg-amber-100/50 dark:border-amber-900/20 dark:hover:bg-amber-900/10"
+                                        >
+                                            <td className="px-3 py-3 font-medium text-amber-900 dark:text-amber-100">
+                                                {cuenta.cliente_nombre}
+                                            </td>
+                                            <td className="px-3 py-3 text-amber-800 dark:text-amber-300">
+                                                {cuenta.referencia_documento}
+                                            </td>
+                                            <td className="px-3 py-3 text-right font-semibold text-amber-900 dark:text-amber-100">
+                                                Bs. {cuenta.saldo_pendiente.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={`inline-block rounded px-2 py-1 text-xs font-bold ${cuenta.dias_vencido > 30
+                                                    ? 'bg-red-200 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                                                    : cuenta.dias_vencido > 15
+                                                        ? 'bg-orange-200 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200'
+                                                        : 'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                                                    }`}>
+                                                    {cuenta.dias_vencido} días
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-3 text-amber-700 dark:text-amber-300">
+                                                {cuenta.fecha_vencimiento}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {cuentasVencidas.length < totalCuentasVencidas && (
+                            <div className="mt-4 text-center">
+                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                    Mostrando {cuentasVencidas.length} de {totalCuentasVencidas} cuentas. Ver todas en módulo de Cuentas por Cobrar.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Métricas principales */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -288,6 +388,8 @@ export default function AdminDashboard({
                     alertas={safeAlertasStock}
                     loading={loading}
                 />
+
+
             </div>
         </AppLayout>
     );

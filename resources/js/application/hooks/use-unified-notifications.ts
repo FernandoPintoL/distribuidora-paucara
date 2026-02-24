@@ -23,6 +23,7 @@ interface UseUnifiedNotificationsOptions {
   autoSubscribeUser?: boolean;
   userId?: number;
   orgId?: number;
+  fetchAlertasVencidas?: boolean;
 }
 
 export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions = {}) => {
@@ -35,6 +36,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
     autoSubscribeUser = true,
     userId,
     orgId,
+    fetchAlertasVencidas = false,
   } = options;
 
   // ✅ CRITICAL: Usar state en lugar de ref para trigger re-renders cuando lleguen notificaciones
@@ -382,6 +384,80 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       listenersRef.current.clear();
     };
   }, []); // ✅ Dependencias vacías - solo se ejecuta una vez en mount
+
+  /**
+   * Fetch alertas de cuentas vencidas con delay (post-login)
+   */
+  useEffect(() => {
+    if (!fetchAlertasVencidas) {
+      return;
+    }
+
+    console.log('⏳ Iniciando fetch de alertas de cuentas vencidas con delay de 1500ms...');
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/alertas/cuentas-vencidas', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          console.warn(`Error fetching alertas vencidas: ${response.status}`);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!data.cuentas || data.cuentas.length === 0) {
+          console.log('✅ No hay cuentas vencidas');
+          return;
+        }
+
+        console.log(`📬 Se encontraron ${data.cuentas.length} cuentas vencidas`);
+
+        // Convertir cada cuenta en una notificación
+        data.cuentas.forEach((cuenta: any) => {
+          const notification: BaseNotification = {
+            id: `cuenta-vencida-${cuenta.id}`,
+            type: 'creditos',
+            title: '⚠️ Cuenta Vencida',
+            message: `${cuenta.cliente_nombre} - Bs. ${cuenta.saldo_pendiente} (${cuenta.dias_vencido} días)`,
+            data: cuenta,
+            read: false,
+            createdAt: new Date().toISOString(),
+            roles: userRoles,
+          };
+
+          // Agregar a notificaciones si no existe
+          if (!notificationsRef.current.has(notification.id)) {
+            notificationsRef.current.set(notification.id, notification);
+            setNotifications(Array.from(notificationsRef.current.values()));
+
+            console.log(`📬 Notificación de cuenta vencida agregada: ${notification.id}`);
+
+            // Callback si está configurado
+            if (onNotification) {
+              onNotification(notification);
+            }
+          }
+        });
+
+        console.log(`✅ ${data.cuentas.length} notificaciones de cuentas vencidas cargadas`);
+      } catch (error) {
+        console.error('❌ Error fetching alertas de cuentas vencidas:', error);
+        if (onError) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+    }, 1500); // 1500ms delay
+
+    return () => clearTimeout(timer);
+  }, [fetchAlertasVencidas, userRoles, onNotification, onError]);
 
   /**
    * Request browser notification permission

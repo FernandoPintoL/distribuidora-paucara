@@ -11,6 +11,7 @@ import {
 import { Bell, Trash2, Volume2, VolumeX, BellRing, BellOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useEffect } from 'react';
 import type { NotificationType } from '@/domain/entities/websocket-events';
 
 export default function ProformaNotificationPanel() {
@@ -28,7 +29,53 @@ export default function ProformaNotificationPanel() {
     autoSubscribePublic: true,
     autoSubscribeUser: user?.id,
     userId: user?.id,
+    fetchAlertasVencidas: true,
   });
+
+  // Detectar si hay alertas críticas de créditos no leídas
+  const hasUnreadCreditos = notifications.some(
+    (n) => n.type === 'creditos' && !n.read
+  );
+
+  // Reproducir sonido cuando hay alertas de créditos
+  const playAlertSound = () => {
+    try {
+      // Sonido de alerta de emergencia/crítico (usando beep múltiple)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Parámetros de sonido: beep agudo y corto
+      oscillator.frequency.value = 800; // Frecuencia aguda
+      oscillator.type = 'sine';
+
+      // Volumen suave pero perceptible
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+
+      // Segundo beep para hacerlo más llamativo
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode2 = audioContext.createGain();
+      oscillator2.connect(gainNode2);
+      gainNode2.connect(audioContext.destination);
+
+      oscillator2.frequency.value = 1000;
+      oscillator2.type = 'sine';
+      gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.15);
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
+
+      oscillator2.start(audioContext.currentTime + 0.15);
+      oscillator2.stop(audioContext.currentTime + 0.35);
+    } catch (error) {
+      console.log('No se pudo reproducir sonido de alerta:', error);
+    }
+  };
 
   // Color mapping for notification types
   const getTypeColor = (type: NotificationType) => {
@@ -47,6 +94,8 @@ export default function ProformaNotificationPanel() {
         return 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800';
       case 'dashboard':
         return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
+      case 'creditos':
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
       default:
         return 'bg-gray-100 dark:bg-gray-700/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
     }
@@ -56,19 +105,35 @@ export default function ProformaNotificationPanel() {
     await requestNotificationPermission();
   };
 
+  // Reproducir sonido cuando hay nuevas alertas de créditos
+  useEffect(() => {
+    if (hasUnreadCreditos) {
+      // Pequeño delay para que el sonido no sea inmediato
+      const timer = setTimeout(() => {
+        playAlertSound();
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnreadCreditos]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className={`relative transition-all ${hasUnreadCreditos ? 'animate-bell-jump animate-bell-pulse' : ''}`}
           title="Notificaciones de sistema"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500 dark:bg-red-600"
+              className={`absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 transition-all ${
+                hasUnreadCreditos
+                  ? 'bg-red-600 dark:bg-red-500 animate-pulse'
+                  : 'bg-red-500 dark:bg-red-600'
+              }`}
               variant="destructive"
             >
               {unreadCount > 9 ? '9+' : unreadCount}

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlertasController;
 use App\Http\Controllers\Api\ApiProformaController;
 use App\Http\Controllers\Api\ApiVentaController;
 use App\Http\Controllers\Api\AuthController;
@@ -1199,6 +1200,14 @@ Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
     Route::post('preparar-impresion-compras', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionCompras']);
     Route::post('preparar-impresion-productos-vendidos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionProductosVendidos']);
     Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
+});
+
+// ==========================================
+// 🚨 ALERTAS Y NOTIFICACIONES
+// ==========================================
+Route::middleware(['auth:sanctum,web'])->group(function () {
+    Route::get('/alertas/cuentas-vencidas', [AlertasController::class, 'cuentasVencidas'])
+        ->name('api.alertas.cuentas-vencidas');
 });
 
 // ==========================================
