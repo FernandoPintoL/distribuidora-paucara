@@ -88,11 +88,12 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
 
     /**
      * Aplicar ordenamiento
+     * ✅ ACTUALIZADO: Usar sort_order en lugar de sort_dir para consistencia con backend
      */
     sort(field: string, direction: 'asc' | 'desc' = 'desc'): void {
         const currentParams = new URLSearchParams(window.location.search);
         currentParams.set('sort_by', field);
-        currentParams.set('sort_dir', direction);
+        currentParams.set('sort_order', direction);  // ✅ CAMBIO: sort_dir -> sort_order
 
         router.get(`/ventas?${currentParams.toString()}`, {}, {
             preserveState: true,

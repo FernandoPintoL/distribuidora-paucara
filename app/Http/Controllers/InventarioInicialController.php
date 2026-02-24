@@ -252,10 +252,16 @@ class InventarioInicialController extends Controller
     public function getDraft($borradorId)
     {
         $borrador = InventarioInicialBorrador::with([
-            'items.producto.codigosBarra', // ✅ Cargar códigos de barra con el producto
+            'items.producto.codigosBarra',  // ✅ Cargar códigos de barra con el producto
+            'items.producto.marca',         // ✅ NUEVO: Cargar marca del producto
+            'items.producto.unidad',        // ✅ NUEVO: Cargar unidad de medida del producto (corrected relationship name)
             'items.almacen',
             'items.stockProducto',
         ])->findOrFail($borradorId);
+
+        // ✅ NUEVO (2026-02-24): Ordenar items por ID DESC para que los nuevos aparezcan primero
+        // Usar ->values() para resetear las claves del array indexado
+        $itemsOrdenados = $borrador->items->sortByDesc('id')->values();
 
         // Verificar autorización
         if ($borrador->usuario_id !== Auth::id()) {
@@ -265,7 +271,7 @@ class InventarioInicialController extends Controller
         return response()->json([
             'id'      => $borrador->id,
             'estado'  => $borrador->estado,
-            'items'   => $borrador->items->map(fn($item) => [
+            'items'   => $itemsOrdenados->map(fn($item) => [  // ✅ Usar items ordenados
                 'id'                 => $item->id,
                 'producto_id'        => $item->producto_id,
                 'almacen_id'         => $item->almacen_id,

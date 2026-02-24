@@ -427,9 +427,9 @@ class VentaService
      * @param int $perPage
      * @param array $filtros Puede incluir: estado, estado_documento_id, cliente_id, usuario_id, fecha_desde, fecha_hasta, numero, search, monto_min, monto_max, moneda_id
      */
-    public function listar(int $perPage = 15, array $filtros = []): LengthAwarePaginator
+    public function listar(int $perPage = 15, array $filtros = [], string $sortBy = 'id', string $sortOrder = 'desc'): LengthAwarePaginator
     {
-        return $this->read(function () use ($perPage, $filtros) {
+        return $this->read(function () use ($perPage, $filtros, $sortBy, $sortOrder) {
             // ✅ ACTUALIZADO: Cargar todas las relaciones necesarias para el frontend
             // Incluye estadoLogistica para mostrar estado de entregas en tabla
             $query = Venta::with([
@@ -443,6 +443,12 @@ class VentaService
             ])
                 ->when($filtros['id'] ?? null, fn($q, $id) =>
                     $q->where('id', $id)
+                )
+                ->when($filtros['id_desde'] ?? null, fn($q, $idDesde) =>
+                    $q->where('id', '>=', (int)$idDesde)
+                )
+                ->when($filtros['id_hasta'] ?? null, fn($q, $idHasta) =>
+                    $q->where('id', '<=', (int)$idHasta)
                 )
                 ->when($filtros['estado'] ?? null, fn($q, $estado) =>
                     $q->where('estado', $estado)
@@ -530,8 +536,14 @@ class VentaService
                     )
                 );
 
+            // ✅ NUEVO: Aplicar ordenamiento dinámico con validación
+            // Campos permitidos para ordenamiento: id, created_at, updated_at, fecha, numero, total, estado
+            $camposPermitidos = ['id', 'created_at', 'updated_at', 'fecha', 'numero', 'total', 'estado'];
+            $sortBy = in_array(strtolower($sortBy), $camposPermitidos) ? $sortBy : 'id';
+            $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'asc' : 'desc';
+
             $resultado = $query
-                ->orderByDesc('created_at')
+                ->orderBy($sortBy, $sortOrder)
                 ->paginate($perPage);
 
             // ✅ DEBUG: Verificar que las relaciones se cargaron correctamente
@@ -542,6 +554,8 @@ class VentaService
                 'tiene_estadoLogistica'   => $resultado->first()?->estadoLogistica ? 'SÍ' : 'NO',
                 'latitud'                 => $resultado->first()?->direccionCliente?->latitud ?? 'N/A',
                 'longitud'                => $resultado->first()?->direccionCliente?->longitud ?? 'N/A',
+                'sort_by'                 => $sortBy,
+                'sort_order'              => $sortOrder,
             ]);
 
             return $resultado;

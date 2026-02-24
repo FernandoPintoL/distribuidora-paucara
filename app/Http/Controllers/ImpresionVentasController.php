@@ -85,8 +85,22 @@ class ImpresionVentasController extends Controller
 
             $vista = $vistaMap[$formato] ?? 'impresion.ventas.hoja-completa-ventas';
 
-            // ✅ Ordenar ascendentemente por ID
-            $ventasOrdenadas = $ventas->sortBy('id');
+            // ✅ ACTUALIZADO (2026-02-24): Aplicar ordenamiento dinámico según filtros
+            // Si los filtros incluyen sort_by y sort_order, usarlos; si no, usar DESC por ID
+            $sortBy = $filtros['sort_by'] ?? 'id';
+            $sortOrder = $filtros['sort_order'] ?? 'desc';
+
+            // Validar campos permitidos para ordenamiento
+            $camposPermitidos = ['id', 'created_at', 'updated_at', 'fecha', 'numero', 'total', 'estado'];
+            $sortBy = in_array(strtolower($sortBy), $camposPermitidos) ? $sortBy : 'id';
+            $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'asc' : 'desc';
+
+            // Aplicar ordenamiento a la colección
+            if ($sortOrder === 'asc') {
+                $ventasOrdenadas = $ventas->sortBy($sortBy);
+            } else {
+                $ventasOrdenadas = $ventas->sortByDesc($sortBy);
+            }
 
             // Renderizar vista HTML con las ventas
             $html = view($vista, [

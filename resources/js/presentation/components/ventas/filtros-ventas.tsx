@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, X, Calendar, DollarSign, Hash } from 'lucide-react';
+import { Search, Filter, X, Calendar, DollarSign, Hash, ArrowUpDown } from 'lucide-react';
 import type { FiltrosVentas, DatosParaFiltrosVentas } from '@/domain/entities/ventas';
 import ventasService from '@/infrastructure/services/ventas.service';
 import SearchSelect from '@/presentation/components/ui/search-select';
@@ -40,7 +40,9 @@ export default function FiltrosVentasComponent({
         filtros.monto_min ||
         filtros.monto_max ||
         filtros.usuario_id ||
-        filtros.tipo_pago_id  // ✅ NUEVO: Incluir tipo_pago_id
+        filtros.tipo_pago_id ||  // ✅ NUEVO: Incluir tipo_pago_id
+        filtros.id_desde ||       // ✅ NUEVO: Incluir id_desde
+        filtros.id_hasta          // ✅ NUEVO: Incluir id_hasta
     );
 
     useEffect(() => {
@@ -134,6 +136,36 @@ export default function FiltrosVentasComponent({
                     />
                 </div>
 
+                {/* Rango de IDs - Desde */}
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Hash className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="number"
+                        placeholder="ID desde"
+                        title="ID mínimo de la venta"
+                        value={filtros.id_desde || ''}
+                        onChange={(e) => handleFiltroChange('id_desde', e.target.value ? Number(e.target.value) : null)}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                    />
+                </div>
+
+                {/* Rango de IDs - Hasta */}
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Hash className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="number"
+                        placeholder="ID hasta"
+                        title="ID máximo de la venta"
+                        value={filtros.id_hasta || ''}
+                        onChange={(e) => handleFiltroChange('id_hasta', e.target.value ? Number(e.target.value) : null)}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                    />
+                </div>
+
 
                 {/* Cliente - Búsqueda por múltiples campos */}
                 <div className="relative">
@@ -182,6 +214,41 @@ export default function FiltrosVentasComponent({
                         <option value="">Todos los tipos</option>
                         <option value="presencial">🏪 Presencial</option>
                         <option value="delivery">🚚 Delivery</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* ✅ NUEVO: Controles de Ordenamiento */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        Ordenar por:
+                    </span>
+
+                    {/* Campo de ordenamiento */}
+                    <select
+                        value={filtros.sort_by || 'id'}
+                        onChange={(e) => handleFiltroChange('sort_by', e.target.value || 'id')}
+                        className="px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                    >
+                        <option value="id">ID (predeterminado)</option>
+                        <option value="created_at">Fecha de creación</option>
+                        <option value="updated_at">Fecha de actualización</option>
+                        <option value="fecha">Fecha de emisión</option>
+                        <option value="numero">Número de venta</option>
+                        <option value="total">Total</option>
+                        <option value="estado">Estado</option>
+                    </select>
+
+                    {/* Orden ascendente/descendente */}
+                    <select
+                        value={filtros.sort_order || 'desc'}
+                        onChange={(e) => handleFiltroChange('sort_order', (e.target.value as 'asc' | 'desc') || 'desc')}
+                        className="px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                    >
+                        <option value="desc">↓ Descendente (más reciente)</option>
+                        <option value="asc">↑ Ascendente (más antiguo)</option>
                     </select>
                 </div>
             </div>

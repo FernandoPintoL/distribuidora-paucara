@@ -209,6 +209,13 @@ class StockApiController extends Controller
             if (!empty($filtros['id'])) {
                 $query->where('id', $filtros['id']);
             }
+            // ✅ NUEVO: Filtros de rango de IDs (2026-02-24)
+            if (!empty($filtros['id_desde'])) {
+                $query->where('id', '>=', (int)$filtros['id_desde']);
+            }
+            if (!empty($filtros['id_hasta'])) {
+                $query->where('id', '<=', (int)$filtros['id_hasta']);
+            }
             if (!empty($filtros['numero'])) {
                 $query->where('numero', 'like', '%' . $filtros['numero'] . '%');
             }
@@ -247,8 +254,16 @@ class StockApiController extends Controller
                 $query->where('total', '<=', (float) $filtros['monto_max']);
             }
 
-            // Ordenar por fecha (más reciente primero)
-            $query->orderByDesc('fecha')->orderByDesc('id');
+            // ✅ NUEVO: Ordenamiento dinámico según parámetros (2026-02-24)
+            $sortBy = $filtros['sort_by'] ?? 'id';
+            $sortOrder = $filtros['sort_order'] ?? 'desc';
+
+            // Validar campos permitidos para ordenamiento
+            $camposPermitidos = ['id', 'created_at', 'updated_at', 'fecha', 'numero', 'total', 'estado'];
+            $sortBy = in_array(strtolower($sortBy), $camposPermitidos) ? $sortBy : 'id';
+            $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'asc' : 'desc';
+
+            $query->orderBy($sortBy, $sortOrder);
 
             $ventas = $query->get();
 

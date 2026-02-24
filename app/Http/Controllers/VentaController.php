@@ -78,6 +78,16 @@ class VentaController extends Controller
      * Usado por:
      * - Web: GET /ventas (Inertia)
      * - API: GET /api/ventas (JSON) - FILTRA POR CLIENTE AUTENTICADO
+     *
+     * PARÁMETROS SOPORTADOS:
+     * - Filtros: id, id_desde, id_hasta, estado, estado_documento_id, cliente_id, usuario_id, tipo_pago_id,
+     *   fecha_desde, fecha_hasta, numero, search/busqueda, monto_min, monto_max, moneda_id, tipo_venta,
+     *   estado_pago, estado_logistico
+     * - Ordenamiento: sort_by (id|created_at|updated_at|fecha|numero|total|estado), sort_order (asc|desc)
+     * - Paginación: per_page (default: 20)
+     *
+     * EJEMPLO:
+     * GET /ventas?sort_by=id&sort_order=desc&per_page=20&id_desde=100&id_hasta=500
      */
     public function index(Request $request): JsonResponse | InertiaResponse | RedirectResponse
     {
@@ -85,9 +95,15 @@ class VentaController extends Controller
             // ✅ NUEVO: Si es API request, filtrar por cliente autenticado
             $isApiRequest = $request->expectsJson() || str_starts_with($request->path(), 'api/');
 
+            // ✅ NUEVO: Extraer parámetros de ordenamiento PRIMERO
+            $sortBy = $request->input('sort_by', 'id');           // Campo por el que ordenar (default: id)
+            $sortOrder = $request->input('sort_order', 'desc');   // Orden ascendente o descendente (default: desc)
+
             // Extraer filtros del request
             $filtros = [
                 'id'                  => $request->input('id'),
+                'id_desde'            => $request->input('id_desde'),      // ✅ NUEVO: Rango de ID desde
+                'id_hasta'            => $request->input('id_hasta'),      // ✅ NUEVO: Rango de ID hasta
                 'estado'              => $request->input('estado'),
                 'estado_documento_id' => $request->input('estado_documento_id'),
                 'cliente_id'          => $request->input('cliente_id'),  // ✅ ACTUALIZADO: Acepta ID, código_cliente, nombre, NIT, teléfono
@@ -104,6 +120,9 @@ class VentaController extends Controller
                 'tipo_venta'          => $request->input('tipo_venta'),
                 'estado_pago'         => $request->input('estado_pago'),      // ✅ NUEVO: Para filtro de estado de pago
                 'estado_logistico'    => $request->input('estado_logistico'), // ✅ NUEVO: Para filtro de estado logístico
+                // ✅ AGREGAR: Parámetros de ordenamiento para que se envíen al frontend y al botón de impresión
+                'sort_by'             => $sortBy,
+                'sort_order'          => $sortOrder,
             ];
 
             // ✅ VERIFICACIÓN DE ROL: Si el usuario tiene rol "Cliente", filtrar solo sus ventas
@@ -143,9 +162,12 @@ class VentaController extends Controller
 
             // Delegar al Service
             // ✅ MODIFICADO: por defecto 20 registros por página para mejor UX en móvil
+            // ✅ NUEVO: Pasar parámetros de ordenamiento
             $ventasPaginadas = $this->ventaService->listar(
                 perPage: $request->input('per_page', 20),
-                filtros: array_filter($filtros) // Solo filtros no vacíos
+                filtros: array_filter($filtros), // Solo filtros no vacíos
+                sortBy: $sortBy,
+                sortOrder: $sortOrder
             );
 
             // ✅ NUEVO: Transformar datos para asegurar que Inertia tenga acceso a todas las relaciones

@@ -58,6 +58,16 @@ export default function ProductoRowExpandible({
                                 {item.producto?.nombre}
                             </h3>
                             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                {/* ✅ NUEVO: ID, Marca y Unidad del producto */}
+                                <div className="truncate">
+                                    <span className="font-medium">ID:</span> {item.producto?.id}
+                                    {item.producto?.marca?.nombre && (
+                                        <> • <span className="font-medium">Marca:</span> {item.producto.marca.nombre}</>
+                                    )}
+                                    {item.producto?.unidad?.nombre && (
+                                        <> • <span className="font-medium">Unidad:</span> {item.producto.unidad.nombre}</>
+                                    )}
+                                </div>
                                 <div className="truncate">
                                     SKU: {item.producto?.sku}
                                     {item.producto?.codigo_barras && (

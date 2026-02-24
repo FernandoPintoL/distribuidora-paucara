@@ -200,6 +200,8 @@ export interface VentaFormData extends BaseFormData {
 export interface FiltrosVentas {
     search?: string;
     id?: number;
+    id_desde?: number | null;           // ✅ NUEVO: Rango de ID desde
+    id_hasta?: number | null;           // ✅ NUEVO: Rango de ID hasta
     numero?: string;
     cliente_id?: Id | string | null;  // ✅ ACTUALIZADO: Acepta ID, string de búsqueda, código_cliente, nombre, NIT, teléfono
     busqueda_cliente?: string | null;  // ✅ NUEVO: Búsqueda alternativa de cliente
@@ -213,8 +215,8 @@ export interface FiltrosVentas {
     fecha_hasta?: string;
     monto_min?: number;
     monto_max?: number;
-    sort_by?: string;
-    sort_dir?: 'asc' | 'desc';
+    sort_by?: string;           // ✅ ACTUALIZADO: id|created_at|updated_at|fecha|numero|total|estado
+    sort_order?: 'asc' | 'desc';  // ✅ ACTUALIZADO: sort_order (antes sort_dir)
     per_page?: number;
     page?: number;
 }
