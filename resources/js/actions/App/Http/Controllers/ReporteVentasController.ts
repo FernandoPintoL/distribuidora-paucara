@@ -1,7 +1,163 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+export const productosVendidos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: productosVendidos.url(options),
+    method: 'get',
+})
+
+productosVendidos.definition = {
+    methods: ["get","head"],
+    url: '/ventas/reporte-productos-vendidos',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+productosVendidos.url = (options?: RouteQueryOptions) => {
+    return productosVendidos.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+productosVendidos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: productosVendidos.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+productosVendidos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: productosVendidos.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+    const productosVendidosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: productosVendidos.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+        productosVendidosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: productosVendidos.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteVentasController::productosVendidos
+ * @see app/Http/Controllers/ReporteVentasController.php:21
+ * @route '/ventas/reporte-productos-vendidos'
+ */
+        productosVendidosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: productosVendidos.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    productosVendidos.form = productosVendidosForm
+/**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+export const imprimirReporte = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirReporte.url(options),
+    method: 'get',
+})
+
+imprimirReporte.definition = {
+    methods: ["get","head"],
+    url: '/ventas/reporte-productos-vendidos/imprimir',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+imprimirReporte.url = (options?: RouteQueryOptions) => {
+    return imprimirReporte.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+imprimirReporte.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: imprimirReporte.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+imprimirReporte.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: imprimirReporte.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+    const imprimirReporteForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: imprimirReporte.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+        imprimirReporteForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirReporte.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteVentasController::imprimirReporte
+ * @see app/Http/Controllers/ReporteVentasController.php:223
+ * @route '/ventas/reporte-productos-vendidos/imprimir'
+ */
+        imprimirReporteForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: imprimirReporte.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    imprimirReporte.form = imprimirReporteForm
+/**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
 export const porPeriodo = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +172,7 @@ porPeriodo.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
 porPeriodo.url = (options?: RouteQueryOptions) => {
@@ -25,7 +181,7 @@ porPeriodo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
 porPeriodo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -34,7 +190,7 @@ porPeriodo.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
 porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,7 +200,7 @@ porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
     const porPeriodoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -54,7 +210,7 @@ porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
         porPeriodoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -63,7 +219,7 @@ porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porPeriodo
- * @see app/Http/Controllers/ReporteVentasController.php:25
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-periodo'
  */
         porPeriodoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -79,7 +235,7 @@ porPeriodo.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     porPeriodo.form = porPeriodoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
 export const porClienteProducto = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +250,7 @@ porClienteProducto.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
 porClienteProducto.url = (options?: RouteQueryOptions) => {
@@ -103,7 +259,7 @@ porClienteProducto.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
 porClienteProducto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -112,7 +268,7 @@ porClienteProducto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 })
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
 porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -122,7 +278,7 @@ porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
     /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
     const porClienteProductoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -132,7 +288,7 @@ porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
         porClienteProductoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -141,7 +297,7 @@ porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
         })
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porClienteProducto
- * @see app/Http/Controllers/ReporteVentasController.php:56
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-cliente-producto'
  */
         porClienteProductoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -157,7 +313,7 @@ porClienteProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
     porClienteProducto.form = porClienteProductoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
 export const porVendedorEstadoPago = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +328,7 @@ porVendedorEstadoPago.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
 porVendedorEstadoPago.url = (options?: RouteQueryOptions) => {
@@ -181,7 +337,7 @@ porVendedorEstadoPago.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
 porVendedorEstadoPago.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -190,7 +346,7 @@ porVendedorEstadoPago.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
 porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -200,7 +356,7 @@ porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
     const porVendedorEstadoPagoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -210,7 +366,7 @@ porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
         porVendedorEstadoPagoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +375,7 @@ porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\ReporteVentasController::porVendedorEstadoPago
- * @see app/Http/Controllers/ReporteVentasController.php:91
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/por-vendedor-estado-pago'
  */
         porVendedorEstadoPagoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +391,7 @@ porVendedorEstadoPago.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     porVendedorEstadoPago.form = porVendedorEstadoPagoForm
 /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/export'
  */
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -250,7 +406,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/export'
  */
 exportMethod.url = (options?: RouteQueryOptions) => {
@@ -259,7 +415,7 @@ exportMethod.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/export'
  */
 exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -269,7 +425,7 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/export'
  */
     const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -279,7 +435,7 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteVentasController::exportMethod
- * @see app/Http/Controllers/ReporteVentasController.php:124
+ * @see app/Http/Controllers/ReporteVentasController.php:0
  * @route '/reportes/ventas/export'
  */
         exportMethodForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -288,6 +444,6 @@ exportMethod.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
         })
     
     exportMethod.form = exportMethodForm
-const ReporteVentasController = { porPeriodo, porClienteProducto, porVendedorEstadoPago, exportMethod, export: exportMethod }
+const ReporteVentasController = { productosVendidos, imprimirReporte, porPeriodo, porClienteProducto, porVendedorEstadoPago, exportMethod, export: exportMethod }
 
 export default ReporteVentasController

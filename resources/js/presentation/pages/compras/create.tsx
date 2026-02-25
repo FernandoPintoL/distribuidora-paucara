@@ -596,6 +596,28 @@ export default function CompraForm() {
     return false;
   };
 
+  // ✨ NUEVO: Limpiar borrador de localStorage
+  const clearDraft = async () => {
+    try {
+      const confirmed = await NotificationService.confirm(
+        '¿Estás seguro de que quieres limpiar el borrador guardado?',
+        {
+          confirmText: 'Limpiar',
+          cancelText: 'Cancelar'
+        }
+      );
+
+      if (confirmed) {
+        localStorage.removeItem('compra-create-draft');
+        NotificationService.success('Borrador eliminado correctamente');
+        console.log('✅ Borrador de compra eliminado');
+      }
+    } catch (err) {
+      console.error('Error al limpiar el borrador:', err);
+      NotificationService.error('Error al limpiar el borrador');
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     console.log('🔵 CompraForm::submit() - INICIADO');
     e.preventDefault();
@@ -765,6 +787,15 @@ export default function CompraForm() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{title}</h1>
           <div className="flex gap-3">
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+              >
+                Limpiar Borrador
+              </button>
+            )}
             <Link
               href="/compras"
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"

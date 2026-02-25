@@ -193,7 +193,7 @@ export default function ReportesDiarios({
                     Monto Procesado
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                    ${Number(estadisticas.total_monto_procesado).toFixed(2)}
+                    Bs. {Number(estadisticas.total_monto_procesado).toFixed(2)}
                   </p>
                 </div>
                 <TrendingDown className="h-8 w-8 text-purple-500 dark:text-purple-400" />
@@ -309,6 +309,7 @@ export default function ReportesDiarios({
             <Table>
               <TableHeader>
                 <TableRow className="dark:border-slate-700 dark:bg-slate-900">
+                  <TableHead className="dark:text-gray-300 font-semibold">Folio</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Fecha/Hora</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Ejecutado por</TableHead>
                   <TableHead className="dark:text-gray-300 text-right font-semibold">Cajas Cerradas</TableHead>
@@ -322,6 +323,9 @@ export default function ReportesDiarios({
                 {cierres.data.length > 0 ? (
                   cierres.data.map((cierre) => (
                     <TableRow key={cierre.id} className="dark:border-slate-700 dark:hover:bg-slate-700 transition-colors">
+                      <TableCell className="dark:text-gray-300">
+                        {cierre.id}
+                      </TableCell>
                       <TableCell className="dark:text-gray-300">
                         {format(parseISO(cierre.fecha_ejecucion), 'dd/MM/yyyy HH:mm', { locale: es })}
                       </TableCell>
@@ -343,19 +347,18 @@ export default function ReportesDiarios({
                         )}
                       </TableCell>
                       <TableCell className="text-right dark:text-gray-300 font-semibold">
-                        ${Number(cierre.total_monto_real).toFixed(2)}
+                        Bs. {Number(cierre.total_monto_real).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <span
-                          className={`font-semibold ${
-                            cierre.total_diferencias === 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-orange-600 dark:text-orange-400'
-                          }`}
+                          className={`font-semibold ${cierre.total_diferencias === 0
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-orange-600 dark:text-orange-400'
+                            }`}
                         >
                           {cierre.total_diferencias === 0
-                            ? '✓ 0.00'
-                            : `${Number(cierre.total_diferencias).toFixed(2)}`}
+                            ? '✓ Bs. 0.00'
+                            : `Bs. ${Number(cierre.total_diferencias).toFixed(2)}`}
                         </span>
                       </TableCell>
                       <TableCell className="text-right space-x-2 flex justify-end">

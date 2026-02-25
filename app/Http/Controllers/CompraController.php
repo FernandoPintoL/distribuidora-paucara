@@ -178,6 +178,7 @@ class CompraController extends Controller
             ])
                 ->where('activo', true)
                 ->orderBy('nombre')
+                ->limit(10)  // ✨ NUEVO: Limitar inicial a 10 productos (búsqueda dinámica después)
                 ->get()
                 ->map(function ($producto) {
                     // Mapear precios por tipo
@@ -273,6 +274,7 @@ class CompraController extends Controller
             ])
                 ->where('activo', true)
                 ->orderBy('nombre')
+                ->limit(10)  // ✨ NUEVO: Limitar inicial a 10 productos (búsqueda dinámica después)
                 ->get()
                 ->map(function ($producto) {
                     // Mapear precios por tipo

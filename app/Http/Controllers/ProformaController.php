@@ -146,6 +146,25 @@ class ProformaController extends Controller
                 $query->whereDate('created_at', '<=', $request->fecha_hasta);
             }
 
+            // ✅ NUEVO: Filtro por proformas convertidas a ventas
+            // ✅ CORREGIDO: Usar has('venta') para verificar que existe relación (ventas.proforma_id NOT NULL)
+            if ($request->filled('solo_convertidas') && $request->solo_convertidas === 'true') {
+                $query->has('venta');
+            }
+
+            // ✅ NUEVO: Filtro por fecha de venta (para proformas convertidas)
+            if ($request->filled('fecha_venta_desde')) {
+                $query->whereHas('venta', function ($q) use ($request) {
+                    $q->whereDate('created_at', '>=', $request->fecha_venta_desde);
+                });
+            }
+
+            if ($request->filled('fecha_venta_hasta')) {
+                $query->whereHas('venta', function ($q) use ($request) {
+                    $q->whereDate('created_at', '<=', $request->fecha_venta_hasta);
+                });
+            }
+
             // Eager loading y paginación
             $proformas = $query->with([
                 'cliente',
@@ -154,7 +173,9 @@ class ProformaController extends Controller
                 'direccionSolicitada',
                 'direccionConfirmada',
                 'estadoLogistica',
-                'venta',
+                'venta' => function ($q) {
+                    $q->select('id', 'numero', 'created_at', 'estado_documento_id', 'total', 'fecha');
+                },
             ])
                 ->orderBy('created_at', 'desc')
                 ->paginate($request->input('per_page', 15));
@@ -169,6 +190,9 @@ class ProformaController extends Controller
                 'filtro_vencidas' => $request->input('filtro_vencidas'),
                 'fecha_desde' => $request->input('fecha_desde'),
                 'fecha_hasta' => $request->input('fecha_hasta'),
+                'solo_convertidas' => $request->input('solo_convertidas'),
+                'fecha_venta_desde' => $request->input('fecha_venta_desde'),
+                'fecha_venta_hasta' => $request->input('fecha_venta_hasta'),
             ];
 
             // ✅ NUEVO 2026-02-21: Traer clientes y usuarios fijos para los filtros

@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import type { VentaShow, EstadoDocumento } from '@/domain/entities/ventas';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import AnularVentaModal from '@/presentation/components/ventas/AnularVentaModal';
+import ConfirmacionEntregaModal from '@/presentation/components/ventas/confirmacion-entrega-modal';
 
 interface PageProps extends InertiaPageProps {
     venta: VentaShow;
@@ -21,6 +22,8 @@ export default function VentaShow() {
     const [anularModal, setAnularModal] = useState<{ isOpen: boolean }>({ isOpen: false });
     const [isAnulando, setIsAnulando] = useState(false);
     const [outputModal, setOutputModal] = useState(false);
+    // ✅ NUEVO: Estado para modal de confirmación de entrega
+    const [confirmacionEntregaModal, setConfirmacionEntregaModal] = useState<{ isOpen: boolean }>({ isOpen: false });
 
     // Verificar si la venta está APROBADA
     const esAprobada = venta.estado_documento?.nombre?.toLowerCase() === 'aprobada' || venta.estado_documento?.codigo === 'APROBADO';
@@ -433,6 +436,18 @@ export default function VentaShow() {
                                                 </p>
                                             </div>
                                         )}
+
+                                        {/* ✅ NUEVO: Botón para ver confirmación de entrega */}
+                                        {venta.entregaConfirmacion && (
+                                            <div className="border-t border-blue-200 dark:border-blue-700 pt-3">
+                                                <button
+                                                    onClick={() => setConfirmacionEntregaModal({ isOpen: true })}
+                                                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
+                                                >
+                                                    ✓ Ver Confirmación de Entrega
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -627,6 +642,14 @@ export default function VentaShow() {
                     fecha: venta.fecha ? new Date(venta.fecha).toLocaleDateString('es-ES') : undefined,
                     monto: venta.total,
                 }}
+            />
+
+            {/* ✅ NUEVO: Modal de Confirmación de Entrega */}
+            <ConfirmacionEntregaModal
+                isOpen={confirmacionEntregaModal.isOpen}
+                entrega={venta.entregaConfirmacion}
+                ventaNumero={venta.numero}
+                onClose={() => setConfirmacionEntregaModal({ isOpen: false })}
             />
         </AppLayout>
     );

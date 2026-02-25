@@ -146,6 +146,22 @@ export interface Venta extends BaseEntity {
     pagos?: Pago[];
     cuenta_por_cobrar?: CuentaPorCobrar;
     direccionCliente?: DireccionCliente;  // ✅ NUEVO: Relación con DireccionCliente
+    entregaConfirmacion?: {  // ✅ NUEVO: Confirmación de entrega
+        id: Id;
+        venta_id: Id;
+        tipo_entrega?: 'COMPLETA' | 'NOVEDAD';
+        tipo_novedad?: string;
+        tuvo_problema?: boolean;
+        tienda_abierta?: boolean;
+        cliente_presente?: boolean;
+        motivo_rechazo?: string;
+        observaciones_logistica?: string;
+        estado_pago?: 'PAGADO' | 'PARCIAL' | 'NO_PAGADO';
+        total_dinero_recibido?: number;
+        monto_pendiente?: number;
+        confirmado_en?: string;
+        created_at?: string;
+    };
 
     // Timestamps
     created_at: string;

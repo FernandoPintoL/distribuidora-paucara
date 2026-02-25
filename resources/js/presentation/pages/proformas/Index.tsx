@@ -84,6 +84,10 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
     const [totalMin, setTotalMin] = useState<string>(getQueryParam('total_min', ''))
     const [totalMax, setTotalMax] = useState<string>(getQueryParam('total_max', ''))
     const [filtroVencidas, setFiltroVencidas] = useState<string>(getQueryParam('filtro_vencidas', 'TODAS'))
+    // ✅ NUEVO: Filtro para proformas convertidas a ventas
+    const [soloConvertidas, setSoloConvertidas] = useState<boolean>(getQueryParam('solo_convertidas') === 'true')
+    const [fechaVentaDesde, setFechaVentaDesde] = useState<string>(getQueryParam('fecha_venta_desde', ''))
+    const [fechaVentaHasta, setFechaVentaHasta] = useState<string>(getQueryParam('fecha_venta_hasta', ''))
 
     const [isLoading, setIsLoading] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState<boolean>(false)
@@ -141,9 +145,12 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
             fechaHasta !== '' ||
             totalMin !== '' ||
             totalMax !== '' ||
-            filtroVencidas !== 'TODAS' // ✅ NUEVO: Incluir filtro de vencidas
+            filtroVencidas !== 'TODAS' || // ✅ NUEVO: Incluir filtro de vencidas
+            soloConvertidas || // ✅ NUEVO: Incluir filtro de convertidas
+            fechaVentaDesde !== '' ||
+            fechaVentaHasta !== ''
         )
-    }, [searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas])
+    }, [searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta])
 
     // ✅ ACTUALIZADO 2026-02-21: Limpiar filtros y navegar al servidor
     const limpiarFiltros = () => {
@@ -156,6 +163,10 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         setTotalMin('')
         setTotalMax('')
         setFiltroVencidas('TODAS')
+        // ✅ NUEVO: Limpiar filtros de convertidas
+        setSoloConvertidas(false)
+        setFechaVentaDesde('')
+        setFechaVentaHasta('')
         // Navegar sin parámetros para ver todos los registros
         router.visit('/proformas', { preserveState: true })
     }
@@ -230,7 +241,10 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         fechaHastaValue?: string,
         totalMinValue?: string,
         totalMaxValue?: string,
-        filtroVencidasValue?: string
+        filtroVencidasValue?: string,
+        soloConvertidosValue?: boolean,
+        fechaVentaDesdeValue?: string,
+        fechaVentaHastaValue?: string
     ) => {
         // Usar los valores proporcionados o los del estado
         const search = searchValue ?? searchTerm
@@ -242,6 +256,9 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         const minTotal = totalMinValue ?? totalMin
         const maxTotal = totalMaxValue ?? totalMax
         const vencidas = filtroVencidasValue ?? filtroVencidas
+        const convertidos = soloConvertidosValue !== undefined ? soloConvertidosValue : soloConvertidas
+        const desdeVenta = fechaVentaDesdeValue ?? fechaVentaDesde
+        const hastaVenta = fechaVentaHastaValue ?? fechaVentaHasta
 
         const params = new URLSearchParams()
         if (search) params.append('search', search)
@@ -253,6 +270,10 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         if (minTotal) params.append('total_min', minTotal)
         if (maxTotal) params.append('total_max', maxTotal)
         if (vencidas !== 'TODAS') params.append('filtro_vencidas', vencidas)
+        // ✅ NUEVO: Agregar parámetros de filtro de convertidas
+        if (convertidos) params.append('solo_convertidas', 'true')
+        if (desdeVenta) params.append('fecha_venta_desde', desdeVenta)
+        if (hastaVenta) params.append('fecha_venta_hasta', hastaVenta)
 
         const queryString = params.toString()
         const url = queryString ? `/proformas?${queryString}` : '/proformas'
@@ -497,14 +518,70 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
 
+                            {/* ✅ NUEVA FILA: Filtros de proformas convertidas a ventas */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                {/* Checkbox: Solo Convertidas */}
+                                <div className="flex items-center gap-3 col-span-1 md:col-span-2 lg:col-span-1">
+                                    <input
+                                        type="checkbox"
+                                        id="soloConvertidas"
+                                        checked={soloConvertidas}
+                                        onChange={(e) => setSoloConvertidas(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 rounded"
+                                    />
+                                    <label htmlFor="soloConvertidas" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                        🛍️ Solo Convertidas a Ventas
+                                    </label>
+                                </div>
 
+                                {/* Fecha de Venta Desde */}
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground">Venta Desde</label>
+                                    <Input
+                                        type="date"
+                                        value={fechaVentaDesde}
+                                        onChange={(e) => setFechaVentaDesde(e.target.value)}
+                                        disabled={!soloConvertidas}
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                {/* Fecha de Venta Hasta */}
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground">Venta Hasta</label>
+                                    <Input
+                                        type="date"
+                                        value={fechaVentaHasta}
+                                        onChange={(e) => setFechaVentaHasta(e.target.value)}
+                                        disabled={!soloConvertidas}
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                {/* Botón para acceder al reporte con filtros */}
+                                <div className="flex items-end">
+                                    <Link
+                                        href={(() => {
+                                            const params = new URLSearchParams();
+                                            if (fechaVentaDesde) params.append('fecha_desde', fechaVentaDesde);
+                                            if (fechaVentaHasta) params.append('fecha_hasta', fechaVentaHasta);
+                                            if (filtroUsuario !== 'TODOS') params.append('usuario_creador_id', filtroUsuario);
+                                            const queryString = params.toString();
+                                            return queryString ? `/ventas/reporte-productos-vendidos?${queryString}` : '/ventas/reporte-productos-vendidos';
+                                        })()}
+                                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition flex items-center justify-center gap-2"
+                                    >
+                                        📊 Ver Reporte
+                                    </Link>
+                                </div>
                             </div>
 
                             {/* Tercera fila: Botones de acción */}
                             <div className="flex gap-2">
                                 <Button
-                                    onClick={() => handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas)}
+                                    onClick={() => handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta)}
                                     className="flex-1"
                                 >
                                     <Search className="h-4 w-4 mr-2" />

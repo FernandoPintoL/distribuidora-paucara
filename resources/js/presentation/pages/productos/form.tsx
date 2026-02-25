@@ -4,7 +4,6 @@ import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
 import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
 import Step5PrecioRango from './steps/Step5PrecioRango'; // ✨ NUEVO
-import ProductoCombos from './components/ProductoCombos';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/presentation/components/ui/card';
@@ -507,7 +506,7 @@ export default function ProductoForm({
                 )}
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
-                {isEditing && (
+                {isEditing && (producto as any)?.es_combo && (
                   <TabsTrigger value="combos">📦 Combos</TabsTrigger>
                 )}
               </TabsList>
@@ -600,9 +599,16 @@ export default function ProductoForm({
                 )}
               </TabsContent>
 
-              {isEditing && producto?.id && (
+              {isEditing && producto?.id && (producto as any)?.es_combo && (
                 <TabsContent value="combos" className="space-y-6 mt-6">
-                  <ProductoCombos productoId={producto.id} />
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <p className="text-muted-foreground">Gestiona los componentes de este combo</p>
+                    <Button asChild>
+                      <Link href={`/combos/${producto.id}/edit`}>
+                        Ir a Editar Combo
+                      </Link>
+                    </Button>
+                  </div>
                 </TabsContent>
               )}
             </Tabs>

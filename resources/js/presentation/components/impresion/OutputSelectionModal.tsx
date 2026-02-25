@@ -11,7 +11,7 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock' | 'ajuste' | 'merma';
+export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock' | 'ajuste' | 'merma' | 'reporte-productos-vendidos';
 
 interface FormatoConfig {
     formato: string;
@@ -97,6 +97,9 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
         { formato: 'TICKET_80', nombre: 'Ticket 80mm', descripcion: 'Impresora térmica 80mm' },
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
+    ],
+    'reporte-productos-vendidos': [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
 };
 
@@ -259,6 +262,11 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'proforma') {
                 // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
                 url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'reporte-productos-vendidos') {
+                // Para reporte de productos vendidos - obtener filtros de la URL actual
+                const params = new URLSearchParams(window.location.search);
+                const queryString = params.toString();
+                url = `/ventas/reporte-productos-vendidos/imprimir?${queryString}&formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -297,6 +305,11 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'proforma') {
                 // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
                 url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'reporte-productos-vendidos') {
+                // Para reporte de productos vendidos - obtener filtros de la URL actual
+                const params = new URLSearchParams(window.location.search);
+                const queryString = params.toString();
+                url = `/ventas/reporte-productos-vendidos/imprimir?${queryString}&formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             }

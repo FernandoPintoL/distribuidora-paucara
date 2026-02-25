@@ -49,6 +49,7 @@ export interface Producto extends BaseEntity {
   activo: boolean;
   fecha_creacion?: string | null;
   es_alquilable?: boolean;
+  es_combo?: boolean; // Indica si es un combo de productos
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
@@ -102,6 +103,7 @@ export interface ProductoFormData extends BaseFormData {
   stock_maximo?: number | null;
   limite_venta?: number | null; // ✨ NUEVO: Límite máximo por venta
   activo?: boolean;
+  es_combo?: boolean; // Indica si es un combo de productos
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos

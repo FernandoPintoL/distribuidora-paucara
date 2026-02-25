@@ -331,6 +331,15 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Excluir 'show' porque lo definiremos después de las rutas específicas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class)->except(['show'])->middleware('caja.abierta');
 
+    // ✅ NUEVO: Reporte de productos vendidos (proformas convertidas a ventas)
+    Route::get('ventas/reporte-productos-vendidos', [\App\Http\Controllers\ReporteVentasController::class, 'productosVendidos'])
+        ->name('ventas.reporte-productos-vendidos')
+        ->middleware('permission:ventas.index');
+
+    Route::get('ventas/reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte'])
+        ->name('ventas.reporte-productos-vendidos.imprimir')
+        ->middleware('permission:ventas.index');
+
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
     // ==========================================
@@ -533,8 +542,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // ✅ NUEVO: Reportes de Cierres Diarios - Historial y detalles
         Route::prefix('reportes-diarios')->name('reportes-diarios.')->group(function () {
             Route::get('/', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'index'])->name('index');
-            Route::get('/{cierreDiarioGeneral}', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'show'])->name('show');
-            Route::get('/{cierreDiarioGeneral}/descargar', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'descargar'])->name('descargar');
+            Route::get('/{id}/debug', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'debug'])->name('debug');
+            Route::get('/{id}', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'show'])->name('show');
+            Route::get('/{id}/descargar', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'descargar'])->name('descargar');
         });
 
         // Gestión de cajas por usuario - Validación de roles en el controlador

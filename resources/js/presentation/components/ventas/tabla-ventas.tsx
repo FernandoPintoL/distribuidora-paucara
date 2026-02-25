@@ -10,6 +10,7 @@ import { OutputSelectionModal } from '@/presentation/components/impresion/Output
 import EstadoVentaBadge from './EstadoVentaBadge';
 import ReversionStockIndicador from './ReversionStockIndicador';
 import DetalleReversionModal from './DetalleReversionModal';
+import ConfirmacionEntregaModal from './confirmacion-entrega-modal';
 import { toast } from 'react-toastify';
 
 interface TablaVentasProps {
@@ -28,6 +29,8 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
     // ✅ NUEVO (2026-02-10): Estado para modal de verificación de reversión de stock
     const [detalleReversionData, setDetalleReversionData] = useState<any>(null);
     const [isDetalleReversionOpen, setIsDetalleReversionOpen] = useState(false);
+    // ✅ NUEVO: Estado para modal de confirmación de entrega
+    const [confirmacionEntregaModal, setConfirmacionEntregaModal] = useState<{ isOpen: boolean; venta?: Venta }>({ isOpen: false });
 
     // ✅ DEBUG: Verificar datos de dirección en consola
     React.useEffect(() => {
@@ -336,9 +339,6 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 🚚 Tipo Entrega {getSortIcon('requiere_envio')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                💰 Caja
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 🕐 Creada
                             </th>
                             <th scope="col" className="px-6 py-3">
@@ -352,11 +352,12 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                            #{venta.id} | {venta.numero}
+                                            <p>Folio: #{venta.id}</p>
+                                            <p>{venta.numero}</p>
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                        {/* <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                                             {formatDate(String(venta.fecha))}
-                                        </div>
+                                        </div> */}
                                         <EstadoVentaBadge
                                             estado={venta.estado_documento?.codigo || 'PENDIENTE'}
                                             tamaño="sm"
@@ -365,21 +366,21 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                         />
                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             creador: <span className="font-medium text-gray-900 dark:text-white">
-                                            {venta.usuario?.name || 'Sin usuario'}
-                                        </span>
+                                                {venta.usuario?.name || 'Sin usuario'}
+                                            </span>
                                         </div>
                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             {venta.proforma?.numero ? (
-                                            <Link
-                                                href={`/proformas/${venta.proforma.id}`}
-                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                                                title="Ver proforma"
-                                            >
-                                                Folio Proforma: {venta.proforma.numero}
-                                            </Link>
-                                        ) : (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
-                                        )}
+                                                <Link
+                                                    href={`/proformas/${venta.proforma.id}`}
+                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                                                    title="Ver proforma"
+                                                >
+                                                    Folio Proforma: {venta.proforma.numero}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                                            )}
                                         </div>
                                     </td>
 
@@ -420,13 +421,30 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                         </div>
                                         <p>
                                             {venta.politica_pago ? (
-                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPoliticaPagoBadgeStyles(venta.politica_pago).bg} ${getPoliticaPagoBadgeStyles(venta.politica_pago).text}`}>
-                                                {getPoliticaPagoBadgeStyles(venta.politica_pago).label}
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
-                                        )}
+                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPoliticaPagoBadgeStyles(venta.politica_pago).bg} ${getPoliticaPagoBadgeStyles(venta.politica_pago).text}`}>
+                                                    {getPoliticaPagoBadgeStyles(venta.politica_pago).label}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
+                                            )}
                                         </p>
+                                        <div className="flex items-center mt-1">
+                                            {venta.caja_id ? (
+                                                <span
+                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                                    title={`Registrada en Caja ID: ${venta.caja_id}`}
+                                                >
+                                                    ✓ En Caja
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                                    title="No registrada en caja"
+                                                >
+                                                    ⚠ Sin Caja
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
 
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -463,27 +481,6 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                         🏪 Presencial
                                                     </span>
                                                 </>
-                                            )}
-                                        </div>
-                                    </td>
-
-                                    {/* ✅ NUEVO: Indicador de Caja */}
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            {venta.caja_id ? (
-                                                <span
-                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                                                    title={`Registrada en Caja ID: ${venta.caja_id}`}
-                                                >
-                                                    ✓ En Caja
-                                                </span>
-                                            ) : (
-                                                <span
-                                                    className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                                                    title="No registrada en caja"
-                                                >
-                                                    ⚠ Sin Caja
-                                                </span>
                                             )}
                                         </div>
                                     </td>
@@ -544,14 +541,14 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
 
                                             {/* ✅ NUEVO (2026-02-10): Indicador de reversión de stock para ventas anuladas */}
                                             <ReversionStockIndicador
-                                                    ventaId={venta.id}
-                                                    ventaNumero={venta.numero}
-                                                    estadoVenta={venta.estado_documento?.codigo || 'ANULADO'}
-                                                    onVerDetalles={(data) => {
-                                                        setDetalleReversionData(data);
-                                                        setIsDetalleReversionOpen(true);
-                                                    }}
-                                                />
+                                                ventaId={venta.id}
+                                                ventaNumero={venta.numero}
+                                                estadoVenta={venta.estado_documento?.codigo || 'ANULADO'}
+                                                onVerDetalles={(data) => {
+                                                    setDetalleReversionData(data);
+                                                    setIsDetalleReversionOpen(true);
+                                                }}
+                                            />
 
                                             {/* ✅ Descargar en formato - Usar OutputSelectionModal */}
                                             <button
@@ -567,11 +564,10 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <button
                                                     onClick={() => handleRegistrarEnCaja(venta)}
                                                     disabled={registrandoEnCaja === venta.id}
-                                                    className={`p-1 rounded transition-colors ${
-                                                        registrandoEnCaja === venta.id
-                                                            ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                                                            : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
-                                                    }`}
+                                                    className={`p-1 rounded transition-colors ${registrandoEnCaja === venta.id
+                                                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                        : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                        }`}
                                                     title="Registrar en movimientos de caja"
                                                 >
                                                     {registrandoEnCaja === venta.id ? (
@@ -689,6 +685,20 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* ✅ NUEVO: Botón para ver detalles de confirmación de entrega */}
+                                                {venta.entregaConfirmacion && (
+                                                    <div className="flex items-start space-x-3 pt-4 border-t border-blue-200 dark:border-blue-800">
+                                                        <div className="flex-1">
+                                                            <button
+                                                                onClick={() => setConfirmacionEntregaModal({ isOpen: true, venta })}
+                                                                className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
+                                                            >
+                                                                ✓ Ver Confirmación de Entrega
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -793,6 +803,14 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                     // Limpiar datos del modal
                     setDetalleReversionData(null);
                 }}
+            />
+
+            {/* ✅ NUEVO: Modal de Confirmación de Entrega */}
+            <ConfirmacionEntregaModal
+                isOpen={confirmacionEntregaModal.isOpen}
+                entrega={confirmacionEntregaModal.venta?.entregaConfirmacion}
+                ventaNumero={confirmacionEntregaModal.venta?.numero}
+                onClose={() => setConfirmacionEntregaModal({ isOpen: false })}
             />
         </div>
     );

@@ -54,6 +54,7 @@ import ImpresionComprasController from './ImpresionComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
+import ReporteVentasController from './ReporteVentasController'
 import ImpresionProformasController from './ImpresionProformasController'
 import ReservaController from './ReservaController'
 import CajaController from './CajaController'
@@ -75,7 +76,6 @@ import ReportePreciosController from './ReportePreciosController'
 import ReporteCreditoController from './ReporteCreditoController'
 import ReporteVisitasController from './ReporteVisitasController'
 import ReporteInventarioController from './ReporteInventarioController'
-import ReporteVentasController from './ReporteVentasController'
 import ConteoFisicoController from './ConteoFisicoController'
 import AnalisisAbcController from './AnalisisAbcController'
 import ImpresionStockController from './ImpresionStockController'
@@ -138,6 +138,7 @@ ImpresionComprasController,
 DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
+ReporteVentasController,
 ImpresionProformasController,
 ReservaController,
 CajaController,
@@ -159,7 +160,6 @@ ReportePreciosController,
 ReporteCreditoController,
 ReporteVisitasController,
 ReporteInventarioController,
-ReporteVentasController,
 ConteoFisicoController,
 AnalisisAbcController,
 ImpresionStockController,

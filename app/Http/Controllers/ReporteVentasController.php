@@ -2,219 +2,407 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ReporteVentasService;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
-use App\Models\Cliente;
-use App\Models\Producto;
+use App\Models\Proforma;
+use App\Models\Venta;
 use App\Models\User;
+use App\Models\EstadoDocumento;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
+use Illuminate\Support\Facades\DB;
 
 class ReporteVentasController extends Controller
 {
-    private ReporteVentasService $reporteService;
-
-    public function __construct(ReporteVentasService $reporteService)
+    /**
+     * Mostrar reporte de productos vendidos
+     * GET /ventas/reporte-productos-vendidos
+     */
+    public function productosVendidos(Request $request): InertiaResponse
     {
-        $this->reporteService = $reporteService;
+        try {
+            $user = auth()->user();
+
+            // Validar fechas
+            $fechaDesde = $request->filled('fecha_desde') ? $request->date('fecha_desde') : now()->subMonth();
+            $fechaHasta = $request->filled('fecha_hasta') ? $request->date('fecha_hasta') : now();
+
+            // Obtener el ID del estado APROBADO
+            // ✅ CORREGIDO: La tabla EstadoDocumento solo tiene columna 'codigo', no 'categoria'
+            $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')
+                ->value('id');
+
+            // Construir query para obtener productos vendidos
+            // ✅ CORREGIDO: La relación es ventas.proforma_id (no proformas.venta_id)
+            // ✅ CORREGIDO: La tabla es detalle_proformas (no proforma_detalles)
+            $query = DB::table('proformas')
+                ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('productos', 'detalle_proformas.producto_id', '=', 'productos.id')
+                ->select(
+                    'productos.id',
+                    'productos.nombre as producto_nombre',
+                    'productos.sku as producto_codigo',
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2))) as cantidad_total'),
+                    DB::raw('AVG(CAST(detalle_proformas.precio_unitario AS DECIMAL(15,2))) as precio_promedio'),
+                    DB::raw('SUM(CAST(detalle_proformas.subtotal AS DECIMAL(15,2))) as total_venta'),
+                    'proformas.usuario_creador_id'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
+
+            // Filtro por usuario creador
+            if ($request->filled('usuario_creador_id')) {
+                $query->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $query->where('proformas.usuario_creador_id', $user->id);
+            }
+
+            // Filtro por cliente
+            if ($request->filled('cliente_id')) {
+                $query->where('proformas.cliente_id', $request->cliente_id);
+            }
+
+            $productos = $query->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->orderBy('productos.nombre', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->producto_nombre,
+                        'codigo' => $item->producto_codigo,
+                        'cantidad_total' => (float) $item->cantidad_total,
+                        'precio_promedio' => (float) $item->precio_promedio,
+                        'total_venta' => (float) $item->total_venta,
+                        'usuario_creador_id' => $item->usuario_creador_id,
+                    ];
+                });
+
+            // Calcular totales
+            $totales = [
+                'cantidad_productos' => $productos->count(),
+                'cantidad_total_vendida' => $productos->sum('cantidad_total'),
+                'total_venta_general' => $productos->sum('total_venta'),
+                'precio_promedio_general' => $productos->count() > 0
+                    ? $productos->sum('total_venta') / $productos->sum('cantidad_total')
+                    : 0,
+            ];
+
+            // Obtener usuarios para el filtro
+            $usuarios = User::whereHas('roles', function ($query) {
+                $query->where('name', 'preventista');
+            })->select('id', 'name', 'email')->get();
+
+            // Obtener clientes para el filtro
+            $clientes = \App\Models\Cliente::activos()->select('id', 'nombre', 'email')->get();
+
+            // Obtener las ventas aprobadas que se usaron en el reporte
+            $ventasQuery = DB::table('ventas')
+                ->join('proformas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('clientes', 'proformas.cliente_id', '=', 'clientes.id')
+                ->join('users', 'proformas.usuario_creador_id', '=', 'users.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->leftJoin('entregas', 'ventas.entrega_id', '=', 'entregas.id')
+                ->leftJoin('estados_logistica', 'entregas.estado_entrega_id', '=', 'estados_logistica.id')
+                ->leftJoin('entregas_venta_confirmaciones', 'ventas.id', '=', 'entregas_venta_confirmaciones.venta_id')
+                ->select(
+                    'ventas.id as venta_id',
+                    'ventas.numero as numero_venta',
+                    'proformas.id as proforma_id',
+                    'proformas.numero as numero_proforma',
+                    'proformas.created_at as fecha_proforma',
+                    'clientes.nombre as cliente_nombre',
+                    'users.name as usuario_nombre',
+                    'ventas.total',
+                    'ventas.created_at as fecha_venta',
+                    'estados_documento.codigo as estado_codigo',
+                    'estados_logistica.codigo as estado_entrega',
+                    'entregas_venta_confirmaciones.motivo_rechazo as motivo_entrega',
+                    'entregas_venta_confirmaciones.tienda_abierta',
+                    'entregas_venta_confirmaciones.cliente_presente',
+                    'entregas_venta_confirmaciones.observaciones_logistica',
+                    'entregas_venta_confirmaciones.tipo_entrega',
+                    'entregas_venta_confirmaciones.tipo_novedad',
+                    'entregas_venta_confirmaciones.tuvo_problema',
+                    'entregas_venta_confirmaciones.estado_pago',
+                    'entregas_venta_confirmaciones.total_dinero_recibido',
+                    'entregas_venta_confirmaciones.monto_pendiente',
+                    'entregas_venta_confirmaciones.confirmado_en'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
+
+            // Aplicar los mismos filtros a las ventas
+            if ($request->filled('usuario_creador_id')) {
+                $ventasQuery->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $ventasQuery->where('proformas.usuario_creador_id', $user->id);
+            }
+
+            if ($request->filled('cliente_id')) {
+                $ventasQuery->where('proformas.cliente_id', $request->cliente_id);
+            }
+
+            $ventas = $ventasQuery->orderByDesc('ventas.id')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->venta_id,
+                        'numero' => $item->numero_venta,
+                        'proforma_id' => $item->proforma_id,
+                        'proforma_numero' => $item->numero_proforma,
+                        'proforma_fecha' => $item->fecha_proforma,
+                        'cliente' => $item->cliente_nombre,
+                        'usuario' => $item->usuario_nombre,
+                        'total' => (float) $item->total,
+                        'fecha' => $item->fecha_venta,
+                        'estado' => $item->estado_codigo,
+                        'estado_entrega' => $item->estado_entrega,
+                        'motivo_entrega' => $item->motivo_entrega,
+                        'tienda_abierta' => $item->tienda_abierta,
+                        'cliente_presente' => $item->cliente_presente,
+                        'observaciones_logistica' => $item->observaciones_logistica,
+                        'tipo_entrega' => $item->tipo_entrega,
+                        'tipo_novedad' => $item->tipo_novedad,
+                        'tuvo_problema' => $item->tuvo_problema,
+                        'estado_pago' => $item->estado_pago,
+                        'total_dinero_recibido' => (float) ($item->total_dinero_recibido ?? 0),
+                        'monto_pendiente' => (float) ($item->monto_pendiente ?? 0),
+                        'confirmado_en' => $item->confirmado_en,
+                    ];
+                });
+
+            $filtros = [
+                'fecha_desde' => $request->input('fecha_desde'),
+                'fecha_hasta' => $request->input('fecha_hasta'),
+                'usuario_creador_id' => $request->input('usuario_creador_id'),
+                'cliente_id' => $request->input('cliente_id'),
+            ];
+
+            return Inertia::render('ventas/reporte-productos-vendidos', [
+                'productos' => $productos,
+                'totales' => $totales,
+                'ventas' => $ventas,
+                'filtros' => $filtros,
+                'usuarios' => $usuarios,
+                'clientes' => $clientes,
+                'fecha_desde' => $fechaDesde->format('Y-m-d'),
+                'fecha_hasta' => $fechaHasta->format('Y-m-d'),
+                'es_preventista' => $user->hasRole('Preventista'),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en ReporteVentasController::productosVendidos', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return Inertia::render('ventas/reporte-productos-vendidos', [
+                'productos' => [],
+                'totales' => [
+                    'cantidad_productos' => 0,
+                    'cantidad_total_vendida' => 0,
+                    'total_venta_general' => 0,
+                ],
+                'ventas' => [],
+                'filtros' => [],
+                'usuarios' => [],
+                'clientes' => [],
+                'error' => 'Error al generar reporte: ' . $e->getMessage(),
+            ]);
+        }
     }
 
     /**
-     * Reporte de ventas por período (día/semana/mes/año)
+     * Imprimir reporte de productos vendidos
+     * GET /ventas/reporte-productos-vendidos/imprimir
      */
-    public function porPeriodo(Request $request): Response
+    public function imprimirReporte(Request $request)
     {
-        $filtros = $request->validate([
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'granularidad' => ['nullable', 'in:dia,semana,mes,año'],
-            'moneda_id' => ['nullable', 'exists:monedas,id'],
-        ]);
+        try {
+            $user = auth()->user();
+            $formato = $request->input('formato', 'A4');
+            $accion = $request->input('accion', 'stream');
 
-        $fechaInicio = $filtros['fecha_inicio'] ?? now()->subMonth();
-        $fechaFin = $filtros['fecha_fin'] ?? now();
+            // Validar fechas
+            $fechaDesde = $request->filled('fecha_desde') ? $request->date('fecha_desde') : now()->subMonth();
+            $fechaHasta = $request->filled('fecha_hasta') ? $request->date('fecha_hasta') : now();
 
-        // Obtener datos del reporte
-        $ventasPorPeriodo = $this->reporteService->obtenerVentasPorPeriodo($filtros);
+            // Obtener el ID del estado APROBADO
+            $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
 
-        // Obtener estadísticas generales
-        $estadisticas = $this->reporteService->obtenerEstadisticas($filtros);
+            // Construir query para obtener productos vendidos (igual al método anterior)
+            $query = DB::table('proformas')
+                ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('productos', 'detalle_proformas.producto_id', '=', 'productos.id')
+                ->select(
+                    'productos.id',
+                    'productos.nombre as producto_nombre',
+                    'productos.sku as producto_codigo',
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2))) as cantidad_total'),
+                    DB::raw('AVG(CAST(detalle_proformas.precio_unitario AS DECIMAL(15,2))) as precio_promedio'),
+                    DB::raw('SUM(CAST(detalle_proformas.subtotal AS DECIMAL(15,2))) as total_venta'),
+                    'proformas.usuario_creador_id'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
 
-        return Inertia::render('reportes/ventas/por-periodo', [
-            'ventasPorPeriodo' => $ventasPorPeriodo,
-            'estadisticas' => $estadisticas,
-            'filtros' => array_merge($filtros, [
-                'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d'),
-            ]),
-        ]);
-    }
+            // Filtro por usuario creador
+            if ($request->filled('usuario_creador_id')) {
+                $query->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $query->where('proformas.usuario_creador_id', $user->id);
+            }
 
-    /**
-     * Reporte de ventas por cliente y producto
-     */
-    public function porClienteProducto(Request $request): Response
-    {
-        $filtros = $request->validate([
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'cliente_id' => ['nullable', 'exists:clientes,id'],
-            'producto_id' => ['nullable', 'exists:productos,id'],
-            'monto_minimo' => ['nullable', 'numeric', 'min:0'],
-            'page' => ['nullable', 'integer', 'min:1'],
-        ]);
+            // Filtro por cliente
+            if ($request->filled('cliente_id')) {
+                $query->where('proformas.cliente_id', $request->cliente_id);
+            }
 
-        $fechaInicio = $filtros['fecha_inicio'] ?? now()->subMonth();
-        $fechaFin = $filtros['fecha_fin'] ?? now();
+            $productos = $query->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->orderBy('productos.nombre', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->producto_nombre,
+                        'codigo' => $item->producto_codigo,
+                        'cantidad_total' => (float) $item->cantidad_total,
+                        'precio_promedio' => (float) $item->precio_promedio,
+                        'total_venta' => (float) $item->total_venta,
+                        'usuario_creador_id' => $item->usuario_creador_id,
+                    ];
+                });
 
-        // Obtener datos del reporte
-        $ventasPorClienteProducto = $this->reporteService->obtenerVentasPorClienteProducto($filtros);
+            // Calcular totales
+            $totales = [
+                'cantidad_productos' => $productos->count(),
+                'cantidad_total_vendida' => $productos->sum('cantidad_total'),
+                'total_venta_general' => $productos->sum('total_venta'),
+                'precio_promedio_general' => $productos->count() > 0
+                    ? $productos->sum('total_venta') / $productos->sum('cantidad_total')
+                    : 0,
+            ];
 
-        // Obtener estadísticas generales
-        $estadisticas = $this->reporteService->obtenerEstadisticas($filtros);
+            // Obtener las ventas aprobadas que se usaron en el reporte
+            $ventasQuery = DB::table('ventas')
+                ->join('proformas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('clientes', 'proformas.cliente_id', '=', 'clientes.id')
+                ->join('users', 'proformas.usuario_creador_id', '=', 'users.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->leftJoin('entregas', 'ventas.entrega_id', '=', 'entregas.id')
+                ->leftJoin('estados_logistica', 'entregas.estado_entrega_id', '=', 'estados_logistica.id')
+                ->leftJoin('entregas_venta_confirmaciones', 'ventas.id', '=', 'entregas_venta_confirmaciones.venta_id')
+                ->select(
+                    'ventas.id as venta_id',
+                    'ventas.numero as numero_venta',
+                    'proformas.id as proforma_id',
+                    'proformas.numero as numero_proforma',
+                    'proformas.created_at as fecha_proforma',
+                    'clientes.nombre as cliente_nombre',
+                    'users.name as usuario_nombre',
+                    'ventas.total',
+                    'ventas.created_at as fecha_venta',
+                    'estados_documento.codigo as estado_codigo',
+                    'estados_logistica.codigo as estado_entrega',
+                    'entregas_venta_confirmaciones.motivo_rechazo as motivo_entrega',
+                    'entregas_venta_confirmaciones.tienda_abierta',
+                    'entregas_venta_confirmaciones.cliente_presente',
+                    'entregas_venta_confirmaciones.observaciones_logistica',
+                    'entregas_venta_confirmaciones.tipo_entrega',
+                    'entregas_venta_confirmaciones.tipo_novedad',
+                    'entregas_venta_confirmaciones.tuvo_problema',
+                    'entregas_venta_confirmaciones.estado_pago',
+                    'entregas_venta_confirmaciones.total_dinero_recibido',
+                    'entregas_venta_confirmaciones.monto_pendiente',
+                    'entregas_venta_confirmaciones.confirmado_en'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
 
-        return Inertia::render('reportes/ventas/por-cliente-producto', [
-            'ventasPorClienteProducto' => $ventasPorClienteProducto,
-            'estadisticas' => $estadisticas,
-            'filtros' => array_merge($filtros, [
-                'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d'),
-            ]),
-            'clientes' => Cliente::orderBy('nombre')->get(['id', 'nombre'])->toArray(),
-            'productos' => Producto::orderBy('nombre')->get(['id', 'nombre'])->toArray(),
-        ]);
-    }
+            // Aplicar los mismos filtros a las ventas
+            if ($request->filled('usuario_creador_id')) {
+                $ventasQuery->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $ventasQuery->where('proformas.usuario_creador_id', $user->id);
+            }
 
-    /**
-     * Reporte de ventas por vendedor y estado de pago
-     */
-    public function porVendedorEstadoPago(Request $request): Response
-    {
-        $filtros = $request->validate([
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'usuario_id' => ['nullable', 'exists:users,id'],
-            'estado_pago' => ['nullable', 'in:PAGADA,PENDIENTE,PARCIAL'],
-        ]);
+            if ($request->filled('cliente_id')) {
+                $ventasQuery->where('proformas.cliente_id', $request->cliente_id);
+            }
 
-        $fechaInicio = $filtros['fecha_inicio'] ?? now()->subMonth();
-        $fechaFin = $filtros['fecha_fin'] ?? now();
+            $ventas = $ventasQuery->orderByDesc('ventas.id')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->venta_id,
+                        'numero' => $item->numero_venta,
+                        'proforma_numero' => $item->numero_proforma,
+                        'proforma_fecha' => $item->fecha_proforma,
+                        'cliente' => $item->cliente_nombre,
+                        'usuario' => $item->usuario_nombre,
+                        'total' => (float) $item->total,
+                        'fecha' => $item->fecha_venta,
+                        'estado' => $item->estado_codigo,
+                        'estado_entrega' => $item->estado_entrega,
+                        'motivo_entrega' => $item->motivo_entrega,
+                        'tienda_abierta' => $item->tienda_abierta,
+                        'cliente_presente' => $item->cliente_presente,
+                        'observaciones_logistica' => $item->observaciones_logistica,
+                        'tipo_entrega' => $item->tipo_entrega,
+                        'tipo_novedad' => $item->tipo_novedad,
+                        'tuvo_problema' => $item->tuvo_problema,
+                        'estado_pago' => $item->estado_pago,
+                        'total_dinero_recibido' => (float) ($item->total_dinero_recibido ?? 0),
+                        'monto_pendiente' => (float) ($item->monto_pendiente ?? 0),
+                        'confirmado_en' => $item->confirmado_en,
+                    ];
+                })
+                ->sortBy('id')
+                ->values();
 
-        // Obtener datos del reporte
-        $ventasPorVendedorEstadoPago = $this->reporteService->obtenerVentasPorVendedorEstadoPago($filtros);
+            // Obtener información del usuario si está filtrado
+            $usuarioNombre = null;
+            if ($request->filled('usuario_creador_id')) {
+                $usuarioNombre = User::find($request->usuario_creador_id)?->name;
+            }
 
-        // Obtener estadísticas generales
-        $estadisticas = $this->reporteService->obtenerEstadisticas($filtros);
+            // Renderizar vista HTML
+            $html = view('reportes.reporte-productos-vendidos-print', [
+                'productos' => $productos,
+                'ventas' => $ventas,
+                'totales' => $totales,
+                'fechaDesde' => $fechaDesde->format('d/m/Y'),
+                'fechaHasta' => $fechaHasta->format('d/m/Y'),
+                'usuarioNombre' => $usuarioNombre,
+                'formato' => $formato,
+            ])->render();
 
-        return Inertia::render('reportes/ventas/por-vendedor-estado-pago', [
-            'ventasPorVendedorEstadoPago' => $ventasPorVendedorEstadoPago,
-            'estadisticas' => $estadisticas,
-            'filtros' => array_merge($filtros, [
-                'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-                'fecha_fin' => $fechaFin->format('Y-m-d'),
-            ]),
-            'vendedores' => User::orderBy('name')->get(['id', 'name'])->toArray(),
-            'estadosPago' => ['PAGADA', 'PENDIENTE', 'PARCIAL'],
-        ]);
-    }
+            // Generar PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+                ->setPaper($formato === 'TICKET_80' ? array(0, 0, 226, 999999) : 'A4', 'portrait');
 
-    /**
-     * Exportar reporte a Excel/PDF
-     */
-    public function export(Request $request)
-    {
-        $tipo = $request->string('tipo'); // 'por-periodo', 'por-cliente-producto', 'por-vendedor-estado-pago'
-        $formato = $request->string('formato'); // 'excel', 'pdf-a4', 'pdf-80', 'pdf-58'
-        $filtros = $request->validate([
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'cliente_id' => ['nullable', 'exists:clientes,id'],
-            'producto_id' => ['nullable', 'exists:productos,id'],
-            'usuario_id' => ['nullable', 'exists:users,id'],
-            'estado_pago' => ['nullable', 'in:PAGADA,PENDIENTE,PARCIAL'],
-            'granularidad' => ['nullable', 'in:dia,semana,mes,año'],
-            'monto_minimo' => ['nullable', 'numeric', 'min:0'],
-        ]);
+            // Retornar según la acción
+            if ($accion === 'download') {
+                return $pdf->download('reporte-productos-vendidos-' . now()->format('Y-m-d-H-i-s') . '.pdf');
+            } else {
+                return $pdf->stream();
+            }
 
-        // Obtener los datos según el tipo de reporte
-        $datos = match ($tipo) {
-            'por-periodo' => $this->reporteService->obtenerVentasPorPeriodo($filtros),
-            'por-cliente-producto' => $this->reporteService->obtenerVentasPorClienteProducto($filtros),
-            'por-vendedor-estado-pago' => $this->reporteService->obtenerVentasPorVendedorEstadoPago($filtros),
-            default => collect(),
-        };
-
-        // Retornar según el formato solicitado
-        return match ($formato) {
-            'excel' => $this->exportarExcel($tipo, $datos),
-            'pdf-a4' => $this->exportarPdfA4($tipo, $datos),
-            'pdf-80' => $this->exportarPdf80mm($tipo, $datos),
-            'pdf-58' => $this->exportarPdf58mm($tipo, $datos),
-            default => response()->json(['error' => 'Formato no válido'], 400),
-        };
-    }
-
-    /**
-     * Exportar a Excel
-     */
-    private function exportarExcel(string $tipo, $datos)
-    {
-        $exportClass = match ($tipo) {
-            'por-periodo' => \App\Exports\VentasPorPeriodoExport::class,
-            'por-cliente-producto' => \App\Exports\VentasPorClienteProductoExport::class,
-            'por-vendedor-estado-pago' => \App\Exports\VentasPorVendedorEstadoPagoExport::class,
-        };
-
-        $filename = "reporte_ventas_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.xlsx';
-
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new $exportClass($datos),
-            $filename
-        );
-    }
-
-    /**
-     * Exportar a PDF A4
-     */
-    private function exportarPdfA4(string $tipo, $datos)
-    {
-        $pdf = \Barryvdh\DomPDF\Facades\Pdf::loadView(
-            "pdf.reportes.ventas.ventas-por-{$tipo}-a4",
-            ['datos' => $datos]
-        )->setPaper('a4', 'portrait');
-
-        $filename = "reporte_ventas_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.pdf';
-
-        return $pdf->download($filename);
-    }
-
-    /**
-     * Exportar a PDF 80mm (thermal)
-     */
-    private function exportarPdf80mm(string $tipo, $datos)
-    {
-        $pdf = \Barryvdh\DomPDF\Facades\Pdf::loadView(
-            "pdf.reportes.ventas.ventas-por-{$tipo}-80",
-            ['datos' => $datos]
-        )->setPaper([0, 0, 226.77, 841.89], 'portrait');
-
-        $filename = "reporte_ventas_{$tipo}_80mm_" . now()->format('Y-m-d_H-i-s') . '.pdf';
-
-        return $pdf->download($filename);
-    }
-
-    /**
-     * Exportar a PDF 58mm (thermal compact)
-     */
-    private function exportarPdf58mm(string $tipo, $datos)
-    {
-        $pdf = \Barryvdh\DomPDF\Facades\Pdf::loadView(
-            "pdf.reportes.ventas.ventas-por-{$tipo}-58",
-            ['datos' => $datos]
-        )->setPaper([0, 0, 164.41, 841.89], 'portrait');
-
-        $filename = "reporte_ventas_{$tipo}_58mm_" . now()->format('Y-m-d_H-i-s') . '.pdf';
-
-        return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Log::error('Error en ReporteVentasController::imprimirReporte', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Error al generar reporte: ' . $e->getMessage()], 500);
+        }
     }
 }

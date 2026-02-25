@@ -640,6 +640,7 @@ class ProductoController extends Controller
             })->toArray();
 
         $payload['es_fraccionado'] = (bool) $producto->es_fraccionado;
+        $payload['es_combo'] = (bool) $producto->es_combo;
 
         $empresa = auth()->user()?->empresa;
 

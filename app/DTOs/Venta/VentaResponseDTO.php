@@ -42,6 +42,7 @@ class VentaResponseDTO extends BaseDTO
         public ?string $estado_pago = null,  // ✅ NUEVO: Estado de pago
         public ?array $proforma = null,
         public ?array $direccion_cliente = null,
+        public ?array $entregaConfirmacion = null,  // ✅ NUEVO: Confirmación de entrega (entregas_venta_confirmaciones)
     ) {}
 
     /**
@@ -73,6 +74,9 @@ class VentaResponseDTO extends BaseDTO
         }
         if (!isset($venta->estadoLogistica)) {
             $venta->load('estadoLogistica');  // ✅ NUEVO: Cargar estado logístico
+        }
+        if (!isset($venta->confirmaciones)) {
+            $venta->load('confirmaciones');  // ✅ NUEVO: Cargar confirmaciones de entrega
         }
 
         return new self(
@@ -159,6 +163,31 @@ class VentaResponseDTO extends BaseDTO
                 'es_principal' => $venta->direccionCliente->es_principal ?? false,
                 'activa' => $venta->direccionCliente->activa ?? true,
             ] : null,
+            // ✅ NUEVO: Confirmación de entrega
+            entregaConfirmacion: (function () use ($venta) {
+                $firstConfirmacion = $venta->confirmaciones?->first();
+
+                if (!$firstConfirmacion) {
+                    return null;
+                }
+
+                return [
+                    'id'                      => $firstConfirmacion->id,
+                    'venta_id'                => $firstConfirmacion->venta_id,
+                    'tipo_entrega'            => $firstConfirmacion->tipo_entrega ?? null,
+                    'tipo_novedad'            => $firstConfirmacion->tipo_novedad ?? null,
+                    'tuvo_problema'           => $firstConfirmacion->tuvo_problema ?? false,
+                    'tienda_abierta'          => $firstConfirmacion->tienda_abierta,
+                    'cliente_presente'        => $firstConfirmacion->cliente_presente,
+                    'motivo_rechazo'          => $firstConfirmacion->motivo_rechazo ?? null,
+                    'observaciones_logistica' => $firstConfirmacion->observaciones_logistica ?? null,
+                    'estado_pago'             => $firstConfirmacion->estado_pago ?? null,
+                    'total_dinero_recibido'   => (float) ($firstConfirmacion->total_dinero_recibido ?? 0),
+                    'monto_pendiente'         => (float) ($firstConfirmacion->monto_pendiente ?? 0),
+                    'confirmado_en'           => $firstConfirmacion->confirmado_en ?? null,
+                    'created_at'              => $firstConfirmacion->created_at ?? null,
+                ];
+            })(),
         );
     }
 

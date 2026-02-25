@@ -416,6 +416,7 @@ class VentaService
             'proforma',
             'direccionCliente.localidad', // ✅ Cargar localidad para mapas
             'estadoLogistica',            // ✅ NUEVO: Estado logístico
+            'confirmaciones',             // ✅ NUEVO: Cargar confirmación de entrega (entregas_venta_confirmaciones)
         ])->findOrFail($ventaId));
 
         return VentaResponseDTO::fromModel($venta);
@@ -440,6 +441,8 @@ class VentaService
                 'direccionCliente.localidad', // ✅ Cargar localidad de la dirección para mapas
                 'estadoLogistica',            // ✅ NUEVO: Para mostrar estado logístico en tabla
                 'detalles.producto',          // ✅ RECOMENDADO: Para verificar peso_total_estimado si es necesario
+                'proforma',                   // ✅ NUEVO: Cargar relación de proforma (si existe)
+                'confirmaciones',             // ✅ NUEVO: Cargar confirmación de entrega (entregas_venta_confirmaciones)
             ])
                 ->when($filtros['id'] ?? null, fn($q, $id) =>
                     $q->where('id', $id)

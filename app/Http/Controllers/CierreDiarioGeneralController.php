@@ -17,47 +17,81 @@ class CierreDiarioGeneralController extends Controller
     /**
      * Mostrar historial de cierres diarios generales
      * GET /cajas/admin/reportes-diarios
+     *
+     * ✅ ACTUALIZADO: Obtiene datos directamente de cierres_caja
+     * Consolida por fecha y usuario
      */
     public function index(Request $request)
     {
-        $query = CierreDiarioGeneral::with(['usuario'])
-            ->recientes();
+        // ✅ Obtener cierres directamente de cierres_caja
+        $query = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])
+            ->orderBy('fecha', 'desc');
 
         // Filtro por fecha
         if ($request->filled('fecha')) {
-            $query->porFecha($request->fecha);
+            $query->whereDate('fecha', $request->fecha);
         }
 
         // Filtro por rango de fechas
         if ($request->filled('desde') && $request->filled('hasta')) {
-            $query->entreFechas(
+            $query->whereBetween('fecha', [
                 $request->desde . ' 00:00:00',
                 $request->hasta . ' 23:59:59'
-            );
+            ]);
         }
 
         // Filtro por usuario
         if ($request->filled('usuario_id')) {
-            $query->porUsuario($request->usuario_id);
+            $query->where('user_id', $request->usuario_id);
         }
 
         // Filtro por discrepancias
         if ($request->boolean('solo_discrepancias')) {
-            $query->conDiscrepancias();
+            $query->where('diferencia', '!=', 0);
         }
 
         $cierres = $query->paginate(20);
 
-        // Estadísticas generales
+        // ✅ Transformar datos para el frontend
+        $cierresFormateados = $cierres->getCollection()->map(function ($cierre) {
+            return [
+                'id' => $cierre->id,
+                'usuario_id' => $cierre->user_id,
+                'fecha_ejecucion' => $cierre->fecha,
+                'total_cajas_procesadas' => 1,
+                'total_cajas_cerradas' => 1,
+                'total_cajas_con_discrepancia' => $cierre->diferencia != 0 ? 1 : 0,
+                'total_monto_esperado' => (float) $cierre->monto_esperado,
+                'total_monto_real' => (float) $cierre->monto_real,
+                'total_diferencias' => (float) $cierre->diferencia,
+                'usuario' => [
+                    'id' => $cierre->usuario->id,
+                    'name' => $cierre->usuario->name,
+                ],
+                'caja' => [
+                    'id' => $cierre->caja->id,
+                    'nombre' => $cierre->caja->nombre ?? 'Caja ' . $cierre->caja_id,
+                ],
+                'apertura_monto' => (float) $cierre->apertura?->monto_apertura,
+            ];
+        });
+
+        $cierres->setCollection($cierresFormateados);
+
+        // ✅ Estadísticas generales calculadas desde cierres_caja
+        $allCierres = \App\Models\CierreCaja::query();
+
         $estadisticas = [
-            'total_cierres' => CierreDiarioGeneral::count(),
-            'total_cajas_cerradas' => CierreDiarioGeneral::sum('total_cajas_cerradas'),
-            'total_monto_procesado' => CierreDiarioGeneral::sum('total_monto_real'),
-            'cierres_con_discrepancias' => CierreDiarioGeneral::where('total_cajas_con_discrepancia', '>', 0)->count(),
+            'total_cierres' => $allCierres->count(),
+            'total_cajas_cerradas' => $allCierres->count(),
+            'total_monto_procesado' => (float) $allCierres->sum('monto_real'),
+            'cierres_con_discrepancias' => $allCierres->where('diferencia', '!=', 0)->count(),
         ];
 
         // Usuarios disponibles para filtro
-        $usuarios = \App\Models\User::whereHas('cajas')
+        $usuarios = \App\Models\User::whereIn('id',
+                \App\Models\CierreCaja::distinct()->pluck('user_id')
+            )
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -76,43 +110,174 @@ class CierreDiarioGeneralController extends Controller
     }
 
     /**
+     * DEBUG: Ver datos en JSON para verificar qué se está obteniendo
+     * GET /cajas/admin/reportes-diarios/{id}/debug
+     */
+    public function debug($id)
+    {
+        try {
+            $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
+
+            $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
+                ->where('user_id', $cierre->user_id)
+                ->where('fecha', '>=', $cierre->apertura->fecha)
+                ->where('fecha', '<=', $cierre->fecha)
+                ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'pago', 'comprobantes'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            return response()->json([
+                'cierre' => [
+                    'id' => $cierre->id,
+                    'caja_id' => $cierre->caja_id,
+                    'user_id' => $cierre->user_id,
+                    'fecha_apertura' => $cierre->apertura->fecha,
+                    'fecha_cierre' => $cierre->fecha,
+                    'monto_esperado' => $cierre->monto_esperado,
+                    'monto_real' => $cierre->monto_real,
+                    'diferencia' => $cierre->diferencia,
+                ],
+                'movimientos_count' => $movimientos->count(),
+                'movimientos_tipos' => $movimientos->groupBy('tipoOperacion.codigo')->map(function($g) {
+                    return ['tipo' => $g->first()->tipoOperacion?->codigo ?? 'SIN_TIPO', 'cantidad' => $g->count(), 'total' => $g->sum('monto')];
+                })->values(),
+                'movimientos_sample' => $movimientos->take(5)->map(function($m) {
+                    return [
+                        'id' => $m->id,
+                        'fecha' => $m->fecha,
+                        'tipo' => $m->tipoOperacion?->codigo,
+                        'monto' => $m->monto,
+                        'documento' => $m->numero_documento,
+                    ];
+                }),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
+    }
+
+    /**
      * Ver detalles completos de un cierre diario
      * GET /cajas/admin/reportes-diarios/{id}
+     *
+     * ✅ Muestra los movimientos de caja entre apertura y cierre
+     * Considera que la caja pudo estar abierta desde días anteriores
      */
-    public function show(CierreDiarioGeneral $cierreDiarioGeneral)
+    public function show($id)
     {
-        $cierreDiarioGeneral->load(['usuario']);
+        try {
+            // ✅ Obtener cierre directamente de cierres_caja
+            $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
 
-        return Inertia::render('Cajas/ReportesDiariosDetalle', [
-            'cierre' => $cierreDiarioGeneral,
-            'resumen' => $cierreDiarioGeneral->obtenerResumen(),
-        ]);
+            // ✅ Obtener movimientos de caja IGUAL QUE EN CajaController::index()
+            // Usa user_id + caja_id + fecha >= apertura
+            $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
+                ->where('user_id', $cierre->user_id)
+                ->where('fecha', '>=', $cierre->apertura->fecha)
+                ->where('fecha', '<=', $cierre->fecha)
+                ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'venta.estadoDocumento', 'pago', 'comprobantes'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            // ✅ Calcular totales por tipo de operación (filtrando los que tienen tipoOperacion)
+            $totalesPorTipo = $movimientos
+                ->filter(fn($mov) => $mov->tipoOperacion !== null)
+                ->groupBy('tipoOperacion.codigo')
+                ->map(fn($group) => [
+                    'codigo' => $group->first()->tipoOperacion->codigo ?? 'OTRO',
+                    'nombre' => $group->first()->tipoOperacion->nombre ?? 'Otro',
+                    'cantidad' => $group->count(),
+                    'total' => (float) $group->sum('monto'),
+                ])
+                ->values();
+
+            // ✅ Transformar movimientos para el frontend
+            $movimientosFormateados = $movimientos->map(fn($mov) => [
+                'id' => $mov->id,
+                'fecha' => $mov->fecha->toIso8601String(),
+                'usuario' => $mov->usuario ? [
+                    'id' => $mov->usuario->id,
+                    'name' => $mov->usuario->name,
+                ] : ['id' => null, 'name' => 'N/A'],
+                'tipo_operacion' => $mov->tipoOperacion ? [
+                    'codigo' => $mov->tipoOperacion->codigo,
+                    'nombre' => $mov->tipoOperacion->nombre,
+                ] : ['codigo' => 'OTRO', 'nombre' => 'Otro'],
+                'numero_documento' => $mov->numero_documento ?? 'N/A',
+                'monto' => (float) $mov->monto,
+                'observaciones' => $mov->observaciones,
+                'venta_id' => $mov->venta_id,
+                'pago_id' => $mov->pago_id,
+            ])->toArray();
+
+            // ✅ Obtener tipos de operación disponibles para filtros
+            $tiposOperacionDisponibles = \App\Models\TipoOperacionCaja::obtenerTiposClasificados();
+            $tiposOperacionFlat = collect($tiposOperacionDisponibles)->flatten(1)->values()->all();
+
+            // ✅ Logging para debug
+            \Log::info('CierreDiarioGeneralController::show', [
+                'cierre_id' => $cierre->id,
+                'caja_id' => $cierre->caja_id,
+                'movimientos_count' => $movimientos->count(),
+                'totales_count' => $totalesPorTipo->count(),
+            ]);
+
+            return Inertia::render('Cajas/ReportesDiariosDetalle', [
+                'cierre' => [
+                    'id' => $cierre->id,
+                    'usuario_id' => $cierre->user_id,
+                    'usuario' => [
+                        'id' => $cierre->usuario->id,
+                        'name' => $cierre->usuario->name,
+                    ],
+                    'caja' => [
+                        'id' => $cierre->caja->id,
+                        'nombre' => $cierre->caja->nombre,
+                    ],
+                    'fecha_apertura' => $cierre->apertura->fecha->toIso8601String(),
+                    'fecha_cierre' => $cierre->fecha->toIso8601String(),
+                    'monto_apertura' => (float) $cierre->apertura->monto_apertura,
+                    'monto_esperado' => (float) $cierre->monto_esperado,
+                    'monto_real' => (float) $cierre->monto_real,
+                    'diferencia' => (float) $cierre->diferencia,
+                ],
+                'movimientos' => $movimientosFormateados,
+                'totales_por_tipo' => $totalesPorTipo->toArray(),
+                'tipos_operacion' => $tiposOperacionFlat,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Error en show() de CierreDiarioGeneralController', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
      * Descargar PDF del resumen diario
      * GET /cajas/admin/reportes-diarios/{id}/descargar?formato=A4|TICKET_58|TICKET_80
      */
-    public function descargar(CierreDiarioGeneral $cierreDiarioGeneral, Request $request)
+    public function descargar($id, Request $request)
     {
         $formato = $request->query('formato', 'A4');
         $accion = $request->query('accion', 'download');
         $fuente = $request->query('fuente', 'consolas');
 
-        $cierreDiarioGeneral->load(['usuario']);
+        // ✅ Obtener cierre directamente de cierres_caja
+        $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
 
-        // Preparar datos para el servicio
+        // ✅ Preparar datos para el servicio - pasar el objeto completo
         $datos = [
-            'cierre' => $cierreDiarioGeneral,
-            'resumen' => $cierreDiarioGeneral->obtenerResumen(),
-            'cajas_procesadas' => $cierreDiarioGeneral->detalle_cajas ?? [],
+            'cierre' => $cierre,
         ];
 
         // Usar ImpresionService para generar el PDF
         $impresionService = app(\App\Services\ImpresionService::class);
         $pdf = $impresionService->generarPDF('cierre_diario_general', $datos, $formato, ['fuente' => $fuente]);
 
-        $nombreArchivo = 'cierre-diario-' . $cierreDiarioGeneral->fecha_ejecucion->format('Y-m-d-His') . '.pdf';
+        $nombreArchivo = 'cierre-diario-' . $cierre->fecha->format('Y-m-d-His') . '.pdf';
 
         if ($accion === 'stream') {
             return $pdf->stream($nombreArchivo);
