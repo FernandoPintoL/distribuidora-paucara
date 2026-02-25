@@ -171,12 +171,13 @@ class CierreDiarioGeneralController extends Controller
 
             // ✅ Obtener movimientos de caja IGUAL QUE EN CajaController::index()
             // Usa user_id + caja_id + fecha >= apertura
+            // ✅ Ordenamiento: por ID ascendente (menor a mayor)
             $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
                 ->where('user_id', $cierre->user_id)
                 ->where('fecha', '>=', $cierre->apertura->fecha)
                 ->where('fecha', '<=', $cierre->fecha)
                 ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'venta.estadoDocumento', 'pago', 'comprobantes'])
-                ->orderBy('id', 'desc')
+                ->orderBy('id', 'asc')
                 ->get();
 
             // ✅ Calcular totales por tipo de operación (filtrando los que tienen tipoOperacion)
@@ -284,6 +285,122 @@ class CierreDiarioGeneralController extends Controller
         }
 
         return $pdf->download($nombreArchivo);
+    }
+
+    /**
+     * Descargar PDF con filtros aplicados
+     * GET /cajas/admin/reportes-diarios/{id}/descargar-filtrado
+     *
+     * Parámetros de query:
+     * - tipos: Array de códigos de tipo de operación (ej: VENTA,PAGO)
+     * - busqueda: Texto para buscar en numero_documento
+     * - monto_min: Monto mínimo
+     * - monto_max: Monto máximo
+     * - formato: A4|TICKET_58|TICKET_80
+     */
+    public function descargarFiltrado($id, Request $request)
+    {
+        try {
+            $formato = $request->query('formato', 'A4');
+            $accion = $request->query('accion', 'download');
+            $fuente = $request->query('fuente', 'consolas');
+
+            // Obtener cierre
+            $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
+
+            // Obtener movimientos (igual que en show())
+            // ✅ Ordenamiento: por ID ascendente (menor a mayor)
+            $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
+                ->where('user_id', $cierre->user_id)
+                ->where('fecha', '>=', $cierre->apertura->fecha)
+                ->where('fecha', '<=', $cierre->fecha)
+                ->with(['tipoOperacion', 'usuario'])
+                ->orderBy('id', 'asc')
+                ->get();
+
+            // ✅ Aplicar filtros
+            $tipos = $request->query('tipos');
+            $busqueda = $request->query('busqueda');
+            $montoMin = $request->query('monto_min');
+            $montoMax = $request->query('monto_max');
+
+            // Filtro por tipos de operación
+            if ($tipos) {
+                $tiposArray = is_array($tipos) ? $tipos : explode(',', $tipos);
+                $movimientos = $movimientos->filter(function ($mov) use ($tiposArray) {
+                    return in_array($mov->tipoOperacion?->codigo, $tiposArray);
+                });
+            }
+
+            // Filtro por búsqueda de documento
+            if ($busqueda) {
+                $searchLower = strtolower($busqueda);
+                $movimientos = $movimientos->filter(function ($mov) use ($searchLower) {
+                    return strpos(strtolower($mov->numero_documento ?? ''), $searchLower) !== false;
+                });
+            }
+
+            // Filtro por rango de montos
+            if ($montoMin !== null) {
+                $movimientos = $movimientos->filter(function ($mov) use ($montoMin) {
+                    return abs($mov->monto) >= floatval($montoMin);
+                });
+            }
+            if ($montoMax !== null) {
+                $movimientos = $movimientos->filter(function ($mov) use ($montoMax) {
+                    return abs($mov->monto) <= floatval($montoMax);
+                });
+            }
+
+            // ✅ Calcular totales filtrados
+            $totalIngresos = $movimientos->filter(fn($m) => $m->monto > 0)->sum('monto');
+            $totalEgresos = $movimientos->filter(fn($m) => $m->monto < 0)->sum('monto');
+            $totalNeto = $totalIngresos + $totalEgresos;
+
+            // Preparar datos para el PDF
+            $movimientosFormateados = $movimientos->map(fn($mov) => [
+                'id' => $mov->id,
+                'fecha' => $mov->fecha->format('d/m/Y H:i:s'),
+                'usuario' => $mov->usuario?->name ?? 'N/A',
+                'tipo_operacion' => $mov->tipoOperacion?->nombre ?? 'Otro',
+                'numero_documento' => $mov->numero_documento ?? 'N/A',
+                'monto' => (float) $mov->monto,
+            ])->toArray();
+
+            $datos = [
+                'cierre' => $cierre,
+                'movimientos' => $movimientosFormateados,
+                'movimientos_count' => count($movimientosFormateados),
+                'total_ingresos' => (float) $totalIngresos,
+                'total_egresos' => (float) $totalEgresos,
+                'total_neto' => (float) $totalNeto,
+                'filtros_aplicados' => [
+                    'tipos' => $tipos ? (is_array($tipos) ? $tipos : explode(',', $tipos)) : [],
+                    'busqueda' => $busqueda,
+                    'monto_min' => $montoMin,
+                    'monto_max' => $montoMax,
+                ],
+            ];
+
+            // Usar ImpresionService para generar el PDF
+            $impresionService = app(\App\Services\ImpresionService::class);
+            $pdf = $impresionService->generarPDF('cierre_diario_filtrado', $datos, $formato, ['fuente' => $fuente]);
+
+            $nombreArchivo = 'cierre-diario-filtrado-' . $cierre->fecha->format('Y-m-d-His') . '.pdf';
+
+            if ($accion === 'stream') {
+                return $pdf->stream($nombreArchivo);
+            }
+
+            return $pdf->download($nombreArchivo);
+        } catch (\Throwable $e) {
+            \Log::error('Error en descargarFiltrado() de CierreDiarioGeneralController', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
 }

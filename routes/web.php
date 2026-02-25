@@ -545,6 +545,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('/{id}/debug', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'debug'])->name('debug');
             Route::get('/{id}', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'show'])->name('show');
             Route::get('/{id}/descargar', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'descargar'])->name('descargar');
+            Route::get('/{id}/descargar-filtrado', [\App\Http\Controllers\CierreDiarioGeneralController::class, 'descargarFiltrado'])->name('descargar-filtrado');
         });
 
         // Gestión de cajas por usuario - Validación de roles en el controlador

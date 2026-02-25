@@ -193,6 +193,31 @@ export default function ReportesDiariosDetalle({
     setMontoMax(null);
   };
 
+  const descargarFiltrado = () => {
+    // Construir los parámetros de query
+    const params = new URLSearchParams();
+
+    if (tiposSeleccionados.length > 0) {
+      params.append('tipos', tiposSeleccionados.join(','));
+    }
+    if (busqueda.trim()) {
+      params.append('busqueda', busqueda.trim());
+    }
+    if (montoMin !== null) {
+      params.append('monto_min', montoMin.toString());
+    }
+    if (montoMax !== null) {
+      params.append('monto_max', montoMax.toString());
+    }
+
+    params.append('formato', 'A4');
+
+    // Redirigir a la descarga
+    window.location.href = `/cajas/admin/reportes-diarios/${cierre.id}/descargar-filtrado?${params.toString()}`;
+  };
+
+  const tieneFiltrantes = tiposSeleccionados.length > 0 || busqueda.trim() || montoMin !== null || montoMax !== null;
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={`Cierre de Caja #${cierre.id}`} />
@@ -301,11 +326,10 @@ export default function ReportesDiariosDetalle({
                 Diferencia
               </p>
               <p
-                className={`text-2xl font-bold mt-2 ${
-                  cierre.diferencia === 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-orange-600 dark:text-orange-400'
-                }`}
+                className={`text-2xl font-bold mt-2 ${cierre.diferencia === 0
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-orange-600 dark:text-orange-400'
+                  }`}
               >
                 Bs. {Number(cierre.diferencia).toFixed(2)}
               </p>
@@ -422,11 +446,10 @@ export default function ReportesDiariosDetalle({
                       <button
                         key={tipo.codigo}
                         onClick={() => toggleTipo(tipo.codigo)}
-                        className={`p-3 rounded-lg border-2 transition text-sm font-medium text-left ${
-                          isSelected
-                            ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                            : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-500'
-                        }`}
+                        className={`p-3 rounded-lg border-2 transition text-sm font-medium text-left ${isSelected
+                          ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-500'
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           <input
@@ -493,11 +516,10 @@ export default function ReportesDiariosDetalle({
                 <div>
                   <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Neto</p>
                   <p
-                    className={`text-2xl font-bold ${
-                      totalNeto >= 0
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                    }`}
+                    className={`text-2xl font-bold ${totalNeto >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                      }`}
                   >
                     Bs. {totalNeto.toFixed(2)}
                   </p>
@@ -532,13 +554,12 @@ export default function ReportesDiariosDetalle({
                         )}
                       </div>
                       <p
-                        className={`text-lg font-bold ${
-                          tipo.total > 0
-                            ? 'text-green-600 dark:text-green-400'
-                            : tipo.total < 0
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-gray-900 dark:text-white'
-                        }`}
+                        className={`text-lg font-bold ${tipo.total > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : tipo.total < 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-900 dark:text-white'
+                          }`}
                       >
                         Bs. {Number(tipo.total).toFixed(2)}
                       </p>
@@ -557,6 +578,7 @@ export default function ReportesDiariosDetalle({
             <Table>
               <TableHeader>
                 <TableRow className="dark:border-slate-700 dark:bg-slate-900">
+                  <TableHead className="dark:text-gray-300 font-semibold">ID</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Fecha/Hora</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Usuario</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Tipo de Operación</TableHead>
@@ -574,6 +596,9 @@ export default function ReportesDiariosDetalle({
                       className="dark:border-slate-700 dark:hover:bg-slate-700 transition-colors"
                     >
                       <TableCell className="dark:text-gray-300 text-sm">
+                        {mov.id}
+                      </TableCell>
+                      <TableCell className="dark:text-gray-300 text-sm">
                         {format(parseISO(mov.fecha), 'dd/MM/yyyy HH:mm:ss', { locale: es })}
                       </TableCell>
                       <TableCell className="dark:text-gray-300">{mov.usuario.name}</TableCell>
@@ -582,9 +607,9 @@ export default function ReportesDiariosDetalle({
                           variant={mov.monto > 0 ? 'default' : 'secondary'}
                           className={
                             mov.monto > 0
-                              ? 'bg-green-600 dark:bg-green-700'
+                              ? 'bg-green-600 dark:bg-green-700 text-white'
                               : mov.monto < 0
-                                ? 'bg-red-600 dark:bg-red-700'
+                                ? 'bg-red-600 dark:bg-red-700 text-white'
                                 : ''
                           }
                         >
@@ -595,13 +620,12 @@ export default function ReportesDiariosDetalle({
                         {mov.numero_documento}
                       </TableCell>
                       <TableCell
-                        className={`text-right font-semibold ${
-                          mov.monto > 0
-                            ? 'text-green-600 dark:text-green-400'
-                            : mov.monto < 0
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-gray-900 dark:text-white'
-                        }`}
+                        className={`text-right font-semibold ${mov.monto > 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : mov.monto < 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-gray-900 dark:text-white'
+                          }`}
                       >
                         {mov.monto > 0 ? '+' : ''}
                         Bs. {Number(mov.monto).toFixed(2)}
@@ -631,17 +655,30 @@ export default function ReportesDiariosDetalle({
             </Table>
           </Card>
 
-          {/* Botón de descarga del cierre completo */}
+          {/* Botones de descarga */}
           <Card className="p-4 dark:bg-slate-800 border dark:border-slate-700">
-            <Button
-              onClick={() => {
-                window.location.href = `/cajas/admin/reportes-diarios/${cierre.id}/descargar?formato=A4`;
-              }}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Descargar PDF - Cierre Completo
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Botón de descarga filtrada - solo si hay filtros aplicados */}
+              {tieneFiltrantes && (
+                <Button
+                  onClick={descargarFiltrado}
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white transition flex-1"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Descargar Filtrado ({movimientosFiltrados.length})
+                </Button>
+              )}
+              {/* Botón de descarga del cierre completo */}
+              <Button
+                onClick={() => {
+                  window.location.href = `/cajas/admin/reportes-diarios/${cierre.id}/descargar?formato=A4`;
+                }}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white transition flex-1"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Descargar Completo ({movimientos.length})
+              </Button>
+            </div>
           </Card>
         </div>
       </div>
