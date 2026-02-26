@@ -104,13 +104,32 @@ export function VehicleRecommendationCard({
       // Auto-seleccionar el vehículo recomendado
       onSelectVehiculo(recomendado.id);
 
-      // Auto-seleccionar el chofer asignado si existe
-      if (recomendado.choferAsignado && onSelectChofer) {
-        onSelectChofer(recomendado.choferAsignado.id);
-        setSeleccionarChoferManualmente(false);
+      // ✅ CORREGIDO: Solo auto-seleccionar el chofer si existe en la lista de choferes disponibles
+      // Esto evita seleccionar choferes que no tienen permisos
+      if (recomendado.choferAsignado && onSelectChofer && choferes?.length > 0) {
+        const choferEnLista = choferes.find(c => c.id === recomendado.choferAsignado.id);
+        if (choferEnLista) {
+          console.log('✅ Auto-seleccionando chofer válido:', {
+            id: recomendado.choferAsignado.id,
+            nombre: recomendado.choferAsignado.nombre,
+          });
+          onSelectChofer(recomendado.choferAsignado.id);
+          setSeleccionarChoferManualmente(false);
+        } else {
+          console.warn('⚠️ Chofer asignado del vehículo NO está en lista de choferes válidos, requiere selección manual', {
+            chofer_id: recomendado.choferAsignado.id,
+            choferes_disponibles: choferes.map(c => c.id),
+          });
+          setSeleccionarChoferManualmente(true);
+        }
+      } else {
+        // Si no hay chofer asignado o no hay choferes disponibles, forzar selección manual
+        if (onSelectChofer) {
+          setSeleccionarChoferManualmente(true);
+        }
       }
     }
-  }, [recomendado?.id, selectedVehiculoId]);
+  }, [recomendado?.id, selectedVehiculoId, choferes]);
 
   // Pre-llenar datos en modo edición (cuando llegan del backend)
   useEffect(() => {
