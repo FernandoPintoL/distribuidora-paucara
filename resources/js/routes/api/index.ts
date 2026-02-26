@@ -1,8 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import proformas from './proformas'
 import modulosSidebar from './modulos-sidebar'
 import combos from './combos'
 import productos from './productos'
-import proformas from './proformas'
 import ventas from './ventas'
 import compras from './compras'
 import precios from './precios'
@@ -176,11 +176,11 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     
     dashboardRedirect.form = dashboardRedirectForm
 const api = {
-    modulosSidebar,
+    proformas,
+modulosSidebar,
 dashboardRedirect,
 combos,
 productos,
-proformas,
 ventas,
 compras,
 precios,

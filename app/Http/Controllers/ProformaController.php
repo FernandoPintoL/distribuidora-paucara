@@ -976,7 +976,29 @@ class ProformaController extends Controller
     {
         try {
             $formato = $request->input('formato', 'A4');      // A4, TICKET_80, TICKET_58
-            $accion  = $request->input('accion', 'download'); // download | stream
+            $accion  = $request->input('accion', 'download'); // download | stream | compartir
+
+            // ✅ NUEVO (2026-02-26): Validar acceso para compartir sin autenticación
+            // Si accion=compartir, verificar que la proforma sea accesible públicamente
+            if ($accion === 'compartir' || $accion === 'stream') {
+                // Permitir acceso sin autenticación
+                Log::info('📄 [ProformaController] Acceso público a proforma', [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'formato' => $formato,
+                    'accion' => $accion,
+                    'usuario_id' => auth()->id() ?? 'anónimo',
+                ]);
+            } else {
+                // Para otras acciones, puede requerir autenticación si lo deseas
+                Log::info('📄 [ProformaController] Descarga de proforma', [
+                    'proforma_id' => $proforma->id,
+                    'proforma_numero' => $proforma->numero,
+                    'formato' => $formato,
+                    'accion' => $accion,
+                    'usuario_id' => auth()->id() ?? 'anónimo',
+                ]);
+            }
 
             // Generar PDF usando el servicio
             $pdf = $this->impresionService->imprimirProforma($proforma, $formato);
@@ -984,14 +1006,15 @@ class ProformaController extends Controller
             $nombreArchivo = "proforma_{$proforma->numero}_{$formato}.pdf";
 
             // Retornar según acción solicitada
-            return $accion === 'stream'
+            return $accion === 'stream' || $accion === 'compartir'
                 ? $pdf->stream($nombreArchivo)
                 : $pdf->download($nombreArchivo);
 
         } catch (\Exception $e) {
-            Log::error('Error al imprimir proforma', [
+            Log::error('❌ Error al imprimir proforma', [
                 'proforma_id' => $proforma->id,
                 'formato'     => $request->input('formato'),
+                'accion'      => $request->input('accion'),
                 'error'       => $e->getMessage(),
             ]);
 

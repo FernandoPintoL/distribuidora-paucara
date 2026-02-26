@@ -56,6 +56,13 @@ Route::post('/register', [AuthController::class, 'register']);
 // Rutas para empleados
 Route::get('/empleados/determinar-rol', [EmpleadoApiController::class, 'determinarRol']);
 
+// ✅ NUEVO: Rutas públicas de proformas (para compartir sin autenticación)
+Route::group(['prefix' => 'proformas'], function () {
+    // 🖨️ Descargar proforma como PDF (público cuando accion=compartir)
+    Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])
+        ->name('api.proformas.imprimir.public');
+});
+
 // Catálogos públicos - GET only (para cargar datos en selects/dropdowns)
 // Nota: El control de acceso se hace a nivel de página web con permisos
 Route::get('/tipos-ajuste-inventario', [TipoAjusteInventarioController::class, 'index']);
@@ -321,14 +328,11 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ✅ NUEVO: Navegación entre proformas pendientes
     Route::get('/proformas/siguiente-pendiente', [ApiProformaController::class, 'obtenerSiguientePendiente']);
 
-    // ✅ NUEVO: PROFORMAS - Impresión / Descarga de PDFs
-    // Rutas de impresión ANTES de apiResource para evitar conflictos
+    // ✅ ACTUALIZADO: PROFORMAS - Impresión / Descarga de PDFs
+    // La ruta de imprimir ahora está en rutas públicas (para compartir sin autenticación)
+    // Solo preview requiere autenticación
     Route::group(['prefix' => 'proformas'], function () {
-        // 🖨️ Descargar proforma como PDF (múltiples formatos)
-        Route::get('/{proforma}/imprimir', [\App\Http\Controllers\ProformaController::class, 'imprimir'])
-            ->name('api.proformas.imprimir');
-
-        // 🖨️ Vista previa de proforma en navegador
+        // 🖨️ Vista previa de proforma en navegador (requiere autenticación)
         Route::get('/{proforma}/preview', [\App\Http\Controllers\ProformaController::class, 'preview'])
             ->name('api.proformas.preview');
     });

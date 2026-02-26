@@ -1,11 +1,11 @@
 import Api from './Api'
+import ProformaController from './ProformaController'
 import InventarioController from './InventarioController'
 import ModuloSidebarController from './ModuloSidebarController'
 import Auth from './Auth'
 import PermissionController from './PermissionController'
 import ProductoController from './ProductoController'
 import ComboController from './ComboController'
-import ProformaController from './ProformaController'
 import VentaController from './VentaController'
 import CompraController from './CompraController'
 import PrecioController from './PrecioController'
@@ -83,13 +83,13 @@ import ImpresionVentasController from './ImpresionVentasController'
 import Settings from './Settings'
 const Controllers = {
     Api,
+ProformaController,
 InventarioController,
 ModuloSidebarController,
 Auth,
 PermissionController,
 ProductoController,
 ComboController,
-ProformaController,
 VentaController,
 CompraController,
 PrecioController,
