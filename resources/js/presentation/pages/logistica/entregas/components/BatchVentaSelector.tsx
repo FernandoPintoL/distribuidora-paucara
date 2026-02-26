@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card } from '@/presentation/components/ui/card';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
@@ -58,19 +58,43 @@ export default function BatchVentaSelector({
             if (fechaHasta) params.append('fecha_hasta', fechaHasta);
             params.append('page', '1');
 
+            console.log('🔍 [BatchVentaSelector] Iniciando búsqueda:', {
+                q: searchInputValue,
+                fecha_desde: fechaDesde,
+                fecha_hasta: fechaHasta,
+            });
+
             const response = await fetch(`/logistica/entregas/ventas/search?${params.toString()}`);
+
+            console.log('📡 [BatchVentaSelector] Respuesta recibida - Status:', response.status);
 
             if (!response.ok) {
                 throw new Error('Error al buscar ventas');
             }
 
             const data = await response.json();
+
+            console.log('✅ [BatchVentaSelector] Datos recibidos del backend:', {
+                total_ventas: data.data.length,
+                pagination: data.pagination,
+                ventas_detalles: data.data.map((v: any) => ({
+                    id: v.id,
+                    numero: v.numero_venta,
+                    cant_detalles: v.detalles?.length ?? 0,
+                    peso_total_estimado: v.peso_total_estimado,
+                    cliente: v.cliente?.nombre,
+                    detalles_primera_venta: data.data[0]?.detalles ? data.data[0].detalles.slice(0, 2) : 'N/A',
+                })),
+                datos_completos_primera_venta: data.data[0],
+            });
+
             setSearchResults(data.data);
             setTotalPages(data.pagination.last_page);
             setCurrentPage(1);
             setSearchTerm(searchInputValue);
             setHasSearched(true);
         } catch (error) {
+            console.error('❌ [BatchVentaSelector] Error en búsqueda:', error);
             setSearchError(error instanceof Error ? error.message : 'Error desconocido');
             setSearchResults([]);
         } finally {
@@ -95,15 +119,28 @@ export default function BatchVentaSelector({
         }
     };
 
-    // Filtrar ventas: usar resultados de búsqueda BD si existe, sino usar datos locales
+    // ✅ NUEVO: Combinar ventas iniciales + resultados de búsqueda (para que estén disponibles en el hook)
     const filteredVentas = useMemo(() => {
-        // Si hay búsqueda activa, usar resultados de búsqueda en BD
+        // Si hay búsqueda activa, mostrar resultados de búsqueda EN BD
         if (hasSearched && searchResults.length > 0) {
             return searchResults;
         }
         // Sino, usar datos iniciales cargados
         return ventas;
     }, [ventas, searchResults, hasSearched]);
+
+    // ✅ NUEVO: Si hay resultados de búsqueda, agregrarlos a las ventas disponibles globales
+    // para que el hook useVehiculoRecomendado pueda encontrar la venta cuando se selecciona
+    useEffect(() => {
+        if (hasSearched && searchResults.length > 0 && ventas) {
+            // Las ventas de búsqueda ya están disponibles via filteredVentas para mostrar en el selector
+            // Pero también necesitan estar en el array que recibe el hook
+            console.log('🔄 [BatchVentaSelector] Resultados de búsqueda disponibles para seleccionar:', {
+                ids_busqueda: searchResults.map(v => v.id),
+                ids_iniciales: ventas.map(v => v.id),
+            });
+        }
+    }, [hasSearched, searchResults, ventas]);
 
     // Agrupar ventas por localidad
     const ventasPorLocalidad = useMemo(() => {

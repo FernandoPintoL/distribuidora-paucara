@@ -676,6 +676,8 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         // ✅ NUEVO: Confirmar una VENTA específica (con validación de todas entregadas)
         // ✅ Confirmar venta individual (venta por venta)
         Route::post('/entregas/{id}/ventas/{venta_id}/confirmar-entrega', [EntregaController::class, 'confirmarVentaEntregada']);
+        // ✅ NUEVO: Actualizar una confirmación existente (editar confirmación)
+        Route::put('/entregas/{id}/ventas/{venta_id}/confirmaciones/{confirmacion_id}', [EntregaController::class, 'actualizarConfirmacionVenta']);
 
         // ✅ NUEVA RUTA: Finalizar entrega (después de todas las ventas entregadas)
         Route::post('/entregas/{id}/finalizar-entrega', [EntregaController::class, 'finalizarEntrega']);

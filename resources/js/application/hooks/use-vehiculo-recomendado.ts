@@ -52,6 +52,60 @@ export function useVehiculoRecomendado(
 
     // Calcular peso total
     const selectedVentas = ventas.filter((v) => selectedVentaIds.includes(v.id));
+
+    // ✅ NUEVO: Si hay ventas seleccionadas pero NO están en el array (búsqueda manual),
+    // hacer fetch automático para obtenerlas
+    const ventasNoEncontradas = selectedVentaIds.filter(
+      id => !ventas.some(v => v.id === id)
+    );
+
+    if (ventasNoEncontradas.length > 0) {
+      console.log('🔍 [useVehiculoRecomendado] Ventas seleccionadas no encontradas en array, buscando...', {
+        ids_no_encontradas: ventasNoEncontradas,
+      });
+
+      // Hacer fetch por cada venta no encontrada
+      Promise.all(
+        ventasNoEncontradas.map(id =>
+          fetch(`/logistica/entregas/ventas/search?q=${id}`)
+            .then(res => res.json())
+            .then(data => data.data?.[0])
+        )
+      )
+        .then(ventasCargadas => {
+          const ventasFiltradas = ventasCargadas.filter(Boolean);
+          console.log('✅ [useVehiculoRecomendado] Ventas cargadas dinámicamente:', {
+            cantidad: ventasFiltradas.length,
+            ids: ventasFiltradas.map(v => v.id),
+            pesos: ventasFiltradas.map(v => v.peso_total_estimado),
+          });
+
+          // Combinar con las ventas encontradas
+          const todasLasVentas = [...selectedVentas, ...ventasFiltradas];
+          const pesoTotalCalculado = todasLasVentas.reduce(
+            (sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0),
+            0
+          );
+
+          if (pesoTotalCalculado > 0) {
+            fetchRecomendacion(pesoTotalCalculado);
+          } else {
+            setState((prev) => ({
+              ...prev,
+              error: 'No se pudo calcular el peso total de las ventas',
+            }));
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error cargando ventas dinámicamente:', err);
+          setState((prev) => ({
+            ...prev,
+            error: 'Error al cargar las ventas',
+          }));
+        });
+      return;
+    }
+
     const pesoTotal = selectedVentas.reduce((sum, v) => sum + (v.peso_total_estimado || v.peso_estimado || 0), 0);
 
     console.log('📊 Calculando recomendación:', {

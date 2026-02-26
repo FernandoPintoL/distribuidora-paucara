@@ -217,6 +217,421 @@ class ReporteVentasController extends Controller
     }
 
     /**
+     * Ranking de clientes por ventas aprobadas/anuladas y productos
+     * GET /reportes/ventas/ranking-clientes
+     */
+    public function rankingClientes(Request $request): InertiaResponse
+    {
+        try {
+            $user = auth()->user();
+            $limite = $request->integer('limite', 20);
+
+            // Validar fechas - default último mes
+            $fechaDesde = $request->filled('fecha_desde')
+                ? $request->date('fecha_desde')
+                : now()->subMonth();
+            $fechaHasta = $request->filled('fecha_hasta')
+                ? $request->date('fecha_hasta')
+                : now();
+
+            // Estados
+            $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
+            $estadoAnuladoId = EstadoDocumento::where('codigo', 'ANULADO')->value('id');
+
+            // Query 1: TOP ventas aprobadas por cliente
+            $topAprobadas = DB::table('ventas')
+                ->join('clientes', 'ventas.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(ventas.id) as total_ventas'),
+                    DB::raw('SUM(CAST(ventas.total AS DECIMAL(15,2))) as monto_total')
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_ventas')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_ventas' => (int) $item->total_ventas,
+                        'monto_total' => (float) $item->monto_total,
+                    ];
+                });
+
+            // Query 2: TOP ventas anuladas por cliente
+            $topAnuladas = DB::table('ventas')
+                ->join('clientes', 'ventas.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(ventas.id) as total_ventas'),
+                    DB::raw('SUM(CAST(ventas.total AS DECIMAL(15,2))) as monto_total')
+                )
+                ->where('ventas.estado_documento_id', $estadoAnuladoId)
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_ventas')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_ventas' => (int) $item->total_ventas,
+                        'monto_total' => (float) $item->monto_total,
+                    ];
+                });
+
+            // Query 3: TOP productos comprados por cliente
+            $topProductos = DB::table('clientes')
+                ->join('ventas', 'clientes.id', '=', 'ventas.cliente_id')
+                ->join('proformas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(DISTINCT ventas.id) as total_ventas'),
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2))) as total_productos'),
+                    DB::raw('SUM(CAST(detalle_proformas.subtotal AS DECIMAL(15,2))) as monto_total')
+                )
+                ->where('estados_documento.codigo', 'APROBADO')
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id')
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_productos')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_ventas' => (int) $item->total_ventas,
+                        'total_productos' => (float) $item->total_productos,
+                        'monto_total' => (float) $item->monto_total,
+                    ];
+                });
+
+            // Query 4: MENOS productos comprados por cliente
+            $menosProductos = DB::table('clientes')
+                ->join('ventas', 'clientes.id', '=', 'ventas.cliente_id')
+                ->join('proformas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(DISTINCT ventas.id) as total_ventas'),
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2))) as total_productos'),
+                    DB::raw('SUM(CAST(detalle_proformas.subtotal AS DECIMAL(15,2))) as monto_total')
+                )
+                ->where('estados_documento.codigo', 'APROBADO')
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id')
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderBy('total_productos')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_ventas' => (int) $item->total_ventas,
+                        'total_productos' => (float) $item->total_productos,
+                        'monto_total' => (float) $item->monto_total,
+                    ];
+                });
+
+            $filtros = [
+                'fecha_desde' => $request->input('fecha_desde'),
+                'fecha_hasta' => $request->input('fecha_hasta'),
+                'limite' => $limite,
+            ];
+
+            return Inertia::render('reportes/ventas/ranking-clientes', [
+                'topAprobadas' => $topAprobadas,
+                'topAnuladas' => $topAnuladas,
+                'topProductos' => $topProductos,
+                'menosProductos' => $menosProductos,
+                'filtros' => $filtros,
+                'fecha_desde' => $fechaDesde->format('Y-m-d'),
+                'fecha_hasta' => $fechaHasta->format('Y-m-d'),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en ReporteVentasController::rankingClientes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return Inertia::render('reportes/ventas/ranking-clientes', [
+                'topAprobadas' => [],
+                'topAnuladas' => [],
+                'topProductos' => [],
+                'menosProductos' => [],
+                'filtros' => [],
+                'error' => 'Error al generar reporte: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Entregas por chofer
+     * GET /reportes/ventas/entregas-por-chofer
+     */
+    public function entregasPorChofer(Request $request): InertiaResponse
+    {
+        try {
+            // Validar fechas - default último mes
+            $fechaDesde = $request->filled('fecha_desde')
+                ? $request->date('fecha_desde')
+                : now()->subMonth();
+            $fechaHasta = $request->filled('fecha_hasta')
+                ? $request->date('fecha_hasta')
+                : now();
+
+            // Query principal: Resumen por chofer
+            $choferes = DB::table('users')
+                ->leftJoin('entregas', 'entregas.chofer_id', '=', 'users.id')
+                ->leftJoin('entregas_venta_confirmaciones', 'entregas_venta_confirmaciones.entrega_id', '=', 'entregas.id')
+                ->select(
+                    'users.id as chofer_id',
+                    'users.name as chofer_nombre',
+                    DB::raw('COUNT(DISTINCT entregas_venta_confirmaciones.id) as total_confirmaciones'),
+                    DB::raw("COUNT(DISTINCT CASE WHEN entregas_venta_confirmaciones.tipo_confirmacion = 'COMPLETA' THEN entregas_venta_confirmaciones.id END) as completas"),
+                    DB::raw("COUNT(DISTINCT CASE WHEN entregas_venta_confirmaciones.tipo_confirmacion = 'CON_NOVEDAD' THEN entregas_venta_confirmaciones.id END) as con_novedad"),
+                    DB::raw("COUNT(DISTINCT CASE WHEN entregas_venta_confirmaciones.tuvo_problema = true THEN entregas_venta_confirmaciones.id END) as con_problemas"),
+                    DB::raw('SUM(CAST(COALESCE(entregas_venta_confirmaciones.total_dinero_recibido, 0) AS DECIMAL(15,2))) as dinero_recibido')
+                )
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '>=', $fechaDesde)
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '<=', $fechaHasta)
+                ->whereNotNull('users.id');
+
+            // Filtrar por chofer específico si se proporciona
+            if ($request->filled('chofer_id')) {
+                $choferes->where('users.id', $request->integer('chofer_id'));
+            }
+
+            $choferes = $choferes->groupBy('users.id', 'users.name')
+                ->orderByDesc('total_confirmaciones')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'chofer_id' => $item->chofer_id,
+                        'chofer_nombre' => $item->chofer_nombre,
+                        'total_confirmaciones' => (int) $item->total_confirmaciones,
+                        'completas' => (int) $item->completas,
+                        'con_novedad' => (int) $item->con_novedad,
+                        'con_problemas' => (int) $item->con_problemas,
+                        'dinero_recibido' => (float) ($item->dinero_recibido ?? 0),
+                    ];
+                });
+
+            // Calcular totales
+            $totales = [
+                'total_confirmaciones' => $choferes->sum('total_confirmaciones'),
+                'total_completas' => $choferes->sum('completas'),
+                'total_novedad' => $choferes->sum('con_novedad'),
+                'total_dinero' => $choferes->sum('dinero_recibido'),
+            ];
+
+            // Obtener lista de choferes para el select
+            $choferesList = User::whereHas('roles', function ($query) {
+                $query->whereIn('name', ['Chofer', 'chofer', 'driver']);
+            })->select('id', 'name')->orderBy('name')->get();
+
+            $filtros = [
+                'fecha_desde' => $request->input('fecha_desde'),
+                'fecha_hasta' => $request->input('fecha_hasta'),
+                'chofer_id' => $request->input('chofer_id'),
+            ];
+
+            return Inertia::render('reportes/ventas/entregas-por-chofer', [
+                'choferes' => $choferes,
+                'totales' => $totales,
+                'filtros' => $filtros,
+                'choferesList' => $choferesList,
+                'fecha_desde' => $fechaDesde->format('Y-m-d'),
+                'fecha_hasta' => $fechaHasta->format('Y-m-d'),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en ReporteVentasController::entregasPorChofer', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return Inertia::render('reportes/ventas/entregas-por-chofer', [
+                'choferes' => [],
+                'totales' => [
+                    'total_confirmaciones' => 0,
+                    'total_completas' => 0,
+                    'total_novedad' => 0,
+                    'total_dinero' => 0,
+                ],
+                'filtros' => [],
+                'choferesList' => [],
+                'error' => 'Error al generar reporte: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Entregas por cliente (completas, rechazadas, tienda cerrada)
+     * GET /reportes/ventas/entregas-por-cliente
+     */
+    public function entregarsPorCliente(Request $request): InertiaResponse
+    {
+        try {
+            $limite = $request->integer('limite', 20);
+
+            // Validar fechas - default último mes
+            $fechaDesde = $request->filled('fecha_desde')
+                ? $request->date('fecha_desde')
+                : now()->subMonth();
+            $fechaHasta = $request->filled('fecha_hasta')
+                ? $request->date('fecha_hasta')
+                : now();
+
+            // Query 1: Clientes con más entregas COMPLETAS
+            $completasQuery = DB::table('entregas_venta_confirmaciones')
+                ->join('ventas', 'entregas_venta_confirmaciones.venta_id', '=', 'ventas.id')
+                ->join('clientes', 'ventas.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(DISTINCT entregas_venta_confirmaciones.id) as total_entregas'),
+                    DB::raw('SUM(CAST(COALESCE(entregas_venta_confirmaciones.total_dinero_recibido, 0) AS DECIMAL(15,2))) as dinero_recibido')
+                )
+                ->where('entregas_venta_confirmaciones.tipo_confirmacion', 'COMPLETA')
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '>=', $fechaDesde)
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '<=', $fechaHasta)
+                ->whereNotNull('entregas_venta_confirmaciones.confirmado_en')
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_entregas')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_entregas' => (int) $item->total_entregas,
+                        'dinero_recibido' => (float) $item->dinero_recibido,
+                    ];
+                });
+
+            // Query 2: Clientes con más entregas RECHAZADAS
+            $rechazadasQuery = DB::table('entregas_venta_confirmaciones')
+                ->join('ventas', 'entregas_venta_confirmaciones.venta_id', '=', 'ventas.id')
+                ->join('clientes', 'ventas.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(DISTINCT entregas_venta_confirmaciones.id) as total_entregas'),
+                    DB::raw('SUM(CAST(COALESCE(ventas.total, 0) AS DECIMAL(15,2))) as monto_rechazado')
+                )
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->whereNotNull('entregas_venta_confirmaciones.motivo_rechazo')
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '>=', $fechaDesde)
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '<=', $fechaHasta)
+                ->whereNotNull('entregas_venta_confirmaciones.confirmado_en')
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_entregas')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_entregas' => (int) $item->total_entregas,
+                        'monto_rechazado' => (float) $item->monto_rechazado,
+                    ];
+                });
+
+            // Query 3: Clientes donde TIENDA ESTABA CERRADA
+            $tiendaCerradaQuery = DB::table('entregas_venta_confirmaciones')
+                ->join('ventas', 'entregas_venta_confirmaciones.venta_id', '=', 'ventas.id')
+                ->join('clientes', 'ventas.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'clientes.id',
+                    'clientes.nombre',
+                    'clientes.codigo_cliente',
+                    DB::raw('COUNT(DISTINCT entregas_venta_confirmaciones.id) as total_entregas'),
+                    DB::raw('SUM(CAST(COALESCE(ventas.total, 0) AS DECIMAL(15,2))) as monto_intento')
+                )
+                ->where('clientes.codigo_cliente', '!=', 'GENERAL')
+                ->where('entregas_venta_confirmaciones.tienda_abierta', false)
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '>=', $fechaDesde)
+                ->whereDate('entregas_venta_confirmaciones.confirmado_en', '<=', $fechaHasta)
+                ->whereNotNull('entregas_venta_confirmaciones.confirmado_en')
+                ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
+                ->orderByDesc('total_entregas')
+                ->limit($limite)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nombre' => $item->nombre,
+                        'codigo_cliente' => $item->codigo_cliente,
+                        'total_entregas' => (int) $item->total_entregas,
+                        'monto_intento' => (float) $item->monto_intento,
+                    ];
+                });
+
+            $filtros = [
+                'fecha_desde' => $request->input('fecha_desde'),
+                'fecha_hasta' => $request->input('fecha_hasta'),
+                'limite' => $limite,
+            ];
+
+            return Inertia::render('reportes/ventas/entregas-por-cliente', [
+                'completadas' => $completasQuery,
+                'rechazadas' => $rechazadasQuery,
+                'tiendaCerrada' => $tiendaCerradaQuery,
+                'filtros' => $filtros,
+                'fecha_desde' => $fechaDesde->format('Y-m-d'),
+                'fecha_hasta' => $fechaHasta->format('Y-m-d'),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en ReporteVentasController::entregarsPorCliente', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return Inertia::render('reportes/ventas/entregas-por-cliente', [
+                'completadas' => [],
+                'rechazadas' => [],
+                'tiendaCerrada' => [],
+                'filtros' => [],
+                'error' => 'Error al generar reporte: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Imprimir reporte de productos vendidos
      * GET /ventas/reporte-productos-vendidos/imprimir
      */

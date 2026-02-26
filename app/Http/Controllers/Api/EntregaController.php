@@ -1020,32 +1020,10 @@ class EntregaController extends Controller
 
             $venta->update($datosActualizacion);
 
-            // ✅ NUEVO: Determinar tipo de entrega y tipo de novedad para reportes
-            $tipoEntrega = 'COMPLETA';
-            $tipoNovedad = null;
-            $tuvoProblema = false;
-
-            $observacionesLogistica = $validated['observaciones_logistica'] ?? null;
-
-            if ($observacionesLogistica && $observacionesLogistica !== 'Entrega completa') {
-                $tipoEntrega = 'CON_NOVEDAD';
-                $tuvoProblema = true;
-
-                // Extraer tipo de novedad (primeras palabras antes del guion)
-                if (strpos($observacionesLogistica, 'Cliente Cerrado') !== false ||
-                    strpos($observacionesLogistica, 'CLIENTE_CERRADO') !== false) {
-                    $tipoNovedad = 'CLIENTE_CERRADO';
-                } elseif (strpos($observacionesLogistica, 'Devolución Parcial') !== false ||
-                          strpos($observacionesLogistica, 'DEVOLUCION_PARCIAL') !== false) {
-                    $tipoNovedad = 'DEVOLUCION_PARCIAL';
-                } elseif (strpos($observacionesLogistica, 'RECHAZADO') !== false ||
-                          strpos($observacionesLogistica, 'Rechazo') !== false) {
-                    $tipoNovedad = 'RECHAZADA';
-                } elseif (strpos($observacionesLogistica, 'NO_CONTACTADO') !== false ||
-                          strpos($observacionesLogistica, 'No Contactado') !== false) {
-                    $tipoNovedad = 'NO_CONTACTADO';
-                }
-            }
+            // ✅ MEJORADO: Usar tipo_confirmacion y tipo_novedad del frontend (no derivar de observaciones)
+            $tipoEntrega = $validated['tipo_confirmacion'] ?? 'COMPLETA';
+            $tipoNovedad = $validated['tipo_novedad'] ?? null;
+            $tuvoProblema = $tipoEntrega === 'CON_NOVEDAD';  // Hay problema si no es COMPLETA
 
             // ✅ MEJORADO: Guardar la confirmación con soporte para múltiples pagos + productos rechazados
             $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
@@ -1153,6 +1131,213 @@ class EntregaController extends Controller
                 'success' => false,
                 'message' => 'Error al confirmar venta entregada',
                 'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * PUT /api/entregas/{id}/ventas/{venta_id}/confirmaciones/{confirmacion_id}
+     *
+     * ✅ NUEVO: Actualizar una confirmación de entrega existente
+     * Utilizado cuando el chofer necesita editar los datos de una entrega ya confirmada
+     */
+    public function actualizarConfirmacionVenta(Request $request, $id, $venta_id, $confirmacion_id)
+    {
+        try {
+            // ✅ Validar datos (misma validación que confirmarVentaEntregada)
+            $validated = $request->validate([
+                'fotos' => 'nullable|array',
+                'fotos.*' => 'string',
+                'observaciones' => 'nullable|string|max:500',
+                'observaciones_logistica' => 'nullable|string|max:1000',
+                'tienda_abierta' => 'nullable|boolean',
+                'cliente_presente' => 'nullable|boolean',
+                'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
+
+                // ✅ Múltiples pagos (nuevo)
+                'pagos' => 'nullable|array',
+                'pagos.*.tipo_pago_id' => 'required_with:pagos|exists:tipos_pago,id',
+                'pagos.*.monto' => 'required_with:pagos|numeric|min:0',
+                'pagos.*.referencia' => 'nullable|string|max:100',
+
+                // ✅ Pago único (backward compatibility)
+                'monto_recibido' => 'nullable|numeric|min:0',
+                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',
+
+                // ✅ Tipo de confirmación
+                'tipo_confirmacion' => 'nullable|in:COMPLETA,CON_NOVEDAD',
+                'tipo_novedad' => 'nullable|string|in:CLIENTE_CERRADO,DEVOLUCION_PARCIAL,RECHAZADO,NO_CONTACTADO',
+
+                // ✅ Productos devueltos (devolución parcial)
+                'productos_devueltos' => 'nullable|array',
+                'productos_devueltos.*.producto_id' => 'required_with:productos_devueltos|integer',
+                'productos_devueltos.*.producto_nombre' => 'required_with:productos_devueltos|string|max:255',
+                'productos_devueltos.*.cantidad' => 'required_with:productos_devueltos|numeric|min:0',
+                'productos_devueltos.*.precio_unitario' => 'required_with:productos_devueltos|numeric|min:0',
+                'productos_devueltos.*.subtotal' => 'required_with:productos_devueltos|numeric|min:0',
+            ]);
+
+            // ✅ Obtener la confirmación existente
+            $confirmacion = EntregaVentaConfirmacion::findOrFail($confirmacion_id);
+
+            if ($confirmacion->entrega_id != $id || $confirmacion->venta_id != $venta_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La confirmación no coincide con la entrega y venta proporcionadas',
+                ], 422);
+            }
+
+            $entrega = Entrega::findOrFail($id);
+            $venta = Venta::findOrFail($venta_id);
+
+            // ✅ Procesar múltiples pagos o pago único
+            $desglosePagos = null;
+            $totalDineroRecibido = 0;
+            $montoPendiente = 0;
+
+            if (isset($validated['pagos']) && !empty($validated['pagos'])) {
+                // Opción A: Múltiples pagos
+                $desglosePagos = [];
+                foreach ($validated['pagos'] as $pago) {
+                    $tipoPago = \App\Models\TipoPago::find($pago['tipo_pago_id']);
+                    $desglosePagos[] = [
+                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                        'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
+                        'monto' => (float) $pago['monto'],
+                        'referencia' => $pago['referencia'] ?? null,
+                    ];
+                    $totalDineroRecibido += (float) $pago['monto'];
+                }
+            } else if (isset($validated['monto_recibido']) && $validated['monto_recibido'] > 0) {
+                // Opción B: Pago único
+                $tipoPago = \App\Models\TipoPago::find($validated['tipo_pago_id']);
+                $desglosePagos = [[
+                    'tipo_pago_id' => $validated['tipo_pago_id'],
+                    'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
+                    'monto' => (float) $validated['monto_recibido'],
+                    'referencia' => null,
+                ]];
+                $totalDineroRecibido = (float) $validated['monto_recibido'];
+            }
+
+            // Calcular monto pendiente
+            $montoAjustado = $venta->total;
+            if (isset($validated['productos_devueltos']) && !empty($validated['productos_devueltos'])) {
+                foreach ($validated['productos_devueltos'] as $producto) {
+                    $montoAjustado -= (float) $producto['subtotal'];
+                }
+            }
+            $montoPendiente = max(0, $montoAjustado - $totalDineroRecibido);
+
+            // ✅ Determinar estado de pago
+            $estadoPago = 'NO_PAGADO';
+            if ($totalDineroRecibido >= $montoAjustado) {
+                $estadoPago = 'PAGADO';
+            } else if ($totalDineroRecibido > 0) {
+                $estadoPago = 'PARCIAL';
+            }
+
+            // ✅ Procesar productos devueltos
+            $productosDevueltos = null;
+            $montoDevuelto = 0;
+            $montoAceptado = $venta->total;
+
+            if (isset($validated['productos_devueltos']) && !empty($validated['productos_devueltos'])) {
+                $productosDevueltos = [];
+                foreach ($validated['productos_devueltos'] as $producto) {
+                    $productosDevueltos[] = [
+                        'producto_id' => (int) $producto['producto_id'],
+                        'producto_nombre' => $producto['producto_nombre'],
+                        'cantidad' => (float) $producto['cantidad'],
+                        'precio_unitario' => (float) $producto['precio_unitario'],
+                        'subtotal' => (float) $producto['subtotal'],
+                    ];
+                    $montoDevuelto += (float) $producto['subtotal'];
+                }
+                $montoAceptado = max(0, $venta->total - $montoDevuelto);
+            }
+
+            // ✅ Guardar fotos nuevas (opcionalmente)
+            $fotosUrls = $confirmacion->fotos ?? [];
+            if (!empty($validated['fotos'])) {
+                $fotosUrls = [];  // Reemplazar fotos existentes
+                foreach ($validated['fotos'] as $foto) {
+                    // Si es una URL ya existente (starts with http), mantenerla
+                    if (strpos($foto, 'http') === 0) {
+                        $fotosUrls[] = $foto;
+                    } else {
+                        // Si es base64, guardarla como archivo
+                        $fotoUrl = $this->guardarArchivoBase64($foto, 'entregas');
+                        if ($fotoUrl) {
+                            $fotosUrls[] = $fotoUrl;
+                        }
+                    }
+                }
+            }
+
+            // ✅ Determinar tipo_entrega basado en tipo_confirmacion
+            $tipoConfirmacionActualizado = $validated['tipo_confirmacion'] ?? $confirmacion->tipo_confirmacion ?? 'COMPLETA';
+            $tipoNovedadActualizado = $validated['tipo_novedad'] ?? $confirmacion->tipo_novedad;
+
+            // ✅ Actualizar la confirmación
+            $confirmacion->update([
+                'tipo_entrega' => $tipoConfirmacionActualizado,  // ✅ COMPLETA o CON_NOVEDAD
+                'tipo_confirmacion' => $tipoConfirmacionActualizado,
+                'tipo_novedad' => $tipoNovedadActualizado,
+                'tienda_abierta' => $validated['tienda_abierta'] ?? $confirmacion->tienda_abierta,
+                'cliente_presente' => $validated['cliente_presente'] ?? $confirmacion->cliente_presente,
+                'motivo_rechazo' => $validated['motivo_rechazo'] ?? $confirmacion->motivo_rechazo,
+                'observaciones_logistica' => $validated['observaciones_logistica'] ?? $confirmacion->observaciones_logistica,
+                'observaciones' => $validated['observaciones'] ?? $confirmacion->observaciones,
+
+                // Pagos
+                'desglose_pagos' => $desglosePagos ?? $confirmacion->desglose_pagos,
+                'total_dinero_recibido' => $totalDineroRecibido ?: $confirmacion->total_dinero_recibido,
+                'monto_pendiente' => $montoPendiente,
+                'estado_pago' => $estadoPago,
+                'tipo_pago_id' => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : $confirmacion->tipo_pago_id,
+                'monto_recibido' => $totalDineroRecibido ?: $confirmacion->monto_recibido,
+
+                // Devoluciones
+                'productos_devueltos' => $productosDevueltos ?? $confirmacion->productos_devueltos,
+                'monto_devuelto' => $montoDevuelto > 0 ? $montoDevuelto : $confirmacion->monto_devuelto,
+                'monto_aceptado' => $montoAceptado,
+
+                // Fotos
+                'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,
+
+                'confirmado_por' => Auth::id(),
+                'confirmado_en' => now(),
+            ]);
+
+            Log::info('✅ Confirmación de entrega actualizada', [
+                'entrega_id' => $id,
+                'venta_id' => $venta_id,
+                'confirmacion_id' => $confirmacion_id,
+                'estado_pago' => $estadoPago,
+                'total_dinero_recibido' => $totalDineroRecibido,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Confirmación actualizada correctamente',
+                'confirmacion' => $confirmacion->fresh(),
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Errores de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error en actualizarConfirmacionVenta', [
+                'error' => $e->getMessage(),
+                'confirmacion_id' => $confirmacion_id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

@@ -14,25 +14,43 @@ interface ImageViewerModalProps {
 }
 
 const TipoEntregaBadge = ({ tipo, tipoNovedad }: { tipo?: string; tipoNovedad?: string }) => {
-    if (tipo === 'NOVEDAD') {
+    // ✅ ACTUALIZADO: Usar CON_NOVEDAD en lugar de NOVEDAD
+    if (tipo === 'CON_NOVEDAD') {
         const novedadClases: Record<string, string> = {
             CLIENTE_CERRADO: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
             DEVOLUCION_PARCIAL: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
             RECHAZADO: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+            NO_CONTACTADO: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
         };
         const clase = novedadClases[tipoNovedad || ''] || 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+        const novedadTexto: Record<string, string> = {
+            CLIENTE_CERRADO: 'Cliente Cerrado',
+            DEVOLUCION_PARCIAL: 'Devolución Parcial',
+            RECHAZADO: 'Rechazado',
+            NO_CONTACTADO: 'No Contactado',
+        };
         return (
             <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${clase}`}>
                 <AlertCircle size={14} />
-                ⚠️ {tipoNovedad || 'Novedad'}
+                ⚠️ {novedadTexto[tipoNovedad || ''] || 'Novedad'}
             </span>
         );
     }
 
+    // ✅ Si es COMPLETA
+    if (tipo === 'COMPLETA') {
+        return (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">
+                <CheckCircle2 size={14} />
+                ✅ Completa
+            </span>
+        );
+    }
+
+    // Fallback para valores desconocidos
     return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">
-            <CheckCircle2 size={14} />
-            ✅ Completa
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+            ❓ {tipo}
         </span>
     );
 };
@@ -255,7 +273,7 @@ export default function ConfirmacionesEntregaSection({ confirmaciones = [], vent
                                         </div>
                                     </div>
 
-                                    {confirmacion.tipo_entrega === 'NOVEDAD' && confirmacion.motivo_rechazo && (
+                                    {confirmacion.tipo_entrega === 'CON_NOVEDAD' && confirmacion.motivo_rechazo && (
                                         <div>
                                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                                 Motivo de Rechazo

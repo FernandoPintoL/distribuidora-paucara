@@ -89,6 +89,15 @@ export default function CreateEntregasUnificado({
     onCancel,
 }: CreateEntregasUnificadoProps) {
     const isEditMode = modo === 'editar';
+
+    // 🔍 LOG: Ventas recibidas del backend
+    console.log('📥 [CreateEntregasUnificado] Ventas recibidas del backend:', {
+        total: ventas.length,
+        ids: ventas.map(v => v.id),
+        ventaPreseleccionada,
+        contiene_preseleccionada: ventaPreseleccionada ? ventas.some(v => v.id === ventaPreseleccionada) : 'N/A',
+        primera_venta: ventas[0],
+    });
     // Estado de selección de ventas
     // Usar Id en lugar de number para ser compatible con VentaConDetalles.id
     const [selectedVentaIds, setSelectedVentaIds] = useState<Id[]>(
@@ -131,6 +140,7 @@ export default function CreateEntregasUnificado({
 
     // Hook para recomendación de vehículo (batch mode)
     // ⚠️ En edit mode, NO usar el hook porque el backend ya envía peso_kg + ventas asignadas
+    // ✅ Backend ahora devuelve la venta pre-seleccionada directamente en el array inicial
     const hookResult = isEditMode
         ? {
             recomendado: null,
@@ -142,7 +152,7 @@ export default function CreateEntregasUnificado({
         }
         : useVehiculoRecomendado(
             selectedVentaIds,
-            ventas,
+            ventas, // ✅ Usar ventas directamente (backend ya trae la pre-seleccionada)
             true, // Auto-select recomendado
             handleSelectVehiculo
         );

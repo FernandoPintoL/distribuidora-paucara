@@ -355,22 +355,18 @@ class EntregaService
      * ✅ REFACTORIZADO FASE 1: Usa método centralizado
      *
      * @param int $entregaId ID de la entrega
-     * @param string|null $firmaDigitalUrl URL de la firma digital del cliente
      * @param string|null $fotoEntregaUrl URL de la foto de la entrega
      */
     public function confirmar(
         int $entregaId,
-        ?string $firmaDigitalUrl = null,
         ?string $fotoEntregaUrl = null,
     ): EntregaResponseDTO {
         $entrega = Entrega::lockForUpdate()->findOrFail($entregaId);
 
-        // Actualizar con registros de firma/foto
+        // Actualizar con registros de foto
         $datosAdicionales = [
-            'fecha_entrega'       => now(),
-            'fecha_firma_entrega' => $firmaDigitalUrl ? now() : null,
-            'firma_digital_url'   => $firmaDigitalUrl,
-            'foto_entrega_url'    => $fotoEntregaUrl,
+            'fecha_entrega'    => now(),
+            'foto_entrega_url' => $fotoEntregaUrl,
         ];
 
         // Usar método centralizado para cambio de estado
@@ -383,7 +379,6 @@ class EntregaService
 
         $this->logSuccess('Entrega confirmada', [
             'entrega_id' => $entregaId,
-            'con_firma'  => $firmaDigitalUrl !== null,
             'con_foto'   => $fotoEntregaUrl !== null,
         ]);
 

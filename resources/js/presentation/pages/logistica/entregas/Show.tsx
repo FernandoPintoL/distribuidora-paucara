@@ -11,6 +11,7 @@ import ProductosAgrupados from './components/ProductosAgrupados';
 import ResumenPagosEntrega from './components/ResumenPagosEntrega';
 import ConfirmacionesEntregaSection from './components/ConfirmacionesEntregaSection';
 import { CorregirPagoModal } from './components/CorregirPagoModal';
+import { EntregaActionsModal } from '@/presentation/components/logistica/entrega-actions-modal';
 import EstadoBadge from '@/presentation/components/logistica/EstadoBadge';
 import EstregaMap from '@/presentation/components/logistica/EstregaMap';
 import EntregaHistorialCambios from '@/presentation/components/logistica/EntregaHistorialCambios';
@@ -19,6 +20,7 @@ import { useState, useEffect } from 'react';
 import { useEntregaNotifications } from '@/application/hooks/use-entrega-notifications';
 import { useToastNotifications } from '@/application/hooks/use-toast-notifications';
 import { useWebSocket } from '@/application/hooks/use-websocket';
+import type { VentaEntrega } from '@/domain/entities/entregas';
 
 interface TipoPago {
     id: number;
@@ -58,6 +60,10 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
     const [isInitiatingRoute, setIsInitiatingRoute] = useState(false);
     const [isFinalizingDelivery, setIsFinalizingDelivery] = useState(false);
     const [corrigiendo, setCorrigiendo] = useState<{ ventaId: number; ventaNumero: string; ventaTotal: number; desglose: DesglosePago[] } | null>(null);
+    // ✅ NUEVO: Estado para confirmación de entrega individual
+    const [confirmandoEntrega, setConfirmandoEntrega] = useState<VentaEntrega | null>(null);
+    // ✅ NUEVO: Estado para confirmación existente (editar)
+    const [confirmacionExistente, setConfirmacionExistente] = useState<any>(null);
 
     // ✅ DEBUG: Ver qué datos llegan del backend
     useEffect(() => {
@@ -68,6 +74,18 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
             datos: initialEntrega?.confirmacionesVentas,
         }); */
     }, [initialEntrega]);
+
+    // ✅ Cargar confirmación existente cuando se selecciona una venta
+    useEffect(() => {
+        if (confirmandoEntrega && entrega.confirmacionesVentas) {
+            const confirmacion = entrega.confirmacionesVentas.find(
+                (c: any) => c.venta_id === confirmandoEntrega.id
+            );
+            setConfirmacionExistente(confirmacion || null);
+        } else {
+            setConfirmacionExistente(null);
+        }
+    }, [confirmandoEntrega, entrega.confirmacionesVentas]);
 
     // Hooks para sincronización en tiempo real
     const { isConnected, on, off } = useWebSocket();
@@ -432,6 +450,25 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                         }}
                     />
 
+                    {/* ✅ NUEVO: Modal mejorado para confirmar entrega de venta */}
+                    {confirmandoEntrega && (
+                        <EntregaActionsModal
+                            entrega={entrega}
+                            venta={confirmandoEntrega as any}
+                            confirmacionExistente={confirmacionExistente}
+                            isOpen={Boolean(confirmandoEntrega)}
+                            onClose={() => setConfirmandoEntrega(null)}
+                            actionType="confirmar-entrega"
+                            onSuccess={() => {
+                                setConfirmandoEntrega(null);
+                                // Recargar la página para reflejar cambios
+                                setTimeout(() => {
+                                    router.reload();
+                                }, 1000);
+                            }}
+                        />
+                    )}
+
                     {/* ✅ NUEVO: Modal para corregir pagos */}
                     {corrigiendo && (
                         <CorregirPagoModal
@@ -508,6 +545,9 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                         entrega={entrega}
                         ventas={entrega.ventas}
                         totalVentas={entrega.ventas.length}
+                        onConfirmarEntrega={(venta) => {
+                            setConfirmandoEntrega(venta);
+                        }}
                         onCorregirPago={(ventaId, ventaNumero, ventaTotal, desglose) => {
                             setCorrigiendo({ ventaId, ventaNumero, ventaTotal, desglose });
                         }}

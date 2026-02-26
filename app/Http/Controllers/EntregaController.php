@@ -263,6 +263,8 @@ class EntregaController extends Controller
         // ✅ NUEVO: Paginar para evitar carga inicial lenta
         // ✅ NUEVO: Solo ventas APROBADAS (estado_documento_id = 3)
         $perPage = 25; // Mostrar 25 ventas por página
+
+        // ✅ FIX: Si hay venta pre-seleccionada, cargarla sin importar tipo_entrega
         $ventasQuery = \App\Models\Venta::query()
             ->with([
                 'cliente.direcciones', // Cargar direcciones del cliente (fallback)
@@ -274,8 +276,19 @@ class EntregaController extends Controller
             ->whereNull('entrega_id')       // ✅ Phase 3: No tiene entrega principal asignada
             ->where('requiere_envio', true) // ✅ Solo ventas que requieren envío
             ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS (ID 3)
-            ->where('tipo_entrega', 'DELIVERY')    // ✅ NUEVO: Solo ventas DELIVERY
-            ->whereDate('created_at', today())     // ✅ NUEVO: Solo ventas creadas hoy
+            ->where(function ($query) use ($ventaPreseleccionada) {
+                // Lógica:
+                // 1️⃣ Mostrar TODAS las ventas de HOY con tipo DELIVERY
+                $query->where(function ($q) {
+                    $q->whereDate('created_at', today())
+                        ->where('tipo_entrega', 'DELIVERY');
+                });
+
+                // 2️⃣ PLUS la venta pre-seleccionada (sin importar fecha ni tipo)
+                if ($ventaPreseleccionada) {
+                    $query->orWhere('id', $ventaPreseleccionada);
+                }
+            })
             ->whereNotNull('cliente_id')    // Debe tener cliente
             ->whereHas('detalles')          // Debe tener detalles de productos
             ->latest();
@@ -283,8 +296,71 @@ class EntregaController extends Controller
         // Paginar en lugar de obtener todo
         $ventasPaginated = $ventasQuery->paginate($perPage);
 
-        $ventas = $ventasPaginated->getCollection()
+        // ✅ NUEVO: Si hay venta pre-seleccionada, asegurar que esté en los resultados
+        $ventasEnPagina = $ventasPaginated->getCollection();
+
+        \Log::info('🔍 [EntregaController::create] Verificando venta pre-seleccionada', [
+            'venta_preseleccionada_id' => $ventaPreseleccionada,
+            'ventas_en_pagina_inicial' => $ventasEnPagina->count(),
+            'ids_inicial' => $ventasEnPagina->pluck('id')->toArray(),
+        ]);
+
+        $ventaPreseleccionadaEnResultados = $ventaPreseleccionada
+            ? $ventasEnPagina->firstWhere('id', $ventaPreseleccionada)
+            : null;
+
+        // Si la venta pre-seleccionada NO está en los resultados, cargarla directamente
+        if ($ventaPreseleccionada && !$ventaPreseleccionadaEnResultados) {
+            \Log::info('⚠️ Venta pre-seleccionada NO está en resultados, buscando directamente', [
+                'venta_id' => $ventaPreseleccionada,
+            ]);
+
+            $ventaPreseleccionadaObj = \App\Models\Venta::with([
+                'cliente.direcciones',
+                'cliente.localidad',
+                'detalles.producto',
+                'estadoDocumento',
+                'direccionCliente',
+            ])->find($ventaPreseleccionada);
+
+            if ($ventaPreseleccionadaObj) {
+                \Log::info('✅ Venta pre-seleccionada cargada, agregando al inicio', [
+                    'venta_id' => $ventaPreseleccionadaObj->id,
+                    'num_detalles' => $ventaPreseleccionadaObj->detalles?->count(),
+                    'peso' => $ventaPreseleccionadaObj->peso_total_estimado,
+                ]);
+                // Agregar al inicio de la colección
+                $ventasEnPagina = $ventasEnPagina->prepend($ventaPreseleccionadaObj);
+            } else {
+                \Log::warning('❌ No se encontró venta pre-seleccionada en BD', [
+                    'venta_id' => $ventaPreseleccionada,
+                ]);
+            }
+        } else if ($ventaPreseleccionada && $ventaPreseleccionadaEnResultados) {
+            \Log::info('✅ Venta pre-seleccionada YA estaba en resultados');
+        }
+
+        \Log::info('📋 [EntregaController::create] Ventas cargadas FINALES', [
+            'venta_preseleccionada' => $ventaPreseleccionada,
+            'total_ventas' => $ventasPaginated->total(),
+            'ventas_en_pagina_final' => $ventasEnPagina->count(),
+            'ids_final' => $ventasEnPagina->pluck('id')->toArray(),
+        ]);
+
+        $ventas = $ventasEnPagina
             ->map(function ($venta) {
+                // ✅ NUEVO: Si peso_total_estimado está vacío, recalcular desde detalles
+                $pesoTotalEstimado = (float) ($venta->peso_total_estimado ?? 0);
+                if ($pesoTotalEstimado === 0.0 && $venta->detalles?->count() > 0) {
+                    // Calcular peso desde detalles: suma(cantidad * peso_producto)
+                    $pesoTotalEstimado = $venta->detalles->reduce(function ($carry, $detalle) {
+                        $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                        return $carry + ((float) $detalle->cantidad * $pesoProd);
+                    }, 0);
+
+                    \Log::info("📊 [EntregaController] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg");
+                }
+
                 // Obtener dirección: prioridad venta -> cliente principal -> primera dirección cliente
                 $direccionCliente = null;
                 if ($venta->direccionCliente) {
@@ -313,8 +389,8 @@ class EntregaController extends Controller
                     'numero_venta' => $venta->numero ?? "V-{$venta->id}",
                     'numero'                     => $venta->numero,
                     'subtotal'                   => (float) $venta->subtotal,                   // ✅ NUEVO: Sin impuesto
-                    'peso_total_estimado'        => (float) ($venta->peso_total_estimado ?? 0), // ✅ NUEVO: Peso pre-calculado
-                    'peso_estimado'              => (float) ($venta->peso_total_estimado ?? 0), // Fallback para compatibilidad
+                    'peso_total_estimado'        => $pesoTotalEstimado, // ✅ CORREGIDO: Peso recalculado si falta
+                    'peso_estimado'              => $pesoTotalEstimado, // Fallback para compatibilidad
                     'fecha_venta'                => $venta->fecha?->format('Y-m-d'),
                     'fecha'                      => $venta->fecha?->format('Y-m-d'),
                     'created_at'                 => $venta->created_at?->format('Y-m-d H:i'), // ✅ NUEVO: Fecha y hora de creación
@@ -426,6 +502,17 @@ class EntregaController extends Controller
             ])
             ->get()
             ->map(function ($venta) {
+                // ✅ NUEVO: Si peso_total_estimado está vacío, recalcular desde detalles
+                $pesoTotalEstimado = (float) ($venta->peso_total_estimado ?? 0);
+                if ($pesoTotalEstimado === 0.0 && $venta->detalles?->count() > 0) {
+                    $pesoTotalEstimado = $venta->detalles->reduce(function ($carry, $detalle) {
+                        $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                        return $carry + ((float) $detalle->cantidad * $pesoProd);
+                    }, 0);
+
+                    \Log::info("📊 [EntregaController::edit] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg");
+                }
+
                 // Obtener dirección: prioridad venta -> cliente principal -> primera dirección cliente
                 $direccionCliente = null;
                 if ($venta->direccionCliente) {
@@ -452,8 +539,8 @@ class EntregaController extends Controller
                     'numero_venta'                => $venta->numero ?? "V-{$venta->id}",
                     'numero'                      => $venta->numero,
                     'subtotal'                    => (float) $venta->subtotal,
-                    'peso_total_estimado'         => (float) ($venta->peso_total_estimado ?? 0),
-                    'peso_estimado'               => (float) ($venta->peso_total_estimado ?? 0),
+                    'peso_total_estimado'         => $pesoTotalEstimado,
+                    'peso_estimado'               => $pesoTotalEstimado,
                     'fecha_venta'                 => $venta->fecha?->format('Y-m-d'),
                     'fecha'                       => $venta->fecha?->format('Y-m-d'),
                     'estado'                      => $venta->estadoDocumento?->nombre ?? 'Sin estado',
@@ -492,13 +579,24 @@ class EntregaController extends Controller
             ->where('estado_documento_id', 3) // Solo APROBADAS
             ->whereNotNull('cliente_id')
             ->whereHas('detalles')
-            ->whereDate('created_at', today()) // ✅ NUEVO: Solo ventas creadas HOY por defecto
+            ->whereDate('created_at', today()) // ✅ En modo edición siempre mostrar solo HOY
             ->latest();
 
         $ventasDisponiblesPaginated = $ventasDisponiblesQuery->paginate($perPage);
 
         $ventasDisponibles = $ventasDisponiblesPaginated->getCollection()
             ->map(function ($venta) {
+                // ✅ NUEVO: Si peso_total_estimado está vacío, recalcular desde detalles
+                $pesoTotalEstimado = (float) ($venta->peso_total_estimado ?? 0);
+                if ($pesoTotalEstimado === 0.0 && $venta->detalles?->count() > 0) {
+                    $pesoTotalEstimado = $venta->detalles->reduce(function ($carry, $detalle) {
+                        $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                        return $carry + ((float) $detalle->cantidad * $pesoProd);
+                    }, 0);
+
+                    \Log::info("📊 [EntregaController::edit-disponibles] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg");
+                }
+
                 $direccionCliente = null;
                 if ($venta->direccionCliente) {
                     $direccionCliente = [
@@ -524,8 +622,8 @@ class EntregaController extends Controller
                     'numero_venta'                => $venta->numero ?? "V-{$venta->id}",
                     'numero'                      => $venta->numero,
                     'subtotal'                    => (float) $venta->subtotal,
-                    'peso_total_estimado'         => (float) ($venta->peso_total_estimado ?? 0),
-                    'peso_estimado'               => (float) ($venta->peso_total_estimado ?? 0),
+                    'peso_total_estimado'         => $pesoTotalEstimado,
+                    'peso_estimado'               => $pesoTotalEstimado,
                     'fecha_venta'                 => $venta->fecha?->format('Y-m-d'),
                     'fecha'                       => $venta->fecha?->format('Y-m-d'),
                     'estado'                      => $venta->estadoDocumento?->nombre ?? 'Sin estado',
@@ -642,6 +740,14 @@ class EntregaController extends Controller
         $page = $request->input('page', 1);
         $perPage = 25;
 
+        // 🔍 LOG: Parámetros recibidos
+        \Log::info('🔍 [searchVentas] Parámetros recibidos:', [
+            'q' => $searchTerm,
+            'fecha_desde' => $fechaDesde,
+            'fecha_hasta' => $fechaHasta,
+            'page' => $page,
+        ]);
+
         $query = \App\Models\Venta::query()
             ->with([
                 'cliente.direcciones',
@@ -694,8 +800,32 @@ class EntregaController extends Controller
         // Paginar resultados
         $ventasPaginated = $query->latest()->paginate($perPage, ['*'], 'page', $page);
 
+        // 🔍 LOG: Resultados de búsqueda
+        \Log::info('📊 [searchVentas] Resultados encontrados:', [
+            'total_ventas' => $ventasPaginated->total(),
+            'ventas_en_pagina' => $ventasPaginated->count(),
+            'ids_ventas' => $ventasPaginated->pluck('id')->toArray(),
+            'detalles_por_venta' => $ventasPaginated->getCollection()->map(fn($v) => [
+                'id' => $v->id,
+                'numero' => $v->numero,
+                'cant_detalles' => $v->detalles?->count() ?? 0,
+                'peso_total_estimado' => $v->peso_total_estimado,
+            ])->toArray(),
+        ]);
+
         // Transformar datos
         $ventas = $ventasPaginated->getCollection()->map(function ($venta) {
+            // ✅ NUEVO: Si peso_total_estimado está vacío, recalcular desde detalles
+            $pesoTotalEstimado = (float) ($venta->peso_total_estimado ?? 0);
+            if ($pesoTotalEstimado === 0.0 && $venta->detalles?->count() > 0) {
+                $pesoTotalEstimado = $venta->detalles->reduce(function ($carry, $detalle) {
+                    $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                    return $carry + ((float) $detalle->cantidad * $pesoProd);
+                }, 0);
+
+                \Log::info("📊 [EntregaController::searchVentas] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg");
+            }
+
             $direccionCliente = null;
             if ($venta->direccionCliente) {
                 $direccionCliente = [
@@ -721,8 +851,8 @@ class EntregaController extends Controller
                 'numero_venta'                   => $venta->numero ?? "V-{$venta->id}",
                 'numero'                         => $venta->numero,
                 'subtotal'                       => (float) $venta->subtotal,
-                'peso_total_estimado'            => (float) ($venta->peso_total_estimado ?? 0),
-                'peso_estimado'                  => (float) ($venta->peso_total_estimado ?? 0),
+                'peso_total_estimado'            => $pesoTotalEstimado,
+                'peso_estimado'                  => $pesoTotalEstimado,
                 'fecha_venta'                    => $venta->fecha?->format('Y-m-d'),
                 'fecha'                          => $venta->fecha?->format('Y-m-d'),
                 'estado'                         => $venta->estadoDocumento?->nombre ?? 'Sin estado',
@@ -745,7 +875,19 @@ class EntregaController extends Controller
             ];
         });
 
-        return response()->json([
+        // 🔍 LOG: Datos finales a enviar (sin detalles para brevedad)
+        \Log::info('✅ [searchVentas] Datos a enviar al frontend:', [
+            'total_ventas_respuesta' => $ventas->count(),
+            'resumen_ventas' => $ventas->map(fn($v) => [
+                'id' => $v['id'],
+                'numero' => $v['numero_venta'],
+                'cant_detalles' => count($v['detalles']),
+                'peso_total_estimado' => $v['peso_total_estimado'],
+                'primer_detalle' => $v['detalles'][0] ?? null,
+            ])->toArray(),
+        ]);
+
+        $response = [
             'data'         => $ventas,
             'pagination'   => [
                 'current_page' => $ventasPaginated->currentPage(),
@@ -754,7 +896,9 @@ class EntregaController extends Controller
                 'last_page'    => $ventasPaginated->lastPage(),
                 'has_more'     => $ventasPaginated->hasMorePages(),
             ],
-        ]);
+        ];
+
+        return response()->json($response);
     }
 
     /**
@@ -1055,17 +1199,15 @@ class EntregaController extends Controller
      *
      * Body:
      * {
-     *   "firma": "base64_string",
      *   "fotos": ["url1", "url2"]
      * }
      */
     public function confirmar(Request $request, int $id): JsonResponse | RedirectResponse
     {
         try {
-            $firma = $request->input('firma');
             $fotos = $request->input('fotos', []);
 
-            $entregaDTO = $this->entregaService->confirmar($id, $firma, $fotos);
+            $entregaDTO = $this->entregaService->confirmar($id, $fotos);
 
             return $this->respondSuccess(
                 data: $entregaDTO,

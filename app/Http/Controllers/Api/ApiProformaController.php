@@ -880,8 +880,10 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha', '>=', $request->fecha_desde);
         }
 
+        // ✅ CORREGIDO: Usar < en lugar de <= para que fecha_hasta sea exclusiva
+        // Esto permite enviar "hoy + 1 día" desde el frontend y capturar solo "hoy"
         if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<=', $request->fecha_hasta);
+            $query->whereDate('fecha', '<', $request->fecha_hasta);
         }
 
         // ✅ NUEVO: Filtro por fecha de vencimiento
@@ -889,8 +891,9 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha_vencimiento', '>=', $request->fecha_vencimiento_desde);
         }
 
+        // ✅ CORREGIDO: Usar < en lugar de <= para que fecha_vencimiento_hasta sea exclusiva
         if ($request->filled('fecha_vencimiento_hasta')) {
-            $query->whereDate('fecha_vencimiento', '<=', $request->fecha_vencimiento_hasta);
+            $query->whereDate('fecha_vencimiento', '<', $request->fecha_vencimiento_hasta);
         }
 
         // ✅ NUEVO: Filtro por fecha de entrega solicitada
@@ -898,8 +901,9 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha_entrega_solicitada', '>=', $request->fecha_entrega_solicitada_desde);
         }
 
+        // ✅ CORREGIDO: Usar < en lugar de <= para que fecha_entrega_solicitada_hasta sea exclusiva
         if ($request->filled('fecha_entrega_solicitada_hasta')) {
-            $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
+            $query->whereDate('fecha_entrega_solicitada', '<', $request->fecha_entrega_solicitada_hasta);
         }
 
         // ✅ NUEVO 2026-02-21: Búsqueda general con PRIORIDAD en ID y número
@@ -5074,7 +5078,7 @@ class ApiProformaController extends Controller
                 $query->whereDate('fecha_vencimiento', '>=', $request->input('fecha_vencimiento_desde'));
             }
             if ($request->filled('fecha_vencimiento_hasta')) {
-                $query->whereDate('fecha_vencimiento', '<=', $request->input('fecha_vencimiento_hasta'));
+                $query->whereDate('fecha_vencimiento', '<', $request->input('fecha_vencimiento_hasta'));
             }
 
             // Filtros de fechas de entrega solicitada
@@ -5082,7 +5086,7 @@ class ApiProformaController extends Controller
                 $query->whereDate('fecha_entrega_solicitada', '>=', $request->input('fecha_entrega_solicitada_desde'));
             }
             if ($request->filled('fecha_entrega_solicitada_hasta')) {
-                $query->whereDate('fecha_entrega_solicitada', '<=', $request->input('fecha_entrega_solicitada_hasta'));
+                $query->whereDate('fecha_entrega_solicitada', '<', $request->input('fecha_entrega_solicitada_hasta'));
             }
 
             // Obtener TODOS los resultados (sin paginación)

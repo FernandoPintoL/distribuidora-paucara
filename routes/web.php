@@ -835,6 +835,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('por-periodo', [\App\Http\Controllers\ReporteVentasController::class, 'porPeriodo'])->name('por-periodo');
             Route::get('por-cliente-producto', [\App\Http\Controllers\ReporteVentasController::class, 'porClienteProducto'])->name('por-cliente-producto');
             Route::get('por-vendedor-estado-pago', [\App\Http\Controllers\ReporteVentasController::class, 'porVendedorEstadoPago'])->name('por-vendedor-estado-pago');
+            Route::get('ranking-clientes', [\App\Http\Controllers\ReporteVentasController::class, 'rankingClientes'])->name('ranking-clientes');
+            Route::get('entregas-por-chofer', [\App\Http\Controllers\ReporteVentasController::class, 'entregasPorChofer'])->name('entregas-por-chofer');
+            Route::get('entregas-por-cliente', [\App\Http\Controllers\ReporteVentasController::class, 'entregarsPorCliente'])->name('entregas-por-cliente');
             Route::post('export', [\App\Http\Controllers\ReporteVentasController::class, 'export'])->name('export');
         });
     });
