@@ -269,6 +269,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
+    Route::get('/app/productos/filtros', [ProductoController::class, 'filtros']);  // ✅ NUEVO: Obtener categorías y marcas
     Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
     Route::get('/app/productos/buscar', [ProductoController::class, 'buscarApi']);
 

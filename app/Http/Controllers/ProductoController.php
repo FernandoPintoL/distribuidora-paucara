@@ -1394,6 +1394,97 @@ class ProductoController extends Controller
     }
 
     /**
+     * API: Obtener filtros disponibles (categorías y marcas)
+     *
+     * Retorna todas las categorías y marcas con productos activos
+     * disponibles en el almacén de la empresa del usuario autenticado
+     */
+    public function filtros(): JsonResponse
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'No autenticado',
+                'data' => []
+            ], 401);
+        }
+
+        try {
+            // Obtener empresa del usuario autenticado
+            $empresa = $user->empresa;
+            if (!$empresa) {
+                return response()->json([
+                    'message' => 'El usuario no tiene asociada una empresa',
+                    'data' => []
+                ], 403);
+            }
+
+            $almacenId = $empresa->almacen_id;
+            if (!$almacenId) {
+                return response()->json([
+                    'message' => 'La empresa no tiene un almacén de venta asignado',
+                    'data' => []
+                ], 403);
+            }
+
+            // Obtener ID del tipo de precio de venta
+            $tipoPrecioVentaId = $this->getTipoPrecioVentaId();
+
+            // Obtener categorías con productos activos que tienen stock y precio
+            $categorias = Categoria::whereHas('productos', function ($query) use ($almacenId, $tipoPrecioVentaId, $empresa) {
+                $query->where('productos.activo', true)
+                    ->where('productos.empresa_id', $empresa->id)
+                    ->whereHas('stock', function ($q) use ($almacenId) {
+                        $q->where('almacen_id', $almacenId)
+                            ->where('cantidad_disponible', '>', 0);
+                    })
+                    ->whereHas('precios', function ($q) use ($tipoPrecioVentaId) {
+                        $q->where('tipo_precio_id', $tipoPrecioVentaId)
+                            ->where('activo', true)
+                            ->where('precio', '>', 0);
+                    });
+            })
+                ->orderBy('nombre')
+                ->select('id', 'nombre')
+                ->get();
+
+            // Obtener marcas con productos activos que tienen stock y precio
+            $marcas = Marca::whereHas('productos', function ($query) use ($almacenId, $tipoPrecioVentaId, $empresa) {
+                $query->where('productos.activo', true)
+                    ->where('productos.empresa_id', $empresa->id)
+                    ->whereHas('stock', function ($q) use ($almacenId) {
+                        $q->where('almacen_id', $almacenId)
+                            ->where('cantidad_disponible', '>', 0);
+                    })
+                    ->whereHas('precios', function ($q) use ($tipoPrecioVentaId) {
+                        $q->where('tipo_precio_id', $tipoPrecioVentaId)
+                            ->where('activo', true)
+                            ->where('precio', '>', 0);
+                    });
+            })
+                ->orderBy('nombre')
+                ->select('id', 'nombre')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'categorias' => $categorias,
+                    'marcas' => $marcas,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [filtros] Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener filtros: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
      * API: Mostrar producto específico
      *
      * Parámetros query:

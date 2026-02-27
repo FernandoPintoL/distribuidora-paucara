@@ -11,7 +11,8 @@ import { useDebouncedValue } from '@/application/hooks/use-debounce';
  */
 export interface FiltrosEntregas {
     estado: string;
-    busqueda: string;
+    busqueda_entrega?: string;
+    busqueda_ventas?: string;
     chofer_id?: string;
     vehiculo_id?: string;
     localidad_id?: string;
@@ -24,7 +25,7 @@ interface Props {
     filtros: FiltrosEntregas;
     onFilterChange: (key: keyof FiltrosEntregas, value: string) => void;
     onReset: () => void;
-    onApply?: () => void;
+    onApply?: (filtrosDirectos?: Partial<FiltrosEntregas>) => void;
     estadosAPI: Array<{ codigo: string; nombre: string }>;
     vehiculos: Array<{ id: number; placa: string; marca: string; modelo: string }>;
     choferes: Array<{ id: number; nombre: string }>;
@@ -58,19 +59,13 @@ export function EntregasFilters({
     // ✅ Estado para controlar visibilidad de filtros
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
 
-    // ✅ Estado local para la búsqueda (se actualiza sin hacer cambios en tiempo real)
-    const [busquedaLocal, setBusquedaLocal] = useState(filtros.busqueda);
-
-    // ✅ Sincronizar busquedaLocal cuando filtros.busqueda cambia desde afuera
-    useEffect(() => {
-        setBusquedaLocal(filtros.busqueda);
-    }, [filtros.busqueda]);
 
     // Calcular cuántos filtros están activos
     const filtrosActivos = useMemo(() => {
         return [
             filtros.estado !== 'TODOS' && { label: 'Estado', value: filtros.estado },
-            filtros.busqueda && { label: 'Búsqueda', value: filtros.busqueda },
+            filtros.busqueda_entrega && { label: 'Búsqueda Entrega', value: filtros.busqueda_entrega },
+            filtros.busqueda_ventas && { label: 'Búsqueda Ventas', value: filtros.busqueda_ventas },
             filtros.chofer_id && {
                 label: 'Chofer',
                 value: choferes.find(c => c.id.toString() === filtros.chofer_id)?.nombre || filtros.chofer_id
@@ -98,48 +93,107 @@ export function EntregasFilters({
 
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            onFilterChange('busqueda', busquedaLocal);
+            // ✅ Pasar los filtros actualizados directamente a onApply para evitar timing issues
+            const filtrosActualizados = { ...filtros, busqueda: busquedaLocal };
+            onApply?.(filtrosActualizados);
         }
     };
 
     return (
         <div className="space-y-4">
-            {/* Búsqueda de Cliente */}
-            <div className="flex gap-2 items-end">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="text"
-                        placeholder="Buscar cliente, venta, placa..."
-                        value={busquedaLocal}
-                        onChange={(e) => setBusquedaLocal(e.target.value)}
-                        onKeyDown={handleSearchKeyDown}
-                        className="pl-10 bg-background"
-                        disabled={isLoading}
-                    />
-                </div>
-                <Button
-                    size="sm"
-                    onClick={() => onFilterChange('busqueda', busquedaLocal)}
-                    disabled={isLoading}
-                    className="whitespace-nowrap"
-                >
-                    Buscar
-                </Button>
-                {busquedaLocal && (
+            {/* Búsqueda Separada: Entrega vs Ventas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Búsqueda en ENTREGA (ID, placa, chofer) */}
+                <div className="flex gap-2 items-end">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Entrega: ID, placa, chofer..."
+                            value={filtros.busqueda_entrega || ''}
+                            onChange={(e) => onFilterChange('busqueda_entrega', e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const filtrosActualizados = { ...filtros, busqueda_entrega: e.currentTarget.value };
+                                    onApply?.(filtrosActualizados);
+                                }
+                            }}
+                            className="pl-10 bg-background"
+                            disabled={isLoading}
+                        />
+                    </div>
                     <Button
                         size="sm"
-                        variant="ghost"
                         onClick={() => {
-                            setBusquedaLocal('');
-                            onFilterChange('busqueda', '');
+                            const filtrosActualizados = { ...filtros, busqueda_entrega: filtros.busqueda_entrega || '' };
+                            onApply?.(filtrosActualizados);
                         }}
                         disabled={isLoading}
                         className="whitespace-nowrap"
                     >
-                        <X className="h-4 w-4" />
+                        Buscar
                     </Button>
-                )}
+                    {filtros.busqueda_entrega && (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                                const filtrosLimpios = { ...filtros, busqueda_entrega: '' };
+                                onApply?.(filtrosLimpios);
+                            }}
+                            disabled={isLoading}
+                            className="whitespace-nowrap"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+
+                {/* Búsqueda en VENTAS (ID venta, cliente, número venta) */}
+                <div className="flex gap-2 items-end">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Ventas: ID, cliente, número..."
+                            value={filtros.busqueda_ventas || ''}
+                            onChange={(e) => onFilterChange('busqueda_ventas', e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const filtrosActualizados = { ...filtros, busqueda_ventas: e.currentTarget.value };
+                                    onApply?.(filtrosActualizados);
+                                }
+                            }}
+                            className="pl-10 bg-background"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        onClick={() => {
+                            const filtrosActualizados = { ...filtros, busqueda_ventas: filtros.busqueda_ventas || '' };
+                            onApply?.(filtrosActualizados);
+                        }}
+                        disabled={isLoading}
+                        className="whitespace-nowrap"
+                    >
+                        Buscar
+                    </Button>
+                    {filtros.busqueda_ventas && (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                                const filtrosLimpios = { ...filtros, busqueda_ventas: '' };
+                                onApply?.(filtrosLimpios);
+                            }}
+                            disabled={isLoading}
+                            className="whitespace-nowrap"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
             </div>
             {/* Header de filtros con contador - CLICKEABLE */}
             <button
@@ -331,7 +385,8 @@ export function EntregasFilters({
                                 // Determinar la clave del filtro basado en el label
                                 const keyMap: Record<string, keyof FiltrosEntregas> = {
                                     'Estado': 'estado',
-                                    'Búsqueda': 'busqueda',
+                                    'Búsqueda Entrega': 'busqueda_entrega',
+                                    'Búsqueda Ventas': 'busqueda_ventas',
                                     'Chofer': 'chofer_id',
                                     'Vehículo': 'vehiculo_id',
                                     'Localidad': 'localidad_id',

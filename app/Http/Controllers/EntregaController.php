@@ -87,7 +87,8 @@ class EntregaController extends Controller
             'vehiculo_id'         => $request->input('vehiculo_id'),
             'localidad_id'        => $request->input('localidad_id'),
             'estado_logistica_id' => $request->input('estado_logistica_id'),
-            'search'              => $request->input('search'),
+            'search_entrega'      => $request->input('search_entrega'),
+            'search_ventas'       => $request->input('search_ventas'),
             'view'                => $view, // ✅ NUEVO: Pasar vista actual al frontend
         ];
 
@@ -102,11 +103,11 @@ class EntregaController extends Controller
 
         $entregas = \App\Models\Entrega::query()
             ->with(['ventas.cliente', 'vehiculo', 'chofer', 'entregador', 'localidad'])
-            // ✅ CORRECCIÓN: Si hay rango de fechas, filtrar por fecha_programada. Si no, mostrar solo HOY
+            // ✅ CORRECCIÓN: Si hay rango de fechas O búsqueda específica, no filtrar por "hoy"
             ->when(
-                !$filtros['fecha_desde'] && !$filtros['fecha_hasta'],
-                fn($q) => $q->whereDate('created_at', today()),  // Default: solo entregas creadas HOY
-                fn($q) => $q  // Si hay fechas, continuar sin filtro de created_at
+                !$filtros['fecha_desde'] && !$filtros['fecha_hasta'] && !$filtros['search_entrega'] && !$filtros['search_ventas'],
+                fn($q) => $q->whereDate('created_at', today()),  // Default: solo entregas creadas HOY (solo si NO hay búsqueda)
+                fn($q) => $q  // Si hay fechas o búsqueda, continuar sin filtro de created_at
             )
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
             ->when($filtros['fecha_desde'], function ($q, $fecha) {
@@ -121,35 +122,47 @@ class EntregaController extends Controller
             ->when($filtros['vehiculo_id'], fn($q, $vehiculoId) => $q->where('vehiculo_id', $vehiculoId))
             ->when($filtros['localidad_id'], fn($q, $localidadId) => $q->where('zona_id', $localidadId))
             ->when($filtros['estado_logistica_id'], fn($q, $estadoId) => $q->where('estado_entrega_id', $estadoId))
-            ->when($filtros['search'], function ($q, $search) {
+            // 🔍 BÚSQUEDA EN DATOS DE LA ENTREGA (ID, placa, chofer)
+            ->when($filtros['search_entrega'], function ($q, $search) {
                 $searchLower = strtolower($search);
-                // ✅ CASE INSENSITIVE: Buscar en clientes de TODAS las ventas, número de venta, placa, chofer
-                $q->where(function ($query) use ($searchLower) {
-                    // 1️⃣ Buscar en datos del cliente de CUALQUIERA de las ventas asociadas a la entrega
-                    // Una entrega tiene muchas ventas (1:N), cada venta tiene un cliente (N:1)
-                    $query->whereHas('ventas', function ($ventaQuery) use ($searchLower) {
+                $q->where(function ($query) use ($searchLower, $search) {
+                    // 1️⃣ Buscar por ID de ENTREGA (si es numérico)
+                    if (is_numeric($search)) {
+                        $query->where('id', (int)$search);
+                    }
+                    // 2️⃣ Buscar en placa del vehículo
+                    $query->orWhereHas('vehiculo', fn($q) =>
+                        $q->whereRaw('LOWER(placa) LIKE ?', ["%{$searchLower}%"])
+                    );
+                    // 3️⃣ Buscar en nombre del chofer
+                    $query->orWhereHas('chofer', fn($q) =>
+                        $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchLower}%"])
+                    );
+                });
+            })
+            // 🔍 BÚSQUEDA EN DATOS DE LAS VENTAS (ID venta, cliente, número venta)
+            ->when($filtros['search_ventas'], function ($q, $search) {
+                $searchLower = strtolower($search);
+                $q->where(function ($query) use ($searchLower, $search) {
+                    // 1️⃣ Buscar por ID de venta (si es numérico)
+                    if (is_numeric($search)) {
+                        $query->whereHas('ventas', fn($ventaQuery) =>
+                            $ventaQuery->where('id', (int)$search)
+                        );
+                    }
+                    // 2️⃣ Buscar en datos del cliente
+                    $query->orWhereHas('ventas', function ($ventaQuery) use ($searchLower) {
                         $ventaQuery->whereHas('cliente', function ($clienteQuery) use ($searchLower) {
                             $clienteQuery->where(function ($q) use ($searchLower) {
-                                // Buscar en nombre del cliente
                                 $q->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
-                                // Buscar en teléfono del cliente
                                 ->orWhereRaw('LOWER(telefono) LIKE ?', ["%{$searchLower}%"])
-                                // Buscar en NIT del cliente
                                 ->orWhereRaw('LOWER(nit) LIKE ?', ["%{$searchLower}%"]);
                             });
                         });
-                    })
-                    // 2️⃣ Buscar en número de cualquiera de las ventas
-                    ->orWhereHas('ventas', fn($q) =>
+                    });
+                    // 3️⃣ Buscar en número de venta
+                    $query->orWhereHas('ventas', fn($q) =>
                         $q->whereRaw('LOWER(numero) LIKE ?', ["%{$searchLower}%"])
-                    )
-                    // 3️⃣ Buscar en placa del vehículo
-                    ->orWhereHas('vehiculo', fn($q) =>
-                        $q->whereRaw('LOWER(placa) LIKE ?', ["%{$searchLower}%"])
-                    )
-                    // 4️⃣ Buscar en nombre del chofer
-                    ->orWhereHas('chofer', fn($q) =>
-                        $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchLower}%"])
                     );
                 });
             })

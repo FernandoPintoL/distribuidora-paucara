@@ -112,6 +112,10 @@ COPY nginx.conf /etc/nginx/http.d/default.conf
 # Copy Supervisor configuration
 COPY supervisord.conf /etc/supervisord.conf
 
+# Copy sync-storage script
+COPY scripts/sync-storage.sh /app/scripts/sync-storage.sh
+RUN chmod +x /app/scripts/sync-storage.sh
+
 # Expose port
 EXPOSE 8080
 
