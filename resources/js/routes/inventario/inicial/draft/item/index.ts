@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:213
+ * @see app/Http/Controllers/InventarioInicialController.php:232
  * @route '/inventario/inventario-inicial/draft/{borrador}/items'
  */
 export const store = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:213
+ * @see app/Http/Controllers/InventarioInicialController.php:232
  * @route '/inventario/inventario-inicial/draft/{borrador}/items'
  */
 store.url = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +44,7 @@ store.url = (args: { borrador: string | number } | [borrador: string | number ] 
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:213
+ * @see app/Http/Controllers/InventarioInicialController.php:232
  * @route '/inventario/inventario-inicial/draft/{borrador}/items'
  */
 store.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -54,7 +54,7 @@ store.post = (args: { borrador: string | number } | [borrador: string | number ]
 
     /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:213
+ * @see app/Http/Controllers/InventarioInicialController.php:232
  * @route '/inventario/inventario-inicial/draft/{borrador}/items'
  */
     const storeForm = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -64,7 +64,7 @@ store.post = (args: { borrador: string | number } | [borrador: string | number ]
 
             /**
 * @see \App\Http\Controllers\InventarioInicialController::store
- * @see app/Http/Controllers/InventarioInicialController.php:213
+ * @see app/Http/Controllers/InventarioInicialController.php:232
  * @route '/inventario/inventario-inicial/draft/{borrador}/items'
  */
         storeForm.post = (args: { borrador: string | number } | [borrador: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -75,7 +75,7 @@ store.post = (args: { borrador: string | number } | [borrador: string | number ]
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\InventarioInicialController::deleteMethod
- * @see app/Http/Controllers/InventarioInicialController.php:371
+ * @see app/Http/Controllers/InventarioInicialController.php:390
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
  */
 export const deleteMethod = (args: { borrador: string | number, item: string | number } | [borrador: string | number, item: string | number ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -90,7 +90,7 @@ deleteMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::deleteMethod
- * @see app/Http/Controllers/InventarioInicialController.php:371
+ * @see app/Http/Controllers/InventarioInicialController.php:390
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
  */
 deleteMethod.url = (args: { borrador: string | number, item: string | number } | [borrador: string | number, item: string | number ], options?: RouteQueryOptions) => {
@@ -116,7 +116,7 @@ deleteMethod.url = (args: { borrador: string | number, item: string | number } |
 
 /**
 * @see \App\Http\Controllers\InventarioInicialController::deleteMethod
- * @see app/Http/Controllers/InventarioInicialController.php:371
+ * @see app/Http/Controllers/InventarioInicialController.php:390
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
  */
 deleteMethod.delete = (args: { borrador: string | number, item: string | number } | [borrador: string | number, item: string | number ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -126,7 +126,7 @@ deleteMethod.delete = (args: { borrador: string | number, item: string | number 
 
     /**
 * @see \App\Http\Controllers\InventarioInicialController::deleteMethod
- * @see app/Http/Controllers/InventarioInicialController.php:371
+ * @see app/Http/Controllers/InventarioInicialController.php:390
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
  */
     const deleteMethodForm = (args: { borrador: string | number, item: string | number } | [borrador: string | number, item: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -141,7 +141,7 @@ deleteMethod.delete = (args: { borrador: string | number, item: string | number 
 
             /**
 * @see \App\Http\Controllers\InventarioInicialController::deleteMethod
- * @see app/Http/Controllers/InventarioInicialController.php:371
+ * @see app/Http/Controllers/InventarioInicialController.php:390
  * @route '/inventario/inventario-inicial/draft/{borrador}/items/{item}'
  */
         deleteMethodForm.delete = (args: { borrador: string | number, item: string | number } | [borrador: string | number, item: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

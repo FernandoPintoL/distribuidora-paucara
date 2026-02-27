@@ -289,9 +289,13 @@ class VisitaPreventistaController extends Controller
 
             $preventista = $user->empleado;
 
-            // Obtener día de la semana actual (0=domingo, 1=lunes, ..., 6=sábado)
-            $diaHoy = now()->dayOfWeek;
-            $fechaHoy = now()->toDateString();
+            // ✅ PARAMETRIZADO: Aceptar fecha opcional (YYYY-MM-DD)
+            // Si no se proporciona, usa HOY
+            $fechaHoy = $request->get('fecha')
+                ? date('Y-m-d', strtotime($request->get('fecha')))
+                : now()->toDateString();
+
+            $diaHoy = \Carbon\Carbon::createFromFormat('Y-m-d', $fechaHoy)->dayOfWeek;
 
             // ✅ QUERY: Obtener clientes del preventista que tienen ventana de entrega para HOY
             $clientesHoy = Cliente::where('preventista_id', $preventista->id)
@@ -307,6 +311,7 @@ class VisitaPreventistaController extends Controller
                         // Cargar direcciones (principal primero)
                         $query->orderBy('es_principal', 'desc');
                     },
+                    'localidad',
                 ])
                 ->get()
                 // Filtrar solo clientes que tienen ventanas de entrega para hoy
@@ -349,6 +354,11 @@ class VisitaPreventistaController extends Controller
                     'estado_visita' => $visitaHoy?->estado_visita,
                     'limite_credito' => $cliente->limite_credito,
                     'puede_tener_credito' => $cliente->puede_tener_credito,
+                    'localidad' => $cliente->localidad ? [
+                        'id' => $cliente->localidad->id,
+                        'nombre' => $cliente->localidad->nombre,
+                        'codigo' => $cliente->localidad->codigo,
+                    ] : null,
                 ];
             })
             ->sortBy('ventana_horaria.hora_inicio') // Ordenar por hora de inicio
@@ -358,7 +368,7 @@ class VisitaPreventistaController extends Controller
             $visitadas = $ordenDelDia->filter(fn($v) => $v['visitado'])->count();
             $pendientes = $ordenDelDia->count() - $visitadas;
 
-            // ✅ Mapeo de días en español
+            // ✅ Mapeo de días en español (usando fecha parametrizada)
             $diasSemana = [
                 'Domingo',
                 'Lunes',
@@ -368,7 +378,7 @@ class VisitaPreventistaController extends Controller
                 'Viernes',
                 'Sábado',
             ];
-            $diaSemanaEspanol = $diasSemana[now()->dayOfWeek];
+            $diaSemanaEspanol = $diasSemana[$diaHoy];
 
             return response()->json([
                 'success' => true,

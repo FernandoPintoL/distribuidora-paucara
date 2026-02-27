@@ -50,11 +50,30 @@ class InventarioInicialController extends Controller
         // Obtener el tipo de ajuste INVENTARIO_INICIAL
         $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
 
+        // Obtener borradores en estado "borrador" para mostrar si hay trabajos en progreso
+        $borradores = InventarioInicialBorrador::with(['usuario:id,name,email', 'items'])
+            ->where('estado', 'borrador')
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(function ($borrador) {
+                return [
+                    'id'              => $borrador->id,
+                    'usuario_id'      => $borrador->usuario_id,
+                    'usuario_nombre'  => $borrador->usuario->name ?? 'Usuario desconocido',
+                    'usuario_email'   => $borrador->usuario->email ?? '',
+                    'cantidad_items'  => $borrador->items->count(),
+                    'created_at'      => $borrador->created_at->format('d/m/Y H:i'),
+                    'updated_at'      => $borrador->updated_at->format('d/m/Y H:i'),
+                    'es_tuyo'         => $borrador->usuario_id === Auth::id(),
+                ];
+            });
+
         // Renderizar el nuevo componente avanzado
         return Inertia::render('inventario/inventario-inicial', [
             'productos'  => $productos,
             'almacenes'  => $almacenes,
             'tipoInventarioInicial' => $tipoInventarioInicial,
+            'borradores' => $borradores,
         ]);
     }
 

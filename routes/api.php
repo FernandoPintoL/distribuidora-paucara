@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\EstadoLogisticoController;
 use App\Http\Controllers\Api\GeocodingController;
 use App\Http\Controllers\Api\PrecioRangoProductoController;
 use App\Http\Controllers\Api\ReporteCargoController;
+use App\Http\Controllers\Api\ReporteProductoDañadoController;
+use App\Http\Controllers\Api\BannerPublicitarioController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\ReporteCargaPdfController;
 use App\Http\Controllers\ReporteCargoListController;
@@ -80,6 +82,9 @@ Route::get('/tipos-pago', function () {
 // ✅ NUEVO: Endpoints para Políticas de Pago
 Route::get('/politicas-pago', [ApiPoliticaPagoController::class, 'index']);
 Route::get('/politicas-pago/disponibles/{clienteId}', [ApiPoliticaPagoController::class, 'disponibles']);
+
+// ✅ NUEVO: Endpoints para Banners Publicitarios (públicos, sin autenticación)
+Route::get('/banners-publicitarios', [BannerPublicitarioController::class, 'index']);
 
 // Procesar ajustes masivos (requiere autenticación)
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma
@@ -1000,6 +1005,41 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         Route::post('/exportar-zip', [ReporteCargoListController::class, 'exportarZip'])
             ->middleware('auth')
             ->name('reportes.exportar-zip');
+    });
+
+    // ✅ NUEVO: Rutas para Reportes de Productos Dañados
+    Route::prefix('reportes-productos-danados')->group(function () {
+        // Listar todos los reportes
+        Route::get('/', [ReporteProductoDañadoController::class, 'index'])
+            ->name('reportes-productos-danados.index');
+
+        // Crear un nuevo reporte
+        Route::post('/', [ReporteProductoDañadoController::class, 'store'])
+            ->name('reportes-productos-danados.store');
+
+        // Ver detalles de un reporte
+        Route::get('/{id}', [ReporteProductoDañadoController::class, 'show'])
+            ->name('reportes-productos-danados.show');
+
+        // Actualizar estado del reporte
+        Route::patch('/{id}', [ReporteProductoDañadoController::class, 'update'])
+            ->name('reportes-productos-danados.update');
+
+        // Eliminar un reporte
+        Route::delete('/{id}', [ReporteProductoDañadoController::class, 'destroy'])
+            ->name('reportes-productos-danados.destroy');
+
+        // Subir imagen para un reporte
+        Route::post('/{id}/imagenes', [ReporteProductoDañadoController::class, 'subirImagen'])
+            ->name('reportes-productos-danados.subir-imagen');
+
+        // Eliminar una imagen del reporte
+        Route::delete('/imagenes/{imagenId}', [ReporteProductoDañadoController::class, 'eliminarImagen'])
+            ->name('reportes-productos-danados.eliminar-imagen');
+
+        // Obtener reportes de una venta específica
+        Route::get('/venta/{ventaId}', [ReporteProductoDañadoController::class, 'reportesPorVenta'])
+            ->name('reportes-productos-danados.por-venta');
     });
 });
 

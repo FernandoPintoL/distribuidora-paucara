@@ -417,12 +417,30 @@ class ApiProformaController extends Controller
             'usuarioCreador',
             'usuarioAprobador',
             'estadoLogistica', // ✅ AGREGADO: Cargar relación de estado
-            'venta',           // ✅ NUEVO: Cargar venta relacionada (cuando está CONVERTIDA)
+            // ✅ MEJORADO 2026-02-27: Cargar venta con todos sus estados relacionados
+            'venta' => function ($q) {
+                $q->with([
+                    'estadoDocumento',      // Estado del documento (estados_documento)
+                    'estadoLogistica',      // Estado logístico (estados_logistica)
+                    'confirmaciones',       // Confirmaciones de entrega (entregas_venta_confirmaciones)
+                ]);
+            },
         ]);
+
+        // ✅ MEJORADO 2026-02-27: Formatear respuesta para incluir observaciones de venta
+        $responseData = $proforma->toArray();
+
+        // Si tiene venta convertida, incluir observaciones
+        if ($proforma->venta) {
+            if (!isset($responseData['venta'])) {
+                $responseData['venta'] = [];
+            }
+            $responseData['venta']['observaciones'] = $proforma->venta->observaciones;
+        }
 
         return response()->json([
             'success' => true,
-            'data'    => $proforma,
+            'data'    => $responseData,
         ]);
     }
 
@@ -1003,7 +1021,14 @@ class ApiProformaController extends Controller
             'detalles.producto.marca',
             'direccionSolicitada',
             'direccionConfirmada',
-            'venta', // ✅ NUEVO: Cargar venta relacionada si está convertida
+            // ✅ MEJORADO 2026-02-27: Cargar venta con todos sus estados relacionados
+            'venta' => function ($q) {
+                $q->with([
+                    'estadoDocumento',      // Estado del documento (estados_documento)
+                    'estadoLogistica',      // Estado logístico (estados_logistica)
+                    'confirmaciones',       // Confirmaciones de entrega (entregas_venta_confirmaciones)
+                ]);
+            },
         ]);
 
         // ✅ Si hay búsqueda, ya se agregó orderByRaw para relevancia
@@ -1033,7 +1058,8 @@ class ApiProformaController extends Controller
                 'success' => true,
                 'data'    => [
                     'pedidos'    => $proformas->map(function ($proforma) {
-                        return [
+                        // ✅ MEJORADO 2026-02-27: Incluir info de venta si está convertida
+                        $responseItem = [
                             'id'                       => $proforma->id,
                             'codigo'                   => $proforma->numero,
                             'fecha'                    => $proforma->fecha?->format('Y-m-d'),
@@ -1071,6 +1097,39 @@ class ApiProformaController extends Controller
                                 ];
                             }),
                         ];
+
+                        // ✅ NUEVO 2026-02-27: Si está convertida, agregar info de venta
+                        if ($proforma->venta) {
+                            $responseItem['venta'] = [
+                                'id'                    => $proforma->venta->id,
+                                'numero'                => $proforma->venta->numero,
+                                'fecha'                 => $proforma->venta->fecha?->format('Y-m-d'),
+                                'estado_documento'      => $proforma->venta->estadoDocumento ? [
+                                    'id'        => $proforma->venta->estadoDocumento->id,
+                                    'codigo'    => $proforma->venta->estadoDocumento->codigo,
+                                    'nombre'    => $proforma->venta->estadoDocumento->nombre,
+                                    'color'     => $proforma->venta->estadoDocumento->color,
+                                ] : null,
+                                'estado_logistica'      => $proforma->venta->estadoLogistica ? [
+                                    'id'        => $proforma->venta->estadoLogistica->id,
+                                    'codigo'    => $proforma->venta->estadoLogistica->codigo,
+                                    'nombre'    => $proforma->venta->estadoLogistica->nombre,
+                                    'color'     => $proforma->venta->estadoLogistica->color,
+                                ] : null,
+                                'confirmaciones_entrega' => $proforma->venta->confirmaciones ? $proforma->venta->confirmaciones->map(function ($confirmacion) {
+                                    return [
+                                        'id'       => $confirmacion->id,
+                                        'estado'   => $confirmacion->estado ?? 'PENDIENTE',
+                                        'fecha'    => $confirmacion->fecha?->format('Y-m-d H:i:s'),
+                                        'chofer'   => $confirmacion->chofer ?? null,
+                                        'cliente'  => $confirmacion->cliente_confirmacion ?? null,
+                                    ];
+                                })->toArray() : [],
+                                'observaciones'          => $proforma->venta->observaciones, // ✅ NUEVO 2026-02-27: Motivo de anulación
+                            ];
+                        }
+
+                        return $responseItem;
                     }),
                     'paginacion' => [
                         'total'         => $proformas->total(),

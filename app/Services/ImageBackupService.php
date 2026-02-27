@@ -79,14 +79,18 @@ class ImageBackupService
             $publicStoragePath = storage_path('app/public');
 
             if (is_dir($publicStoragePath)) {
+                // Hacer backup de carpetas conocidas
                 $stats['clientes_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'clientes');
                 $stats['proveedores_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'proveedores');
                 $stats['productos_imagenes'] = $this->backupFolder($zip, $publicStoragePath, 'productos');
                 $stats['empresas_datos'] = $this->backupFolder($zip, $publicStoragePath, 'empresas');
                 $stats['entregas_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'entregas');
                 $stats['visitas_fotos'] = $this->backupFolder($zip, $publicStoragePath, 'visitas');
+                $stats['banners_publicitarios'] = $this->backupFolder($zip, $publicStoragePath, 'banners-publicitarios');
                 $stats['fotos_lugar_cliente'] = $this->backupFolder($zip, $publicStoragePath, 'clientes/*/fotos_lugar');
-                $stats['otros_archivos'] = $this->backupOtherFolders($zip, $publicStoragePath);
+
+                // Hacer backup de TODAS las demás carpetas (completamente exhaustivo)
+                $stats['otros_archivos'] = $this->backupAllRemainingFolders($zip, $publicStoragePath);
             }
 
             // Agregar metadatos
@@ -361,22 +365,51 @@ class ImageBackupService
     /**
      * Hacer backup de otras carpetas no categorizadas
      */
-    protected function backupOtherFolders(ZipArchive $zip, string $publicPath): int
+    /**
+     * Hacer backup de TODAS las carpetas restantes (completamente exhaustivo)
+     * Incluye cualquier carpeta nueva o desconocida que no haya sido respaldada explícitamente
+     */
+    protected function backupAllRemainingFolders(ZipArchive $zip, string $publicPath): int
     {
         $count = 0;
-        $knownFolders = ['clientes', 'proveedores', 'productos', 'empresas', 'entregas', 'visitas'];
+        // Carpetas que ya fueron respaldadas explícitamente
+        $backedUpFolders = [
+            'clientes',
+            'proveedores',
+            'productos',
+            'empresas',
+            'entregas',
+            'visitas',
+            'banners-publicitarios',
+        ];
 
         if (is_dir($publicPath)) {
-            $items = scandir($publicPath);
-            foreach ($items as $item) {
-                if ($item !== '.' && $item !== '..' && is_dir($publicPath . DIRECTORY_SEPARATOR . $item)) {
-                    if (!in_array($item, $knownFolders)) {
-                        $count += $this->backupFolderRecursive($zip, $publicPath . DIRECTORY_SEPARATOR . $item, $item);
+            $items = @scandir($publicPath);
+            if ($items !== false) {
+                foreach ($items as $item) {
+                    // Ignorar . y ..
+                    if ($item === '.' || $item === '..') {
+                        continue;
+                    }
+
+                    $itemPath = $publicPath . DIRECTORY_SEPARATOR . $item;
+
+                    // Si es directorio y NO está en la lista de respaldados explícitamente
+                    if (is_dir($itemPath) && !in_array($item, $backedUpFolders)) {
+                        Log::info("Respaldando carpeta adicional (exhaustivo): $item");
+                        $count += $this->backupFolderRecursive($zip, $itemPath, $item);
+                    }
+                    // Si es archivo en la raíz, también incluirlo
+                    elseif (is_file($itemPath)) {
+                        Log::info("Respaldando archivo en raíz: $item");
+                        $zip->addFile($itemPath, $item);
+                        $count++;
                     }
                 }
             }
         }
 
+        Log::info("Total de archivos/carpetas adicionales respaldados (exhaustivo): $count");
         return $count;
     }
 

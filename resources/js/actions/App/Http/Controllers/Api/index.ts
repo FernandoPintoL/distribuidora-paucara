@@ -2,6 +2,7 @@ import AuthController from './AuthController'
 import EmpleadoApiController from './EmpleadoApiController'
 import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import ApiPoliticaPagoController from './ApiPoliticaPagoController'
+import BannerPublicitarioController from './BannerPublicitarioController'
 import RoleController from './RoleController'
 import NotificationController from './NotificationController'
 import ChoferPreferenciaController from './ChoferPreferenciaController'
@@ -21,6 +22,7 @@ import EncargadoController from './EncargadoController'
 import EntregaBatchController from './EntregaBatchController'
 import VentaLogisticaController from './VentaLogisticaController'
 import ReporteCargoController from './ReporteCargoController'
+import ReporteProductoDañadoController from './ReporteProductoDañadoController'
 import ChoferGastoController from './ChoferGastoController'
 import AdminCajaApiController from './AdminCajaApiController'
 import EstadoLogisticoController from './EstadoLogisticoController'
@@ -31,6 +33,7 @@ const Api = {
 EmpleadoApiController,
 TipoAjusteInventarioController,
 ApiPoliticaPagoController,
+BannerPublicitarioController,
 RoleController,
 NotificationController,
 ChoferPreferenciaController,
@@ -50,6 +53,7 @@ EncargadoController,
 EntregaBatchController,
 VentaLogisticaController,
 ReporteCargoController,
+ReporteProductoDañadoController,
 ChoferGastoController,
 AdminCajaApiController,
 EstadoLogisticoController,

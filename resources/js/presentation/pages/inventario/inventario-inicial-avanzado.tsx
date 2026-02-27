@@ -71,9 +71,10 @@ interface Borrador {
 
 interface Props {
     almacenes: Almacen[];
+    borradorId?: number;
 }
 
-export default function InventarioInicialAvanzado({ almacenes }: Props) {
+export default function InventarioInicialAvanzado({ almacenes, borradorId }: Props) {
     const [borrador, setBorrador] = useState<Borrador | null>(null);
     const [expandidos, setExpandidos] = useState<Set<Id>>(new Set());
     const [showCargarModal, setShowCargarModal] = useState(false);
@@ -104,8 +105,14 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
     // Inicializar borrador al cargar
     useEffect(() => {
-        inicializarBorrador();
-    }, []);
+        if (borradorId) {
+            // Si viene un borradorId, cargar ese específico
+            cargarBorrador(borradorId);
+        } else {
+            // Si no, crear uno nuevo
+            inicializarBorrador();
+        }
+    }, [borradorId]);
 
     // Limpiar debounce timer al desmontar componente
     useEffect(() => {
@@ -649,10 +656,29 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
 
             // ✅ SI ES BÚSQUEDA EXACTA Y ENCONTRÓ 1 SOLO PRODUCTO → AGREGAR AUTOMÁTICAMENTE
             if (exactMatch && resultCount === 1 && productos[0]) {
-                console.log(`🎯 COINCIDENCIA EXACTA - Agregando automáticamente: ${productos[0].nombre}`);
+                const productoId = productos[0].id;
+                const productoNombre = productos[0].nombre;
+
+                // Verificar si el producto ya está en el borrador
+                const productoYaExiste = borrador?.items?.some(item => item.producto_id === productoId);
+
+                if (productoYaExiste) {
+                    console.log(`⚠️ PRODUCTO YA EN LISTA - ${productoNombre} ya está en el borrador`);
+                    NotificationService.warning(
+                        `⚠️ Este producto ya está en la lista\n${productoNombre}\n\nPuedes editar la cantidad directamente en la tabla`
+                    );
+
+                    // Limpiar búsqueda
+                    setBusqueda('');
+                    setSugerencias([]);
+                    setMostrarSugerencias(false);
+                    return;
+                }
+
+                console.log(`🎯 COINCIDENCIA EXACTA - Agregando automáticamente: ${productoNombre}`);
 
                 // Agregar el producto automáticamente
-                await agregarProductos([productos[0].id]);
+                await agregarProductos([productoId]);
 
                 // Limpiar búsqueda
                 setBusqueda('');
@@ -660,7 +686,7 @@ export default function InventarioInicialAvanzado({ almacenes }: Props) {
                 setMostrarSugerencias(false);
 
                 NotificationService.success(
-                    `✓ Producto agregado automáticamente:\n${productos[0].nombre}`
+                    `✓ Producto agregado automáticamente:\n${productoNombre}`
                 );
                 return;
             }

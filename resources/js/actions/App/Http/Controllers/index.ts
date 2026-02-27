@@ -44,6 +44,8 @@ import PrecioRangoController from './PrecioRangoController'
 import MonedaController from './MonedaController'
 import TipoPagoController from './TipoPagoController'
 import TipoDocumentoController from './TipoDocumentoController'
+import ReporteProductoDanadoAdminController from './ReporteProductoDanadoAdminController'
+import BannerPublicitarioAdminController from './BannerPublicitarioAdminController'
 import UserController from './UserController'
 import EmpleadoController from './EmpleadoController'
 import CuentaPorPagarController from './CuentaPorPagarController'
@@ -128,6 +130,8 @@ PrecioRangoController,
 MonedaController,
 TipoPagoController,
 TipoDocumentoController,
+ReporteProductoDanadoAdminController,
+BannerPublicitarioAdminController,
 UserController,
 EmpleadoController,
 CuentaPorPagarController,

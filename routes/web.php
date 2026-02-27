@@ -174,6 +174,19 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Rutas para backup de imágenes
     Route::get('admin/image-backup', fn() => \Inertia\Inertia::render('admin/image-backup'))->middleware('permission:admin.image-backup.manage')->name('admin.image-backup');
 
+    // ✅ NUEVO: Reportes de Productos Dañados
+    Route::get('admin/reportes-productos-danados', [\App\Http\Controllers\ReporteProductoDanadoAdminController::class, 'index'])->middleware('permission:admin')->name('admin.reportes-productos-danados.index');
+
+    // ✅ NUEVO: Banners Publicitarios
+    Route::prefix('admin/banners-publicitarios')->middleware('permission:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'index'])->name('admin.banners-publicitarios.index');
+        Route::post('/', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'store'])->name('admin.banners-publicitarios.store');
+        Route::post('/{banner}', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'update'])->name('admin.banners-publicitarios.update');
+        Route::patch('/{banner}/toggle', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'toggleActivo'])->name('admin.banners-publicitarios.toggle');
+        Route::delete('/{banner}', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'destroy'])->name('admin.banners-publicitarios.destroy');
+        Route::post('/actualizar-orden', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'actualizarOrden'])->name('admin.banners-publicitarios.actualizar-orden');
+    });
+
     // Rutas para gestión de módulos del sidebar
     Route::get('modulos-sidebar', [\App\Http\Controllers\ModuloSidebarController::class, 'index'])->name('modulos-sidebar.index');
     Route::get('modulos-sidebar/create', [\App\Http\Controllers\ModuloSidebarController::class, 'create'])->middleware('permission:admin.config')->name('modulos-sidebar.create');
@@ -832,9 +845,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
 
         // Reportes de ventas
         Route::prefix('ventas')->name('ventas.')->group(function () {
-            Route::get('por-periodo', [\App\Http\Controllers\ReporteVentasController::class, 'porPeriodo'])->name('por-periodo');
-            Route::get('por-cliente-producto', [\App\Http\Controllers\ReporteVentasController::class, 'porClienteProducto'])->name('por-cliente-producto');
-            Route::get('por-vendedor-estado-pago', [\App\Http\Controllers\ReporteVentasController::class, 'porVendedorEstadoPago'])->name('por-vendedor-estado-pago');
             Route::get('ranking-clientes', [\App\Http\Controllers\ReporteVentasController::class, 'rankingClientes'])->name('ranking-clientes');
             Route::get('entregas-por-chofer', [\App\Http\Controllers\ReporteVentasController::class, 'entregasPorChofer'])->name('entregas-por-chofer');
             Route::get('entregas-por-cliente', [\App\Http\Controllers\ReporteVentasController::class, 'entregarsPorCliente'])->name('entregas-por-cliente');

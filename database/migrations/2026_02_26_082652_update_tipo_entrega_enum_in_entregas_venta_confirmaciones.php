@@ -14,19 +14,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // ✅ PASO 1: Convertir valores NOVEDAD a CON_NOVEDAD PRIMERO
-        DB::statement("UPDATE entregas_venta_confirmaciones SET tipo_entrega = 'CON_NOVEDAD' WHERE tipo_entrega = 'NOVEDAD'");
-
-        // ✅ PASO 2: Remover la restricción CHECK antigua
+        // ✅ PASO 1: Remover las restricciones CHECK PRIMERO (antes de actualizar datos)
         DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_entrega_check");
-
-        // ✅ PASO 3: Agregar nueva restricción con CON_NOVEDAD
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_entrega_check CHECK (tipo_entrega IN ('COMPLETA', 'CON_NOVEDAD'))");
-
-        // ✅ PASO 4: Actualizar constraint para tipo_novedad - agregar NO_CONTACTADO
         DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_novedad_check");
 
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_novedad_check CHECK (tipo_novedad IN ('CLIENTE_CERRADO', 'DEVOLUCION_PARCIAL', 'RECHAZADO', 'NO_CONTACTADO'))");
+        // ✅ PASO 2: Convertir valores NOVEDAD a CON_NOVEDAD
+        DB::statement("UPDATE entregas_venta_confirmaciones SET tipo_entrega = 'CON_NOVEDAD' WHERE tipo_entrega = 'NOVEDAD'");
+
+        // ✅ PASO 3: Corregir RECHAZADA a RECHAZADO
+        DB::statement("UPDATE entregas_venta_confirmaciones SET tipo_novedad = 'RECHAZADO' WHERE tipo_novedad = 'RECHAZADA'");
+
+        // ✅ PASO 4: Agregar nueva restricción para tipo_entrega con CON_NOVEDAD
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_entrega_check CHECK (tipo_entrega IN ('COMPLETA', 'CON_NOVEDAD'))");
+
+        // ✅ PASO 5: Agregar nueva restricción para tipo_novedad - agregar NO_CONTACTADO
+        // Permitir NULL para registros sin novedad
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_novedad_check CHECK (tipo_novedad IS NULL OR tipo_novedad IN ('CLIENTE_CERRADO', 'DEVOLUCION_PARCIAL', 'RECHAZADO', 'NO_CONTACTADO'))");
     }
 
     /**
@@ -34,13 +37,18 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // ✅ Remover las restricciones CHECK PRIMERO
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_entrega_check");
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_novedad_check");
+
         // ✅ Revertir los cambios (volver a NOVEDAD y remover NO_CONTACTADO)
         DB::statement("UPDATE entregas_venta_confirmaciones SET tipo_entrega = 'NOVEDAD' WHERE tipo_entrega = 'CON_NOVEDAD'");
 
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_entrega_check");
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_entrega_check CHECK (tipo_entrega IN ('COMPLETA', 'NOVEDAD'))");
+        // ✅ Revertir RECHAZADO a RECHAZADA
+        DB::statement("UPDATE entregas_venta_confirmaciones SET tipo_novedad = 'RECHAZADA' WHERE tipo_novedad = 'RECHAZADO'");
 
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones DROP CONSTRAINT IF EXISTS entregas_venta_confirmaciones_tipo_novedad_check");
-        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_novedad_check CHECK (tipo_novedad IN ('CLIENTE_CERRADO', 'DEVOLUCION_PARCIAL', 'RECHAZADO'))");
+        // ✅ Agregar las restricciones antiguas
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_entrega_check CHECK (tipo_entrega IN ('COMPLETA', 'NOVEDAD'))");
+        DB::statement("ALTER TABLE entregas_venta_confirmaciones ADD CONSTRAINT entregas_venta_confirmaciones_tipo_novedad_check CHECK (tipo_novedad IS NULL OR tipo_novedad IN ('CLIENTE_CERRADO', 'DEVOLUCION_PARCIAL', 'RECHAZADA'))");
     }
 };
