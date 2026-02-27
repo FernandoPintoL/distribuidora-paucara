@@ -2696,7 +2696,8 @@ class EntregaController extends Controller
                                         'tipo_entrega' => $confirmacion->tipo_entrega,
                                         'tipo_novedad' => $confirmacion->tipo_novedad,
                                         // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
-                                        'fotos' => json_decode($confirmacion->fotos, true) ?? [],
+                                        // ✅ FIX 2026-02-26: fotos ya es array por casting en modelo, no decodificar
+                                        'fotos' => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
                                         'firma_digital_url' => $confirmacion->firma_digital_url,
                                         'observaciones_logistica' => $confirmacion->observaciones_logistica,
                                         'detalles' => $confirmacion->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
