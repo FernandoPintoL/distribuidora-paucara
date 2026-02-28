@@ -1,13 +1,15 @@
 import { Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import SearchSelect from '@/presentation/components/ui/search-select';
-import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
+import { useProductoSearch } from '../hooks/useProductoSearch';
+import type { Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
+import type { Producto } from '@/domain/entities/productos';
 
 interface ModoManualProps {
     items: InventarioItem[];
-    productos: Producto[];
     almacenes: Almacen[];
     onAgregarItem: () => void;
     onEliminarItem: (index: number) => void;
@@ -18,7 +20,6 @@ interface ModoManualProps {
 
 export default function ModoManual({
     items,
-    productos = [],
     almacenes = [],
     onAgregarItem,
     onEliminarItem,
@@ -26,11 +27,15 @@ export default function ModoManual({
     onGuardar,
     processing,
 }: ModoManualProps) {
-    const productosOptions = (productos || []).map(p => ({
-        value: p.id,
-        label: `${p.nombre}${p.sku ? ` (${p.sku})` : ''}`,
-        description: [p.categoria, p.marca].filter(Boolean).join(' • ')
-    }));
+    const { opciones: productosOptions, cargando: cargandoProductos, buscarConDebounce } = useProductoSearch();
+    const [productosCache, setProductosCache] = useState<Map<number, Producto>>(new Map());
+
+    // Limpiar cuando se desmonta el componente
+    useEffect(() => {
+        return () => {
+            // Cleanup si es necesario
+        };
+    }, []);
 
     const almacenesOptions = (almacenes || []).map(a => ({
         value: a.id,
@@ -38,10 +43,23 @@ export default function ModoManual({
         description: a.ubicacion_fisica
     }));
 
-    const productoSeleccionado = (index: number) => {
+    const productoSeleccionado = (index: number): Producto | null => {
         const item = items[index];
-        if (!item?.producto_id || !productos) return null;
-        return (productos || []).find(p => p.id === item.producto_id);
+        if (!item?.producto_id) return null;
+        return productosCache.get(item.producto_id) || null;
+    };
+
+    // Actualizar el caché cuando se selecciona un producto
+    const handleProductoChange = (index: number, productoId: number | '') => {
+        onActualizarItem(index, 'producto_id', productoId);
+
+        // Si hay un ID, buscar información del producto
+        if (productoId && typeof productoId === 'number') {
+            const opcion = productosOptions.find(opt => opt.value === productoId);
+            if (opcion?.data) {
+                setProductosCache(prev => new Map(prev).set(productoId, opcion.data));
+            }
+        }
     };
 
     return (
@@ -96,9 +114,11 @@ export default function ModoManual({
                                             placeholder="Buscar producto..."
                                             value={item.producto_id ? String(item.producto_id) : ''}
                                             options={productosOptions}
-                                            onChange={(value) => onActualizarItem(index, 'producto_id', value ? Number(value) : '')}
+                                            onChange={(value) => handleProductoChange(index, value ? Number(value) : '')}
+                                            onSearch={(searchTerm) => buscarConDebounce(searchTerm)}
                                             allowClear={true}
-                                            emptyText="No se encontraron productos"
+                                            emptyText={cargandoProductos ? "Buscando..." : "No se encontraron productos"}
+                                            loading={cargandoProductos}
                                         />
                                     </div>
 

@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Button } from '@/presentation/components/ui/button';
 import { Almacen } from '@/domain/entities/almacenes';
 import {
     InventarioInicialBorradorItem,
@@ -18,6 +19,7 @@ interface Props {
         lote?: string,
         fechaVencimiento?: string
     ) => Promise<void>;
+    onEliminar: (productoId: Id) => void;
     allItems: InventarioInicialBorradorItem[];
 }
 
@@ -27,6 +29,7 @@ export default function ProductoRowExpandible({
     expanded,
     onToggleExpand,
     onGuardarItem,
+    onEliminar,
     allItems,
 }: Props) {
 
@@ -44,7 +47,23 @@ export default function ProductoRowExpandible({
     const porcentajeCompletado = (almacenesCompletados / almacenes.length) * 100;
 
     return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition relative">
+            {/* Botón de eliminar - Posición absoluta */}
+            <div className="absolute top-3 right-12 sm:right-10 z-10">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEliminar(item.producto_id);
+                    }}
+                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    title="Eliminar producto"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </div>
+
             {/* Fila principal del producto */}
             <button
                 onClick={() => onToggleExpand(item.producto_id)}
@@ -54,24 +73,29 @@ export default function ProductoRowExpandible({
                 <div className="flex-1 text-left min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <div className="flex-1 min-w-0">
+                            <p> <span className="font-medium text-blue-600 dark:text-blue-400">Item #{item.id}</span></p>
                             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                                 {item.producto?.nombre}
                             </h3>
                             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                {/* ✅ NUEVO: ID, Marca y Unidad del producto */}
+                                {/* ✅ ID del borrador item + ID del producto */}
                                 <div className="truncate">
-                                    <span className="font-medium">ID:</span> {item.producto?.id}
+                                    <p>
+                                        {item.producto?.id && (
+                                            <> • <span className="font-medium">Prod:</span> {item.producto.id}</>
+                                        )} / • SKU: {item.producto?.sku}
+                                        {item.producto?.codigo_barras && (
+                                            <> • {item.producto.codigo_barras}</>
+                                        )}
+                                    </p>
+                                </div>
+                                {/* ✅ Marca y Unidad del producto */}
+                                <div className="truncate">
                                     {item.producto?.marca?.nombre && (
-                                        <> • <span className="font-medium">Marca:</span> {item.producto.marca.nombre}</>
+                                        <><span className="font-medium">Marca:</span> {item.producto.marca.nombre}</>
                                     )}
                                     {item.producto?.unidad?.nombre && (
                                         <> • <span className="font-medium">Unidad:</span> {item.producto.unidad.nombre}</>
-                                    )}
-                                </div>
-                                <div className="truncate">
-                                    SKU: {item.producto?.sku}
-                                    {item.producto?.codigo_barras && (
-                                        <> • {item.producto.codigo_barras}</>
                                     )}
                                 </div>
                                 {Array.isArray(item.producto?.codigos_barra) && item.producto.codigos_barra.length > 0 && (

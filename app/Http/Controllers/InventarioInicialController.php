@@ -21,26 +21,6 @@ class InventarioInicialController extends Controller
      */
     public function index()
     {
-        // Obtener productos activos con información mínima
-        $productos = Producto::with(['categoria:id,nombre', 'marca:id,nombre', 'unidad:id,codigo,nombre'])
-            ->where('activo', true)
-            ->select('id', 'nombre', 'sku', 'categoria_id', 'marca_id', 'unidad_medida_id', 'stock_minimo')
-            ->orderBy('nombre')
-            ->get()
-            ->map(function ($producto) {
-                return [
-                    'id'                       => $producto->id,
-                    'nombre'                   => $producto->nombre,
-                    'sku'                      => $producto->sku,
-                    'categoria'                => $producto->categoria?->nombre,
-                    'marca'                    => $producto->marca?->nombre,
-                    'unidad'                   => $producto->unidad?->codigo,
-                    'stock_minimo'             => $producto->stock_minimo,
-                    // Verificar si ya tiene inventario inicial cargado
-                    'tiene_inventario_inicial' => $this->tieneInventarioInicial($producto->id),
-                ];
-            });
-
         // Obtener almacenes activos
         $almacenes = Almacen::where('activo', true)
             ->select('id', 'nombre')
@@ -68,9 +48,9 @@ class InventarioInicialController extends Controller
                 ];
             });
 
-        // Renderizar el nuevo componente avanzado
+        // Renderizar el componente - SIN cargar todos los productos
+        // Los productos se buscan al backend según sea necesario mediante búsqueda
         return Inertia::render('inventario/inventario-inicial', [
-            'productos'  => $productos,
             'almacenes'  => $almacenes,
             'tipoInventarioInicial' => $tipoInventarioInicial,
             'borradores' => $borradores,

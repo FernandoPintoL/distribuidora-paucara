@@ -3,7 +3,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import NotificationService from '@/infrastructure/services/notification.service';
 import { useState, useRef } from 'react';
-import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
+import type { Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
 
 interface RowError {
     row: number;
@@ -11,7 +11,6 @@ interface RowError {
 }
 
 interface ModoImportacionProps {
-    productos: Producto[];
     almacenes: Almacen[];
     onCargarItems: (items: InventarioItem[]) => void;
 }
@@ -83,7 +82,6 @@ const parseCSV = (content: string): string[][] => {
 };
 
 export default function ModoImportacion({
-    productos = [],
     almacenes = [],
     onCargarItems,
 }: ModoImportacionProps) {
@@ -91,16 +89,63 @@ export default function ModoImportacion({
     const [errors, setErrors] = useState<RowError[]>([]);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [productosCache, setProductosCache] = useState<Map<string, number>>(new Map());
 
-    // Crear mapeos normalizados para búsqueda flexible
-    const productoMapNombre = new Map((productos || []).map(p => [normalizarTexto(p.nombre), p.id]));
-    const productoMapSKU = new Map((productos || []).map(p => p.sku ? [normalizarTexto(p.sku), p.id] : null).filter(Boolean) as Array<[string, number]>);
+    // Obtener token CSRF
+    const getCsrfToken = () => {
+        const token = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+        return token?.content || '';
+    };
 
     const almacenMapNormalizado = new Map((almacenes || []).map(a => [normalizarTexto(a.nombre), a.id]));
 
-    const buscarProducto = (texto: string): number | undefined => {
-        const normalizado = normalizarTexto(texto);
-        return productoMapNombre.get(normalizado) || productoMapSKU.get(normalizado);
+    // Buscar producto en el backend
+    const buscarProductoEnBackend = async (texto: string): Promise<number | undefined> => {
+        const cacheKey = normalizarTexto(texto);
+
+        // Verificar caché
+        if (productosCache.has(cacheKey)) {
+            return productosCache.get(cacheKey);
+        }
+
+        try {
+            const response = await fetch('/productos/paginados/listar', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    page: 1,
+                    per_page: 1,
+                    search: texto,
+                }),
+            });
+
+            if (!response.ok) {
+                return undefined;
+            }
+
+            const data = await response.json();
+            const productos = data.productos || [];
+
+            if (productos.length > 0) {
+                const productoId = productos[0].id;
+                // Guardar en caché
+                setProductosCache(prev => new Map(prev).set(cacheKey, productoId));
+                return productoId;
+            }
+
+            return undefined;
+        } catch (error) {
+            console.error('Error buscando producto:', error);
+            return undefined;
+        }
+    };
+
+    const buscarProducto = async (texto: string): Promise<number | undefined> => {
+        return buscarProductoEnBackend(texto);
     };
 
     const buscarAlmacen = (texto: string): number | undefined => {
@@ -153,7 +198,7 @@ export default function ModoImportacion({
         setLoading(true);
         const reader = new FileReader();
 
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const content = e.target?.result as string;
                 const rows = parseCSV(content);
@@ -169,7 +214,7 @@ export default function ModoImportacion({
                 const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim()));
 
                 setPreview(rows);
-                validarDatos(headers, dataRows);
+                await validarDatos(headers, dataRows);
             } catch (error) {
                 NotificationService.error('Error al procesar el archivo');
                 console.error(error);
@@ -181,7 +226,7 @@ export default function ModoImportacion({
         reader.readAsText(file);
     };
 
-    const validarDatos = (headers: string[], rows: string[][]) => {
+    const validarDatos = async (headers: string[], rows: string[][]) => {
         // Encontrar índices de columnas (búsqueda flexible)
         const indiceProd = headers.findIndex(h => h.includes('producto'));
         const indiceAlm = headers.findIndex(h => h.includes('almacen'));
@@ -207,17 +252,17 @@ export default function ModoImportacion({
 
         const rowErrors: RowError[] = [];
 
-        rows.forEach((row, rowIndex) => {
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const row = rows[rowIndex];
             const errores: string[] = [];
 
             // Validar producto
             if (!row[indiceProd]?.trim()) {
                 errores.push('❌ Producto: Campo vacío (requerido)');
             } else {
-                const productoId = buscarProducto(row[indiceProd]);
+                const productoId = await buscarProducto(row[indiceProd]);
                 if (!productoId) {
-                    const productosDisponibles = (productos || []).slice(0, 3).map(p => `"${p.nombre}"`).join(', ');
-                    errores.push(`❌ Producto: "${row[indiceProd]}" no encontrado. Usa el nombre exacto o SKU. Ejemplos: ${productosDisponibles}...`);
+                    errores.push(`❌ Producto: "${row[indiceProd]}" no encontrado. Verifica que exista el nombre o SKU`);
                 }
             }
 
@@ -247,7 +292,7 @@ export default function ModoImportacion({
             if (errores.length > 0) {
                 rowErrors.push({ row: rowIndex + 2, errors: errores });
             }
-        });
+        }
 
         setErrors(rowErrors);
 
@@ -255,11 +300,11 @@ export default function ModoImportacion({
             const totalErrores = rowErrors.reduce((sum, r) => sum + r.errors.length, 0);
             NotificationService.error(`Se encontraron ${totalErrores} error(es) en el archivo. Revisa los detalles abajo.`);
         } else {
-            cargarItemsDelArchivo(headers, rows);
+            await cargarItemsDelArchivo(headers, rows);
         }
     };
 
-    const cargarItemsDelArchivo = (headers: string[], rows: string[][]) => {
+    const cargarItemsDelArchivo = async (headers: string[], rows: string[][]) => {
         // Encontrar índices de columnas (búsqueda flexible)
         const indiceProd = headers.findIndex(h => h.includes('producto'));
         const indiceAlm = headers.findIndex(h => h.includes('almacen'));
@@ -268,16 +313,21 @@ export default function ModoImportacion({
         const indiceFecha = headers.findIndex(h => h.includes('fecha'));
         const indiceObs = headers.findIndex(h => h.includes('observacion'));
 
-        const items: InventarioItem[] = rows
-            .filter(row => row.some(cell => cell.trim()))
-            .map(row => ({
-                producto_id: buscarProducto(row[indiceProd]) || '',
-                almacen_id: buscarAlmacen(row[indiceAlm]) || '',
-                cantidad: Number(row[indiceCant]) || '',
-                lote: row[indiceLote]?.trim() || '',
-                fecha_vencimiento: convertirFecha(row[indiceFecha] || ''),
-                observaciones: row[indiceObs]?.trim() || '',
-            }));
+        const items: InventarioItem[] = [];
+
+        for (const row of rows.filter(r => r.some(cell => cell.trim()))) {
+            const productoId = await buscarProducto(row[indiceProd]);
+            if (productoId) {
+                items.push({
+                    producto_id: productoId,
+                    almacen_id: buscarAlmacen(row[indiceAlm]) || '',
+                    cantidad: Number(row[indiceCant]) || '',
+                    lote: row[indiceLote]?.trim() || '',
+                    fecha_vencimiento: convertirFecha(row[indiceFecha] || ''),
+                    observaciones: row[indiceObs]?.trim() || '',
+                });
+            }
+        }
 
         onCargarItems(items);
         NotificationService.success(`Se cargaron ${items.length} items en la tabla`);

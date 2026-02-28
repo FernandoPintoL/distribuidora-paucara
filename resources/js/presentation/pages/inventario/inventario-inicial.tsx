@@ -11,7 +11,6 @@ import ModoTabla from './components/modo-tabla';
 import ModoImportacion from './components/modo-importacion';
 import InventarioInicialAvanzado from './inventario-inicial-avanzado';
 import { store as storeInventarioInicial } from '@/routes/inventario/inicial';
-import { Producto } from '@/domain/entities/productos';
 import { TipoAjusteInventario } from '@/domain/entities/tipos-ajuste-inventario';
 import { InventarioItem } from '@/domain/entities/inventario-inicial';
 import { Almacen } from '@/domain/entities/almacenes';
@@ -29,13 +28,12 @@ interface Borrador {
 }
 
 interface Props {
-    productos: Producto[];
     almacenes: Almacen[];
     tipoInventarioInicial?: TipoAjusteInventario;
     borradores?: Borrador[];
 }
 
-export default function InventarioInicial({ productos, almacenes, tipoInventarioInicial, borradores = [] }: Props) {
+export default function InventarioInicial({ almacenes, tipoInventarioInicial, borradores = [] }: Props) {
     const { data, setData, post, processing } = useForm<{ items: InventarioItem[] }>({
         items: []
     });
@@ -234,11 +232,10 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                                 {borradores.map((borrador) => (
                                     <div
                                         key={borrador.id}
-                                        className={`p-3 rounded-lg border flex items-center justify-between ${
-                                            borrador.es_tuyo
+                                        className={`p-3 rounded-lg border flex items-center justify-between ${borrador.es_tuyo
                                                 ? 'bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800'
                                                 : 'bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
@@ -298,7 +295,6 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                         <TabsContent value="manual" className="space-y-4 flex-1 overflow-auto">
                             <ModoManual
                                 items={data.items}
-                                productos={productos}
                                 almacenes={almacenes}
                                 onAgregarItem={agregarItem}
                                 onEliminarItem={eliminarItem}
@@ -311,7 +307,6 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
                         <TabsContent value="tabla" className="flex-1 overflow-hidden flex flex-col">
                             <ModoTabla
                                 items={data.items}
-                                productos={productos}
                                 almacenes={almacenes}
                                 onAgregarItem={agregarItem}
                                 onActualizarItem={actualizarItem}
@@ -323,7 +318,6 @@ export default function InventarioInicial({ productos, almacenes, tipoInventario
 
                         <TabsContent value="importar" className="space-y-4 flex-1 overflow-auto">
                             <ModoImportacion
-                                productos={productos}
                                 almacenes={almacenes}
                                 onCargarItems={cargarItemsImportados}
                             />

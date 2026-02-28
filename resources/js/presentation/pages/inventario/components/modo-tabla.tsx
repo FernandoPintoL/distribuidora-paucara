@@ -1,13 +1,15 @@
 import { Trash2, Save, Plus, AlertCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import NotificationService from '@/infrastructure/services/notification.service';
-import type { Producto, Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
+import { useProductoSearch } from '../hooks/useProductoSearch';
+import type { Almacen, InventarioItem } from '@/domain/entities/inventario-inicial';
+import type { Producto } from '@/domain/entities/productos';
 
 interface ModoTablaProps {
     items: InventarioItem[];
-    productos: Producto[];
     almacenes: Almacen[];
     onAgregarItem: () => void;
     onActualizarItem: (index: number, field: keyof InventarioItem, value: any) => void;
@@ -18,7 +20,6 @@ interface ModoTablaProps {
 
 export default function ModoTabla({
     items,
-    productos = [],
     almacenes = [],
     onAgregarItem,
     onActualizarItem,
@@ -26,6 +27,8 @@ export default function ModoTabla({
     onGuardar,
     processing,
 }: ModoTablaProps) {
+    const { opciones: productosOptions, cargando: cargandoProductos, buscarConDebounce } = useProductoSearch();
+    const [productosCache, setProductosCache] = useState<Map<number, Producto>>(new Map());
     if (items.length === 0) {
         return (
             <div className="flex flex-col h-full gap-4">
@@ -56,19 +59,13 @@ export default function ModoTabla({
         );
     }
 
-    const productoMap = new Map((productos || []).map(p => [p.id, p]));
-    const almacenMap = new Map((almacenes || []).map(a => [a.id, a]));
+    const almacenMap = useMemo(() => new Map((almacenes || []).map(a => [a.id, a])), [almacenes]);
 
-    const productosOptions = (productos || []).map(p => ({
-        value: p.id,
-        label: `${p.nombre}${p.sku ? ` (${p.sku})` : ''}`,
-        description: [p.categoria, p.marca].filter(Boolean).join(' • ')
-    }));
-
-    const almacenesOptions = (almacenes || []).map(a => ({
-        value: a.id,
-        label: a.nombre,
-    }));
+    const almacenesOptions = useMemo(() =>
+        (almacenes || []).map(a => ({
+            value: a.id,
+            label: a.nombre,
+        })), [almacenes]);
 
     // Función para detectar duplicados (producto + almacén)
     const verificarDuplicado = (productoId: number, almacenId: number, indexActual: number): boolean => {
@@ -81,8 +78,8 @@ export default function ModoTabla({
 
     // Función para obtener nombre de producto
     const obtenerNombreProducto = (productoId: number | '') => {
-        if (!productoId) return '';
-        return productoMap.get(productoId as number)?.nombre || 'Producto desconocido';
+        if (!productoId) return 'Producto desconocido';
+        return productosCache.get(productoId as number)?.nombre || 'Producto desconocido';
     };
 
     // Función para obtener nombre de almacén
@@ -103,6 +100,14 @@ export default function ModoTabla({
                     `Ya existe "${obtenerNombreProducto(productoId)}" en "${obtenerNombreAlmacen(almacenId)}"`
                 );
                 return;
+            }
+        }
+
+        // Si es cambio de producto, actualizar caché
+        if (field === 'producto_id' && value) {
+            const opcion = productosOptions.find(opt => opt.value === value);
+            if (opcion?.data) {
+                setProductosCache(prev => new Map(prev).set(value, opcion.data));
             }
         }
 
@@ -167,8 +172,10 @@ export default function ModoTabla({
                                             value={item.producto_id ? String(item.producto_id) : ''}
                                             options={productosOptions}
                                             onChange={(value) => handleActualizarConValidacion(index, 'producto_id', value ? Number(value) : '')}
+                                            onSearch={(searchTerm) => buscarConDebounce(searchTerm)}
                                             allowClear={true}
-                                            emptyText="No encontrado"
+                                            emptyText={cargandoProductos ? "Buscando..." : "No encontrado"}
+                                            loading={cargandoProductos}
                                         />
                                     </td>
                                     <td className="px-2 py-1.5 min-w-24 sm:min-w-32 hidden sm:table-cell">

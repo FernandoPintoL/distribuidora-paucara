@@ -284,6 +284,61 @@ export default function InventarioInicialAvanzado({ almacenes, borradorId }: Pro
         }
     };
 
+    const eliminarProducto = async (productoId: Id) => {
+        if (!borrador) return;
+
+        // Confirmar eliminación
+        const confirmado = await NotificationService.confirm(
+            '¿Estás seguro de que deseas eliminar este producto y todos sus items?',
+            {
+                title: 'Confirmar eliminación',
+                confirmText: 'Sí, eliminar',
+                cancelText: 'Cancelar',
+            }
+        );
+
+        if (!confirmado) return;
+
+        try {
+            setGuardando(true);
+
+            // Obtener todos los items del producto para eliminarlos
+            const itemsProducto = borrador.items.filter(i => i.producto_id === productoId);
+
+            // Eliminar cada item
+            for (const item of itemsProducto) {
+                if (item.id) {
+                    const response = await fetch(
+                        getRoute('inicial.draft.item.delete', {
+                            borrador: borrador.id,
+                            item: item.id
+                        }),
+                        {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-Token': getCsrfToken(),
+                            },
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Error al eliminar item');
+                    }
+                }
+            }
+
+            // Recargar borrador
+            await cargarBorrador(borrador.id);
+            NotificationService.success('Producto eliminado correctamente');
+        } catch (error) {
+            NotificationService.error('Error al eliminar producto');
+            console.error(error);
+        } finally {
+            setGuardando(false);
+        }
+    };
+
     const guardarTodosBorrador = async () => {
         if (!borrador) return;
 
@@ -319,7 +374,7 @@ export default function InventarioInicialAvanzado({ almacenes, borradorId }: Pro
     };
 
     const handleBusquedaChange = (valor: string) => {
-        console.log('🔍 Búsqueda cambiada:', valor);
+        console.log('🔍 Búsqueda actualizada:', valor);
         setBusqueda(valor);
         setPaginaActual(1);
 
@@ -361,14 +416,6 @@ export default function InventarioInicialAvanzado({ almacenes, borradorId }: Pro
             );
             setSugerencias(filtrados.slice(0, 5)); // Máximo 5 sugerencias locales
             setMostrarSugerencias(filtrados.length > 0);
-
-            // Debounce: buscar en BD después de 800ms sin escribir
-            debounceTimerRef.current = setTimeout(() => {
-                if (valor.trim().length >= 2) { // Mínimo 2 caracteres para buscar en BD
-                    console.log(`⏱️ Debounce finalizado - Buscando en BD: "${valor}"`);
-                    buscarEnDB(valor);
-                }
-            }, 800);
         } else {
             setSugerencias([]);
             setMostrarSugerencias(false);
@@ -1044,6 +1091,7 @@ export default function InventarioInicialAvanzado({ almacenes, borradorId }: Pro
                                             });
                                         }}
                                         onGuardarItem={guardarItem}
+                                        onEliminar={eliminarProducto}
                                         allItems={borrador.items}
                                     />
                                 ))}
