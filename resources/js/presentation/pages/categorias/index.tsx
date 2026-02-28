@@ -31,7 +31,7 @@ interface CategoriasIndexProps {
 export default function CategoriasIndex({ categorias, filters }: CategoriasIndexProps) {
   return (
     <AppLayout breadcrumbs={[
-      { title: 'Dashboard', href: categoriasService.indexUrl() },
+      { title: 'Dashboards', href: categoriasService.indexUrl() },
       { title: 'Categorías', href: categoriasService.indexUrl() }
     ]}>
       <GenericContainer<Categoria, CategoriaFormData>
