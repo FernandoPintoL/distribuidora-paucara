@@ -401,9 +401,6 @@ class InventarioInicialController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        // Nota: Los items sin cantidad serán ignorados automáticamente al procesar
-        // (ver línea 413-415: if ($item->cantidad === null || $item->cantidad <= 0) continue;)
-
         DB::beginTransaction();
         try {
             $tipoInventarioInicial = TipoAjusteInventario::where('clave', 'INVENTARIO_INICIAL')->firstOrFail();
@@ -420,17 +417,26 @@ class InventarioInicialController extends Controller
                     continue; // Solo saltar si es null
                 }
 
+                // Usar savepoint para aislar cada item
+                $savepointName = 'sp_item_' . $index;
+                DB::statement("SAVEPOINT {$savepointName}");
+
                 try {
                     if ($item->stock_producto_id) {
                         // Reemplazar stock existente (no actualizar)
-                        $stockProducto    = StockProducto::findOrFail($item->stock_producto_id);
+                        $stockProducto = StockProducto::find($item->stock_producto_id);
+
+                        if (!$stockProducto) {
+                            throw new \Exception("Stock producto con ID {$item->stock_producto_id} no encontrado");
+                        }
+
                         $cantidadAnterior = $stockProducto->cantidad;
                         $diferencia       = $item->cantidad - $cantidadAnterior;
 
                         // REEMPLAZAR cantidad y cantidad_disponible (ignorar reservas previas)
                         $stockProducto->cantidad            = $item->cantidad;
-                        $stockProducto->cantidad_disponible = $item->cantidad; // REEMPLAZAR: igual a cantidad
-                        $stockProducto->cantidad_reservada  = 0; // REEMPLAZAR: siempre 0
+                        $stockProducto->cantidad_disponible = $item->cantidad;
+                        $stockProducto->cantidad_reservada  = 0;
                         $stockProducto->lote                = $item->lote;
                         $stockProducto->fecha_vencimiento   = $item->fecha_vencimiento;
                         if ($item->precio_costo) {
@@ -439,7 +445,7 @@ class InventarioInicialController extends Controller
                         $stockProducto->fecha_actualizacion = now();
                         $stockProducto->save();
 
-                        // Validar invariante (ahora siempre se cumple: cantidad = cantidad_disponible + 0)
+                        // Validar invariante
                         if ($stockProducto->validarInvariante() === false) {
                             throw new \Exception("Invariante de stock roto para producto_id={$item->producto_id}");
                         }
@@ -495,10 +501,14 @@ class InventarioInicialController extends Controller
                     }
 
                     $resultados['exitosos']++;
+                    // Confirmar savepoint
+                    DB::statement("RELEASE SAVEPOINT {$savepointName}");
                 } catch (\Exception $e) {
+                    // Revertir solo este item
+                    DB::statement("ROLLBACK TO SAVEPOINT {$savepointName}");
                     $resultados['fallidos']++;
                     $resultados['errores'][] = "Item producto {$item->producto_id}, almacén {$item->almacen_id}: {$e->getMessage()}";
-                    Log::error('Error completando borrador', ['error' => $e->getMessage()]);
+                    Log::error('Error completando item del borrador', ['error' => $e->getMessage()]);
                 }
             }
 

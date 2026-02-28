@@ -23,14 +23,16 @@ class StockProducto extends Model
         'fecha_actualizacion',
         'lote',
         'fecha_vencimiento',
+        'precio_costo',
     ];
 
     protected function casts(): array
     {
         return [
-            'cantidad' => 'decimal:6',
-            'cantidad_reservada' => 'decimal:6',
-            'cantidad_disponible' => 'decimal:6',
+            'cantidad' => 'int',
+            'cantidad_reservada' => 'int',
+            'cantidad_disponible' => 'int',
+            'precio_costo' => 'decimal:2',
             'fecha_actualizacion' => 'datetime',
             'fecha_vencimiento' => 'date',
             'deleted_at' => 'datetime', // ✓ Para SoftDeletes
