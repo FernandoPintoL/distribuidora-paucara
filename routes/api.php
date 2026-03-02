@@ -470,6 +470,10 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
         Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
 
+        // ✅ NUEVO: Reporte de productos vendidos (API) - DEBE IR ANTES que apiResource
+        // Para evitar que {reporte-productos-vendidos} sea interpretado como {venta} ID
+        Route::get('reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte']);
+
         // 🎯 Rutas con parámetro {venta} o {producto}
         Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);
         Route::get('{venta}/resumen-stock', [VentaController::class, 'obtenerResumenStock']);
@@ -1272,6 +1276,14 @@ Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
     Route::post('preparar-impresion-compras', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionCompras']);
     Route::post('preparar-impresion-productos-vendidos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionProductosVendidos']);
     Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
+});
+
+// ==========================================
+// 📊 REPORTES DE VENTAS
+// ==========================================
+Route::middleware(['auth:sanctum'])->prefix('reportes')->group(function () {
+    Route::get('productos-vendidos', [\App\Http\Controllers\Api\ApiReporteVentasController::class, 'productosVendidos'])
+        ->name('api.reportes.productos-vendidos');
 });
 
 // ==========================================
