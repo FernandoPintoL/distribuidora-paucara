@@ -17,6 +17,7 @@ import cajas from './cajas'
 import gastos from './gastos'
 import admin from './admin'
 import conciliacion from './conciliacion'
+import reportes from './reportes'
 import alertas from './alertas'
 import dashboard from './dashboard'
 import codigosBarra from './codigos-barra'
@@ -268,6 +269,7 @@ cajas,
 gastos,
 admin,
 conciliacion,
+reportes,
 alertas,
 dashboard,
 codigosBarra,

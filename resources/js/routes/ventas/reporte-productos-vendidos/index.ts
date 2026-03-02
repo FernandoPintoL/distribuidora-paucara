@@ -77,8 +77,3 @@ imprimir.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     imprimir.form = imprimirForm
-const reporteProductosVendidos = {
-    imprimir,
-}
-
-export default reporteProductosVendidos

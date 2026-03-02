@@ -5,7 +5,7 @@
 
 <div class="separador"></div>
 {{-- Encabezado --}}
-<div style="text-align: center; margin-bottom: 10px;">
+<div style="text-align: center; margin-bottom: 10px; font-size: 11px;">
     <h3 style="margin: 5px 0;">PROFORMA <br/> {{ $documento->numero }}</h3>
     <p>Folio: {{ $documento->id }}</p>
     <p style="margin: 3px 0;">{{ $documento->created_at->format('d/m/Y H:i') }}</p>
@@ -14,7 +14,7 @@
 <div class="separador"></div>
 
 {{-- CLIENTE --}}
-<div style="margin-bottom: 8px;">
+<div style="margin-bottom: 8px; font-size: 11px;">
     <p style="margin: 2px 0;"><strong>{{ $documento->cliente?->nombre ?? 'CLIENTE' }}</strong></p>
     @if($documento->cliente?->nit_ci)
         <p style="margin: 2px 0;">NIT/CI: {{ $documento->cliente->nit_ci }}</p>

@@ -10,352 +10,203 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
             color: #333;
-            background: white;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0;
             padding: 20px;
         }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-        }
-
         .header {
             text-align: center;
-            border-bottom: 2px solid #1f2937;
-            padding-bottom: 20px;
             margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
         }
-
         .header h1 {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 18px;
             margin-bottom: 5px;
-            color: #1f2937;
         }
-
         .header p {
-            font-size: 12px;
-            color: #6b7280;
+            font-size: 10px;
+            color: #666;
         }
-
         .info-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #f3f4f6;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .info-row .item {
             display: flex;
             justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 10px;
         }
-
-        .info-row .label {
-            font-weight: bold;
-            color: #374151;
+        .info-row span {
+            margin-right: 20px;
         }
-
-        .info-row .value {
-            color: #1f2937;
-        }
-
         .section-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            color: #1f2937;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e5e7eb;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            background-color: #f0f0f0;
+            padding: 5px;
+            border-left: 3px solid #333;
         }
-
-        .summary-cards {
-            display: table;
-            width: 100%;
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-            border-collapse: collapse;
-        }
-
-        .summary-card {
-            display: table-cell;
-            border: 1px solid #e5e7eb;
-            padding: 10px;
-            text-align: center;
-            background: #f9fafb;
-            width: 25%;
-        }
-
-        .summary-card .label {
-            font-size: 11px;
-            font-weight: bold;
-            color: #6b7280;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            line-height: 1.3;
-            display: block;
-        }
-
-        .summary-card .value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1f2937;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-size: 12px;
+            font-size: 10px;
         }
-
         table thead {
-            background: #1f2937;
-            color: white;
+            background-color: #f0f0f0;
         }
-
         table th {
-            padding: 10px;
+            border: 1px solid #999;
+            padding: 5px;
             text-align: left;
             font-weight: bold;
-            border: 1px solid #1f2937;
         }
-
         table td {
-            padding: 10px;
-            border: 1px solid #e5e7eb;
-            text-align: left;
+            border: 1px solid #ddd;
+            padding: 5px;
         }
-
-        table tbody tr:nth-child(even) {
-            background: #f9fafb;
+        table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
-
-        table tbody tr:hover {
-            background: #f3f4f6;
-        }
-
-        .text-right {
+        .number {
             text-align: right;
         }
-
-        .text-center {
-            text-align: center;
+        .totales {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 11px;
+            font-weight: bold;
         }
-
+        .total-box {
+            flex: 1;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #999;
+            border-radius: 4px;
+        }
+        .total-label {
+            color: #666;
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+        .total-value {
+            font-size: 14px;
+            color: #333;
+        }
         .footer {
             margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #e5e7eb;
             text-align: center;
-            font-size: 11px;
-            color: #6b7280;
-        }
-
-        .footer p {
-            margin: 5px 0;
-        }
-
-        @media print {
-            body {
-                padding: 0;
-            }
-            .container {
-                max-width: 100%;
-            }
-            table {
-                page-break-inside: avoid;
-            }
-            .section-title {
-                page-break-after: avoid;
-            }
-        }
-
-        .usuario-badge {
-            display: inline-block;
-            background: #3b82f6;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin: 5px 0;
+            font-size: 9px;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <h1>📊 Reporte de Productos Vendidos</h1>
-            <p>Análisis de productos vendidos en proformas convertidas a ventas aprobadas</p>
+            <p>Distribuidora Paucara</p>
         </div>
 
-        <!-- Info -->
         <div class="info-row">
-            <div class="item">
-                <span class="label">Período:</span>
-                <span class="value">{{ $fechaDesde }} a {{ $fechaHasta }}</span>
-            </div>
-            <div class="item">
-                <span class="label">Generado:</span>
-                <span class="value">{{ now()->format('d/m/Y H:i:s') }}</span>
-            </div>
+            <span><strong>Período:</strong> {{ $fechaDesde }} al {{ $fechaHasta }}</span>
             @if ($usuarioNombre)
-                <div class="item">
-                    <span class="label">Preventista:</span>
-                    <span class="value usuario-badge">{{ $usuarioNombre }}</span>
-                </div>
+                <span><strong>Preventista:</strong> {{ $usuarioNombre }}</span>
             @endif
+            <span><strong>Generado:</strong> {{ now()->format('d/m/Y H:i') }}</span>
         </div>
 
-        <!-- Resumen -->
-        <div class="section-title">Resumen</div>
-        <div class="summary-cards">
-            <div class="summary-card">
-                <div class="label">Productos Únicos</div>
-                <div class="value">{{ $totales['cantidad_productos'] }}</div>
+        <div class="totales">
+            <div class="total-box">
+                <div class="total-label">Cantidad de Productos</div>
+                <div class="total-value">{{ $totales['cantidad_productos'] ?? 0 }}</div>
             </div>
-            <div class="summary-card">
-                <div class="label">Cantidad Total Vendida</div>
-                <div class="value">{{ number_format($totales['cantidad_total_vendida'], 2, '.', ',') }}</div>
+            <div class="total-box">
+                <div class="total-label">Cantidad Total Vendida</div>
+                <div class="total-value">{{ number_format($totales['cantidad_total_vendida'] ?? 0, 2, ',', '.') }}</div>
             </div>
-            <div class="summary-card">
-                <div class="label">Total Venta General</div>
-                <div class="value">Bs. {{ number_format($totales['total_venta_general'], 2, '.', ',') }}</div>
+            <div class="total-box">
+                <div class="total-label">Total Venta General</div>
+                <div class="total-value">Bs. {{ number_format($totales['total_venta_general'] ?? 0, 2, ',', '.') }}</div>
             </div>
-            <div class="summary-card">
-                <div class="label">Precio Promedio</div>
-                <div class="value">Bs. {{ number_format($totales['precio_promedio_general'], 2, '.', ',') }}</div>
+            <div class="total-box">
+                <div class="total-label">Precio Promedio</div>
+                <div class="total-value">Bs. {{ number_format($totales['precio_promedio_general'] ?? 0, 2, ',', '.') }}</div>
             </div>
         </div>
 
-        <!-- Tabla de Productos -->
-        <div class="section-title">Productos</div>
         @if (count($productos) > 0)
+            <div class="section-title">📦 Productos Vendidos</div>
             <table>
                 <thead>
                     <tr>
                         <th>Producto</th>
                         <th>Código</th>
-                        <th class="text-right">Cantidad</th>
-                        <th class="text-right">Precio Promedio</th>
-                        <th class="text-right">Total Venta</th>
+                        <th class="number">Cantidad</th>
+                        <th class="number">Precio Promedio</th>
+                        <th class="number">Total Venta</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($productos as $producto)
                         <tr>
-                            <td>{{ $producto['nombre'] }}</td>
-                            <td>{{ $producto['codigo'] }}</td>
-                            <td class="text-right">{{ number_format($producto['cantidad_total'], 2, '.', ',') }}</td>
-                            <td class="text-right">Bs. {{ number_format($producto['precio_promedio'], 2, '.', ',') }}</td>
-                            <td class="text-right"><strong>Bs. {{ number_format($producto['total_venta'], 2, '.', ',') }}</strong></td>
+                            <td>{{ $producto['nombre'] ?? 'N/A' }}</td>
+                            <td>{{ $producto['codigo'] ?? 'N/A' }}</td>
+                            <td class="number">{{ number_format($producto['cantidad_total'] ?? 0, 2, ',', '.') }}</td>
+                            <td class="number">Bs. {{ number_format($producto['precio_promedio'] ?? 0, 2, ',', '.') }}</td>
+                            <td class="number">Bs. {{ number_format($producto['total_venta'] ?? 0, 2, ',', '.') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        @else
-            <p class="text-center">No hay productos vendidos en el período seleccionado.</p>
         @endif
 
-        <!-- Tabla de Ventas -->
-        <div class="section-title">Ventas Aprobadas</div>
         @if (count($ventas) > 0)
+            <div class="section-title">📋 Ventas Aprobadas</div>
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th># Proforma</th>
-                        <th>Fecha Proforma</th>
-                        <th># Venta</th>
+                        <th>Venta #</th>
                         <th>Cliente</th>
                         <th>Usuario</th>
-                        <th>Fecha Venta</th>
-                        <th>Est. Documento</th>
-                        <th>Est. Entrega</th>
-                        <th class="text-right">Total</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th class="number">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($ventas as $venta)
                         <tr>
-                            <td>{{ $venta['id'] }}</td>
-                            <td>{{ $venta['proforma_numero'] }}</td>
-                            <td>{{ \Carbon\Carbon::parse($venta['proforma_fecha'])->format('d/m/Y') }}</td>
-                            <td>{{ $venta['numero'] }}</td>
-                            <td>{{ $venta['cliente'] }}</td>
-                            <td>{{ $venta['usuario'] }}</td>
-                            <td>{{ \Carbon\Carbon::parse($venta['fecha'])->format('d/m/Y') }}</td>
-                            <td><strong>{{ $venta['estado'] }}</strong></td>
+                            <td>{{ $venta['numero'] ?? 'N/A' }}</td>
+                            <td>{{ $venta['cliente'] ?? 'N/A' }}</td>
+                            <td>{{ $venta['usuario'] ?? 'N/A' }}</td>
                             <td>
-                                @if ($venta['confirmado_en'])
-                                    <strong>{{ $venta['estado_entrega'] ?? 'N/A' }}</strong><br>
-
-                                    {{-- Tipo de entrega --}}
-                                    @if ($venta['tipo_entrega'])
-                                        <small style="color: {{ $venta['tipo_entrega'] === 'COMPLETA' ? 'green' : 'orange' }};">
-                                            📦 {{ $venta['tipo_entrega'] }}
-                                        </small><br>
-                                    @endif
-
-                                    {{-- Contexto de entrega --}}
-                                    @if ($venta['tienda_abierta'] !== null)
-                                        <small>Tienda: {{ $venta['tienda_abierta'] ? '✓ Abierta' : '✗ Cerrada' }}</small><br>
-                                    @endif
-                                    @if ($venta['cliente_presente'] !== null)
-                                        <small>Cliente: {{ $venta['cliente_presente'] ? '✓ Presente' : '✗ Ausente' }}</small><br>
-                                    @endif
-
-                                    {{-- Tipo de novedad si aplica --}}
-                                    @if ($venta['tipo_novedad'])
-                                        <small style="color: red;"><strong>⚠️ {{ str_replace('_', ' ', $venta['tipo_novedad']) }}</strong></small><br>
-                                    @endif
-
-                                    {{-- Estado de pago --}}
-                                    @if ($venta['estado_pago'])
-                                        <small><strong>Pago: {{ $venta['estado_pago'] }}</strong></small>
-                                        @if ($venta['total_dinero_recibido'] > 0)
-                                            <small>(Bs. {{ number_format($venta['total_dinero_recibido'], 2, '.', ',') }})</small>
-                                            @if ($venta['monto_pendiente'] > 0)
-                                                <small style="color: red;"> Pendiente: Bs. {{ number_format($venta['monto_pendiente'], 2, '.', ',') }}</small>
-                                            @endif
-                                            <br>
-                                        @else
-                                            <br>
-                                        @endif
-                                    @endif
-
-                                    {{-- Observaciones de logística --}}
-                                    @if ($venta['observaciones_logistica'])
-                                        <small style="font-style: italic;">📝 {{ substr($venta['observaciones_logistica'], 0, 80) }}{{ strlen($venta['observaciones_logistica']) > 80 ? '...' : '' }}</small>
-                                    @endif
+                                @if ($venta['fecha'] ?? null)
+                                    {{ \Carbon\Carbon::parse($venta['fecha'])->format('d/m/Y') }}
                                 @else
-                                    <em>Sin confirmar</em>
+                                    N/A
                                 @endif
                             </td>
-                            <td class="text-right"><strong>Bs. {{ number_format($venta['total'], 2, '.', ',') }}</strong></td>
+                            <td>{{ $venta['estado'] ?? 'N/A' }}</td>
+                            <td class="number">Bs. {{ number_format($venta['total'] ?? 0, 2, ',', '.') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        @else
-            <p class="text-center">No hay ventas aprobadas en el período seleccionado.</p>
         @endif
 
-        <!-- Footer -->
         <div class="footer">
-            <p>Este reporte fue generado automáticamente por el sistema.</p>
-            <p>Para más información contacte con administración.</p>
+            <p>Este reporte fue generado automáticamente por el sistema Distribuidora Paucara</p>
         </div>
     </div>
 </body>

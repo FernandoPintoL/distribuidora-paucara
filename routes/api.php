@@ -452,6 +452,10 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ✅ VENTAS: PDF Download (Impresión de tickets y facturas) - ANTES de apiResource
     // Esto asegura que se procesen ANTES que las rutas genéricas de apiResource
     Route::group(['prefix' => 'ventas'], function () {
+        // ✅ Reporte de productos vendidos - DEBE IR ANTES que {venta}/imprimir
+        // Para evitar que sea capturado por {venta}/imprimir
+        Route::get('reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte']);
+
         // 🖨️ Descargar venta como PDF (múltiples formatos)
         // Accesible por Chofer (para descargar PDFs de ventas asignadas)
         // y por Cliente (para descargar sus propias ventas)
@@ -469,10 +473,6 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('para-impresion', [VentaController::class, 'ventasParaImpresion']);
         Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
         Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
-
-        // ✅ NUEVO: Reporte de productos vendidos (API) - DEBE IR ANTES que apiResource
-        // Para evitar que {reporte-productos-vendidos} sea interpretado como {venta} ID
-        Route::get('reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte']);
 
         // 🎯 Rutas con parámetro {venta} o {producto}
         Route::get('{producto}/stock', [VentaController::class, 'obtenerStockProducto']);

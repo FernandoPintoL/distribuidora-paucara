@@ -344,15 +344,6 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Excluir 'show' porque lo definiremos después de las rutas específicas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class)->except(['show'])->middleware('caja.abierta');
 
-    // ✅ NUEVO: Reporte de productos vendidos (proformas convertidas a ventas)
-    Route::get('ventas/reporte-productos-vendidos', [\App\Http\Controllers\ReporteVentasController::class, 'productosVendidos'])
-        ->name('ventas.reporte-productos-vendidos')
-        ->middleware('permission:ventas.index');
-
-    Route::get('ventas/reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte'])
-        ->name('ventas.reporte-productos-vendidos.imprimir')
-        ->middleware('permission:ventas.index');
-
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
     // ==========================================
@@ -366,6 +357,15 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // RUTAS ADICIONALES PARA MÓDULO DE VENTAS
     // ==========================================
     Route::prefix('ventas')->name('ventas.')->group(function () {
+        // ✅ NUEVO: Reporte de productos vendidos - ANTES de rutas genéricas
+        Route::get('reporte-productos-vendidos/imprimir', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirReporte'])
+            ->name('reporte-productos-vendidos.imprimir')
+            ->middleware('permission:ventas.index');
+
+        Route::get('reporte-productos-vendidos', [\App\Http\Controllers\ReporteVentasController::class, 'productosVendidos'])
+            ->name('reporte-productos-vendidos')
+            ->middleware('permission:ventas.index');
+
         // Rutas sin parámetros dinámicos PRIMERO
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');
@@ -383,10 +383,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('{venta}/registrar-pago', [\App\Http\Controllers\VentaController::class, 'registrarPago'])->name('registrar-pago');
 
         // Rutas con parámetros dinámicos van al final
-        Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir-venta');
-        Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview');
-        Route::get('{venta}/exportar-excel', [\App\Http\Controllers\VentaController::class, 'exportarExcel'])->name('exportar-excel');
-        Route::get('{venta}/exportar-pdf', [\App\Http\Controllers\VentaController::class, 'exportarPdf'])->name('exportar-pdf');
+        // ⚠️ IMPORTANTE: Restringir {venta} a solo números para no capturar rutas de texto
+        Route::get('{venta}/imprimir', [\App\Http\Controllers\VentaController::class, 'imprimir'])->name('imprimir-venta')->where('venta', '[0-9]+');
+        Route::get('{venta}/preview', [\App\Http\Controllers\VentaController::class, 'preview'])->name('preview')->where('venta', '[0-9]+');
+        Route::get('{venta}/exportar-excel', [\App\Http\Controllers\VentaController::class, 'exportarExcel'])->name('exportar-excel')->where('venta', '[0-9]+');
+        Route::get('{venta}/exportar-pdf', [\App\Http\Controllers\VentaController::class, 'exportarPdf'])->name('exportar-pdf')->where('venta', '[0-9]+');
 
         // Show debe ir AL FINAL para no capturar otras rutas
         Route::get('{id}', [\App\Http\Controllers\VentaController::class, 'show'])->name('show')->where('id', '[0-9]+');
