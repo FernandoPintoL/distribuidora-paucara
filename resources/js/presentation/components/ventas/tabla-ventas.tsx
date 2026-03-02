@@ -339,6 +339,9 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                 🚚 Tipo Entrega {getSortIcon('requiere_envio')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                👤 Preventista
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 🕐 Creada
                             </th>
                             <th scope="col" className="px-6 py-3">
@@ -382,6 +385,27 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
                                             )}
                                         </div>
+                                        {venta.preventista ? (
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                                    <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                                                        {venta.preventista.name.charAt(0).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {venta.preventista.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {venta.preventista.email}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className="inline-flex px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+                                                -
+                                            </span>
+                                        )}
                                     </td>
 
                                     <td className="px-6 py-4">

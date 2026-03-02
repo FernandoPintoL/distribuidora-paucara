@@ -25,7 +25,8 @@ export default function FiltrosVentasComponent({
         estados_documento: datosParaFiltros?.estados_documento || [],
         monedas: datosParaFiltros?.monedas || [],
         usuarios: datosParaFiltros?.usuarios || [],
-        tipos_pago: datosParaFiltros?.tipos_pago || []  // ✅ NUEVO: Tipos de pago
+        tipos_pago: datosParaFiltros?.tipos_pago || [],  // ✅ NUEVO: Tipos de pago
+        preventistas: datosParaFiltros?.preventistas || []  // ✅ NUEVO (2026-03-01): Preventistas
     };
 
     // Detectar si hay filtros activos
@@ -41,6 +42,7 @@ export default function FiltrosVentasComponent({
         filtros.monto_max ||
         filtros.usuario_id ||
         filtros.tipo_pago_id ||  // ✅ NUEVO: Incluir tipo_pago_id
+        filtros.preventista_id ||  // ✅ NUEVO (2026-03-01): Incluir preventista_id
         filtros.id_desde ||       // ✅ NUEVO: Incluir id_desde
         filtros.id_hasta          // ✅ NUEVO: Incluir id_hasta
     );
@@ -92,7 +94,10 @@ export default function FiltrosVentasComponent({
     };
 
     const aplicarFiltros = (filtrosAplicar?: FiltrosVentas) => {
-        ventasService.searchVentas(filtrosAplicar || filtros);
+        const filtrosFinales = filtrosAplicar || filtros;
+        console.log('🔍 [FiltrosVentas] Aplicando filtros:', filtrosFinales);
+        console.log('🔍 [FiltrosVentas] preventista_id:', filtrosFinales.preventista_id);
+        ventasService.searchVentas(filtrosFinales);
     };
 
     const limpiarFiltros = () => {
@@ -305,6 +310,24 @@ export default function FiltrosVentasComponent({
                                     label: usuario.name
                                 }))}
                                 onChange={(value) => handleFiltroChange('usuario_id', value ? Number(value) : null)}
+                                allowClear={true}
+                                className="w-full"
+                            />
+                        </div>
+
+                        {/* ✅ NUEVO (2026-03-01): Preventista */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                👤 Preventista
+                            </label>
+                            <SearchSelect
+                                placeholder="Seleccionar preventista..."
+                                value={filtros.preventista_id || ''}
+                                options={datosSeguros.preventistas.map((preventista) => ({
+                                    value: preventista.id,
+                                    label: preventista.name
+                                }))}
+                                onChange={(value) => handleFiltroChange('preventista_id', value ? Number(value) : null)}
                                 allowClear={true}
                                 className="w-full"
                             />

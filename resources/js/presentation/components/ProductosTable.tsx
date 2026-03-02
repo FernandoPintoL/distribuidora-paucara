@@ -101,10 +101,12 @@ export default function ProductosTable({
     onDetallesActualizados, // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles
     es_farmacia = false // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
 }: ProductosTableProps) {
-    
+
     // ✅ DEBUG: Loguear props recibidos
     console.log('📋 ProductosTable - Props recibidos:', productos);
     console.log('Detalles recibidos:', detalles);
+    // ✅ DEBUG: Loguear si es farmacia
+    console.log('🏥 ProductosTable - es_farmacia:', es_farmacia);
     const [productSearch, setProductSearch] = useState('');
     const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -389,6 +391,7 @@ export default function ProductosTable({
             const data = await response.json();
 
             console.log('✅ [ProductosTable] Respuesta API completa:', data.data);
+            console.log('🏥 [buscarProductos] Contexto de farmacia - es_farmacia:', es_farmacia);
 
             // Transformar respuesta de API a formato Producto
             const productosAPI = data.data.map((p: any) => {
@@ -432,7 +435,14 @@ export default function ProductosTable({
                     combo_items: p.combo_items || [],
                     // ✅ NUEVO: Incluir límites
                     limite_productos: p.limite_productos || null,
-                    limite_venta: p.limite_venta || null
+                    limite_venta: p.limite_venta || null,
+                    // ✅ NUEVO: Incluir marca, unidad y categoría para mostrar en sugerencias
+                    marca: p.marca ? { id: p.marca.id, nombre: p.marca.nombre } : null,
+                    unidad: p.unidad ? { id: p.unidad.id, nombre: p.unidad.nombre, codigo: p.unidad.codigo } : null,
+                    categoria: p.categoria ? { id: p.categoria.id, nombre: p.categoria.nombre } : null,
+                    // ✅ NUEVO: Incluir campos de medicamentos (farmacia)
+                    principio_activo: p.principio_activo || null,
+                    uso_de_medicacion: p.uso_de_medicacion || null
                 };
             });
 
@@ -867,15 +877,25 @@ export default function ProductosTable({
                                         </div>
                                     </button>
                                     {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
-                                    {es_farmacia && (producto.principio_activo || producto.uso_de_medicacion) && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setFarmaciaProdutoSeleccionado(producto)}
-                                            className="w-full text-left px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-t border-gray-100 dark:border-zinc-700 font-medium flex items-center gap-1"
-                                        >
-                                            <span>💊 Ver info medicamento</span>
-                                        </button>
-                                    )}
+                                    {(() => {
+                                        const mostrarMedicamentos = es_farmacia && (producto.principio_activo || producto.uso_de_medicacion);
+                                        if (mostrarMedicamentos) {
+                                            console.log(`💊 [Sugerencias] Mostrando medicamento para ${producto.nombre}:`, {
+                                                es_farmacia,
+                                                principio_activo: producto.principio_activo,
+                                                uso_de_medicacion: producto.uso_de_medicacion
+                                            });
+                                        }
+                                        return mostrarMedicamentos && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setFarmaciaProdutoSeleccionado(producto)}
+                                                className="w-full text-left px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-t border-gray-100 dark:border-zinc-700 font-medium flex items-center gap-1"
+                                            >
+                                                <span>💊 Ver info medicamento</span>
+                                            </button>
+                                        );
+                                    })()}
                                 </div>
                             ))
                         )}
@@ -993,6 +1013,36 @@ export default function ProductosTable({
                                                 {productoInfo?.codigo_barras && (
                                                     <div>Código Barras: {productoInfo.codigo_barras}</div>
                                                 )}
+                                                {/* ✅ NUEVO: Mostrar Marca y Unidad en línea compacta */}
+                                                {((productoInfo as any)?.marca || (productoInfo as any)?.unidad) && (
+                                                    <div className="text-gray-600 dark:text-gray-500">
+                                                        {(productoInfo as any)?.marca?.nombre && `Marca: ${(productoInfo as any).marca.nombre}`}
+                                                        {(productoInfo as any)?.marca?.nombre && (productoInfo as any)?.unidad?.codigo && ' | '}
+                                                        {(productoInfo as any)?.unidad?.codigo && `Unidad: ${(productoInfo as any).unidad.codigo}`}
+                                                    </div>
+                                                )}
+                                                {/* ✅ NUEVO: Mostrar campos de medicamentos solo si es farmacia */}
+                                                {(() => {
+                                                    const tieneDataMedicamentos = (productoInfo as any)?.principio_activo || (productoInfo as any)?.uso_de_medicacion;
+                                                    const mostrarMedicamentos = es_farmacia && tieneDataMedicamentos;
+                                                    if (mostrarMedicamentos) {
+                                                        console.log(`💊 [Tabla] Mostrando medicamento para ${productoInfo?.nombre}:`, {
+                                                            es_farmacia,
+                                                            principio_activo: (productoInfo as any)?.principio_activo,
+                                                            uso_de_medicacion: (productoInfo as any)?.uso_de_medicacion
+                                                        });
+                                                    }
+                                                    return mostrarMedicamentos && (
+                                                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 space-y-0.5">
+                                                            {(productoInfo as any)?.principio_activo && (
+                                                                <div>💊 P.A.: {(productoInfo as any).principio_activo}</div>
+                                                            )}
+                                                            {(productoInfo as any)?.uso_de_medicacion && (
+                                                                <div>📋 Uso: {(productoInfo as any).uso_de_medicacion}</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">

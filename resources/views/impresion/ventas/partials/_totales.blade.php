@@ -6,7 +6,7 @@
     ✅ Muestra cambio si aplica
     ✅ Muestra total en letras
 --}}
-<div class="totales text-right" style="font-size=13px;">
+<div class="totales text-right">
     <table>
         {{-- Subtotal --}}
         {{-- <tr>
@@ -17,22 +17,27 @@
         {{-- Mostrar descuento si existe --}}
         {{-- @if($documento->descuento > 0)
         @endif --}}
-        <tr style="font-size=13px;">
+        <tr style="font-size:12px;">
             <td><strong>Descuento:</strong></td>
-            <td class="text-right" >{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
+            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
         </tr>
-        {{-- TOTAL A PAGAR (final) --}}
-        @php
-            $totalAPagar = $documento->subtotal - ($documento->descuento ?? 0);
-            $cambio = max(0, $documento->monto_pagado - $totalAPagar);
-        @endphp
-        <tr class="total-final" style="font-size=13px;">
-            <td><strong>Total a Pagar:</strong></td>
+        {{-- TOTAL (final a pagar) --}}
+        <tr class="total-final" style="font-size:12px;">
+            <td><strong>Total:</strong></td>
             <td class="text-right">
-                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($totalAPagar, 2) }}</strong>
+                <strong>{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->total, 2) }}</strong>
             </td>
         </tr>
-        <tr style="font-size=13px;">
+        {{-- MONTO PAGADO --}}
+        <tr style="font-size:12px;">
+            <td><strong>Monto Pagado:</strong></td>
+            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pagado ?? 0, 2) }}</td>
+        </tr>
+        {{-- CAMBIO --}}
+        @php
+        $cambio = max(0, ($documento->monto_pagado ?? 0) - $documento->total);
+        @endphp
+        <tr style="font-size:12px;">
             <td><strong>Cambio:</strong></td>
             <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($cambio, 2) }}</td>
         </tr>

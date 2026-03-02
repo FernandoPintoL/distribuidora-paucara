@@ -8,6 +8,7 @@ import NotificationController from './NotificationController'
 import ChoferPreferenciaController from './ChoferPreferenciaController'
 import TipoMermaController from './TipoMermaController'
 import EstadoMermaController from './EstadoMermaController'
+import StockDisponiblePdfController from './StockDisponiblePdfController'
 import ApiProformaController from './ApiProformaController'
 import ReservaProformaController from './ReservaProformaController'
 import EntregaController from './EntregaController'
@@ -39,6 +40,7 @@ NotificationController,
 ChoferPreferenciaController,
 TipoMermaController,
 EstadoMermaController,
+StockDisponiblePdfController,
 ApiProformaController,
 ReservaProformaController,
 EntregaController,

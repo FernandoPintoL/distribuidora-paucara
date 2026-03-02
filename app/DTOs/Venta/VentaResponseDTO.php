@@ -43,6 +43,8 @@ class VentaResponseDTO extends BaseDTO
         public ?array $proforma = null,
         public ?array $direccion_cliente = null,
         public ?array $entregaConfirmacion = null,  // ✅ NUEVO: Confirmación de entrega (entregas_venta_confirmaciones)
+        public ?int $preventista_id = null,  // ✅ NUEVO (2026-03-01): ID del preventista
+        public ?array $preventista = null,   // ✅ NUEVO (2026-03-01): Datos del preventista
     ) {}
 
     /**
@@ -77,6 +79,9 @@ class VentaResponseDTO extends BaseDTO
         }
         if (!isset($venta->confirmaciones)) {
             $venta->load('confirmaciones');  // ✅ NUEVO: Cargar confirmaciones de entrega
+        }
+        if (!isset($venta->preventista)) {
+            $venta->load('preventista');  // ✅ NUEVO (2026-03-01): Cargar preventista
         }
 
         return new self(
@@ -188,6 +193,13 @@ class VentaResponseDTO extends BaseDTO
                     'created_at'              => $firstConfirmacion->created_at ?? null,
                 ];
             })(),
+            // ✅ NUEVO (2026-03-01): Preventista
+            preventista_id: $venta->preventista_id,
+            preventista: $venta->preventista ? [
+                'id' => $venta->preventista->id,
+                'name' => $venta->preventista->name,
+                'email' => $venta->preventista->email,
+            ] : null,
         );
     }
 

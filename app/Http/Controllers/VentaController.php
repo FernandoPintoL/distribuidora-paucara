@@ -110,6 +110,7 @@ class VentaController extends Controller
                 'busqueda_cliente'    => $request->input('busqueda_cliente'),  // ✅ NUEVO: Búsqueda alternativa de cliente
                 'usuario_id'          => $request->input('usuario_id'),
                 'tipo_pago_id'        => $request->input('tipo_pago_id'),      // ✅ NUEVO: Filtro por tipo de pago
+                'preventista_id'      => $request->input('preventista_id'),    // ✅ NUEVO (2026-03-01): Filtro por preventista
                 'fecha_desde'         => $request->input('fecha_desde'),
                 'fecha_hasta'         => $request->input('fecha_hasta'),
                 'numero'              => $request->input('numero'),
@@ -292,6 +293,13 @@ class VentaController extends Controller
                             'created_at'              => $firstConfirmacion->created_at ?? null,
                         ];
                     })(),
+                    // ✅ NUEVO (2026-03-01): Relación con preventista (vendedor responsable)
+                    'preventista_id'             => $venta->preventista_id,
+                    'preventista'                => $venta->preventista ? [
+                        'id'    => $venta->preventista->id,
+                        'name'  => $venta->preventista->name,
+                        'email' => $venta->preventista->email,
+                    ] : null,
                 ];
             });
 
@@ -324,6 +332,8 @@ class VentaController extends Controller
                     'usuarios'          => User::select('id', 'name')->orderBy('name')->get(),
                     'monedas'           => Moneda::activos()->select('id', 'codigo', 'nombre')->get(),
                     'tipos_pago'        => TipoPago::activos()->select('id', 'nombre')->get(),  // ✅ NUEVO: Tipos de pago
+                    // ✅ NUEVO (2026-03-01): Preventistas (usuarios con rol preventista)
+                    'preventistas'      => User::role('preventista')->select('id', 'name')->orderBy('name')->get(),
                 ],
             ]);
 
@@ -351,13 +361,24 @@ class VentaController extends Controller
             'icono'  => $tipo->getIcon(),
         ])->toArray();
 
-        // ✅ NUEVO: Obtener almacén de la empresa principal
-        $empresaPrincipal = \App\Models\Empresa::principal();
+        // ✅ NUEVO: Obtener almacén de la empresa principal (consulta FRESCA, sin cache)
+        // Forzar consulta directa a BD para obtener valor actual de es_farmacia
+        $empresaPrincipal = \App\Models\Empresa::where('es_principal', true)
+            ->where('activo', true)
+            ->first(); // Sin Cache::remember para obtener valor actual
         $almacenIdEmpresa = (int) ($empresaPrincipal?->almacen_id ?? 1); // ✅ Cast a int explícito
 
         Log::info('📦 VentaController::create - Obteniendo productos con stock', [
             'almacen_id_empresa' => $almacenIdEmpresa,
             'empresa_principal'  => $empresaPrincipal?->nombre,
+        ]);
+
+        // ✅ DEBUG: Log de es_farmacia y logistica_envios para verificar que consulta fresco
+        Log::info('🏥 VentaController::create - Consultando VALORES FRESCOS de BD', [
+            'es_farmacia' => (bool) $empresaPrincipal?->es_farmacia,
+            'logistica_envios' => (bool) $empresaPrincipal?->logistica_envios,
+            'empresa_id' => $empresaPrincipal?->id,
+            'empresa_nombre' => $empresaPrincipal?->nombre,
         ]);
 
                                   // ✅ MODIFICADO: NO cargar productos en la página
@@ -384,6 +405,7 @@ class VentaController extends Controller
             'estados_documento'  => EstadoDocumento::where('activo', true)->select('id', 'codigo', 'nombre')->get(), // ✅ NUEVO: Estados de documento
             'almacen_id_empresa' => $almacenIdEmpresa,                                                               // ✅ NUEVO: Almacén de la empresa
             'es_farmacia'        => (bool) $empresaPrincipal?->es_farmacia,                                          // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
+            'logistica_envios'   => (bool) $empresaPrincipal?->logistica_envios,                                     // ✅ NUEVO: Indicador para mostrar/ocultar logística de envíos
         ]);
     }
 

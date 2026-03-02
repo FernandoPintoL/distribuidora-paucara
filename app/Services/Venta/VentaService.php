@@ -164,6 +164,7 @@ class VentaService
                 'numero'                     => '0',  // ✅ TEMP: Se asignará al ID después de crear
                 'cliente_id'                 => $dto->cliente_id,
                 'usuario_id'                 => $dto->usuario_id ?? Auth::id(),
+                'preventista_id'             => $dto->preventista_id, // ✅ NUEVO (2026-03-01): Preventista responsable
                 'fecha'                      => $dto->fecha,
                 'subtotal'                   => $dto->subtotal,
                 'descuento'                  => $dto->descuento,  // ✅ NUEVO: Registrar descuento del frontend
@@ -443,6 +444,7 @@ class VentaService
                 'detalles.producto',          // ✅ RECOMENDADO: Para verificar peso_total_estimado si es necesario
                 'proforma',                   // ✅ NUEVO: Cargar relación de proforma (si existe)
                 'confirmaciones',             // ✅ NUEVO: Cargar confirmación de entrega (entregas_venta_confirmaciones)
+                'preventista',                // ✅ NUEVO (2026-03-01): Cargar preventista responsable
             ])
                 ->when($filtros['id'] ?? null, fn($q, $id) =>
                     $q->where('id', $id)
@@ -488,6 +490,9 @@ class VentaService
                 )
                 ->when($filtros['tipo_pago_id'] ?? null, fn($q, $tipoPagoId) =>
                     $q->where('tipo_pago_id', $tipoPagoId)  // ✅ NUEVO: Filtro por tipo de pago
+                )
+                ->when($filtros['preventista_id'] ?? null, fn($q, $preventistaId) =>
+                    $q->where('preventista_id', $preventistaId)  // ✅ NUEVO (2026-03-01): Filtro por preventista
                 )
                 ->when($filtros['fecha_desde'] ?? null, fn($q, $fecha) =>
                     $q->where('created_at', '>=', $fecha . ' 00:00:00')

@@ -39,10 +39,10 @@
     @endif
     {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
     @php
-        $usuarioCreadorProforma = null;
-        if ($documento->proforma_id && $documento->proforma) {
-            $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
-        }
+    $usuarioCreadorProforma = null;
+    if ($documento->proforma_id && $documento->proforma) {
+    $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
+    }
     @endphp
     @if($usuarioCreadorProforma)
     <p><strong>Preventista:</strong> {{ $usuarioCreadorProforma->name }}</p>
@@ -116,10 +116,12 @@
 
 <div class="separador"></div>
 
-{{-- ==================== QR CODE ==================== --}}
+{{-- ==================== QR CODE - Solo para distribuidores (no farmacias) ==================== --}}
+@if(!$empresa->es_farmacia)
 <div class="center">
     @include('impresion.ventas.partials._qr')
 </div>
+@endif
 
 <div class="separador"></div>
 

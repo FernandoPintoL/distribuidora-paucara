@@ -45,6 +45,8 @@ class CrearVentaDTO extends BaseDTO
         public ?int $estado_documento_id = null,
         // ✅ NUEVO: Información de pago (para calcular estado_pago dinámicamente)
         public ?float $monto_pagado_inicial = null,  // Monto pagado en el momento de la aprobación
+        // ✅ NUEVO (2026-03-01): Preventista responsable de la venta
+        public ?int $preventista_id = null,
     ) {}
 
     /**
@@ -101,6 +103,9 @@ class CrearVentaDTO extends BaseDTO
             idempotency_key: $request->input('idempotency_key'),
             estado_documento_id: $request->has('estado_documento_id') ? (int) $request->input('estado_documento_id') : null,
             monto_pagado_inicial: $request->has('monto_pagado_inicial') ? (float) $request->input('monto_pagado_inicial') : null,
+            // ✅ NUEVO (2026-03-01): Mapear preventista_id del frontend
+            // ✅ CORREGIDO: Convertir 0 a null para evitar error de FK
+            preventista_id: $request->has('preventista_id') && $request->input('preventista_id') ? (int) $request->input('preventista_id') : null,
         );
     }
 

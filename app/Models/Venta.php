@@ -30,6 +30,7 @@ class Venta extends Model
         'observaciones_logistica',  // ✅ NUEVO: Observaciones sobre entrega (completa, incidentes, etc.)
         'cliente_id',
         'usuario_id',
+        'preventista_id',  // ✅ NUEVO: User con rol de preventista
         'estado_documento_id',
         'moneda_id',
         'proforma_id',
@@ -170,6 +171,14 @@ class Venta extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * ✅ NUEVO: Relación con el preventista (User con rol de preventista)
+     */
+    public function preventista()
+    {
+        return $this->belongsTo(User::class, 'preventista_id');
     }
 
     public function estadoDocumento()

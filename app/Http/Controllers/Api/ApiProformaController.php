@@ -2645,8 +2645,8 @@ class ApiProformaController extends Controller
      */
     public function convertirAVenta(Proforma $proforma, Request $request)
     {
-        // 🔧 Cargar la relación estadoLogistica para el accessor
-        $proforma->load('estadoLogistica');
+        // 🔧 Cargar las relaciones necesarias
+        $proforma->load(['estadoLogistica', 'usuarioCreador']);
 
         // ✅ MEJORADO: Validar datos de pago si se proporcionan
         // Ahora incluye CREDITO en las políticas permitidas
@@ -2964,6 +2964,22 @@ class ApiProformaController extends Controller
                     'venta_id'     => $venta->id,
                     'numero_venta' => $numeroVenta,
                 ]);
+
+                // ✅ NUEVO: Asignar preventista si el usuario creador de la proforma es preventista
+                if ($proforma->usuarioCreador && $proforma->usuarioCreador->hasRole('preventista')) {
+                    $venta->update(['preventista_id' => $proforma->usuarioCreador->id]);
+                    Log::info('✅ [convertirAVenta] Preventista asignado a la venta', [
+                        'venta_id'       => $venta->id,
+                        'preventista_id' => $proforma->usuarioCreador->id,
+                        'preventista'    => $proforma->usuarioCreador->name,
+                    ]);
+                } else {
+                    Log::info('ℹ️ [convertirAVenta] Usuario creador NO es preventista', [
+                        'venta_id'           => $venta->id,
+                        'usuario_creador_id' => $proforma->usuarioCreador?->id,
+                        'usuario_creador'    => $proforma->usuarioCreador?->name,
+                    ]);
+                }
 
                 // 🔑 CRÍTICO: Obtener caja abierta para establecer en atributo especial
                 // El listener RegisterCajaMovementFromVentaListener requiere _caja_id para registrar en caja

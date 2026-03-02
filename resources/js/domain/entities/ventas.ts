@@ -132,6 +132,7 @@ export interface Venta extends BaseEntity {
     estado_logistico_id?: Id;  // ✅ NUEVO: FK al estado logístico
     estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIALMENTE_PAGADO' | 'VENCIDO';  // ✅ NUEVO: Estado de pago
     politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO';  // ✅ NUEVO: Política de pago
+    preventista_id?: Id | null;  // ✅ NUEVO (2026-03-01): ID del preventista responsable
 
     // Relaciones
     cliente?: Cliente;
@@ -142,6 +143,7 @@ export interface Venta extends BaseEntity {
     tipo_documento?: TipoDocumento;
     proforma?: Proforma;
     estadoLogistica?: EstadoLogistica;  // ✅ NUEVO: Relación con EstadoLogistica
+    preventista?: Usuario;  // ✅ NUEVO (2026-03-01): Relación con preventista (User)
     detalles?: DetalleVenta[];
     pagos?: Pago[];
     cuenta_por_cobrar?: CuentaPorCobrar;
@@ -227,6 +229,7 @@ export interface FiltrosVentas {
     tipo_pago_id?: Id | null;  // ✅ NUEVO: Filtro por tipo de pago
     estado_pago?: string | null;  // ✅ NUEVO: Filtro por estado de pago
     estado_logistico?: string | null;  // ✅ NUEVO: Filtro por estado logístico
+    preventista_id?: Id | null;  // ✅ NUEVO (2026-03-01): Filtro por preventista
     fecha_desde?: string;
     fecha_hasta?: string;
     monto_min?: number;
@@ -279,6 +282,7 @@ export interface DatosParaFiltrosVentas {
     monedas: Moneda[];
     usuarios: Usuario[];
     tipos_pago?: TipoPago[];  // ✅ NUEVO: Tipos de pago para filtrado
+    preventistas?: Usuario[];  // ✅ NUEVO (2026-03-01): Preventistas para filtrado
 }
 
 // =============== DATOS PARA FORMULARIOS ===============

@@ -61,9 +61,36 @@ interface PageProps extends InertiaPageProps {
 }
 
 export default function VentaForm() {
-    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, tipos_precio, almacen_id_empresa, es_farmacia, auth, venta } = usePage<PageProps>().props;
+    const { clientes, productos, monedas, estados_documento, tipos_pago, tipos_documento, tipos_precio, almacen_id_empresa, es_farmacia, logistica_envios, auth, venta } = usePage<PageProps>().props;
     const isEditing = Boolean(venta);
     const { shouldShowBanner } = useCajaWarning();
+
+    // ✅ DEBUG: Log INICIAL de valores desde Inertia
+    console.log('🔥 [VentaForm] VALORES INICIALES DESDE INERTIA:', {
+        es_farmacia,
+        logistica_envios,
+        tipo_logistica_envios: typeof logistica_envios,
+        es_booleano: logistica_envios === true || logistica_envios === false,
+    });
+
+    // ✅ DEBUG: Detectar cambios en es_farmacia y logistica_envios
+    useEffect(() => {
+        console.log('🏥 [VentaForm] es_farmacia cambió:', es_farmacia);
+        console.log('📦 [VentaForm] logistica_envios cambió:', logistica_envios);
+        console.log(`✅ [VentaForm] Campo logística ${logistica_envios ? 'VISIBLE ✅' : 'OCULTO ❌'}`);
+        // Si cambió el valor, recarga la página para obtener datos frescos
+        console.warn('⚠️ Si cambiaste es_farmacia o logistica_envios en Empresa, necesitas refrescar los datos');
+    }, [es_farmacia, logistica_envios]);
+
+    // ✅ NUEVO: Función para refrescar los datos desde el servidor
+    const refrescarDatos = () => {
+        console.log('🔄 [VentaForm] Refrescando datos...');
+        router.visit(window.location.href, {
+            method: 'get',
+            replace: true,
+            preserveState: false // No preserva el estado, fuerza cargar props frescos
+        });
+    };
 
     // Validaciones defensivas para evitar errores usando useMemo
     const clientesSeguro = useMemo(() => clientes || [], [clientes]);
@@ -132,6 +159,14 @@ export default function VentaForm() {
     }>>([]);
     const [cargandoDirecciones, setCargandoDirecciones] = useState(false);
 
+    // ✅ NUEVO: Estados para preventistas
+    interface Preventista {
+        id: number;
+        name: string;
+    }
+    const [preventistas, setPrevenstitas] = useState<Preventista[]>([]);
+    const [cargandoPrevenstitas, setCargandoPrevenstitas] = useState(true);
+
     // Estados para validación de caja abierta
     interface CajaInfo {
         tiene_caja_abierta: boolean;
@@ -182,6 +217,30 @@ export default function VentaForm() {
         verificarCaja();
     }, []);
 
+    // ✅ NUEVO: Cargar preventistas al montar el componente
+    useEffect(() => {
+        const cargarPrevenstitas = async () => {
+            try {
+                const response = await fetch('/api/preventistas');
+                const data = await response.json();
+                if (data.success && Array.isArray(data.preventistas)) {
+                    setPrevenstitas(data.preventistas);
+                    console.log('✅ Preventistas cargados:', data.preventistas);
+                } else {
+                    console.warn('⚠️ Respuesta de preventistas inválida:', data);
+                    setPrevenstitas([]);
+                }
+            } catch (error) {
+                console.error('❌ Error al cargar preventistas:', error);
+                setPrevenstitas([]);
+            } finally {
+                setCargandoPrevenstitas(false);
+            }
+        };
+
+        cargarPrevenstitas();
+    }, []);
+
     // Hook para calcular carrito con precios por rango
     const precioRango = usePrecioRangoCarrito(500); // Debounce de 500ms
 
@@ -230,7 +289,9 @@ export default function VentaForm() {
         // ✅ NUEVO: Estado de pago por defecto PAGADO (consistente con proformas)
         estado_pago: venta?.estado_pago || 'PAGADO',
         // ✅ NUEVO: Dirección del cliente para envío
-        direccion_cliente_id: (venta?.direccion_cliente_id ? Number(venta.direccion_cliente_id) : null) as number | null
+        direccion_cliente_id: (venta?.direccion_cliente_id ? Number(venta.direccion_cliente_id) : null) as number | null,
+        // ✅ NUEVO: Preventista (User con rol de preventista)
+        preventista_id: (venta?.preventista_id ? Number(venta.preventista_id) : null) as number | null
     });
 
     // ✅ NUEVO (2026-02-11): Estado local para input de monto_pagado_inicial
@@ -1325,120 +1386,121 @@ export default function VentaForm() {
                         </div>
                     </div>
 
-                    {/* Sección de Envío - SIEMPRE VISIBLE */}
-                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-md font-medium text-gray-900 dark:text-white">
-                                🚚 Información de Envío
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => setData('requiere_envio', !data.requiere_envio)}
-                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${data.requiere_envio
-                                    ? 'bg-green-600 dark:bg-green-700'
-                                    : 'bg-gray-300 dark:bg-gray-600'
-                                    } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
-                            >
-                                <span
-                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${data.requiere_envio ? 'translate-x-7' : 'translate-x-1'
-                                        }`}
-                                />
-                                <span className="ml-2 text-sm font-medium text-white">
-                                    {data.requiere_envio ? 'Sí' : 'No'}
-                                </span>
-                            </button>
-                        </div>
+                    {/* Sección de Envío - Solo visible si logistica_envios = true */}
+                    {logistica_envios && (
+                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-md font-medium text-gray-900 dark:text-white">
+                                    🚚 Información de Envío
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setData('requiere_envio', !data.requiere_envio)}
+                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${data.requiere_envio
+                                        ? 'bg-green-600 dark:bg-green-700'
+                                        : 'bg-gray-300 dark:bg-gray-600'
+                                        } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
+                                >
+                                    <span
+                                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${data.requiere_envio ? 'translate-x-7' : 'translate-x-1'
+                                            }`}
+                                    />
+                                    <span className="ml-2 text-sm font-medium text-white">
+                                        {data.requiere_envio ? 'Sí' : 'No'}
+                                    </span>
+                                </button>
+                            </div>
 
-                        {/* Campos de envío - mostrar solo si requiere_envio es true */}
-                        {data.requiere_envio && (
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
-                                {/* ✅ NUEVO: Selector de política de pago para envíos */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        💳 Política de Pago
-                                    </label>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                            <input
-                                                type="radio"
-                                                name="politica_pago"
-                                                value="CONTRA_ENTREGA"
-                                                checked={data.politica_pago === 'CONTRA_ENTREGA'}
-                                                onChange={(e) => setData('politica_pago', e.target.value)}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Contra Entrega
-                                                </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    El cliente paga al recibir el pedido
-                                                </p>
-                                            </div>
-                                        </label>
-                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                            <input
-                                                type="radio"
-                                                name="politica_pago"
-                                                value="ANTICIPADO_100"
-                                                checked={data.politica_pago === 'ANTICIPADO_100'}
-                                                onChange={(e) => setData('politica_pago', e.target.value)}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Anticipado 100%
-                                                </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    El cliente paga antes de enviar el pedido
-                                                </p>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* ✅ NUEVO: Selector de direcciones del cliente */}
-                                {clienteSeleccionado && (
+                            {/* Campos de envío - mostrar solo si requiere_envio es true */}
+                            {data.requiere_envio && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
+                                    {/* ✅ NUEVO: Selector de política de pago para envíos */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            📍 Direcciones del Cliente
+                                            💳 Política de Pago
                                         </label>
-                                        {cargandoDirecciones ? (
-                                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                                                <span className="text-sm">Cargando direcciones...</span>
-                                            </div>
-                                        ) : direccionesDisponibles.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {direccionesDisponibles.map((dir) => (
-                                                    <label key={dir.id} className="flex items-start gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                                        <input
-                                                            type="radio"
-                                                            name="direccion_cliente"
-                                                            value={dir.id}
-                                                            checked={data.direccion_cliente_id === dir.id}
-                                                            onChange={(e) => setData('direccion_cliente_id', Number(e.target.value))}
-                                                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                {dir.direccion}
-                                                                {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
-                                                            </p>
-                                                            {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400">📍 {dir.localidad}</p>}
-                                                        </div>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-amber-600 dark:text-amber-400">
-                                                ⚠️ El cliente no tiene direcciones registradas. Completa la dirección manualmente a continuación.
-                                            </p>
-                                        )}
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                                <input
+                                                    type="radio"
+                                                    name="politica_pago"
+                                                    value="CONTRA_ENTREGA"
+                                                    checked={data.politica_pago === 'CONTRA_ENTREGA'}
+                                                    onChange={(e) => setData('politica_pago', e.target.value)}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Contra Entrega
+                                                    </p>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                        El cliente paga al recibir el pedido
+                                                    </p>
+                                                </div>
+                                            </label>
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                                <input
+                                                    type="radio"
+                                                    name="politica_pago"
+                                                    value="ANTICIPADO_100"
+                                                    checked={data.politica_pago === 'ANTICIPADO_100'}
+                                                    onChange={(e) => setData('politica_pago', e.target.value)}
+                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Anticipado 100%
+                                                    </p>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                        El cliente paga antes de enviar el pedido
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        </div>
                                     </div>
-                                )}
 
-                                <div>
+                                    {/* ✅ NUEVO: Selector de direcciones del cliente */}
+                                    {clienteSeleccionado && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                📍 Direcciones del Cliente
+                                            </label>
+                                            {cargandoDirecciones ? (
+                                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                                    <span className="text-sm">Cargando direcciones...</span>
+                                                </div>
+                                            ) : direccionesDisponibles.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {direccionesDisponibles.map((dir) => (
+                                                        <label key={dir.id} className="flex items-start gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                                            <input
+                                                                type="radio"
+                                                                name="direccion_cliente"
+                                                                value={dir.id}
+                                                                checked={data.direccion_cliente_id === dir.id}
+                                                                onChange={(e) => setData('direccion_cliente_id', Number(e.target.value))}
+                                                                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                    {dir.direccion}
+                                                                    {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
+                                                                </p>
+                                                                {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400">📍 {dir.localidad}</p>}
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-amber-600 dark:text-amber-400">
+                                                    ⚠️ El cliente no tiene direcciones registradas. Completa la dirección manualmente a continuación.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Dirección de Envío {!data.direccion_cliente_id && '*'}
                                     </label>
@@ -1450,9 +1512,9 @@ export default function VentaForm() {
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                     />
                                     {errors.observaciones && <p className="mt-1 text-sm text-red-600">{errors.observaciones}</p>}
-                                </div>
+                                </div> */}
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Persona que Recibe
@@ -1476,42 +1538,70 @@ export default function VentaForm() {
                                             className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                         />
                                     </div>
+                                </div> */}
+
+                                    {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si logistica_envios (prop global) = true */}
+                                    {(() => {
+                                        const mostrar = logistica_envios;
+                                        console.log(`🔍 [Render] Evaluando condición logistica_envios:`, {
+                                            logistica_envios,
+                                            tipo: typeof logistica_envios,
+                                            estaVacio: !logistica_envios,
+                                            mostrar
+                                        });
+                                        return mostrar && (
+                                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
+                                                {/* ✅ NUEVO: Selector de Preventista */}
+                                                <div className="border-t border-green-200 dark:border-green-800 pt-3">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        👤 Preventista (Opcional)
+                                                    </label>
+                                                    {cargandoPrevenstitas ? (
+                                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                            <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
+                                                            <span className="text-sm">Cargando preventistas...</span>
+                                                        </div>
+                                                    ) : preventistas.length > 0 ? (
+                                                        <select
+                                                            value={data.preventista_id || ''}
+                                                            onChange={(e) => setData('preventista_id', e.target.value ? Number(e.target.value) : null)}
+                                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-zinc-800 dark:text-white"
+                                                        >
+                                                            <option value="">-- Selecciona un preventista --</option>
+                                                            {preventistas.map((prev) => (
+                                                                <option key={prev.id} value={prev.id}>
+                                                                    {prev.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                                                            ⚠️ No hay preventistas disponibles
+                                                        </p>
+                                                    )}
+                                                    <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                                                        ℹ️ Asigna un preventista responsable de esta venta
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        ℹ️ Los datos del cliente se pre-rellenan automáticamente. Modifica si es necesario.
+                                    </p>
                                 </div>
+                            )}
 
-                                {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si empresa.logistica_envios = true */}
-                                {selectedCliente?.empresa?.logistica_envios && (
-                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            🚚 Empresa de Logística
-                                        </label>
-                                        <select
-                                            value={data.empresa_logistica_id || ''}
-                                            onChange={(e) => setData('empresa_logistica_id', e.target.value ? Number(e.target.value) : null)}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-zinc-800 dark:text-white"
-                                        >
-                                            <option value="">Selecciona empresa de logística...</option>
-                                            <option value="">-- Envío directo (sin intermediario) --</option>
-                                        </select>
-                                        <p className="text-xs text-green-700 dark:text-green-300">
-                                            ℹ️ Esta empresa dispone de servicio de logística para envíos
-                                        </p>
-                                    </div>
-                                )}
-
-                                <p className="text-xs text-blue-700 dark:text-blue-300">
-                                    ℹ️ Los datos del cliente se pre-rellenan automáticamente. Modifica si es necesario.
+                            {!data.requiere_envio && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Desactiva el envío si la venta es presencial
                                 </p>
-                            </div>
-                        )}
+                            )}
 
-                        {!data.requiere_envio && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Desactiva el envío si la venta es presencial
-                            </p>
-                        )}
-
-                        {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
-                    </div>
+                            {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
+                        </div>
+                    )}
                     <br />
                     <ProductosTable
                         productos={productosSeguro}
@@ -1671,6 +1761,16 @@ export default function VentaForm() {
                     >
                         🗑️ Limpiar borrador
                     </button>
+
+                    {/* ✅ NUEVO: Botón para refrescar datos desde el servidor */}
+                    {/* <button
+                        type="button"
+                        onClick={refrescarDatos}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-600 dark:hover:bg-blue-900/50 dark:focus:ring-offset-gray-900 transition-colors"
+                        title="Refrescar datos desde el servidor (si cambió es_farmacia en Empresa)"
+                    >
+                        🔄 Refrescar datos
+                    </button> */}
 
                     {/* ✅ NUEVO: Permitir CREDITO incluso con stock insuficiente */}
                     {(() => {

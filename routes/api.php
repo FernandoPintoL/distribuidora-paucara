@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\ReporteCargoController;
 use App\Http\Controllers\Api\ReporteProductoDañadoController;
 use App\Http\Controllers\Api\BannerPublicitarioController;
 use App\Http\Controllers\Api\EstadoMermaController;
+use App\Http\Controllers\Api\StockDisponiblePdfController;
 use App\Http\Controllers\ReporteCargaPdfController;
 use App\Http\Controllers\ReporteCargoListController;
 use App\Http\Controllers\Api\NotificationController;
@@ -290,6 +291,30 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ==========================================
     Route::get('/productos/{producto}/stock', [ProductoController::class, 'obtenerStock'])->name('api.productos.stock');
     Route::post('/productos/stock/multiples', [ProductoController::class, 'obtenerStockMultiples'])->name('api.productos.stock.multiples');
+
+    // ✅ NUEVO: PDF de stock disponible para preventistas
+    Route::get('/app/stock/pdf', [StockDisponiblePdfController::class, 'generar'])->name('api.app.stock.pdf');
+
+    // ✅ NUEVO: Preventistas para selector en ventas
+    Route::get('/preventistas', function () {
+        try {
+            $preventistas = \App\Models\User::role('preventista')
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'preventistas' => $preventistas->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener preventistas:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar preventistas',
+            ], 500);
+        }
+    })->name('api.preventistas');
 
     // ==========================================
     // 🛒 PROFORMAS - API UNIFICADA

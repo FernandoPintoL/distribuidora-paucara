@@ -95,6 +95,17 @@ class Empresa extends Model
     }
 
     /**
+     * ✅ NUEVO: Obtener empresa principal SIN CACHE (consulta fresca de BD)
+     * Útil cuando necesitas el valor actual, ej: es_farmacia
+     */
+    public static function principalFresh(): ?self
+    {
+        return self::where('es_principal', true)
+            ->where('activo', true)
+            ->first();
+    }
+
+    /**
      * Obtener URL pública del logo
      *
      * @param string $tipo 'principal'|'compacto'|'footer'

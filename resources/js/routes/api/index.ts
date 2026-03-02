@@ -3,6 +3,7 @@ import proformas from './proformas'
 import modulosSidebar from './modulos-sidebar'
 import combos from './combos'
 import productos from './productos'
+import app from './app'
 import ventas from './ventas'
 import compras from './compras'
 import precios from './precios'
@@ -175,12 +176,85 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
         })
     
     dashboardRedirect.form = dashboardRedirectForm
+/**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+export const preventistas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: preventistas.url(options),
+    method: 'get',
+})
+
+preventistas.definition = {
+    methods: ["get","head"],
+    url: '/api/preventistas',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+preventistas.url = (options?: RouteQueryOptions) => {
+    return preventistas.definition.url + queryParams(options)
+}
+
+/**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: preventistas.url(options),
+    method: 'get',
+})
+/**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: preventistas.url(options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+    const preventistasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: preventistas.url(options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+        preventistasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preventistas.url(options),
+            method: 'get',
+        })
+            /**
+ * @see routes/api.php:299
+ * @route '/api/preventistas'
+ */
+        preventistasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preventistas.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    preventistas.form = preventistasForm
 const api = {
     proformas,
 modulosSidebar,
 dashboardRedirect,
 combos,
 productos,
+app,
+preventistas,
 ventas,
 compras,
 precios,

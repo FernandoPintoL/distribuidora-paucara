@@ -59,6 +59,10 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
             )
         );
 
+        console.log('🔍 [VentasService.search] Filtros originales:', filters);
+        console.log('🔍 [VentasService.search] Filtros limpios:', cleanFilters);
+        console.log('🔍 [VentasService.search] URL Query:', Object.entries(cleanFilters).map(([k, v]) => `${k}=${v}`).join('&'));
+
         router.get('/ventas', cleanFilters, {
             preserveState: true,
             replace: true,
@@ -73,6 +77,7 @@ export class VentasService implements BaseService<Venta, VentaFormData> {
      * Búsqueda específica para ventas con filtros tipados
      */
     searchVentas(filters: FiltrosVentas): void {
+        console.log('🔍 [VentasService] searchVentas recibido:', filters);
         this.search(filters as Filters);
     }
 

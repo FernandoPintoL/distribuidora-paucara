@@ -65,7 +65,8 @@ class ImpresionService
     public function __construct()
     {
         try {
-            $this->empresa = Empresa::principal();
+            // ✅ NUEVO: Usar principalFresh() para obtener valor actual sin cache
+            $this->empresa = Empresa::principalFresh();
         } catch (Exception $e) {
             // Si no existe la tabla o hay error, empresa será null
             \Log::warning('No se pudo cargar empresa principal para impresión', [
@@ -134,7 +135,8 @@ class ImpresionService
                 ]);
 
             // Usar vista fallback
-            $empresa = $this->empresa ?? Empresa::principal();
+            // ✅ NUEVO: Usar principalFresh() para obtener valor actual sin cache
+            $empresa = $this->empresa ?? Empresa::principalFresh();
 
             // Convertir logos a base64 para embebimiento en PDF
             $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
@@ -322,7 +324,8 @@ class ImpresionService
     private function prepararDatos($documento, PlantillaImpresion $plantilla, array $opciones): array
     {
         // Asegurar que tenemos una empresa
-        $empresa = $this->empresa ?? Empresa::principal();
+        // ✅ NUEVO: Usar principalFresh() para obtener valor actual sin cache
+        $empresa = $this->empresa ?? Empresa::principalFresh();
 
         if (!$empresa) {
             throw new Exception('No hay empresa configurada para generar documentos');

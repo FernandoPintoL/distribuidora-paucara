@@ -59,6 +59,8 @@ class StoreVentaRequest extends FormRequest
             'requiere_envio'             => 'nullable|boolean',
             // ✅ CORREGIDO (2026-02-10): direccion_cliente_id solo requerida si requiere_envio=true
             'direccion_cliente_id'       => 'nullable|exists:direcciones_cliente,id',
+            // ✅ NUEVO (2026-03-01): preventista_id es opcional, debe existir si se proporciona
+            'preventista_id'             => 'nullable|exists:users,id',
             'canal_origen'               => 'nullable|string|in:APP_EXTERNA,WEB,PRESENCIAL',
             'estado_logistico'           => 'nullable|string|in:PENDIENTE_ENVIO,PREPARANDO,ENVIADO,ENTREGADO',
 
@@ -106,6 +108,8 @@ class StoreVentaRequest extends FormRequest
             'moneda_id.exists'                    => 'La moneda seleccionada no existe.',
             // ✅ NUEVO (2026-02-10): Mensaje para dirección cliente
             'direccion_cliente_id.exists'         => 'La dirección de cliente seleccionada no existe.',
+            // ✅ NUEVO (2026-03-01): Mensaje para preventista
+            'preventista_id.exists'               => 'El preventista seleccionado no existe.',
 
             'detalles.required'                   => 'Los detalles de venta son requeridos.',
             'detalles.array'                      => 'Los detalles deben ser un arreglo.',
