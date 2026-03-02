@@ -79,27 +79,33 @@
             text-align: right;
         }
         .totales {
-            display: flex;
-            gap: 20px;
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 15px;
+            margin-bottom: 15px;
             font-size: 11px;
             font-weight: bold;
         }
-        .total-box {
-            flex: 1;
+        .totales td {
+            width: 25%;
             background-color: #f0f0f0;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #999;
-            border-radius: 4px;
+            text-align: center;
+            vertical-align: middle;
         }
         .total-label {
             color: #666;
-            font-size: 9px;
-            margin-bottom: 3px;
+            font-size: 8px;
+            margin-bottom: 2px;
+            line-height: 1.2;
+            display: block;
         }
         .total-value {
-            font-size: 14px;
+            font-size: 12px;
             color: #333;
+            font-weight: bold;
+            display: block;
         }
         .footer {
             margin-top: 30px;
@@ -126,24 +132,26 @@
             <span><strong>Generado:</strong> {{ now()->format('d/m/Y H:i') }}</span>
         </div>
 
-        <div class="totales">
-            <div class="total-box">
-                <div class="total-label">Cantidad de Productos</div>
-                <div class="total-value">{{ $totales['cantidad_productos'] ?? 0 }}</div>
-            </div>
-            <div class="total-box">
-                <div class="total-label">Cantidad Total Vendida</div>
-                <div class="total-value">{{ number_format($totales['cantidad_total_vendida'] ?? 0, 2, ',', '.') }}</div>
-            </div>
-            <div class="total-box">
-                <div class="total-label">Total Venta General</div>
-                <div class="total-value">Bs. {{ number_format($totales['total_venta_general'] ?? 0, 2, ',', '.') }}</div>
-            </div>
-            <div class="total-box">
-                <div class="total-label">Precio Promedio</div>
-                <div class="total-value">Bs. {{ number_format($totales['precio_promedio_general'] ?? 0, 2, ',', '.') }}</div>
-            </div>
-        </div>
+        <table class="totales">
+            <tr>
+                <td>
+                    <span class="total-label">Cantidad de Productos</span>
+                    <span class="total-value">{{ $totales['cantidad_productos'] ?? 0 }}</span>
+                </td>
+                <td>
+                    <span class="total-label">Cantidad Total Vendida</span>
+                    <span class="total-value">{{ number_format($totales['cantidad_total_vendida'] ?? 0, 2, ',', '.') }}</span>
+                </td>
+                <td>
+                    <span class="total-label">Total Venta General</span>
+                    <span class="total-value">Bs. {{ number_format($totales['total_venta_general'] ?? 0, 2, ',', '.') }}</span>
+                </td>
+                <td>
+                    <span class="total-label">Precio Promedio</span>
+                    <span class="total-value">Bs. {{ number_format($totales['precio_promedio_general'] ?? 0, 2, ',', '.') }}</span>
+                </td>
+            </tr>
+        </table>
 
         @if (count($productos) > 0)
             <div class="section-title">📦 Productos Vendidos</div>
@@ -153,7 +161,6 @@
                         <th>Producto</th>
                         <th>Código</th>
                         <th class="number">Cantidad</th>
-                        <th class="number">Precio Promedio</th>
                         <th class="number">Total Venta</th>
                     </tr>
                 </thead>
@@ -163,7 +170,6 @@
                             <td>{{ $producto['nombre'] ?? 'N/A' }}</td>
                             <td>{{ $producto['codigo'] ?? 'N/A' }}</td>
                             <td class="number">{{ number_format($producto['cantidad_total'] ?? 0, 2, ',', '.') }}</td>
-                            <td class="number">Bs. {{ number_format($producto['precio_promedio'] ?? 0, 2, ',', '.') }}</td>
                             <td class="number">Bs. {{ number_format($producto['total_venta'] ?? 0, 2, ',', '.') }}</td>
                         </tr>
                     @endforeach

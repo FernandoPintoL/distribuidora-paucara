@@ -932,11 +932,6 @@ export default function ProductosTable({
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Cantidad
                                 </th>
-                                {tipo === 'venta' && (
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Unidad Venta
-                                    </th>
-                                )}
                                 {tipo === 'compra' && (
                                     <>
 
@@ -1137,9 +1132,9 @@ export default function ProductosTable({
                                                 }}
                                                 className="w-16 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
-                                        </td>
-                                        {tipo === 'venta' && (
-                                            <td className="px-4 py-2 whitespace-nowrap">
+                                            <div>
+                                                {tipo === 'venta' && (
+                                            <div className="px-4 py-2 whitespace-nowrap">
                                                 {(() => {
                                                     console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
                                                         es_fraccionado: detalle.es_fraccionado,
@@ -1202,8 +1197,11 @@ export default function ProductosTable({
                                                         );
                                                     }
                                                 })()}
-                                            </td>
+                                            </div>
                                         )}
+                                            </div>
+                                        </td>
+                                        
                                         {tipo === 'compra' && (
                                             <>
 

@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 import logistica from './logistica'
+import reporteProductosVendidos from './reporte-productos-vendidos'
 import cuentasPorCobrar from './cuentas-por-cobrar'
 import stock from './stock'
 import detalles from './detalles'

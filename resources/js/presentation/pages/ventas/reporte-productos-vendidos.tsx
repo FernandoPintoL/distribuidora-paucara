@@ -91,6 +91,28 @@ export default function ReporteProductosVendidos({
         filtros.cliente_id ? String(filtros.cliente_id) : 'TODOS'
     );
 
+    // ✅ NUEVO: Estados para impresión automática
+    const [impresoras, setImpresoras] = useState<string[]>([]);
+    const [impresoraSeleccionada, setImpresoraSeleccionada] = useState<string>('default');
+    const [imprimiendo, setImprimiendo] = useState(false);
+
+    // ✅ NUEVO: Cargar impresoras disponibles al montar
+    React.useEffect(() => {
+        const cargarImpresoras = async () => {
+            try {
+                const response = await fetch('/api/ventas/impresoras/disponibles');
+                const data = await response.json();
+                if (data.success && data.impresoras.length > 0) {
+                    setImpresoras(data.impresoras);
+                    setImpresoraSeleccionada(data.impresoras[0]);
+                }
+            } catch (error) {
+                console.error('Error al cargar impresoras:', error);
+            }
+        };
+        cargarImpresoras();
+    }, []);
+
     const handleAbrirDetalleEntrega = (venta: Venta) => {
         setSelectedVenta(venta);
         setIsDeliveryModalOpen(true);
@@ -118,6 +140,72 @@ export default function ReporteProductosVendidos({
         router.visit(url);
     };
 
+    // ✅ NUEVO: Imprimir directamente en la impresora con diálogo
+    const handleImprimirDirecto = () => {
+        const params = new URLSearchParams();
+        if (fechaDesde) params.append('fecha_desde', fechaDesde);
+        if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+        if (usuarioId && usuarioId !== 'TODOS') params.append('usuario_creador_id', usuarioId);
+        if (clienteId && clienteId !== 'TODOS') params.append('cliente_id', clienteId);
+
+        const url = `/ventas/reporte-productos-vendidos/imprimir?${params.toString()}`;
+
+        // Abrir en una ventana nueva
+        const ventana = window.open(url, 'print', 'width=900,height=700');
+
+        // Esperar a que cargue el PDF y luego abrir el diálogo de impresión
+        if (ventana) {
+            setTimeout(() => {
+                ventana.print();
+            }, 1500);
+        }
+    };
+
+    // ✅ NUEVO: Imprimir automáticamente sin diálogos
+    const handleImprimirAutomatico = async () => {
+        if (!impresoraSeleccionada) {
+            alert('Por favor selecciona una impresora');
+            return;
+        }
+
+        setImprimiendo(true);
+        try {
+            const params = new URLSearchParams();
+            if (fechaDesde) params.append('fecha_desde', fechaDesde);
+            if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+            if (usuarioId && usuarioId !== 'TODOS') params.append('usuario_creador_id', usuarioId);
+            if (clienteId && clienteId !== 'TODOS') params.append('cliente_id', clienteId);
+            params.append('impresora', impresoraSeleccionada);
+
+            const response = await fetch('/ventas/reporte-productos-vendidos/imprimir-directo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    fecha_desde: fechaDesde,
+                    fecha_hasta: fechaHasta,
+                    usuario_creador_id: usuarioId !== 'TODOS' ? usuarioId : null,
+                    cliente_id: clienteId !== 'TODOS' ? clienteId : null,
+                    impresora: impresoraSeleccionada,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`✅ ${data.mensaje}`);
+            } else {
+                alert(`❌ Error: ${data.error}`);
+            }
+        } catch (error) {
+            alert(`❌ Error al imprimir: ${error}`);
+        } finally {
+            setImprimiendo(false);
+        }
+    };
+
     const handleLimpiar = () => {
         setFechaDesde(fecha_desde);
         setFechaHasta(fecha_hasta);
@@ -142,21 +230,106 @@ export default function ReporteProductosVendidos({
                                 Análisis de productos vendidos en proformas convertidas a ventas aprobadas
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
+                            {/* ✅ NUEVO: Selector de Impresora */}
+                            {/*{impresoras.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">🖨️ Impresora:</label>
+                                    <select
+                                        value={impresoraSeleccionada}
+                                        onChange={(e) => setImpresoraSeleccionada(e.target.value)}
+                                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                                    >
+                                        {impresoras.map((imp) => (
+                                            <option key={imp} value={imp}>
+                                                {imp}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}{/*
+
+                            {/* ✅ NUEVO: Botón de Imprimir Automático */}
+                            {/*<button
+                                onClick={handleImprimirAutomatico}
+                                disabled={imprimiendo || impresoras.length === 0}
+                                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg font-medium transition"
+                                title="Imprime automáticamente en la impresora seleccionada sin diálogos"
+                            >
+                                {imprimiendo ? '⏳ Imprimiendo...' : '🔥 Automático'}
+                            </button>*/}
+
+                            {/* Botón de Imprimir Directo */}
+                            {/*<button
+                                onClick={handleImprimirDirecto}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                                title="Abre el diálogo de impresión para seleccionar tu impresora"
+                            >
+                                🖨️ Directo
+                            </button>*/}
                             <button
                                 onClick={() => setIsModalOpen(true)}
                                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
                             >
-                                🖨️ Imprimir/Exportar
+                                💾 Imp/Exportar
                             </button>
                             <Link
                                 href="/proformas"
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
                             >
-                                ← Volver a Proformas
+                                ← Volver
                             </Link>
                         </div>
                     </div>
+
+                    {/* Accesos rápidos por Preventista */}
+                    {usuarios.length > 0 && (
+                        <div className="mt-6">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+                                🚀 Accesos rápidos por preventista:
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => {
+                                        setUsuarioId('TODOS');
+                                        handleBuscar();
+                                    }}
+                                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                                        usuarioId === 'TODOS'
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-gray-100 dark:bg-zinc-700 text-gray-900 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-600'
+                                    }`}
+                                >
+                                    📋 Todos
+                                </button>
+                                {usuarios.map((usuario) => (
+                                    <button
+                                        key={usuario.id}
+                                        onClick={() => {
+                                            setUsuarioId(String(usuario.id));
+                                            // Actualizar automáticamente después de seleccionar
+                                            setTimeout(() => {
+                                                const params = new URLSearchParams();
+                                                if (fechaDesde) params.append('fecha_desde', fechaDesde);
+                                                if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+                                                params.append('usuario_creador_id', String(usuario.id));
+                                                if (clienteId && clienteId !== 'TODOS') params.append('cliente_id', clienteId);
+                                                const url = `/ventas/reporte-productos-vendidos?${params.toString()}`;
+                                                router.visit(url);
+                                            }, 0);
+                                        }}
+                                        className={`px-4 py-2 rounded-lg font-medium transition ${
+                                            String(usuarioId) === String(usuario.id)
+                                                ? 'bg-indigo-600 text-white shadow-md'
+                                                : 'bg-gray-100 dark:bg-zinc-700 text-gray-900 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-600'
+                                        }`}
+                                    >
+                                        👤 {usuario.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -167,12 +340,23 @@ export default function ReporteProductosVendidos({
 
                 {/* Mostrar Usuario Preventista Seleccionado */}
                 {usuarioId && usuarioId !== 'TODOS' && (
-                    <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-center gap-2">
-                            <span className="text-blue-700 dark:text-blue-300 font-medium">👤 Preventista:</span>
-                            <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">
-                                {usuarios.find((u) => String(u.id) === usuarioId)?.name || 'Usuario no encontrado'}
-                            </span>
+                    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-800 rounded-lg shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xl">👤</span>
+                                <div>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase">Filtro de Preventista Activo</p>
+                                    <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                        {usuarios.find((u) => String(u.id) === usuarioId)?.name || 'Usuario no encontrado'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setUsuarioId('TODOS')}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                            >
+                                ✕ Cambiar
+                            </button>
                         </div>
                     </div>
                 )}
@@ -181,11 +365,30 @@ export default function ReporteProductosVendidos({
                 <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md p-6 mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🔍 Filtros</h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {/* Preventista/Usuario Creador */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                👤 Preventista
+                            </label>
+                            <select
+                                value={usuarioId}
+                                onChange={(e) => setUsuarioId(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+                            >
+                                <option value="TODOS">Todos</option>
+                                {usuarios.map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                        {u.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* Cliente */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Cliente
+                                🏪 Cliente
                             </label>
                             <SearchSelect
                                 label=""
@@ -207,7 +410,7 @@ export default function ReporteProductosVendidos({
                         {/* Fecha Desde */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Desde
+                                📅 Desde
                             </label>
                             <input
                                 type="date"
@@ -220,7 +423,7 @@ export default function ReporteProductosVendidos({
                         {/* Fecha Hasta */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Hasta
+                                📅 Hasta
                             </label>
                             <input
                                 type="date"
@@ -230,28 +433,7 @@ export default function ReporteProductosVendidos({
                             />
                         </div>
 
-                        {/* Usuario Creador */}
-                        {!es_preventista && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Usuario/Preventista
-                                </label>
-                                <select
-                                    value={usuarioId}
-                                    onChange={(e) => setUsuarioId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
-                                >
-                                    <option value="TODOS">Todos</option>
-                                    {usuarios.map((u) => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2 items-end">
                             <button
                                 onClick={handleBuscar}
                                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
@@ -262,7 +444,7 @@ export default function ReporteProductosVendidos({
                                 onClick={handleLimpiar}
                                 className="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-medium transition"
                             >
-                                🔄
+                                🔄 Limpiar
                             </button>
                         </div>
                     </div>

@@ -826,6 +826,10 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
     // ✅ LOGÍSTICA: Seguimiento de Ventas y Entregas
     Route::prefix('ventas')->group(function () {
+        // ✅ NUEVO: Obtener lista de impresoras disponibles
+        Route::get('/impresoras/disponibles', [\App\Http\Controllers\ReporteVentasController::class, 'obtenerImpresoras'])
+            ->name('impresoras.disponibles');
+
         // Obtener detalle logístico de una venta (estado de entregas)
         Route::get('/{venta}/logistica', [\App\Http\Controllers\Api\VentaLogisticaController::class, 'show'])
             ->middleware('permission:ventas.show')

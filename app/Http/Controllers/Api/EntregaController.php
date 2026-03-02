@@ -148,7 +148,7 @@ class EntregaController extends Controller
                 ->with([
                     'estadoEntrega:id,codigo,nombre,color,icono',  // Solo campos necesarios
                     'ventas:id,numero,subtotal,impuesto,total,estado_logistico_id,fecha_entrega_comprometida,cliente_id,direccion_cliente_id,entrega_id',
-                    'ventas.cliente:id,nombre,nit,telefono,localidad_id',
+                    'ventas.cliente:id,nombre,nit,telefono,razon_social,localidad_id',  // ✅ AGREGADO: razon_social
                     'ventas.cliente.localidad:id,nombre,codigo',
                     'ventas.direccionCliente:id,direccion,latitud,longitud',
                     'ventas.estadoLogistica:id,codigo,nombre,color,icono',
@@ -191,6 +191,7 @@ class EntregaController extends Controller
                             'nombre' => $venta->cliente->nombre,
                             'nit' => $venta->cliente->nit,
                             'telefono' => $venta->cliente->telefono,
+                            'razon_social' => $venta->cliente->razon_social,  // ✅ AGREGADO
                             'localidad' => $venta->cliente->localidad ? [
                                 'id' => $venta->cliente->localidad->id,
                                 'nombre' => $venta->cliente->localidad->nombre,

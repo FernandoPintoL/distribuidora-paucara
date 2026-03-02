@@ -366,6 +366,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('reporte-productos-vendidos')
             ->middleware('permission:ventas.index');
 
+        // ✅ NUEVO: Impresión directa a impresora (sin diálogos)
+        Route::post('reporte-productos-vendidos/imprimir-directo', [\App\Http\Controllers\ReporteVentasController::class, 'imprimirDirecto'])
+            ->name('reporte-productos-vendidos.imprimir-directo')
+            ->middleware('permission:ventas.index');
+
         // Rutas sin parámetros dinámicos PRIMERO
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');

@@ -20,13 +20,13 @@
         <p style="margin: 2px 0;">NIT/CI: {{ $documento->cliente->nit_ci }}</p>
     @endif
     @if($documento->cliente?->localidad)
-        <p style="margin: 2px 0;">📍 {{ $documento->cliente->localidad->nombre }}</p>
+        <p style="margin: 2px 0;"><strong>Localidad: </strong> {{ $documento->cliente->localidad->nombre }}</p>
     @endif
 </div>
 
 {{-- PREVENTISTA --}}
 @if($documento->usuarioCreador)
-<div style="margin-bottom: 8px;">
+<div style="margin-bottom: 8px; font-size: 11px;">
     <p style="margin: 2px 0;"><strong>Preventista:</strong> {{ $documento->usuarioCreador->name }}</p>
 </div>
 @endif
@@ -37,7 +37,7 @@
 @include('impresion.ventas.partials._items', ['formato' => 'ticket-80'])
 
 {{-- TOTALES --}}
-<div style="margin: 10px 0; border-top: 2px solid #333; border-bottom: 1px solid #333;">
+<div style="margin: 10px 0; border-top: 2px solid #333; border-bottom: 1px solid #333; font-size: 11px;">
     @php
         $subtotal = $documento->subtotal ?? 0;
         $descuento = $documento->descuento ?? 0;
@@ -63,7 +63,7 @@
 </div>
 
 {{-- INFORMACIÓN IMPORTANTE --}}
-<div style="margin-top: 10px;">
+<div style="margin-top: 10px; font-size: 11px;">
     <p style="margin: 3px 0;">
         <strong>📅 Válida hasta:</strong><br>
         {{ $documento->fecha_vencimiento->format('d/m/Y') }}
@@ -73,7 +73,7 @@
     </p>
 
     @if($documento->fecha_entrega_solicitada)
-    <p style="margin: 3px 0; margin-top: 5px;">
+    <p style="margin: 3px 0; margin-top: 5px; font-size: 11px;">
         <strong>🚚 Entrega solicitada:</strong><br>
         {{ $documento->fecha_entrega_solicitada->format('d/m/Y') }}
         @if($documento->hora_entrega_solicitada)

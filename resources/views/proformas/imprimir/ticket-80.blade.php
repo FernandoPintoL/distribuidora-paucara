@@ -180,7 +180,7 @@
         </table>
         @endif
 
-        <div class="totales">
+        <div class="totales" style="font-size: 11px;">
             <div class="total-row">
                 <span>Subtotal:</span>
                 <span>{{ number_format($proforma->subtotal, 2) }}</span>
