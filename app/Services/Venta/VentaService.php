@@ -153,10 +153,34 @@ class VentaService
                 'nota'          => 'El pago se registra después en movimientos_caja, no al crear',
             ]);
 
+            // ✅ NUEVO (2026-03-02): Si tipo_pago NO es CRÉDITO y monto_pagado_inicial es 0
+            // Automáticamente asignar monto_pagado = total
+            // Soporta: EFECTIVO, TRANSFERENCIA/QR, TARJETA, etc. (cualquier pago inmediato)
+            $montoPagado = $dto->monto_pagado_inicial ?? 0;
+            $tipoPagoId = $dto->tipo_pago_id;
+
+            if ($tipoPagoId && $montoPagado <= 0) {
+                $tipoPago = \App\Models\TipoPago::find($tipoPagoId);
+
+                // ✅ CORREGIDO (2026-03-02): Si NO es CRÉDITO, auto-asignar total
+                // Esto cubre: EFECTIVO, TRANSFERENCIA/QR, TARJETA, etc.
+                if ($tipoPago && strtoupper($tipoPago->codigo) !== 'CREDITO') {
+                    $montoPagado = $dto->total;
+                    Log::info('💳 [VentaService::crear] Tipo pago NO-CRÉDITO sin monto → Auto-asignar total', [
+                        'total'        => $dto->total,
+                        'monto_pagado' => $montoPagado,
+                        'tipo_pago_codigo' => $tipoPago->codigo,
+                        'tipo_pago_nombre' => $tipoPago->nombre,
+                        'nota' => 'Auto-asignado porque NO es CRÉDITO'
+                    ]);
+                }
+            }
+
             // 3.1 Crear Venta
             Log::debug('📝 [VentaService::crear] Creando registro de Venta en BD', [
                 'cliente_id'          => $dto->cliente_id,
                 'total'               => $dto->total,
+                'monto_pagado'        => $montoPagado,
                 'estado_documento_id' => $estadoDocumentoId,
             ]);
 
@@ -186,8 +210,8 @@ class VentaService
                 'tipo_pago_id'               => $dto->tipo_pago_id,  // ✅ NUEVO: Tipo de pago seleccionado
                 'politica_pago'              => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'estado_pago'                => $estadoPago,                                             // ✅ Dinámico según pago inicial
-                'monto_pagado'               => $dto->monto_pagado_inicial ?? 0,                         // ✅ Si se pagó al aprobar
-                'monto_pendiente'            => max(0, ($dto->subtotal - ($dto->descuento ?? 0)) - ($dto->monto_pagado_inicial ?? 0)),
+                'monto_pagado'               => $montoPagado,  // ✅ CORREGIDO (2026-03-02): Usa monto calculado (total si CONTADO sin pago)
+                'monto_pendiente'            => max(0, ($dto->subtotal - ($dto->descuento ?? 0)) - $montoPagado),
                                                                                                          // Campos de SLA y compromisos de entrega
                 'fecha_entrega_comprometida' => $dto->fecha_entrega_comprometida,
                 'hora_entrega_comprometida'  => $dto->hora_entrega_comprometida,

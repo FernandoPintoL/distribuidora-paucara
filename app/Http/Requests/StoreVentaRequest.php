@@ -79,6 +79,8 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.combo_items_seleccionados.*.combo_item_id' => 'nullable|integer|exists:combo_items,id',
             'detalles.*.combo_items_seleccionados.*.producto_id' => 'nullable|integer|exists:productos,id',
             'detalles.*.combo_items_seleccionados.*.incluido' => 'nullable|boolean',
+            // ✅ NUEVO (2026-03-02): Validación para monto_pagado_inicial
+            'monto_pagado_inicial' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -126,6 +128,9 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.subtotal.required'        => 'El subtotal del detalle es requerido.',
             'detalles.*.subtotal.numeric'         => 'El subtotal del detalle debe ser numérico.',
             'detalles.*.subtotal.min'             => 'El subtotal del detalle debe ser mayor a 0.',
+            // ✅ NUEVO (2026-03-02): Mensajes para monto_pagado_inicial
+            'monto_pagado_inicial.numeric'        => 'El monto pagado debe ser un número válido.',
+            'monto_pagado_inicial.min'            => 'El monto pagado no puede ser negativo.',
         ];
     }
 

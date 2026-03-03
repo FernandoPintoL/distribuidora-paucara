@@ -53,6 +53,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'numero' => $proforma->numero,
             'cliente_id' => $proforma->cliente_id,
             'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
+            'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente', // ✅ NUEVO: Nombre del cliente para notificación personalizada
             'estado' => $proforma->estado,
             'total' => (float) $proforma->total,
             'usuario_aprobador' => [
@@ -96,6 +97,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'venta_numero' => $venta->numero ?? null,
             'cliente_id' => $proforma->cliente_id,
             'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
+            'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente', // ✅ NUEVO: Incluir nombre del cliente
             'total' => (float) $proforma->total,
             'fecha_conversion' => now()->toIso8601String(),
         ]);

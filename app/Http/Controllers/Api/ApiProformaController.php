@@ -1416,25 +1416,10 @@ class ApiProformaController extends Controller
 
         $request->validate([
             'comentario'                      => 'nullable|string|max:500',
-            // Confirmación de entrega del vendedor después de coordinación
-            // ✅ FIXED: Comparar con fecha_entrega_solicitada (no con today que depende de zona horaria)
-            'fecha_entrega_confirmada'        => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) use ($proforma) {
-                    if ($value) {
-                        $fechaConfirmada = \Carbon\Carbon::parse($value)->toDateString();
-                        $fechaSolicitada = $proforma->fecha_entrega_solicitada ?
-                        \Carbon\Carbon::parse($proforma->fecha_entrega_solicitada)->toDateString() :
-                        null;
-
-                        // Si existe fecha solicitada, la confirmada debe ser >= a ella
-                        if ($fechaSolicitada && \Carbon\Carbon::parse($fechaConfirmada)->lt(\Carbon\Carbon::parse($fechaSolicitada))) {
-                            $fail('La fecha de entrega confirmada debe ser igual o posterior a la fecha solicitada (' . $fechaSolicitada . ')');
-                        }
-                    }
-                },
-            ],
+            // ✅ MEJORADO: Permitir fechas de entrega sin restricción
+            // El usuario puede adelantar la entrega (confirmar para fecha anterior a la solicitada)
+            // ya que podría estar adelantando el trabajo
+            'fecha_entrega_confirmada'        => 'nullable|date',
             'hora_entrega_confirmada'         => 'nullable|date_format:H:i',
             'hora_entrega_confirmada_fin'     => 'nullable|date_format:H:i',
             'direccion_entrega_confirmada_id' => 'nullable|exists:direcciones_cliente,id',
@@ -3016,6 +3001,9 @@ class ApiProformaController extends Controller
 
                 // ✅ DISPARO MANUAL DEL EVENTO: VentaCreada (para que se registre en caja)
                 event(new \App\Events\VentaCreada($venta));
+
+                // ✅ NUEVO: Disparar evento ProformaConvertida para notificar al cliente a través de WebSocket
+                event(new \App\Events\ProformaConvertida($proforma, $venta));
 
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {

@@ -147,12 +147,13 @@ class Venta extends Model
             // Por ahora, solo generar movimientos de caja
             // $venta->generarAsientoContable();
 
-            // Generar movimiento de caja
-            try {
-                $venta->generarMovimientoCaja();
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Error generando movimiento de caja para venta {$venta->numero}: " . $e->getMessage());
-            }
+            // ✅ DESACTIVADO (2026-03-02): El listener RegisterCajaMovementFromVentaListener es más robusto
+            // Evitar duplicados: listener crea movimiento, no el método booted
+            // try {
+            //     $venta->generarMovimientoCaja();
+            // } catch (\Exception $e) {
+            //     \Illuminate\Support\Facades\Log::error("Error generando movimiento de caja para venta {$venta->numero}: " . $e->getMessage());
+            // }
         });
 
         // Antes de eliminar una venta, revertir movimientos
@@ -899,8 +900,10 @@ class Venta extends Model
     public function generarMovimientoCaja(): void
     {
         try {
-            // Solo generar movimiento para ventas al contado
-            if ($this->tipoPago?->codigo !== 'CONTADO') {
+            // ✅ CORREGIDO (2026-03-02): Crear movimiento si hay monto_pagado > 0, sin restricción de tipo de pago
+            // Antes: Solo creaba para CONTADO, ahora: crea para cualquier tipo de pago si pagó algo
+            if (($this->monto_pagado ?? 0) <= 0) {
+                Log::debug("No hay monto_pagado para venta {$this->numero}, no se crea movimiento de caja");
                 return;
             }
 
@@ -913,16 +916,61 @@ class Venta extends Model
             $cajaId = $this->getAttribute('_caja_id');
 
             if (!$cajaId) {
-                // Fallback: Obtener caja abierta (usar user_id como en el modelo)
+                // ✅ DEBUG COMPLETO: Verificar todas las cajas abiertas
+                Log::warning("🔍 [generarMovimientoCaja] BUSCANDO CAJA ABIERTA - INICIO DEBUG", [
+                    'usuario_id_venta' => $this->usuario_id,
+                    'fecha_venta' => $this->fecha,
+                ]);
+
+                // 1. Ver TODAS las aperturas del usuario (sin filtros)
+                $todasAperturas = AperturaCaja::where('user_id', $this->usuario_id)->get();
+                Log::warning("📋 TODAS LAS APERTURAS DEL USUARIO:", [
+                    'cantidad' => $todasAperturas->count(),
+                    'aperturas' => $todasAperturas->map(fn($a) => [
+                        'id' => $a->id,
+                        'caja_id' => $a->caja_id,
+                        'fecha' => $a->fecha,
+                        'tiene_cierre' => $a->cierre()->exists(),
+                    ])->toArray()
+                ]);
+
+                // 2. Ver TODAS las aperturas abiertas (sin cierre)
+                $aperturasAbiertas = AperturaCaja::where('user_id', $this->usuario_id)
+                    ->abiertas()
+                    ->get();
+                Log::warning("🔓 APERTURAS ABIERTAS (sin cierre):", [
+                    'cantidad' => $aperturasAbiertas->count(),
+                    'aperturas' => $aperturasAbiertas->map(fn($a) => [
+                        'id' => $a->id,
+                        'caja_id' => $a->caja_id,
+                        'fecha' => $a->fecha,
+                    ])->toArray()
+                ]);
+
+                // 3. Buscar con filtro de fecha
                 $cajaAbierta = AperturaCaja::where('user_id', $this->usuario_id)
-                    ->whereDate('fecha', $this->fecha)
+                    ->where('fecha', '<=', $this->fecha)  // ✅ Apertura antes o igual a la fecha de venta
+                    ->abiertas()  // ✅ Usa scope: whereDoesntHave('cierre') - cajas SIN cierre
+                    ->orderByDesc('fecha')  // ✅ Obtiene la apertura más reciente
                     ->first();
 
                 if (!$cajaAbierta) {
-                    Log::warning("No hay caja abierta para generar movimiento de venta {$this->numero}");
+                    Log::error("❌ NO HAY CAJA ABIERTA PARA GENERAR MOVIMIENTO DE VENTA {$this->numero}", [
+                        'usuario_id' => $this->usuario_id,
+                        'fecha_venta' => $this->fecha,
+                        'nota' => 'Se requiere: user_id coincida, fecha_apertura <= fecha_venta, sin cierre'
+                    ]);
 
                     return;
                 }
+
+                Log::info("✅ CAJA ABIERTA ENCONTRADA PARA VENTA {$this->numero}", [
+                    'caja_id' => $cajaAbierta->caja_id,
+                    'apertura_fecha' => $cajaAbierta->fecha,
+                    'venta_fecha' => $this->fecha,
+                    'dias_abierta' => $this->fecha->diffInDays($cajaAbierta->fecha),
+                    'usuario_id' => $this->usuario_id
+                ]);
 
                 $cajaId = $cajaAbierta->caja_id;
             }
@@ -936,19 +984,24 @@ class Venta extends Model
                 return;
             }
 
+            // ✅ CORREGIDO (2026-03-02): Usar monto_pagado en lugar de total
             MovimientoCaja::create([
                 'caja_id'           => $cajaId,
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'numero_documento'  => $this->numero,
                 'descripcion'       => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",
-                'monto'             => $this->total,
+                'monto'             => $this->monto_pagado ?? 0,  // ✅ Usa monto efectivamente pagado, no total
                 'fecha'             => $this->fecha,
                 'user_id'           => $this->usuario_id,
                 'venta_id'          => $this->id,              // ✅ Asignar ID de venta
                 'tipo_pago_id'      => $this->tipo_pago_id,    // ✅ Asignar tipo de pago
             ]);
 
-            Log::info("Movimiento de caja generado para venta {$this->numero}");
+            Log::info("Movimiento de caja generado para venta {$this->numero}", [
+                'monto_pagado' => $this->monto_pagado,
+                'total' => $this->total,
+                'tipo_pago' => $this->tipoPago?->nombre,
+            ]);
         } catch (Exception $e) {
             Log::error("Error generando movimiento de caja para venta {$this->numero}: " . $e->getMessage());
         }
