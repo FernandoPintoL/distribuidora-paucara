@@ -134,7 +134,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::update
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:163
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:166
  * @route '/admin/banners-publicitarios/{banner}'
  */
 export const update = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -149,7 +149,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::update
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:163
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:166
  * @route '/admin/banners-publicitarios/{banner}'
  */
 update.url = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ update.url = (args: { banner: number | { id: number } } | [banner: number | { id
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::update
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:163
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:166
  * @route '/admin/banners-publicitarios/{banner}'
  */
 update.post = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -192,7 +192,7 @@ update.post = (args: { banner: number | { id: number } } | [banner: number | { i
 
     /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::update
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:163
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:166
  * @route '/admin/banners-publicitarios/{banner}'
  */
     const updateForm = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -202,7 +202,7 @@ update.post = (args: { banner: number | { id: number } } | [banner: number | { i
 
             /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::update
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:163
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:166
  * @route '/admin/banners-publicitarios/{banner}'
  */
         updateForm.post = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -213,7 +213,7 @@ update.post = (args: { banner: number | { id: number } } | [banner: number | { i
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::toggleActivo
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:218
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:222
  * @route '/admin/banners-publicitarios/{banner}/toggle'
  */
 export const toggleActivo = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -228,7 +228,7 @@ toggleActivo.definition = {
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::toggleActivo
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:218
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:222
  * @route '/admin/banners-publicitarios/{banner}/toggle'
  */
 toggleActivo.url = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -261,7 +261,7 @@ toggleActivo.url = (args: { banner: number | { id: number } } | [banner: number 
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::toggleActivo
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:218
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:222
  * @route '/admin/banners-publicitarios/{banner}/toggle'
  */
 toggleActivo.patch = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -271,7 +271,7 @@ toggleActivo.patch = (args: { banner: number | { id: number } } | [banner: numbe
 
     /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::toggleActivo
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:218
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:222
  * @route '/admin/banners-publicitarios/{banner}/toggle'
  */
     const toggleActivoForm = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -286,7 +286,7 @@ toggleActivo.patch = (args: { banner: number | { id: number } } | [banner: numbe
 
             /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::toggleActivo
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:218
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:222
  * @route '/admin/banners-publicitarios/{banner}/toggle'
  */
         toggleActivoForm.patch = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -302,7 +302,7 @@ toggleActivo.patch = (args: { banner: number | { id: number } } | [banner: numbe
     toggleActivo.form = toggleActivoForm
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::destroy
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:270
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:274
  * @route '/admin/banners-publicitarios/{banner}'
  */
 export const destroy = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -317,7 +317,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::destroy
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:270
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:274
  * @route '/admin/banners-publicitarios/{banner}'
  */
 destroy.url = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -350,7 +350,7 @@ destroy.url = (args: { banner: number | { id: number } } | [banner: number | { i
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::destroy
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:270
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:274
  * @route '/admin/banners-publicitarios/{banner}'
  */
 destroy.delete = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -360,7 +360,7 @@ destroy.delete = (args: { banner: number | { id: number } } | [banner: number | 
 
     /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::destroy
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:270
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:274
  * @route '/admin/banners-publicitarios/{banner}'
  */
     const destroyForm = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -375,7 +375,7 @@ destroy.delete = (args: { banner: number | { id: number } } | [banner: number | 
 
             /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::destroy
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:270
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:274
  * @route '/admin/banners-publicitarios/{banner}'
  */
         destroyForm.delete = (args: { banner: number | { id: number } } | [banner: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -391,7 +391,7 @@ destroy.delete = (args: { banner: number | { id: number } } | [banner: number | 
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::actualizarOrden
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:243
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:247
  * @route '/admin/banners-publicitarios/actualizar-orden'
  */
 export const actualizarOrden = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -406,7 +406,7 @@ actualizarOrden.definition = {
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::actualizarOrden
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:243
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:247
  * @route '/admin/banners-publicitarios/actualizar-orden'
  */
 actualizarOrden.url = (options?: RouteQueryOptions) => {
@@ -415,7 +415,7 @@ actualizarOrden.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::actualizarOrden
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:243
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:247
  * @route '/admin/banners-publicitarios/actualizar-orden'
  */
 actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -425,7 +425,7 @@ actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
     /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::actualizarOrden
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:243
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:247
  * @route '/admin/banners-publicitarios/actualizar-orden'
  */
     const actualizarOrdenForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -435,7 +435,7 @@ actualizarOrden.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
             /**
 * @see \App\Http\Controllers\BannerPublicitarioAdminController::actualizarOrden
- * @see app/Http/Controllers/BannerPublicitarioAdminController.php:243
+ * @see app/Http/Controllers/BannerPublicitarioAdminController.php:247
  * @route '/admin/banners-publicitarios/actualizar-orden'
  */
         actualizarOrdenForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

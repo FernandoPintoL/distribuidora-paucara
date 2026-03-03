@@ -133,6 +133,7 @@ export interface Venta extends BaseEntity {
     estado_pago?: 'PENDIENTE' | 'PAGADO' | 'PARCIALMENTE_PAGADO' | 'VENCIDO';  // ✅ NUEVO: Estado de pago
     politica_pago?: 'CONTRA_ENTREGA' | 'ANTICIPADO_100' | 'MEDIO_MEDIO' | 'CREDITO';  // ✅ NUEVO: Política de pago
     preventista_id?: Id | null;  // ✅ NUEVO (2026-03-01): ID del preventista responsable
+    entrega_id?: Id | null;  // ✅ NUEVO (2026-03-03): ID de la entrega asignada
 
     // Relaciones
     cliente?: Cliente;
@@ -144,6 +145,7 @@ export interface Venta extends BaseEntity {
     proforma?: Proforma;
     estadoLogistica?: EstadoLogistica;  // ✅ NUEVO: Relación con EstadoLogistica
     preventista?: Usuario;  // ✅ NUEVO (2026-03-01): Relación con preventista (User)
+    entrega?: any;  // ✅ NUEVO (2026-03-03): Relación con Entrega (cualquier entrega asignada)
     detalles?: DetalleVenta[];
     pagos?: Pago[];
     cuenta_por_cobrar?: CuentaPorCobrar;

@@ -111,8 +111,8 @@ export default function EntregasPorCliente({
                                 tipo === 'completadas'
                                     ? cliente.dinero_recibido
                                     : tipo === 'rechazadas'
-                                    ? cliente.monto_rechazado
-                                    : cliente.monto_intento;
+                                        ? cliente.monto_rechazado
+                                        : cliente.monto_intento;
 
                             return (
                                 <tr
@@ -216,7 +216,7 @@ export default function EntregasPorCliente({
                     </div>
 
                     {/* Tarjetas de Resumen */}
-                    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 p-4">
                             <p className="text-sm text-green-600 dark:text-green-400">Entregas Completadas</p>
                             <p className="mt-2 text-2xl font-bold text-green-900 dark:text-green-200">{totalesCompletadas.totalEntregas}</p>
@@ -236,40 +236,37 @@ export default function EntregasPorCliente({
                                 {totalesTotaleCerrada.clientes} clientes
                             </p>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Tabs */}
                     <div className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                         <div className="flex border-b border-gray-200 dark:border-gray-700">
                             <button
                                 onClick={() => setActiveTab('completadas')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'completadas'
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'completadas'
                                         ? 'border-b-2 border-green-600 text-green-600 dark:text-green-400'
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <CheckCircle className="mb-1 inline h-4 w-4 mr-2" />
                                 Completadas
                             </button>
                             <button
                                 onClick={() => setActiveTab('rechazadas')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'rechazadas'
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'rechazadas'
                                         ? 'border-b-2 border-red-600 text-red-600 dark:text-red-400'
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <XCircle className="mb-1 inline h-4 w-4 mr-2" />
                                 Rechazadas
                             </button>
                             <button
                                 onClick={() => setActiveTab('cerrada')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'cerrada'
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'cerrada'
                                         ? 'border-b-2 border-amber-600 text-amber-600 dark:text-amber-400'
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <Lock className="mb-1 inline h-4 w-4 mr-2" />
                                 Tienda Cerrada

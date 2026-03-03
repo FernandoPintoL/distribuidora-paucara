@@ -3331,4 +3331,176 @@ class EntregaController extends Controller
             return '';
         }
     }
+
+    /**
+     * GET /api/entregas/{id}/entregas-disponibles
+     * Obtener lista de entregas disponibles para reasignar una venta
+     * (Excluye la entrega actual, pero permite cualquier estado)
+     */
+    public function entregasDisponiblesParaReasignar($id)
+    {
+        try {
+            $entregasDisponibles = Entrega::with(['chofer', 'vehiculo', 'estadoEntrega'])
+                ->where('id', '!=', $id)
+                // ✅ Sin filtro de estado - permite reasignar a CUALQUIER entrega
+                ->orderByDesc('numero_entrega')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $entregasDisponibles,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo entregas disponibles', [
+                'entrega_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener entregas disponibles',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * PUT /api/entregas/{id}/reasignar-venta
+     * Reasignar una venta a otra entrega
+     *
+     * Soporta dos tipos de relaciones:
+     * 1. Directa: ventas.entrega_id = $id (ACTUAL)
+     * 2. Legacy: entrega_venta pivot table (DEPRECADO)
+     *
+     * Body JSON:
+     * {
+     *   "venta_id": 123,
+     *   "entrega_destino_id": 456
+     * }
+     */
+    public function reasignarVenta(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'venta_id' => 'required|integer|exists:ventas,id',
+                'entrega_destino_id' => 'required|integer|exists:entregas,id',
+            ]);
+
+            $ventaId = $validated['venta_id'];
+            $entregaDestinoId = $validated['entrega_destino_id'];
+
+            // Validar que la entrega origen exista
+            $entregaOrigen = Entrega::find($id);
+            if (!$entregaOrigen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Entrega origen no encontrada',
+                ], 404);
+            }
+
+            // Validar que la entrega destino exista
+            $entregaDestino = Entrega::find($entregaDestinoId);
+            if (!$entregaDestino) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Entrega destino no encontrada',
+                ], 404);
+            }
+
+            // No permitir asignar a la misma entrega
+            if ($id == $entregaDestinoId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puedes asignar una venta a la misma entrega',
+                ], 422);
+            }
+
+            // Obtener la venta
+            $venta = Venta::find($ventaId);
+            if (!$venta) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Venta no encontrada',
+                ], 404);
+            }
+
+            // Verificar si la venta está asignada a la entrega origen
+            // Soporta ambos tipos de relación:
+            $estaEnOrigen = false;
+            $esRelacionDirecta = false;
+
+            // Tipo 1: Relación DIRECTA (ventas.entrega_id)
+            if ($venta->entrega_id == $id) {
+                $estaEnOrigen = true;
+                $esRelacionDirecta = true;
+            }
+
+            // Tipo 2: Relación LEGACY (entrega_venta pivot)
+            if (!$estaEnOrigen) {
+                $ventaEnOrigen = DB::table('entrega_venta')
+                    ->where('entrega_id', $id)
+                    ->where('venta_id', $ventaId)
+                    ->first();
+                $estaEnOrigen = $ventaEnOrigen !== null;
+            }
+
+            if (!$estaEnOrigen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La venta no está asignada a esta entrega',
+                ], 422);
+            }
+
+            DB::transaction(function () use ($id, $ventaId, $entregaDestinoId, $esRelacionDirecta) {
+                if ($esRelacionDirecta) {
+                    // Actualizar la relación directa en tabla ventas
+                    Venta::where('id', $ventaId)->update(['entrega_id' => $entregaDestinoId]);
+                } else {
+                    // Actualizar la relación legacy en tabla entrega_venta
+                    DB::table('entrega_venta')
+                        ->where('entrega_id', $id)
+                        ->where('venta_id', $ventaId)
+                        ->update(['entrega_id' => $entregaDestinoId, 'updated_at' => now()]);
+                }
+
+                // Log de auditoría
+                Log::info('✅ Venta reasignada a nueva entrega', [
+                    'venta_id' => $ventaId,
+                    'entrega_origen_id' => $id,
+                    'entrega_destino_id' => $entregaDestinoId,
+                    'tipo_relacion' => $esRelacionDirecta ? 'DIRECTA' : 'LEGACY',
+                    'usuario_id' => Auth::id(),
+                    'timestamp' => now(),
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Venta reasignada exitosamente',
+                'venta_id' => $ventaId,
+                'entrega_origen_id' => $id,
+                'entrega_destino_id' => $entregaDestinoId,
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validación fallida',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error reasignando venta', [
+                'venta_id' => $ventaId ?? null,
+                'entrega_origen_id' => $id,
+                'entrega_destino_id' => $entregaDestinoId ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al reasignar la venta: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

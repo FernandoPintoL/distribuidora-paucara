@@ -77,6 +77,14 @@ export default function InputSearch({
 
     // Debounce de búsqueda - Versión simplificada para evitar bucles infinitos
     useEffect(() => {
+        // ✅ CORREGIDO (2026-03-03): No buscar si ya hay una opción seleccionada y el query coincide
+        // Esto evita que se muestren sugerencias cuando el usuario ya seleccionó algo
+        if (selectedOption && selectedOption.label === query) {
+            setOptions([]);
+            setIsOpen(false);
+            return;
+        }
+
         // Solo buscar si query tiene al menos 2 caracteres
         if (!query || query.length < 2) {
             setOptions([]);
@@ -102,7 +110,7 @@ export default function InputSearch({
 
         return () => clearTimeout(timeout);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [query]); // Solo depende de query, ignoramos onSearch para evitar bucles
+    }, [query, selectedOption?.label]); // Agregado selectedOption para verificar si hay selección
 
     // Cerrar dropdown al hacer click fuera
     useEffect(() => {

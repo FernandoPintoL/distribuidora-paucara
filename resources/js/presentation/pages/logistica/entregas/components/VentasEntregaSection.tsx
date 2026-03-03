@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronDown, ShoppingCart, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle, Edit2, Truck } from 'lucide-react';
+import { ChevronDown, ShoppingCart, DollarSign, Calendar, MapPin, Package, CheckCircle, AlertCircle, Edit2, Truck, Navigation } from 'lucide-react';
 import { Badge } from '@/presentation/components/ui/badge';
 import { Button } from '@/presentation/components/ui/button';
+import { ReasignarVentaModal } from './ReasignarVentaModal';
 import type { VentaEntrega, Entrega } from '@/domain/entities/entregas';
 
 interface DesglosePago {
@@ -46,6 +47,8 @@ export default function VentasEntregaSection({ entrega, ventas, onCorregirPago, 
     console.log('VentasEntregaSection render with ventas:', ventas);
     console.log('🔍 Verificando tipo_pago en ventas:', ventas.map(v => ({ id: v.id, tipo_pago: v.tipo_pago, numero: v.numero })));
     const [expandedVentaId, setExpandedVentaId] = useState<number | null>(null);
+    const [reasignarModalOpen, setReasignarModalOpen] = useState(false);
+    const [ventaAReasignar, setVentaAReasignar] = useState<VentaEntrega | undefined>(undefined);
 
     // ✅ Helper para obtener la confirmación de una venta
     const obtenerConfirmacionVenta = (ventaId: number) => {
@@ -376,6 +379,20 @@ export default function VentasEntregaSection({ entrega, ventas, onCorregirPago, 
                                                                     ✏️ Corregir Pagos
                                                                 </Button>
                                                             )}
+
+                                                            {/* ✅ NUEVO: Botón para reasignar a otra entrega */}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setVentaAReasignar(venta);
+                                                                    setReasignarModalOpen(true);
+                                                                }}
+                                                                className="gap-2 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                                            >
+                                                                <Navigation className="h-4 w-4" />
+                                                                🚚 Reasignar
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -388,6 +405,21 @@ export default function VentasEntregaSection({ entrega, ventas, onCorregirPago, 
                     </table>
                 </div>
             </div>
+
+            {/* ✅ NUEVO: Modal para reasignar venta */}
+            <ReasignarVentaModal
+                isOpen={reasignarModalOpen}
+                venta={ventaAReasignar}
+                entregaActual={entrega}
+                onClose={() => {
+                    setReasignarModalOpen(false);
+                    setVentaAReasignar(undefined);
+                }}
+                onSuccess={() => {
+                    // Recargar la página para ver los cambios actualizados
+                    window.location.reload();
+                }}
+            />
         </div>
     );
 }

@@ -47,6 +47,8 @@ class CrearVentaDTO extends BaseDTO
         public ?float $monto_pagado_inicial = null,  // Monto pagado en el momento de la aprobación
         // ✅ NUEVO (2026-03-01): Preventista responsable de la venta
         public ?int $preventista_id = null,
+        // ✅ NUEVO (2026-03-03): Entrega para asignar venta a una entrega existente
+        public ?int $entrega_id = null,
     ) {}
 
     /**
@@ -106,6 +108,8 @@ class CrearVentaDTO extends BaseDTO
             // ✅ NUEVO (2026-03-01): Mapear preventista_id del frontend
             // ✅ CORREGIDO: Convertir 0 a null para evitar error de FK
             preventista_id: $request->has('preventista_id') && $request->input('preventista_id') ? (int) $request->input('preventista_id') : null,
+            // ✅ NUEVO (2026-03-03): Mapear entrega_id del frontend (para asignar a entrega existente)
+            entrega_id: $request->has('entrega_id') && $request->input('entrega_id') ? (int) $request->input('entrega_id') : null,
         );
     }
 

@@ -23,9 +23,9 @@ class ReporteVentasController extends Controller
         try {
             $user = auth()->user();
 
-            // Validar fechas
-            $fechaDesde = $request->filled('fecha_desde') ? $request->date('fecha_desde') : now()->subMonth();
-            $fechaHasta = $request->filled('fecha_hasta') ? $request->date('fecha_hasta') : now();
+            // ✅ NUEVO (2026-03-03): Validar fechas - default mes actual (día 1 al hoy)
+            $fechaDesde = $request->filled('fecha_desde') ? $request->date('fecha_desde') : now()->startOfMonth();  // Primer día del mes actual
+            $fechaHasta = $request->filled('fecha_hasta') ? $request->date('fecha_hasta') : now();  // Hoy
 
             // Obtener el ID del estado APROBADO
             // ✅ CORREGIDO: La tabla EstadoDocumento solo tiene columna 'codigo', no 'categoria'
@@ -226,13 +226,13 @@ class ReporteVentasController extends Controller
             $user = auth()->user();
             $limite = $request->integer('limite', 20);
 
-            // Validar fechas - default último mes
+            // ✅ NUEVO (2026-03-03): Validar fechas - default mes actual (día 1 al hoy)
             $fechaDesde = $request->filled('fecha_desde')
                 ? $request->date('fecha_desde')
-                : now()->subMonth();
+                : now()->startOfMonth();  // Primer día del mes actual
             $fechaHasta = $request->filled('fecha_hasta')
                 ? $request->date('fecha_hasta')
-                : now();
+                : now();  // Hoy
 
             // Estados
             $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
@@ -401,13 +401,13 @@ class ReporteVentasController extends Controller
     public function entregasPorChofer(Request $request): InertiaResponse
     {
         try {
-            // Validar fechas - default último mes
+            // ✅ NUEVO (2026-03-03): Validar fechas - default mes actual (día 1 al hoy)
             $fechaDesde = $request->filled('fecha_desde')
                 ? $request->date('fecha_desde')
-                : now()->subMonth();
+                : now()->startOfMonth();  // Primer día del mes actual
             $fechaHasta = $request->filled('fecha_hasta')
                 ? $request->date('fecha_hasta')
-                : now();
+                : now();  // Hoy
 
             // Query principal: Resumen por chofer
             $choferes = DB::table('users')
@@ -503,13 +503,13 @@ class ReporteVentasController extends Controller
         try {
             $limite = $request->integer('limite', 20);
 
-            // Validar fechas - default último mes
+            // ✅ NUEVO (2026-03-03): Validar fechas - default mes actual (día 1 al hoy)
             $fechaDesde = $request->filled('fecha_desde')
                 ? $request->date('fecha_desde')
-                : now()->subMonth();
+                : now()->startOfMonth();  // Primer día del mes actual
             $fechaHasta = $request->filled('fecha_hasta')
                 ? $request->date('fecha_hasta')
-                : now();
+                : now();  // Hoy
 
             // Query 1: Clientes con más entregas COMPLETAS
             $completasQuery = DB::table('entregas_venta_confirmaciones')

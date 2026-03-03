@@ -368,36 +368,48 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
         <AppLayout>
             <Head title={`Entrega ${numero}`} />
 
-            <div className="space-y-6 p-6 mx-auto bg-white dark:bg-slate-950">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 mx-auto bg-white dark:bg-slate-950 min-h-screen">
+                {/* Header - Responsive */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    {/* Título y Info */}
+                    <div className="flex items-start gap-3 sm:gap-4">
                         <button
                             onClick={() => router.visit('/logistica/entregas')}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition flex-shrink-0 mt-1"
                         >
                             <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                         </button>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Entrega Folio: {numero}</h1>
-                            <p>{entrega.numero_entrega}</p>
-                            <p className="text-gray-500 dark:text-gray-400">Detalles de la entrega</p>
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">
+                                Entrega Folio: {numero}
+                            </h1>
+                            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate">{entrega.numero_entrega}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">Detalles de la entrega</p>
                         </div>
                     </div>
 
-                    <EstadoBadge entrega={entrega} />
+                    {/* Estado Badge - Visible en móvil arriba */}
+                    <div className="sm:hidden">
+                        <EstadoBadge entrega={entrega} />
+                    </div>
 
-                    <div className="flex gap-2 items-center">
+                    {/* Estado Badge - Oculto en móvil */}
+                    <div className="hidden sm:block">
+                        <EstadoBadge entrega={entrega} />
+                    </div>
+
+                    {/* Botones - Stack en móvil */}
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         {/* ✅ NUEVO: Botón para marcar como listo para entrega - SOLO en PREPARACION_CARGA */}
                         {estadoActualParaValidar === 'PREPARACION_CARGA' && (
                             <Button
                                 onClick={handleMarcarListoParaEntrega}
                                 disabled={isMarking}
                                 variant="default"
-                                className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                                className="bg-green-600 hover:bg-green-700 text-white w-full text-sm sm:text-base"
                             >
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                {isMarking ? 'Procesando...' : 'Listo para Entrega'}
+                                <CheckCircle2 className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">{isMarking ? 'Procesando...' : 'Listo para Entrega'}</span>
                             </Button>
                         )}
 
@@ -407,10 +419,10 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                                 onClick={handleIniciarRuta}
                                 disabled={isInitiatingRoute}
                                 variant="default"
-                                className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+                                className="bg-blue-600 hover:bg-blue-700 text-white w-full text-sm sm:text-base"
                             >
-                                <Navigation className="w-4 h-4 mr-2" />
-                                {isInitiatingRoute ? 'Iniciando...' : 'Iniciar Ruta'}
+                                <Navigation className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">{isInitiatingRoute ? 'Iniciando...' : 'Iniciar Ruta'}</span>
                             </Button>
                         )}
 
@@ -420,10 +432,10 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                                 onClick={handleFinalizarEntrega}
                                 disabled={isFinalizingDelivery}
                                 variant="default"
-                                className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+                                className="bg-red-600 hover:bg-red-700 text-white w-full text-sm sm:text-base"
                             >
-                                <Flag className="w-4 h-4 mr-2" />
-                                {isFinalizingDelivery ? 'Finalizando...' : 'Finalizar Entrega'}
+                                <Flag className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">{isFinalizingDelivery ? 'Finalizando...' : 'Finalizar Entrega'}</span>
                             </Button>
                         )}
 
@@ -431,10 +443,10 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                         <Button
                             onClick={() => setIsOutputModalOpen(true)}
                             variant="outline"
-                            className="w-full sm:w-auto"
+                            className="w-full text-sm sm:text-base"
                         >
-                            <Package className="w-4 h-4 mr-2" />
-                            Imprimir
+                            <Package className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">Imprimir</span>
                         </Button>
                     </div>
 
@@ -486,26 +498,26 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
 
                 {/* Información del Lote - Entregas con mismo chofer y vehículo */}
                 {entrega.chofer && entrega.vehiculo && (
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-50/50 dark:from-purple-900/20 dark:to-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800 p-6">
-                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-900 dark:text-purple-200">
-                            <Package className="w-5 h-5" />
-                            Contexto del Lote
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-50/50 dark:from-purple-900/20 dark:to-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800 p-4 sm:p-6">
+                        <h2 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2 text-purple-900 dark:text-purple-200">
+                            <Package className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                            <span>Contexto del Lote</span>
                         </h2>
                         <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">Chofer Asignado</p>
-                                    <p className="font-medium text-purple-900 dark:text-purple-100">{entrega.chofer.name}</p>
+                                    <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Chofer Asignado</p>
+                                    <p className="font-medium text-sm sm:text-base text-purple-900 dark:text-purple-100 truncate">{entrega.chofer.name}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">Vehículo</p>
-                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                    <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Vehículo</p>
+                                    <p className="font-medium text-sm sm:text-base text-purple-900 dark:text-purple-100">
                                         {entrega.vehiculo.placa}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">Fecha Programada</p>
-                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                    <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Fecha Programada</p>
+                                    <p className="font-medium text-sm sm:text-base text-purple-900 dark:text-purple-100">
                                         {new Date(entrega.fecha_programada).toLocaleDateString('es-ES', {
                                             weekday: 'short',
                                             year: 'numeric',
@@ -515,16 +527,16 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">Peso Entrega</p>
-                                    <p className="font-medium text-purple-900 dark:text-purple-100">
+                                    <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Peso Entrega</p>
+                                    <p className="font-medium text-sm sm:text-base text-purple-900 dark:text-purple-100">
                                         {entrega.peso_kg ? `${entrega.peso_kg} kg` : 'N/A'}
                                     </p>
                                 </div>
                                 {/* ✅ NUEVO (2026-02-12): Mostrar entregador */}
                                 {entrega.entregador && (
                                     <div>
-                                        <p className="text-sm text-purple-700 dark:text-purple-300">Entregador</p>
-                                        <p className="font-medium text-purple-900 dark:text-purple-100">{entrega.entregador.name}</p>
+                                        <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Entregador</p>
+                                        <p className="font-medium text-sm sm:text-base text-purple-900 dark:text-purple-100 truncate">{entrega.entregador.name}</p>
                                     </div>
                                 )}
                             </div>

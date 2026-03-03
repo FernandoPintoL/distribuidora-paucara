@@ -219,6 +219,7 @@ class VentaService
                 'ventana_entrega_fin'        => $dto->ventana_entrega_fin,
                 'idempotency_key'            => $dto->idempotency_key,
                 'caja_id'                    => $cajaId, // ✅ NUEVO: Caja donde se registró la venta
+                'entrega_id'                 => $dto->entrega_id, // ✅ NUEVO (2026-03-03): Entrega asignada (opcional)
             ]);
 
             // ✅ NUEVO: Asignar número de venta con formato VEN + FECHA + ID
@@ -469,6 +470,8 @@ class VentaService
                 'proforma',                   // ✅ NUEVO: Cargar relación de proforma (si existe)
                 'confirmaciones',             // ✅ NUEVO: Cargar confirmación de entrega (entregas_venta_confirmaciones)
                 'preventista',                // ✅ NUEVO (2026-03-01): Cargar preventista responsable
+                'entrega.chofer',             // ✅ NUEVO (2026-03-03): Cargar entrega asignada y su chofer
+                'entrega.vehiculo',           // ✅ NUEVO (2026-03-03): Cargar vehículo de la entrega
             ])
                 ->when($filtros['id'] ?? null, fn($q, $id) =>
                     $q->where('id', $id)
@@ -584,6 +587,7 @@ class VentaService
                 'primera_venta_id'        => $resultado->first()?->id ?? 'N/A',
                 'tiene_direccion_cliente' => $resultado->first()?->direccionCliente ? 'SÍ' : 'NO',
                 'tiene_estadoLogistica'   => $resultado->first()?->estadoLogistica ? 'SÍ' : 'NO',
+                'tiene_entrega'           => $resultado->first()?->entrega ? 'SÍ' : 'NO',  // ✅ NUEVO (2026-03-03)
                 'latitud'                 => $resultado->first()?->direccionCliente?->latitud ?? 'N/A',
                 'longitud'                => $resultado->first()?->direccionCliente?->longitud ?? 'N/A',
                 'sort_by'                 => $sortBy,

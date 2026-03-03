@@ -64,7 +64,7 @@ export default function RankingClientes({
     fecha_hasta,
     error,
 }: RankingClientesProps) {
-    const [activeTab, setActiveTab] = useState<'aprobadas' | 'anuladas' | 'productos' | 'menos'>('aprobadas');
+    const [activeTab, setActiveTab] = useState<'aprobadas' | 'anuladas' | 'productos' | 'menos'>('productos');
     const [fechaDesde, setFechaDesde] = useState(filtros.fecha_desde || fecha_desde);
     const [fechaHasta, setFechaHasta] = useState(filtros.fecha_hasta || fecha_hasta);
     const [limite, setLimite] = useState(filtros.limite?.toString() || '20');
@@ -223,7 +223,13 @@ export default function RankingClientes({
                     </div>
 
                     {/* Tarjetas de Resumen */}
-                    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 p-4">
+                            <p className="text-sm text-green-600 dark:text-green-400">Más Productos</p>
+                            <p className="mt-2 text-2xl font-bold text-green-900 dark:text-green-200">{totalesProductos.clientes}</p>
+                            <p className="text-xs text-green-600 dark:text-green-400">Bs. {totalesProductos.montoTotal.toFixed(2)}</p>
+                        </div>
+
                         <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 p-4">
                             <p className="text-sm text-blue-600 dark:text-blue-400">Más Ventas Aprobadas</p>
                             <p className="mt-2 text-2xl font-bold text-blue-900 dark:text-blue-200">{totalesAprobadas.clientes}</p>
@@ -234,61 +240,54 @@ export default function RankingClientes({
                             <p className="mt-2 text-2xl font-bold text-red-900 dark:text-red-200">{totalesAnuladas.clientes}</p>
                             <p className="text-xs text-red-600 dark:text-red-400">Bs. {totalesAnuladas.montoTotal.toFixed(2)}</p>
                         </div>
-                        <div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 p-4">
-                            <p className="text-sm text-green-600 dark:text-green-400">Más Productos</p>
-                            <p className="mt-2 text-2xl font-bold text-green-900 dark:text-green-200">{totalesProductos.clientes}</p>
-                            <p className="text-xs text-green-600 dark:text-green-400">Bs. {totalesProductos.montoTotal.toFixed(2)}</p>
-                        </div>
+
                         <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 p-4">
                             <p className="text-sm text-amber-600 dark:text-amber-400">Menos Productos</p>
                             <p className="mt-2 text-2xl font-bold text-amber-900 dark:text-amber-200">{totalesmenos.clientes}</p>
                             <p className="text-xs text-amber-600 dark:text-amber-400">Bs. {totalesmenos.montoTotal.toFixed(2)}</p>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Tabs */}
                     <div className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                         <div className="flex border-b border-gray-200 dark:border-gray-700">
                             <button
+                                onClick={() => setActiveTab('productos')}
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'productos'
+                                    ? 'border-b-2 border-green-600 text-green-600 dark:text-green-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                                    }`}
+                            >
+                                <Award className="mb-1 inline h-4 w-4 mr-2" />
+                                Más Productos
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('aprobadas')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'aprobadas'
-                                        ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'aprobadas'
+                                    ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                                    }`}
                             >
                                 <ArrowUp className="mb-1 inline h-4 w-4 mr-2" />
                                 Más Ventas Aprobadas
                             </button>
                             <button
                                 onClick={() => setActiveTab('anuladas')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'anuladas'
-                                        ? 'border-b-2 border-red-600 text-red-600 dark:text-red-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'anuladas'
+                                    ? 'border-b-2 border-red-600 text-red-600 dark:text-red-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                                    }`}
                             >
                                 <ArrowDown className="mb-1 inline h-4 w-4 mr-2" />
                                 Más Ventas Anuladas
                             </button>
-                            <button
-                                onClick={() => setActiveTab('productos')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'productos'
-                                        ? 'border-b-2 border-green-600 text-green-600 dark:text-green-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
-                            >
-                                <Award className="mb-1 inline h-4 w-4 mr-2" />
-                                Más Productos
-                            </button>
+
                             <button
                                 onClick={() => setActiveTab('menos')}
-                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                                    activeTab === 'menos'
-                                        ? 'border-b-2 border-amber-600 text-amber-600 dark:text-amber-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                                }`}
+                                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'menos'
+                                    ? 'border-b-2 border-amber-600 text-amber-600 dark:text-amber-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                                    }`}
                             >
                                 <ArrowDown className="mb-1 inline h-4 w-4 mr-2" />
                                 Menos Productos

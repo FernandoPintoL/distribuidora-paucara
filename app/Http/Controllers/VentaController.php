@@ -209,6 +209,7 @@ class VentaController extends Controller
                     'caja_id'                    => $venta->caja_id,  // ✅ NUEVO: ID de caja para indicador
                     'direccion_cliente_id'       => $venta->direccion_cliente_id,
                     'proforma_id'                => $venta->proforma_id,
+                    'entrega_id'                 => $venta->entrega_id,  // ✅ NUEVO (2026-03-03): ID de entrega asignada
                     'created_at'                 => $venta->created_at,
                     'updated_at'                 => $venta->updated_at,
                     // ✅ RELACIONES - Incluir explícitamente
@@ -238,6 +239,7 @@ class VentaController extends Controller
                         'id'           => $venta->direccionCliente->id,
                         'direccion'    => $venta->direccionCliente->direccion,
                         'referencias'  => $venta->direccionCliente->observaciones,
+                        'observaciones' => $venta->direccionCliente->observaciones,  // ✅ NUEVO (2026-03-03): Campo explícito de observaciones
                         'localidad_id' => $venta->direccionCliente->localidad_id,
                         'localidad'    => $venta->direccionCliente->localidad?->nombre ?? null,
                         'latitud'      => (float) ($venta->direccionCliente->latitud ?? 0),
@@ -299,6 +301,25 @@ class VentaController extends Controller
                         'id'    => $venta->preventista->id,
                         'name'  => $venta->preventista->name,
                         'email' => $venta->preventista->email,
+                    ] : null,
+                    // ✅ NUEVO (2026-03-03): Relación con entrega asignada
+                    'entrega'                    => $venta->entrega ? [
+                        'id'                => $venta->entrega->id,
+                        'numero_entrega'    => $venta->entrega->numero_entrega,
+                        'numero_envio'      => $venta->entrega->numero_envio,
+                        'fecha_programada'  => $venta->entrega->fecha_programada,
+                        'estado'            => $venta->entrega->estado,
+                        'direccion_entrega' => $venta->entrega->direccion_entrega,
+                        'chofer'            => $venta->entrega->chofer ? [
+                            'id'   => $venta->entrega->chofer->id,
+                            'name' => $venta->entrega->chofer->name ?? $venta->entrega->chofer->nombre,
+                        ] : null,
+                        'vehiculo'          => $venta->entrega->vehiculo ? [
+                            'id'    => $venta->entrega->vehiculo->id,
+                            'placa' => $venta->entrega->vehiculo->placa,
+                            'marca' => $venta->entrega->vehiculo->marca,
+                            'modelo' => $venta->entrega->vehiculo->modelo,
+                        ] : null,
                     ] : null,
                 ];
             });
@@ -406,6 +427,11 @@ class VentaController extends Controller
             'almacen_id_empresa' => $almacenIdEmpresa,                                                               // ✅ NUEVO: Almacén de la empresa
             'es_farmacia'        => (bool) $empresaPrincipal?->es_farmacia,                                          // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
             'logistica_envios'   => (bool) $empresaPrincipal?->logistica_envios,                                     // ✅ NUEVO: Indicador para mostrar/ocultar logística de envíos
+            // ✅ NUEVO (2026-03-03): Direcciones de clientes con observaciones para mostrar en formulario
+            'direcciones_clientes' => \App\Models\DireccionCliente::where('activa', true)
+                ->with('cliente:id,nombre')
+                ->select('id', 'cliente_id', 'direccion', 'observaciones', 'localidad_id', 'latitud', 'longitud', 'es_principal')
+                ->get(),
         ]);
     }
 

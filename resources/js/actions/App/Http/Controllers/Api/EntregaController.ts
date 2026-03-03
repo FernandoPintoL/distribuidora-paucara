@@ -1461,6 +1461,187 @@ obtenerResumenPagos.head = (args: { id: string | number } | [id: string | number
     
     obtenerResumenPagos.form = obtenerResumenPagosForm
 /**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+export const entregasDisponiblesParaReasignar = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasDisponiblesParaReasignar.url(args, options),
+    method: 'get',
+})
+
+entregasDisponiblesParaReasignar.definition = {
+    methods: ["get","head"],
+    url: '/api/chofer/entregas/{id}/entregas-disponibles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+entregasDisponiblesParaReasignar.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return entregasDisponiblesParaReasignar.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+entregasDisponiblesParaReasignar.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: entregasDisponiblesParaReasignar.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+entregasDisponiblesParaReasignar.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: entregasDisponiblesParaReasignar.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+    const entregasDisponiblesParaReasignarForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: entregasDisponiblesParaReasignar.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+        entregasDisponiblesParaReasignarForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasDisponiblesParaReasignar.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::entregasDisponiblesParaReasignar
+ * @see app/Http/Controllers/Api/EntregaController.php:3340
+ * @route '/api/chofer/entregas/{id}/entregas-disponibles'
+ */
+        entregasDisponiblesParaReasignarForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: entregasDisponiblesParaReasignar.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    entregasDisponiblesParaReasignar.form = entregasDisponiblesParaReasignarForm
+/**
+* @see \App\Http\Controllers\Api\EntregaController::reasignarVenta
+ * @see app/Http/Controllers/Api/EntregaController.php:3381
+ * @route '/api/chofer/entregas/{id}/reasignar-venta'
+ */
+export const reasignarVenta = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+    url: reasignarVenta.url(args, options),
+    method: 'put',
+})
+
+reasignarVenta.definition = {
+    methods: ["put"],
+    url: '/api/chofer/entregas/{id}/reasignar-venta',
+} satisfies RouteDefinition<["put"]>
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::reasignarVenta
+ * @see app/Http/Controllers/Api/EntregaController.php:3381
+ * @route '/api/chofer/entregas/{id}/reasignar-venta'
+ */
+reasignarVenta.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return reasignarVenta.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\EntregaController::reasignarVenta
+ * @see app/Http/Controllers/Api/EntregaController.php:3381
+ * @route '/api/chofer/entregas/{id}/reasignar-venta'
+ */
+reasignarVenta.put = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
+    url: reasignarVenta.url(args, options),
+    method: 'put',
+})
+
+    /**
+* @see \App\Http\Controllers\Api\EntregaController::reasignarVenta
+ * @see app/Http/Controllers/Api/EntregaController.php:3381
+ * @route '/api/chofer/entregas/{id}/reasignar-venta'
+ */
+    const reasignarVentaForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: reasignarVenta.url(args, {
+                    [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                        _method: 'PUT',
+                        ...(options?.query ?? options?.mergeQuery ?? {}),
+                    }
+                }),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\Api\EntregaController::reasignarVenta
+ * @see app/Http/Controllers/Api/EntregaController.php:3381
+ * @route '/api/chofer/entregas/{id}/reasignar-venta'
+ */
+        reasignarVentaForm.put = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: reasignarVenta.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'PUT',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'post',
+        })
+    
+    reasignarVenta.form = reasignarVentaForm
+/**
 * @see \App\Http\Controllers\Api\EntregaController::obtenerTracking
  * @see app/Http/Controllers/Api/EntregaController.php:1732
  * @route '/api/cliente/pedidos/{proformaId}/tracking'
@@ -3077,6 +3258,6 @@ cambiarTipoEntrega.patch = (args: { entrega: string | number, venta: string | nu
         })
     
     cambiarTipoEntrega.form = cambiarTipoEntregaForm
-const EntregaController = { obtenerEntregaPorVenta, estadisticasChofer, misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarVentaEntregada, actualizarConfirmacionVenta, finalizarEntrega, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerResumenPagos, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones, confirmarCarga, marcarListoParaEntrega, iniciarTransito, actualizarUbicacionGPS, consolidarAutomatico, crearEntregaConsolidada, actualizarEntregaConsolidada, cancelarEntrega, confirmarVentaCargada, desmarcarVentaCargada, obtenerDetalles, obtenerProgreso, obtenerLocalidades, corregirPagoConfirmacion, cambiarTipoEntrega }
+const EntregaController = { obtenerEntregaPorVenta, estadisticasChofer, misTrabjos, entregasAsignadas, showEntrega, iniciarRuta, actualizarEstado, marcarLlegada, confirmarVentaEntregada, actualizarConfirmacionVenta, finalizarEntrega, confirmarEntrega, reportarNovedad, registrarUbicacion, historialEntregas, obtenerResumenPagos, entregasDisponiblesParaReasignar, reasignarVenta, obtenerTracking, indexAdmin, asignarEntrega, entregasActivas, obtenerUbicaciones, confirmarCarga, marcarListoParaEntrega, iniciarTransito, actualizarUbicacionGPS, consolidarAutomatico, crearEntregaConsolidada, actualizarEntregaConsolidada, cancelarEntrega, confirmarVentaCargada, desmarcarVentaCargada, obtenerDetalles, obtenerProgreso, obtenerLocalidades, corregirPagoConfirmacion, cambiarTipoEntrega }
 
 export default EntregaController

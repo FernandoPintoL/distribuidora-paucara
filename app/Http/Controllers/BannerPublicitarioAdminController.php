@@ -119,7 +119,10 @@ class BannerPublicitarioAdminController extends Controller
         try {
             // Subir imagen
             $file = $request->file('imagen');
-            $nombreArchivo = time() . '_' . $file->getClientOriginalName();
+            // ✅ CORREGIDO (2026-03-03): Usar hashName() para evitar nombres demasiado largos
+            // hashName() genera un nombre único y corto: {hash}.{extension}
+            // Ejemplo: 5d41402abc4b2a76b9719d911017c592.jpg
+            $nombreArchivo = $file->hashName();
             $ruta = $file->storeAs('banners-publicitarios', $nombreArchivo, 'public');
 
             // Crear banner
@@ -127,7 +130,7 @@ class BannerPublicitarioAdminController extends Controller
                 'titulo' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'] ?? null,
                 'imagen' => $ruta,
-                'nombre_archivo' => $file->getClientOriginalName(),
+                'nombre_archivo' => $file->getClientOriginalName(),  // Guardar nombre original para referencia
                 'fecha_inicio' => $validated['fecha_inicio'] ?? null,
                 'fecha_fin' => $validated['fecha_fin'] ?? null,
                 'activo' => $validated['activo'] ?? true,
@@ -180,11 +183,12 @@ class BannerPublicitarioAdminController extends Controller
                 }
 
                 $file = $request->file('imagen');
-                $nombreArchivo = time() . '_' . $file->getClientOriginalName();
+                // ✅ CORREGIDO (2026-03-03): Usar hashName() para evitar nombres demasiado largos
+                $nombreArchivo = $file->hashName();
                 $ruta = $file->storeAs('banners-publicitarios', $nombreArchivo, 'public');
 
                 $validated['imagen'] = $ruta;
-                $validated['nombre_archivo'] = $file->getClientOriginalName();
+                $validated['nombre_archivo'] = $file->getClientOriginalName();  // Guardar nombre original para referencia
             }
 
             $banner->update($validated);

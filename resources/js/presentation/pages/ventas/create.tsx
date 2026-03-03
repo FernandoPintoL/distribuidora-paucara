@@ -11,6 +11,7 @@ import StockManager from '@/presentation/components/ventas/stock-manager';
 // Importar componentes y hooks adicionales
 import InputSearch from '@/presentation/components/ui/input-search';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
+import { SearchableSelect } from '@/presentation/components/ui/searchable-select';
 import { useClienteSearch } from '@/infrastructure/hooks/use-api-search';
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente';
 import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable';
@@ -167,6 +168,17 @@ export default function VentaForm() {
     const [preventistas, setPrevenstitas] = useState<Preventista[]>([]);
     const [cargandoPrevenstitas, setCargandoPrevenstitas] = useState(true);
 
+    // ✅ NUEVO: Estados para entregas disponibles
+    interface Entrega {
+        id: number;
+        numero_entrega: string;
+        estado?: string;
+        chofer?: { name: string };
+        vehiculo?: { placa: string };
+    }
+    const [entregas, setEntregas] = useState<Entrega[]>([]);
+    const [cargandoEntregas, setCargandoEntregas] = useState(false);
+
     // Estados para validación de caja abierta
     interface CajaInfo {
         tiene_caja_abierta: boolean;
@@ -241,6 +253,33 @@ export default function VentaForm() {
         cargarPrevenstitas();
     }, []);
 
+    // ✅ NUEVO: Cargar entregas disponibles
+    useEffect(() => {
+        const cargarEntregas = async () => {
+            try {
+                setCargandoEntregas(true);
+                const response = await fetch('/api/chofer/entregas/1/entregas-disponibles');
+                const data = await response.json();
+                if (data.success && Array.isArray(data.data)) {
+                    setEntregas(data.data);
+                    console.log('✅ Entregas cargadas:', data.data);
+                } else {
+                    console.warn('⚠️ Respuesta de entregas inválida:', data);
+                    setEntregas([]);
+                }
+            } catch (error) {
+                console.error('❌ Error al cargar entregas:', error);
+                setEntregas([]);
+            } finally {
+                setCargandoEntregas(false);
+            }
+        };
+
+        if (logistica_envios) {
+            cargarEntregas();
+        }
+    }, [logistica_envios]);
+
     // Hook para calcular carrito con precios por rango
     const precioRango = usePrecioRangoCarrito(500); // Debounce de 500ms
 
@@ -291,7 +330,9 @@ export default function VentaForm() {
         // ✅ NUEVO: Dirección del cliente para envío
         direccion_cliente_id: (venta?.direccion_cliente_id ? Number(venta.direccion_cliente_id) : null) as number | null,
         // ✅ NUEVO: Preventista (User con rol de preventista)
-        preventista_id: (venta?.preventista_id ? Number(venta.preventista_id) : null) as number | null
+        preventista_id: (venta?.preventista_id ? Number(venta.preventista_id) : null) as number | null,
+        // ✅ NUEVO: Entrega (para asignar venta a una entrega existente)
+        entrega_id: (venta?.entrega_id ? Number(venta.entrega_id) : null) as number | null
     });
 
     // ✅ NUEVO (2026-02-11): Estado local para input de monto_pagado_inicial
@@ -417,9 +458,10 @@ export default function VentaForm() {
         }
     }, [venta?.cliente, clienteDisplay]);
 
-    // ✅ NUEVO: Cargar direcciones del cliente cuando se selecciona Y requiere_envio es true
+    // ✅ NUEVO: Cargar direcciones del cliente cuando se selecciona
+    // Se carga SIEMPRE (independientemente de requiere_envio) para poder auto-seleccionar
     useEffect(() => {
-        if (data.requiere_envio && data.cliente_id && data.cliente_id !== 0 && typeof data.cliente_id === 'number') {
+        if (data.cliente_id && data.cliente_id !== 0 && typeof data.cliente_id === 'number') {
             setCargandoDirecciones(true);
             const cargarDirecciones = async () => {
                 try {
@@ -434,11 +476,21 @@ export default function VentaForm() {
                         if (result.success && result.data?.direcciones) {
                             const direccionesActivas = result.data.direcciones.filter((d: any) => d.activa !== false);
                             setDireccionesDisponibles(direccionesActivas);
-                            console.log('✅ Direcciones cargadas:', direccionesActivas);
+                            console.log('✅ Direcciones cargadas:', {
+                                cantidad: direccionesActivas.length,
+                                direcciones: direccionesActivas
+                            });
 
-                            // ✅ Si solo hay una dirección activa, seleccionarla automáticamente
+                            // ✅ MEJORADO (2026-03-03): Si solo hay una dirección activa, seleccionarla automáticamente
+                            // Esto funciona siempre, independientemente de requiere_envio
                             if (direccionesActivas.length === 1 && !data.direccion_cliente_id) {
-                                setData('direccion_cliente_id', direccionesActivas[0].id);
+                                const unica = direccionesActivas[0];
+                                setData('direccion_cliente_id', unica.id);
+                                console.log('✅ Dirección única seleccionada automáticamente:', {
+                                    id: unica.id,
+                                    observaciones: unica.observaciones,
+                                    direccion: unica.direccion
+                                });
                             }
                         } else {
                             setDireccionesDisponibles([]);
@@ -455,7 +507,7 @@ export default function VentaForm() {
         } else {
             setDireccionesDisponibles([]);
         }
-    }, [data.requiere_envio, data.cliente_id]);
+    }, [data.cliente_id]);
 
     // ✅ NUEVO: Cargar datos completos del cliente cuando se selecciona
     useEffect(() => {
@@ -1483,11 +1535,26 @@ export default function VentaForm() {
                                                                 className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
                                                             />
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                    {dir.direccion}
-                                                                    {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
-                                                                </p>
-                                                                {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400">📍 {dir.localidad}</p>}
+                                                                {/* ✅ NUEVO (2026-03-03): Observaciones como dato principal */}
+                                                                {dir.observaciones ? (
+                                                                    <>
+                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                            🏷️ {dir.observaciones}
+                                                                            {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                                            📍 {dir.direccion}
+                                                                        </p>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                            {dir.direccion}
+                                                                            {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
+                                                                        </p>
+                                                                        {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">📍 {dir.localidad}</p>}
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </label>
                                                     ))}
@@ -1581,6 +1648,55 @@ export default function VentaForm() {
                                                     )}
                                                     <p className="text-xs text-green-700 dark:text-green-300 mt-2">
                                                         ℹ️ Asigna un preventista responsable de esta venta
+                                                    </p>
+                                                </div>
+
+                                                {/* ✅ NUEVO: Selector de Entrega con Búsqueda */}
+                                                <div className="border-t border-green-200 dark:border-green-800 pt-3">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        🚚 Asignar a Entrega (Opcional)
+                                                    </label>
+                                                    {cargandoEntregas ? (
+                                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                            <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
+                                                            <span className="text-sm">Cargando entregas...</span>
+                                                        </div>
+                                                    ) : entregas && entregas.length > 0 ? (
+                                                        <div>
+                                                            <SearchableSelect
+                                                                value={data.entrega_id ? String(data.entrega_id) : ''}
+                                                                onValueChange={(value) => setData('entrega_id', value ? Number(value) : null)}
+                                                                items={entregas}
+                                                                placeholder="Selecciona una entrega..."
+                                                                searchPlaceholder="Busca por ID, chofer, vehículo, estado..."
+                                                                searchFields={['numero_entrega', 'id', 'chofer.name', 'vehiculo.placa', 'estado']}
+                                                                renderOption={(entrega) => (
+                                                                    <div className="flex items-center gap-2 w-full">
+                                                                        <span className="font-medium">#{entrega.numero_entrega}</span>
+                                                                        <span className="text-gray-400">•</span>
+                                                                        <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                                                            {entrega.estado || 'N/A'}
+                                                                        </span>
+                                                                        <span className="text-gray-400">•</span>
+                                                                        <span className="text-sm">{entrega.chofer?.name || 'Sin chofer'}</span>
+                                                                        <span className="text-gray-400">/</span>
+                                                                        <span className="text-sm">{entrega.vehiculo?.placa || 'Sin vehículo'}</span>
+                                                                    </div>
+                                                                )}
+                                                            />
+                                                            {data.entrega_id && (
+                                                                <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                                                                    ✓ Venta será asignada a la entrega seleccionada
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                                                            ℹ️ No hay entregas disponibles. Crea una entrega primero o desactiva esta opción.
+                                                        </p>
+                                                    )}
+                                                    <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                                                        ℹ️ Asigna esta venta a una entrega existente (opcional)
                                                     </p>
                                                 </div>
                                             </div>

@@ -730,6 +730,12 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
         // ✅ NUEVO: Resumen de pagos registrados en una entrega
         Route::get('/entregas/{id}/resumen-pagos', [EntregaController::class, 'obtenerResumenPagos']);
 
+        // ✅ NUEVO: Obtener entregas disponibles para reasignar
+        Route::get('/entregas/{id}/entregas-disponibles', [EntregaController::class, 'entregasDisponiblesParaReasignar']);
+
+        // ✅ NUEVO: Reasignar una venta a otra entrega
+        Route::put('/entregas/{id}/reasignar-venta', [EntregaController::class, 'reasignarVenta']);
+
         // ✅ NUEVO: Rutas para gestión de cajas del chofer
         Route::prefix('cajas')->middleware('can.open.caja')->group(function () {
             Route::get('/estado', [ChoferCajaController::class, 'obtenerEstado']);
