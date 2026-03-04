@@ -168,8 +168,15 @@ class CajaController extends Controller
             $ventasAnuladas = (float) $datosCalculados['datosReferenciales']['anulaciones'];
             $pagosCredito = (float) $datosCalculados['detalleEfectivo']['pagos_credito'];
 
-            // ✅ NUEVO: Calcular TODAS las ventas a crédito DE ESTA CAJA (pagadas + pendientes)
-            $ventasCreditoTotales = (float) $this->cierreCajaService->calcularVentasCreditoDeCaja($cajaAbiertaHoy);
+            // ✅ NUEVO: Obtener TODAS las ventas a crédito DE ESTA CAJA (ya calculadas en datosCalculados)
+            $ventasCreditoTotales = (float) ($datosCalculados['sumatorialVentasCredito'] ?? 0);
+
+            // 🔍 DEBUG: Verificar qué se está devolviendo
+            Log::info('🔍 [CajaController] DEBUG sumatorialVentasCredito:', [
+                'sumatorialVentasCredito' => $ventasCreditoTotales,
+                'datosCalculados_keys' => array_keys($datosCalculados),
+                'datos_ref' => $datosCalculados['datosReferenciales'] ?? [],
+            ]);
 
             // ✅ CORREGIDO (2026-02-11): Usar sumatorias individuales en lugar de salidas_reales
             // ✅ ACTUALIZADO (2026-02-20): Incluir COMPRA en totalEgresos
@@ -526,27 +533,50 @@ class CajaController extends Controller
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    // Información básica
-                    'apertura_id'                 => $aperturaCaja->id,
-                    'caja_nombre'                 => $aperturaCaja->caja->nombre,
-                    'fecha_apertura'              => $aperturaCaja->fecha,
-                    'fecha_cierre'                => $aperturaCaja->cierre?->created_at,
+                    // ✅ NUEVA ESTRUCTURA ESTANDARIZADA (igual a props.datosResumen del index)
+                    // Información básica de la apertura
+                    'apertura'                  => (float) ($aperturaCaja->monto_apertura ?? 0),
 
-                    // Sumatorias de ventas
-                    'sumatoria_ventas_total'      => (float) ($datos['sumatorialVentas'] ?? 0),
-                    'sumatoria_ventas_efectivo'   => (float) ($datos['sumatorialVentasEfectivo'] ?? 0),
-                    'sumatoria_ventas_credito'    => (float) ($datos['sumatorialVentasCredito'] ?? 0),
-                    'sumatoria_ventas_anuladas'   => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
+                    // Totales de ventas (estructura standard)
+                    'totalVentas'               => (float) ($datos['totalVentasEfectivo'] ?? 0),  // Ventas sin crédito
+                    'ventasAnuladas'            => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
+                    'pagosCredito'              => (float) ($datos['montoPagosCreditos'] ?? 0),
+                    'ventasCreditoTotales'      => (float) ($datos['sumatorialVentasCredito'] ?? 0),
 
-                    // Otros totales
-                    'sumatoria_gastos'            => (float) ($datos['sumatorialGastos'] ?? 0),
-                    'sumatoria_pagos_sueldo'      => (float) ($datos['sumatorialPagosSueldo'] ?? 0),
-                    'sumatoria_anticipos'         => (float) ($datos['sumatorialAnticipos'] ?? 0),
-                    'sumatoria_anulaciones'       => (float) ($datos['sumatorialAnulaciones'] ?? 0),
-                    'monto_pagos_creditos'        => (float) ($datos['montoPagosCreditos'] ?? 0),
+                    // Totales consolidados
+                    'totalSalidas'              => (float) ($datos['totalEgresos'] ?? 0),
+                    'totalIngresos'             => (float) ($datos['totalIngresos'] ?? 0),
+                    'totalEgresos'              => (float) ($datos['totalEgresos'] ?? 0),
+                    'efectivoEsperado'          => $datos['efectivoEsperado'] ?? [],  // ✅ Retornar array completo, no float
 
-                    // Agrupaciones (para desglose)
-                    'movimientos_agrupados'       => collect($datos['movimientosAgrupados'])
+                    // Desglose de ventas por tipo de pago
+                    'ventasPorTipoPago'         => $datos['ventasPorTipoPago'] ?? [],
+                    'pagosCreditoPorTipoPago'   => $datos['pagosCreditoPorTipoPago'] ?? [],
+
+                    // Desglose de egresos
+                    'sumatorialGastos'          => (float) ($datos['sumatorialGastos'] ?? 0),
+                    'sumatorialPagosSueldo'     => (float) ($datos['sumatorialPagosSueldo'] ?? 0),
+                    'sumatorialAnticipos'       => (float) ($datos['sumatorialAnticipos'] ?? 0),
+                    'sumatorialCompras'         => (float) ($datos['sumatorialCompras'] ?? 0),
+                    'sumatorialAnulaciones'     => (float) ($datos['sumatorialAnulaciones'] ?? 0),
+
+                    // ✅ COMPATIBILIDAD CON CierreCajaModal: Mantener nombres antiguos
+                    'apertura_id'               => $aperturaCaja->id,
+                    'caja_nombre'               => $aperturaCaja->caja->nombre,
+                    'fecha_apertura'            => $aperturaCaja->fecha,
+                    'fecha_cierre'              => $aperturaCaja->cierre?->created_at,
+                    'sumatoria_ventas_total'    => (float) ($datos['sumatorialVentas'] ?? 0),
+                    'sumatoria_ventas_efectivo' => (float) ($datos['sumatorialVentasEfectivo'] ?? 0),
+                    'sumatoria_ventas_credito'  => (float) ($datos['sumatorialVentasCredito'] ?? 0),
+                    'sumatoria_ventas_anuladas' => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
+                    'sumatoria_gastos'          => (float) ($datos['sumatorialGastos'] ?? 0),
+                    'monto_pagos_creditos'      => (float) ($datos['montoPagosCreditos'] ?? 0),
+                    'total_ingresos'            => (float) ($datos['totalIngresos'] ?? 0),
+                    'total_egresos'             => (float) ($datos['totalEgresos'] ?? 0),
+                    'efectivo_esperado'         => $datos['efectivoEsperado'] ?? [],
+
+                    // ✅ Mantener datos adicionales para CierreCajaModal
+                    'movimientos_agrupados'     => collect($datos['movimientosAgrupados'])
                         ->map(function ($items, $tipo) {
                             return [
                                 'tipo'     => $tipo,
@@ -556,23 +586,14 @@ class CajaController extends Controller
                         })
                         ->values()
                         ->toArray(),
-                    'movimientos_por_tipo_pago'   => $datos['movimientosPorTipoPago'] ?? [],
-                    'ventas_por_tipo_pago'        => $datos['ventasPorTipoPago'] ?? [],
-                    'ventas_por_estado'           => $datos['ventasPorEstado'] ?? [],
+                    'movimientos_por_tipo_pago' => $datos['movimientosPorTipoPago'] ?? [],
+                    'ventas_por_tipo_pago'      => $datos['ventasPorTipoPago'] ?? [],
+                    'ventas_por_estado'         => $datos['ventasPorEstado'] ?? [],
                     'pagos_credito_por_tipo_pago' => $datos['pagosCreditoPorTipoPago'] ?? [],
-                    'gastos_por_tipo_pago'        => $datos['gastosPorTipoPago'] ?? [],
-
-                    // Efectivo esperado
-                    'efectivo_esperado'           => $datos['efectivoEsperado'] ?? [],
-
-                    // Rangos
-                    'rango_ventas_ids'            => $datos['rangoVentasIds'] ?? [],
-                    'rango_creditos'              => $datos['rangoCreditos'] ?? [],
-                    'rango_pagos'                 => $datos['rangoPagos'] ?? [],
-
-                    // Totales básicos
-                    'total_ingresos'              => (float) ($datos['totalIngresos'] ?? 0),
-                    'total_egresos'               => (float) ($datos['totalEgresos'] ?? 0),
+                    'gastos_por_tipo_pago'      => $datos['gastosPorTipoPago'] ?? [],
+                    'rango_ventas_ids'          => $datos['rangoVentasIds'] ?? [],
+                    'rango_creditos'            => $datos['rangoCreditos'] ?? [],
+                    'rango_pagos'               => $datos['rangoPagos'] ?? [],
                 ],
             ]);
         } catch (\Exception $e) {

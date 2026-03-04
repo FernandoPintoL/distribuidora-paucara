@@ -671,20 +671,16 @@ class CierreCajaService
     {
         $montoApertura = $aperturaCaja->monto_apertura ?? 0;
 
-        // Ventas en efectivo aprobadas
-        $ventasEfectivo = $movimientos
-            ->filter(fn($m) =>
-                $m->tipoOperacion?->codigo === 'VENTA' &&
-                $m->tipoPago?->nombre === 'Efectivo' &&
-                $this->esVentaAprobada($m)
-            )
-            ->sum('monto');
+        // ✅ CORREGIDO (2026-03-03): Usar MISMO CÁLCULO que sumatorialVentasEfectivo
+        // (Solo EFECTIVO + TRANSFERENCIA/QR - tipos de pago explícitos)
+        // Esto asegura consistencia con sumatorialVentasEfectivo
+        $ventasEfectivo = $this->calcularVentasPorTipoPagoEspecifico($aperturaCaja, ['EFECTIVO', 'TRANSFERENCIA/QR']);
 
-        // Ventas anuladas en efectivo
+        // Ventas anuladas (TODOS los tipos excepto crédito)
         $ventasAnuladas = $movimientos
             ->filter(fn($m) =>
                 $m->tipoOperacion?->codigo === 'VENTA' &&
-                $m->tipoPago?->nombre === 'Efectivo' &&
+                $m->tipoPago?->codigo !== 'CREDITO' &&
                 $this->esVentaAnulada($m)
             )
             ->sum('monto');
@@ -736,6 +732,8 @@ class CierreCajaService
             'compras' => $compras,
             'anulaciones' => $anulaciones,
             'total_egresos' => $totalEgresos,
+            // ✅ CORRECTO: monto_esperado = Apertura + Entradas - Salidas
+            // Es la cantidad TOTAL de dinero que debería haber en caja al cierre
             'total' => $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos,
         ];
     }
@@ -902,6 +900,7 @@ class CierreCajaService
             $query = DB::table('ventas')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('ventas.caja_id', $aperturaCaja->caja_id)                 // ✅ Ventas de ESTA caja
+                ->where('ventas.usuario_id', $aperturaCaja->user_id)              // ✅ Del USUARIO DE LA APERTURA (campo correcto: usuario_id)
                 ->where('ventas.politica_pago', 'CREDITO')                        // ✅ POLÍTICA de pago = CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)        // ✅ APROBADAS
                 ->whereBetween('ventas.created_at', [$this->fechaInicio, $this->fechaFin]);  // ✅ Rango de fechas
@@ -913,11 +912,13 @@ class CierreCajaService
             Log::info('💳 [calcularVentasAprobadasCredito] - DEBUGGING (OPTIMIZADO):', [
                 'apertura_id' => $aperturaCaja->id,
                 'caja_id' => $aperturaCaja->caja_id,
+                'user_id' => $aperturaCaja->user_id,
                 'fecha_inicio' => $this->fechaInicio,
                 'fecha_fin' => $this->fechaFin,
                 'cantidad_registros' => $registros->count(),
                 'total_credito' => $total,
                 'registro_ids' => $registros->pluck('id')->toArray(),
+                'registros_completos' => $registros->toArray(),
                 'sql_query' => $query->toSql(),
                 'sql_bindings' => $query->getBindings(),
             ]);
@@ -950,12 +951,17 @@ class CierreCajaService
     public function calcularVentasCreditoDeCaja(AperturaCaja $aperturaCaja): float
     {
         try {
-            // ✅ Usar movimientos_caja como tabla principal
-            // Busca movimientos de esta caja que sean ventas a crédito aprobadas
-            $total = DB::table('movimientos_caja')
-                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+            // ✅ CORREGIDO (2026-03-03): Filtrar por CAJA + USUARIO + PERÍODO DE APERTURA
+            // Considerar que la caja puede estar abierta varios días
+
+            $fechaCierre = $aperturaCaja->cierre?->created_at ?? now();  // Si está cerrada, usar fecha cierre; sino, ahora
+
+            $total = DB::table('ventas')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)  // ✅ Movimientos de esta caja
+                ->where('ventas.caja_id', $aperturaCaja->caja_id)           // ✅ Ventas de esta caja
+                ->where('ventas.usuario_id', $aperturaCaja->user_id)         // ✅ Ventas del USUARIO DE LA APERTURA (campo correcto: usuario_id)
+                ->where('ventas.created_at', '>=', $aperturaCaja->fecha)    // ✅ Desde que se abrió
+                ->where('ventas.created_at', '<=', $fechaCierre)            // ✅ Hasta que se cerró (o ahora)
                 ->where('ventas.politica_pago', 'CREDITO')                  // ✅ Política CRÉDITO
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)  // ✅ Solo aprobadas
                 ->sum('ventas.total');                                      // ✅ Suma totales de ventas
@@ -963,8 +969,11 @@ class CierreCajaService
             Log::info('💳 [calcularVentasCreditoDeCaja]:', [
                 'apertura_id' => $aperturaCaja->id,
                 'caja_id' => $aperturaCaja->caja_id,
+                'user_id' => $aperturaCaja->user_id,
+                'fecha_apertura' => $aperturaCaja->fecha,
+                'fecha_cierre' => $fechaCierre,
+                'dias_abierta' => $aperturaCaja->fecha->diffInDays($fechaCierre),
                 'total_credito' => $total,
-                'source' => 'movimientos_caja',
             ]);
 
             return (float) $total;
@@ -972,6 +981,7 @@ class CierreCajaService
             Log::error('❌ [calcularVentasCreditoDeCaja]:', [
                 'apertura_id' => $aperturaCaja->id,
                 'caja_id' => $aperturaCaja->caja_id,
+                'user_id' => $aperturaCaja->user_id,
                 'error' => $e->getMessage(),
             ]);
             return 0;

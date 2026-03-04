@@ -115,22 +115,10 @@ export function CajaEstadoCard({
 
     const isDiaAnterior = esDiaAnterior();
 
-    // ✅ MEJORADO (2026-02-20): Usar datos frescos del servidor si están disponibles
-    // datosActualizados viene del endpoint /cajas/{id}/datos-cierre y trae valores correctos del backend
-    const totalEgresos = datosActualizados?.total_egresos || 0;
-    const efectivoEsperadoDelServidor = datosActualizados?.efectivoEsperado || 0;
-
-    // Si vienen datos del servidor, usar esos (son más precisos), sino usar los props originales
-    const efectivoActual = datosActualizados ? {
-        apertura: datosActualizados.apertura || efectivoEsperado?.apertura || 0,
-        ventas_efectivo: datosActualizados.detalleEfectivo?.ventas_efectivo_transferencia || efectivoEsperado?.ventas_efectivo || 0,
-        pagos_credito: datosActualizados.detalleEfectivo?.pagos_credito || efectivoEsperado?.pagos_credito || 0,
-        total_egresos: totalEgresos,
-        total: efectivoEsperadoDelServidor,
-    } : efectivoEsperado;
-
-    console.log('Efectivo actual (usando datos actualizados del servidor):', efectivoActual);
-    console.log('Total Egresos correcto:', totalEgresos);
+    // ✅ SIMPLIFICADO (2026-03-03): Confiar en los cálculos del backend
+    // No hacer lógica duplicada - el servidor ya calculó todo esto
+    const totalEgresos = datosActualizados?.totalEgresos || 0;
+    const totalIngresos = datosActualizados?.totalIngresos || 0;
 
     if (!cajaAbiertaHoy) {
         return (
@@ -229,22 +217,38 @@ export function CajaEstadoCard({
                                 Apertura
                             </label>
                             <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                                {efectivoEsperado ? formatCurrency(efectivoEsperado.apertura) : formatCurrency(cajaAbiertaHoy.monto_apertura)}
+                                {formatCurrency(datosActualizados?.apertura || cajaAbiertaHoy?.monto_apertura || 0)}
                             </p>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Entradas (Efectivo Real)
+                                Entradas (Ingresos por Ventas)
                             </label>
-                            {efectivoActual ? (
+                            {datosActualizados ? (
                                 <>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Ventas: {formatCurrency(efectivoActual.ventas_efectivo)} + Pagos: {formatCurrency(efectivoActual.pagos_credito)}
-                                    </p>
-                                    <p className="text-lg font-semibold text-green-600 dark:text-green-400 mt-1">
-                                        +{formatCurrency(efectivoActual.ventas_efectivo + efectivoActual.pagos_credito)}
-                                    </p>
+                                    {/* ✅ CORREGIDO: Mostrar desglose de todos los tipos de pago */}
+                                    {datosActualizados.ventasPorTipoPago && datosActualizados.ventasPorTipoPago.length > 0 ? (
+                                        <div className="space-y-1">
+                                            {datosActualizados.ventasPorTipoPago.map((tipoPago: any, idx: number) => (
+                                                <p key={idx} className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {tipoPago.tipo}: {formatCurrency(tipoPago.total)}
+                                                </p>
+                                            ))}
+                                            {(datosActualizados?.pagosCredito || 0) > 0 && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Pagos de Crédito: {formatCurrency(datosActualizados.pagosCredito)}
+                                                </p>
+                                            )}
+                                            <p className="text-lg font-semibold text-green-600 dark:text-green-400 mt-1 border-t border-gray-300 pt-1">
+                                                +{formatCurrency(datosActualizados.totalIngresos || 0)}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-lg font-semibold text-gray-500 dark:text-gray-400">
+                                            Sin movimientos
+                                        </p>
+                                    )}
                                 </>
                             ) : (
                                 <p className="text-lg font-semibold text-gray-500 dark:text-gray-400">
@@ -262,7 +266,7 @@ export function CajaEstadoCard({
                                     <span className="text-xs text-blue-600 dark:text-blue-400">Actualizando...</span>
                                 )}
                             </div>
-                            {efectivoActual ? (
+                            {datosActualizados ? (
                                 <div className="mt-2 space-y-2">
                                     {/* Gastos */}
                                     {(datosActualizados?.sumatorialGastos ?? 0) > 0 && (
@@ -304,6 +308,16 @@ export function CajaEstadoCard({
                                         </div>
                                     )}
 
+                                    {/* Anulaciones */}
+                                    {(datosActualizados?.sumatorialAnulaciones ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Anulaciones</span>
+                                            <span className="font-semibold text-gray-600 dark:text-gray-400">
+                                                {formatCurrency(datosActualizados.sumatorialAnulaciones)}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     {/* Total Egresos */}
                                     <div className="flex justify-between items-center text-sm p-2 bg-red-100 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700 font-bold">
                                         <span className="text-red-800 dark:text-red-200">Total Egresos</span>
@@ -321,47 +335,38 @@ export function CajaEstadoCard({
 
                         <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                💰 Total Esperado
+                                💰 Efectivo Esperado
                             </label>
                             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                                {/* ✅ CORREGIDO (2026-02-20): Calcular correctamente con datos del servidor */}
-                                {(() => {
-                                    if (datosActualizados) {
-                                        // Usar los valores correctos del servidor:
-                                        // Ventas Efectivo + Pagos Crédito - Total Egresos (correcto)
-                                        const ventasEfectivo = datosActualizados.sumatoria_ventas_efectivo || 0;
-                                        const pagosCredito = datosActualizados.monto_pagos_creditos || 0;
-                                        const totalEgresos = datosActualizados.total_egresos || 0;
-                                        const total = ventasEfectivo + pagosCredito - totalEgresos;
-
-                                        console.log('💰 TOTAL ESPERADO CORRECTO:', {
-                                            ventasEfectivo: ventasEfectivo,
-                                            pagosCredito: pagosCredito,
-                                            totalEgresos: totalEgresos,
-                                            formula: `${ventasEfectivo} + ${pagosCredito} - ${totalEgresos}`,
-                                            total: total,
-                                        });
-                                        return formatCurrency(total);
-                                    } else {
-                                        // Fallback si no hay datos del servidor
-                                        return formatCurrency(cajaAbiertaHoy.monto_apertura + totalMovimientos);
-                                    }
-                                })()}
+                                {/* ✅ Backend calcula: efectivoEsperado = apertura + ingresos - egresos */}
+                                {formatCurrency(datosActualizados?.efectivoEsperado || 0)}
                             </p>
                         </div>
 
-                        {/* ✅ NUEVO: Referencial - Sumatoria total de TODAS las ventas aprobadas */}
-                        {(datosActualizados?.sumatoria_ventas_total || ventasCreditoTotales) && (
+                        {/* ✅ REFERENCIAL: Total de TODAS las ventas (incluye crédito) */}
+                        {(datosActualizados?.totalVentas || datosActualizados?.ventasCreditoTotales) && (
                             <div className="pt-3 border-t border-gray-300 dark:border-gray-600">
                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                                    📊 REFERENCIAL: Total Ventas Aprobadas
+                                    📊 TOTAL DE VENTAS (Contado + Crédito)
                                 </label>
-                                <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                    {formatCurrency((datosActualizados?.sumatoria_ventas_total || 0))}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Efectivo + Transferencia + Crédito Aprobadas (de esta caja)
-                                </p>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600 dark:text-gray-400">Ventas Contado (Efectivo + Transferencia/QR):</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(datosActualizados.totalVentas || 0)}</span>
+                                    </div>
+                                    {(datosActualizados?.ventasCreditoTotales || 0) > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600 dark:text-gray-400">Ventas a Crédito:</span>
+                                            <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(datosActualizados.ventasCreditoTotales)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700 font-bold">
+                                        <span className="text-gray-900 dark:text-white">TOTAL VENTAS:</span>
+                                        <span className="text-purple-600 dark:text-purple-400">
+                                            {formatCurrency((datosActualizados.totalVentas || 0) + (datosActualizados.ventasCreditoTotales || 0))}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

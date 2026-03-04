@@ -150,11 +150,23 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
 
     // ✅ NUEVO: Obtener tipos únicos y calcular totales
     const tipos = Object.keys(movimientosAgrupados);
-    const totalesPorTipo = Object.entries(movimientosAgrupados).map(([tipo, movs]) => ({
-        tipo,
-        total: movs.reduce((sum, m) => sum + m.monto, 0),
-        count: movs.length,
-    }));
+    const totalesPorTipo = Object.entries(movimientosAgrupados).map(([tipo, movs]) => {
+        // ✅ CORREGIDO (2026-03-03): Para VENTA, usar ventasTotales del backend que ya está correcto
+        // Para otros tipos, sumar los montos localmente
+        if (tipo === 'Venta' || tipo === 'VENTA') {
+            return {
+                tipo,
+                total: ventasTotales || 0, // Usar el valor correcto del backend
+                count: movs.length,
+            };
+        }
+
+        return {
+            tipo,
+            total: movs.reduce((sum, m) => sum + m.monto, 0),
+            count: movs.length,
+        };
+    });
 
     // ✅ NUEVO: Agrupar movimientos por tipo de pago y calcular totales
     const movimientosAgrupadosPorTipoPago = movimientosHoy.reduce((acc: Record<string, any[]>, mov: any) => {

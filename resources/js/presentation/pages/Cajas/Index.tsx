@@ -57,39 +57,7 @@ export default function Index(props: CajasIndexProps) {
     const [showConsolidateDialog, setShowConsolidateDialog] = useState(false);
     const [outputModal, setOutputModal] = useState<{ isOpen: boolean; printType?: 'cierre' | 'movimientos'; movimientoId?: number }>({ isOpen: false });
 
-    // ✅ NUEVO: Estado para datos frescos del servidor (una sola llamada AJAX)
-    const [datosActualizados, setDatosActualizados] = useState<any>(null);
-    const [cargandoDatos, setCargandoDatos] = useState(false);
-
     const { movimientosHoy, totalMovimientos, esVistaAdmin = false, usuarioDestino, historicoAperturas, ventasCreditoTotales } = props;
-
-    // ✅ NUEVO: useEffect para cargar datos frescos del servidor (una sola llamada)
-    useEffect(() => {
-        if (cajaAbiertaHoy?.id) {
-            setCargandoDatos(true);
-            console.log('🔵 [Cajas/Index] Iniciando petición a /cajas/' + cajaAbiertaHoy.id + '/datos-cierre');
-
-            fetch(`/cajas/${cajaAbiertaHoy.id}/datos-cierre`)
-                .then(res => {
-                    console.log('🟦 [Cajas/Index] Response status:', res.status);
-                    return res.json();
-                })
-                .then(result => {
-                    console.log('🟩 [Cajas/Index] Respuesta completa del backend:', result);
-                    if (result.success && result.data) {
-                        console.log('✅ [Cajas/Index] Datos cargados exitosamente');
-                        setDatosActualizados(result.data);
-                    }
-                })
-                .catch(err => {
-                    console.error('❌ [Cajas/Index] Error cargando datos frescos:', err);
-                })
-                .finally(() => {
-                    console.log('🔴 [Cajas/Index] Petición finalizada');
-                    setCargandoDatos(false);
-                });
-        }
-    }, [cajaAbiertaHoy?.id]);
 
     // ✅ NUEVO: Callback cuando se registra exitosamente un movimiento
     const handleMovimientoRegistrado = (movimiento: any) => {
@@ -124,8 +92,8 @@ export default function Index(props: CajasIndexProps) {
         });
     };
 
-    // ✅ MEJORADO: Usar datos frescos del servidor si están disponibles
-    const efectivoEsperadoActual = datosActualizados?.efectivo_esperado || props.efectivoEsperado;
+    // ✅ Usar datos del servidor desde props
+    const efectivoEsperadoActual = props.datosResumen?.efectivoEsperado || props.efectivoEsperado;
 
     // ✅ Título dinámico según contexto
     const titulo = esVistaAdmin ? `Caja de ${usuarioDestino?.name}` : 'Gestión de Cajas';
@@ -221,8 +189,8 @@ export default function Index(props: CajasIndexProps) {
                         cajaAbiertaHoy={cajaAbiertaHoy}
                         totalMovimientos={totalMovimientos}
                         efectivoEsperado={efectivoEsperadoActual}
-                        datosActualizados={datosActualizados}
-                        cargandoDatos={cargandoDatos}
+                        datosActualizados={props.datosResumen}
+                        cargandoDatos={false}
                         ventasCreditoTotales={ventasCreditoTotales}
                         onAbrirClick={handleAbrirModal}
                         onCerrarClick={handleAbrirCierreModal}
@@ -238,7 +206,7 @@ export default function Index(props: CajasIndexProps) {
                     {cajaAbiertaHoy && (
                         <ResumenCajaCard
                             datosResumen={props.datosResumen}
-                            cargando={cargandoDatos}
+                            cargando={false}
                         />
                     )}
 
@@ -294,7 +262,7 @@ export default function Index(props: CajasIndexProps) {
                                 ventasAnuladas={props.ventasAnuladas}
                                 ventasCredito={props.ventasCredito}
                                 sumatorialCompras={props.sumatorialCompras}
-                                cargandoDatos={cargandoDatos}
+                                cargandoDatos={false}
                             />
                         </TabsContent>
 

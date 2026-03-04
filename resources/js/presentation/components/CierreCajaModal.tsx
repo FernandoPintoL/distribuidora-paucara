@@ -187,18 +187,21 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
     const gastosTotales = datosCierre?.sumatoria_gastos || 0;
 
     // ✅ CORREGIDO (2026-02-20): Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
-    const ingresos = ventasEnEfectivo + pagosDeCredito;
+    const ingresos = ventasEnEfectivo + pagosDeCredito + ventasCredito;
     const egresos = datosCierre?.total_egresos || 0;
+    const apertura = datosCierre?.apertura || cajaAbierta?.monto_apertura || 0;
 
-    // ✅ MEJORADO (2026-02-20): Total Esperado = Ventas Efectivo + Pagos Crédito - Total Egresos
-    const totalEsperadoMejorado = ventasEnEfectivo + pagosDeCredito - egresos;
+    // ✅ CORREGIDO (2026-03-03): Total Esperado = Apertura + Ventas Efectivo + Pagos Crédito - Total Egresos
+    // Es la cantidad TOTAL de dinero que debería haber en caja al cierre
+    const totalEsperadoMejorado = apertura + ventasEnEfectivo + pagosDeCredito - egresos;
 
     // ✅ DEBUG: Log de cómo se calcula Total Esperado
     console.log('💰 [CierreCajaModal] TOTAL ESPERADO CORRECTO:', {
+        apertura: apertura,
         ventasEfectivo: ventasEnEfectivo,
         pagosCredito: pagosDeCredito,
         totalEgresos: egresos,
-        formula: `${ventasEnEfectivo} + ${pagosDeCredito} - ${egresos}`,
+        formula: `${apertura} + ${ventasEnEfectivo} + ${pagosDeCredito} - ${egresos}`,
         total: totalEsperadoMejorado,
     });
 
@@ -322,7 +325,7 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
                                     </div>
                                 </div>
                                 {/* Resumen financiero - ✅ MEJORADO: Usa efectivo real en lugar de todas las operaciones */}
-                                <div className="space-y-3 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
                                     <div className="flex justify-between items-center mb-3">
                                         <h4 className="font-semibold text-teal-900 dark:text-teal-300">
                                             📊 Resumen
@@ -333,43 +336,39 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400 ">Monto Inicial:</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
+                                    {/* ENTRADAS - Verde */}
+                                    <div className="flex justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+                                        <span className="text-green-700 dark:text-green-300">⬆️ Monto Inicial:</span>
+                                        <span className="font-medium text-green-900 dark:text-green-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
                                     </div>
-                                    <div className="flex justify-between border-t border-gray-300">
-                                        <span className="text-gray-600 dark:text-gray-400">Ventas Efectivo:</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    <div className="flex justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+                                        <span className="text-green-700 dark:text-green-300">⬆️ Ventas Efectivo:</span>
+                                        <span className="font-medium text-green-900 dark:text-green-100">
                                             {formatCurrency(ventasEnEfectivo)}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between border-t border-gray-300">
-                                        <span className="text-gray-600 dark:text-gray-400">Ventas a Crédito:</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    <div className="flex justify-between px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+                                        <span className="text-blue-700 dark:text-blue-300">ℹ️ Ventas a Crédito:</span>
+                                        <span className="font-medium text-blue-900 dark:text-blue-100">
                                             {formatCurrency(ventasCredito)}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between border-t border-gray-300">
-                                        <span className="text-gray-600 dark:text-gray-400">CxC Efectivo <small>(Pagos Creditos):</small></span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(pagosDeCredito)}</span>
+                                    <div className="flex justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+                                        <span className="text-green-700 dark:text-green-300">⬆️ CxC Efectivo <small>(Pagos Creditos):</small></span>
+                                        <span className="font-medium text-green-900 dark:text-green-100">{formatCurrency(pagosDeCredito)}</span>
                                     </div>
-                                    <div className="flex justify-between border-t border-gray-300">
-                                        <span className="text-gray-600 dark:text-gray-400">Devoluciones Ventas</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(ventasAnuladas)}</span>
+                                    {/* SALIDAS - Rojo */}
+                                    <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
+                                        <span className="text-red-700 dark:text-red-300">⬇️ Devoluciones Ventas</span>
+                                        <span className="font-medium text-red-900 dark:text-red-100">{formatCurrency(ventasAnuladas)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Devoluciones Efectivo</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(ventasAnuladas)}</span>
+                                    <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
+                                        <span className="text-red-700 dark:text-red-300">⬇️ Devoluciones Efectivo</span>
+                                        <span className="font-medium text-red-900 dark:text-red-100">{formatCurrency(ventasAnuladas)}</span>
                                     </div>
-                                    <div className="flex justify-between border-t border-gray-300">
-                                        <span className="text-gray-600 dark:text-gray-400">Entrado Efectivo:</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
-                                            {formatCurrency(pagosDeCredito)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600 dark:text-gray-400">Salidas Efectivo:</span>
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
+                                        <span className="text-red-700 dark:text-red-300">⬇️ Salidas Efectivo:</span>
+                                        <span className="font-medium text-red-900 dark:text-red-100">
                                             {formatCurrency(egresos)}
                                         </span>
                                     </div>
