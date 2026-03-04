@@ -50,9 +50,10 @@ return Application::configure(basePath: dirname(__DIR__))
             CheckUserAttributes::class,
         ]);
 
-        // Excluir rutas del middleware CSRF para testing
+        // ✅ Excluir rutas del middleware CSRF
         $middleware->validateCsrfTokens(except: [
             'test-csrf',
+            'api/*',  // 🔐 Las APIs usan Sanctum, no CSRF
         ]);
 
         // Aliases for Spatie Permission middlewares
