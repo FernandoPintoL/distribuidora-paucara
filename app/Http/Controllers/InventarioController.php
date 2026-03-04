@@ -3013,8 +3013,8 @@ class InventarioController extends Controller
                             continue;
                         }
 
-                        // ✅ NUEVO: Filtrar solo productos con stock disponible > 0
-                        if ($soloConStock && $stock->cantidad_disponible <= 0) {
+                        // ✅ NUEVO: Filtrar solo productos con stock cantidad >= 1
+                        if ($soloConStock && $stock->cantidad < 1) {
                             continue;
                         }
 
