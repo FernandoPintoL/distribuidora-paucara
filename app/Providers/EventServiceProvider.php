@@ -16,6 +16,7 @@ use App\Events\EntregaEstadoCambiado;
 use App\Events\EntregaRechazada;
 use App\Events\MarcarLlegadaConfirmada;
 use App\Events\NovedadEntregaReportada;
+use App\Events\ProformaActualizada;
 use App\Events\ProformaAprobada;
 use App\Events\ProformaCoordinacionActualizada;
 use App\Events\ProformaConvertida;
@@ -39,6 +40,7 @@ use App\Listeners\SendProformaCoordinationNotification;
 use App\Listeners\SendProformaConvertedNotification;
 use App\Listeners\SendProformaCreatedNotification;
 use App\Listeners\SendProformaRejectedNotification;
+use App\Listeners\SendProformaUpdatedNotification;
 use App\Listeners\SendEntregaAsignadaNotification;
 use App\Listeners\Venta\BroadcastProformaCreada;
 use App\Events\CreditoCreado;
@@ -94,6 +96,11 @@ class EventServiceProvider extends ServiceProvider
         ProformaCreada::class => [
             BroadcastProformaCreada::class,
             SendProformaCreatedNotification::class,
+        ],
+
+        // ✅ NUEVO: Notificar cuando se actualiza una proforma
+        ProformaActualizada::class => [
+            SendProformaUpdatedNotification::class,
         ],
 
         ProformaAprobada::class => [

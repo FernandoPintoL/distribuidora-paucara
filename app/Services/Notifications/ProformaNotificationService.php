@@ -166,6 +166,33 @@ class ProformaNotificationService
         return $this->wsService->notifyCoordination($proforma, $usuarioId);
     }
 
+    /**
+     * ✅ NUEVO: Notificar actualización de proforma
+     * - Guarda en BD para todos los usuarios relevantes
+     * - Envía notificación en tiempo real vía WebSocket
+     */
+    public function notifyUpdated(Proforma $proforma): bool
+    {
+        // 1. Obtener usuarios a notificar
+        $users   = $this->getUsersForUpdated($proforma);
+        $userIds = $users->pluck('id')->toArray();
+
+        // 2. Guardar en BD (persistente)
+        $this->dbNotificationService->create($userIds, 'proforma.actualizada', [
+            'proforma_numero' => $proforma->numero,
+            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'      => $proforma->cliente_id,
+            'total'           => (float) $proforma->total,
+            'items_count'     => $proforma->detalles->count(),
+            'estado'          => $proforma->estado,
+        ], [
+            'proforma_id' => $proforma->id,
+        ]);
+
+        // 3. Enviar notificación en tiempo real vía WebSocket
+        return $this->wsService->notifyUpdated($proforma);
+    }
+
     // ========================================
     // MÉTODOS PRIVADOS - LÓGICA DE USUARIOS
     // ========================================
@@ -317,6 +344,43 @@ class ProformaNotificationService
         }
 
         // 3. Cliente (usuario asociado al cliente)
+        if ($proforma->cliente && $proforma->cliente->user_id) {
+            $clienteUser = User::where('id', $proforma->cliente->user_id)
+                ->where('activo', true)
+                ->first();
+            if ($clienteUser) {
+                $users->push($clienteUser);
+            }
+        }
+
+        return $users->unique('id');
+    }
+
+    /**
+     * ✅ NUEVO: Usuarios para notificar cuando se ACTUALIZA una proforma
+     * Criterio: Preventistas, Managers, Admins, Creador y Cliente
+     */
+    private function getUsersForUpdated(Proforma $proforma): Collection
+    {
+        $users = collect();
+
+        // 1. Preventistas, managers y admins (staff)
+        $staffUsers = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['preventista', 'manager', 'admin', 'Preventista', 'Manager', 'Admin']);
+        })->where('activo', true)->get();
+        $users = $users->merge($staffUsers);
+
+        // 2. Usuario que creó la proforma
+        if ($proforma->usuario_creador_id) {
+            $creador = User::where('id', $proforma->usuario_creador_id)
+                ->where('activo', true)
+                ->first();
+            if ($creador) {
+                $users->push($creador);
+            }
+        }
+
+        // 3. Cliente (usuario asociado al cliente, si existe)
         if ($proforma->cliente && $proforma->cliente->user_id) {
             $clienteUser = User::where('id', $proforma->cliente->user_id)
                 ->where('activo', true)

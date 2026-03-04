@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Api;
 
+use App\Events\ProformaActualizada;
 use App\Events\ProformaCreada;
 use App\Events\ProformaRechazada;
 use App\Http\Controllers\Controller;
@@ -661,8 +662,8 @@ class ApiProformaController extends Controller
             $impuesto = $subtotal * 0.13;
             $total    = $subtotal;
 
-            // Actualizar campos de cabecera
-            $proforma->update([
+            // ✅ Preparar todos los campos para actualizar de una sola vez
+            $datosActualizar = [
                 'cliente_id'    => $clienteId,
                 'tipo_entrega'  => $requestData['tipo_entrega'],
                 'subtotal'      => $subtotal,
@@ -670,27 +671,28 @@ class ApiProformaController extends Controller
                 'total'         => $total,
                 'politica_pago' => $requestData['politica_pago'],
                 'observaciones' => $requestData['observaciones'] ?? $proforma->observaciones,
-            ]);
+            ];
 
-            // Actualizar información de entrega solicitada
-            if ($request->filled('fecha_entrega_solicitada')) {
-                $proforma->fecha_entrega_solicitada = $requestData['fecha_entrega_solicitada'];
+            // ✅ Incluir información de entrega solicitada (ya normalizada en $requestData)
+            if (isset($requestData['fecha_entrega_solicitada']) && $requestData['fecha_entrega_solicitada']) {
+                $datosActualizar['fecha_entrega_solicitada'] = $requestData['fecha_entrega_solicitada'];
             }
-            if ($request->filled('hora_entrega_solicitada')) {
-                $proforma->hora_entrega_solicitada = $requestData['hora_entrega_solicitada'];
+            if (isset($requestData['hora_entrega_solicitada']) && $requestData['hora_entrega_solicitada']) {
+                $datosActualizar['hora_entrega_solicitada'] = $requestData['hora_entrega_solicitada'];
             }
-            if ($request->filled('hora_entrega_solicitada_fin')) {
-                $proforma->hora_entrega_solicitada_fin = $requestData['hora_entrega_solicitada_fin'];
+            if (isset($requestData['hora_entrega_solicitada_fin']) && $requestData['hora_entrega_solicitada_fin']) {
+                $datosActualizar['hora_entrega_solicitada_fin'] = $requestData['hora_entrega_solicitada_fin'];
             }
 
-            // Actualizar dirección solo si es DELIVERY
-            if ($requestData['tipo_entrega'] === 'DELIVERY' && $request->filled('direccion_entrega_solicitada_id')) {
-                $proforma->direccion_entrega_solicitada_id = $requestData['direccion_entrega_solicitada_id'];
+            // ✅ Actualizar dirección solo si es DELIVERY
+            if ($requestData['tipo_entrega'] === 'DELIVERY' && isset($requestData['direccion_entrega_solicitada_id']) && $requestData['direccion_entrega_solicitada_id']) {
+                $datosActualizar['direccion_entrega_solicitada_id'] = $requestData['direccion_entrega_solicitada_id'];
             } elseif ($requestData['tipo_entrega'] === 'PICKUP') {
-                $proforma->direccion_entrega_solicitada_id = null;
+                $datosActualizar['direccion_entrega_solicitada_id'] = null;
             }
 
-            $proforma->save();
+            // ✅ Actualizar todo de una sola vez
+            $proforma->update($datosActualizar);
 
             // Actualizar detalles: eliminar viejos y crear nuevos (solo si vienen productos)
             if ($request->filled('productos')) {
@@ -711,6 +713,9 @@ class ApiProformaController extends Controller
             $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'direccionSolicitada', 'direccionConfirmada']);
 
             DB::commit();
+
+            // ✅ NUEVO: Disparar evento de actualización para notificaciones en tiempo real
+            event(new ProformaActualizada($proforma));
 
             return response()->json([
                 'success' => true,

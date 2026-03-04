@@ -124,6 +124,43 @@ class ProformaWebSocketService extends BaseWebSocketService
     }
 
     /**
+     * ✅ NUEVO: Notificar actualización de proforma
+     */
+    public function notifyUpdated($proforma): bool
+    {
+        return $this->send('notify/proforma-updated', [
+            'id' => $proforma->id,
+            'numero' => $proforma->numero,
+            'cliente_id' => $proforma->cliente_id,
+            'user_id' => $proforma->cliente?->user_id,
+            'cliente' => [
+                'id' => $proforma->cliente_id,
+                'nombre' => $proforma->cliente?->nombre ?? 'Cliente',
+                'apellido' => $proforma->cliente?->apellido ?? '',
+            ],
+            'subtotal' => (float) $proforma->subtotal,
+            'impuesto' => (float) $proforma->impuesto,
+            'total' => (float) $proforma->total,
+            'estado' => $proforma->estado,
+            'tipo_entrega' => $proforma->tipo_entrega,
+            'politica_pago' => $proforma->politica_pago,
+            'fecha_entrega_solicitada' => $proforma->fecha_entrega_solicitada?->toIso8601String(),
+            'hora_entrega_solicitada' => $proforma->hora_entrega_solicitada,
+            'hora_entrega_solicitada_fin' => $proforma->hora_entrega_solicitada_fin,
+            'items' => ($proforma->detalles ?? collect())->map(function ($item) {
+                return [
+                    'producto_id' => $item->producto_id,
+                    'producto_nombre' => $item->producto?->nombre ?? 'Producto',
+                    'cantidad' => $item->cantidad,
+                    'precio_unitario' => (float) $item->precio_unitario,
+                    'subtotal' => (float) $item->subtotal,
+                ];
+            })->toArray(),
+            'fecha_actualizacion' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Notificar actualización de coordinación de entrega
      */
     public function notifyCoordination($proforma, int $usuarioId): bool
