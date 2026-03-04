@@ -1549,6 +1549,28 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                 Proforma {proforma.numero}
                             </h1>
                             <div className="space-y-2 mt-3">
+                                {/* 📦 Información de Entrega Solicitada */}
+                                {(proforma.fecha_entrega_solicitada || proforma.hora_entrega_solicitada) && (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                                            📦 Entrega Solicitada
+                                        </p>
+                                        <div className="flex flex-wrap gap-4 text-sm text-blue-800 dark:text-blue-300">
+                                            {proforma.fecha_entrega_solicitada && (
+                                                <p>
+                                                    📅 Fecha: <span className="font-semibold">{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                                </p>
+                                            )}
+                                            {proforma.hora_entrega_solicitada && (
+                                                <p>
+                                                    🕐 Hora: <span className="font-semibold">{proforma.hora_entrega_solicitada}</span>
+                                                    {proforma.hora_entrega_solicitada_fin && <span> - {proforma.hora_entrega_solicitada_fin}</span>}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-wrap gap-4 text-[var(--text-sm)] text-muted-foreground">
                                     <p>
                                         📅 Creada: {new Date(proforma.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}

@@ -815,7 +815,7 @@ export default function ProductosTable({
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
                 {(productosDisponibles.length > 0 || searchError || (productSearch && !isLoading && productosDisponibles.length === 0)) && (
-                    <div className="mt-1 max-h-32 overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
+                    <div className="mt-1 max-h-[300px] overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
                         {/* ✅ ESTADO: Cargando */}
                         {isLoading && (
                             <div className="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 text-center">
@@ -832,78 +832,95 @@ export default function ProductosTable({
 
                         {/* ✅ ESTADO: Resultados encontrados */}
                         {!isLoading && productosDisponibles.length > 0 && (
-                            productosDisponibles.map((producto) => (
-                                <div
-                                    key={producto.id}
-                                    className="border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
-                                >
-                                    <button
-                                        type="button"
-                                        disabled={readOnly}
-                                        onClick={() => handleAgregarProductoYLimpiar(producto)}
-                                        className="w-full text-left px-2.5 py-2 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {/* ✅ NUEVO: Nombre del producto */}
-                                        <div className="font-medium text-xs text-gray-900 dark:text-white">
-                                            {producto.nombre}
-                                        </div>
-                                        {/* ✅ NUEVO: Código, precio (redondeado a 2 decimales) y stock */}
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            <span>{producto.codigo} | {formatCurrencyWith2Decimals(producto.precio_venta || 0)}</span>
-                                            {/* ✅ Mostrar stock para compras */}
-                                            {tipo === 'compra' ? (
-                                                <span> | Stock: {(producto as any).stock_disponible ?? (producto as any).stock ?? 0}</span>
-                                            ) : (
-                                                (producto as any).stock_disponible && <span> | Stock: {(producto as any).stock_disponible}</span>
-                                            )}
-                                        </div>
-                                        {/* ✅ NUEVO: Metadatos del producto (unidad, marca, categoría) */}
-                                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex flex-wrap gap-2">
-                                            {producto.unidad && (
-                                                <span className="bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded text-blue-700 dark:text-blue-300">
-                                                    {producto.unidad.nombre}
-                                                </span>
-                                            )}
-                                            {producto.marca && (
-                                                <span className="bg-purple-50 dark:bg-purple-900/20 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300">
-                                                    {producto.marca.nombre}
-                                                </span>
-                                            )}
-                                            {producto.categoria && (
-                                                <span className="bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300">
-                                                    {producto.categoria.nombre}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </button>
-                                    {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
-                                    {(() => {
-                                        const mostrarMedicamentos = es_farmacia && (producto.principio_activo || producto.uso_de_medicacion);
-                                        if (mostrarMedicamentos) {
-                                            console.log(`💊 [Sugerencias] Mostrando medicamento para ${producto.nombre}:`, {
-                                                es_farmacia,
-                                                principio_activo: producto.principio_activo,
-                                                uso_de_medicacion: producto.uso_de_medicacion
-                                            });
-                                        }
-                                        return mostrarMedicamentos && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setFarmaciaProdutoSeleccionado(producto)}
-                                                className="w-full text-left px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 border-t border-gray-100 dark:border-zinc-700 font-medium flex items-center gap-1"
-                                            >
-                                                <span>💊 Ver info medicamento</span>
-                                            </button>
-                                        );
-                                    })()}
+                            <>
+                                {/* ✅ ENCABEZADO: Contador de productos */}
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 px-4 py-3 border-b-2 border-green-200 dark:border-green-800">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-sm text-green-900 dark:text-green-200">
+                                            ✨ {productosDisponibles.length} {productosDisponibles.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+                                        </span>
+                                        <span className="text-xs text-green-700 dark:text-green-300">Haz clic para agregar</span>
+                                    </div>
                                 </div>
-                            ))
+
+                                {productosDisponibles.map((producto) => (
+                                    <div
+                                        key={producto.id}
+                                        className="border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
+                                    >
+                                        <button
+                                            type="button"
+                                            disabled={readOnly}
+                                            onClick={() => handleAgregarProductoYLimpiar(producto)}
+                                            className="w-full text-left px-4 py-3.5 hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {/* ✅ NUEVO: Nombre del producto */}
+                                            <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                                                {producto.nombre}
+                                            </div>
+                                            {/* ✅ NUEVO: Código, precio (redondeado a 2 decimales) y stock */}
+                                            <div className="text-sm text-gray-600 dark:text-gray-300 mt-1.5">
+                                                <span className="font-medium">{producto.codigo}</span>
+                                                <span className="text-green-700 dark:text-green-400 font-bold ml-2">
+                                                    {formatCurrencyWith2Decimals(producto.precio_venta || 0)}
+                                                </span>
+                                                {/* ✅ Mostrar stock para compras */}
+                                                {tipo === 'compra' ? (
+                                                    <span className="text-blue-600 dark:text-blue-400 font-medium ml-2">
+                                                        📦 Stock: {(producto as any).stock_disponible ?? (producto as any).stock ?? 0}
+                                                    </span>
+                                                ) : (
+                                                    (producto as any).stock_disponible && <span className="text-blue-600 dark:text-blue-400 font-medium ml-2">📦 Stock: {(producto as any).stock_disponible}</span>
+                                                )}
+                                            </div>
+                                            {/* ✅ NUEVO: Metadatos del producto (unidad, marca, categoría) */}
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2.5 flex flex-wrap gap-2">
+                                                {producto.unidad && (
+                                                    <span className="bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full text-blue-700 dark:text-blue-300 font-medium">
+                                                        {producto.unidad.nombre}
+                                                    </span>
+                                                )}
+                                                {producto.marca && (
+                                                    <span className="bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full text-purple-700 dark:text-purple-300 font-medium">
+                                                        {producto.marca.nombre}
+                                                    </span>
+                                                )}
+                                                {producto.categoria && (
+                                                    <span className="bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full text-amber-700 dark:text-amber-300 font-medium">
+                                                        {producto.categoria.nombre}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </button>
+                                        {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
+                                        {(() => {
+                                            const mostrarMedicamentos = es_farmacia && (producto.principio_activo || producto.uso_de_medicacion);
+                                            if (mostrarMedicamentos) {
+                                                console.log(`💊 [Sugerencias] Mostrando medicamento para ${producto.nombre}:`, {
+                                                    es_farmacia,
+                                                    principio_activo: producto.principio_activo,
+                                                    uso_de_medicacion: producto.uso_de_medicacion
+                                                });
+                                            }
+                                            return mostrarMedicamentos && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFarmaciaProdutoSeleccionado(producto)}
+                                                    className="w-full text-left px-4 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-t border-gray-100 dark:border-zinc-700 font-semibold flex items-center gap-2"
+                                                >
+                                                    <span>💊 Ver información del medicamento</span>
+                                                </button>
+                                            );
+                                        })()}
+                                    </div>
+                                ))}
+                            </>
                         )}
 
                         {/* ✅ ESTADO: Sin resultados */}
                         {!isLoading && productosDisponibles.length === 0 && !searchError && (
-                            <div className="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 text-center">
-                                No se encontraron productos
+                            <div className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 text-center bg-gray-50 dark:bg-zinc-800/50">
+                                🔍 No se encontraron productos
                             </div>
                         )}
                     </div>
@@ -1089,11 +1106,10 @@ export default function ProductosTable({
 
                                                 return (
                                                     <div className="text-xs">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${
-                                                            stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
                                                             stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
-                                                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
-                                                        }`}>
+                                                                'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
+                                                            }`}>
                                                             Disponible: {stockDisponible}
                                                         </span>
                                                         {stockTotal > stockDisponible && (
@@ -1134,74 +1150,74 @@ export default function ProductosTable({
                                             />
                                             <div>
                                                 {tipo === 'venta' && (
-                                            <div className="px-4 py-2 whitespace-nowrap">
-                                                {(() => {
-                                                    console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
-                                                        es_fraccionado: detalle.es_fraccionado,
-                                                        unidad_medida_id: detalle.unidad_medida_id,
-                                                        unidad_medida_nombre: detalle.unidad_medida_nombre,
-                                                        unidad_venta_id: detalle.unidad_venta_id,
-                                                        conversiones_count: detalle.conversiones?.length,
-                                                        conversiones: detalle.conversiones,
-                                                        precio_venta: detalle.producto?.precio_venta
-                                                    });
+                                                    <div className="px-4 py-2 whitespace-nowrap">
+                                                        {(() => {
+                                                            console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
+                                                                es_fraccionado: detalle.es_fraccionado,
+                                                                unidad_medida_id: detalle.unidad_medida_id,
+                                                                unidad_medida_nombre: detalle.unidad_medida_nombre,
+                                                                unidad_venta_id: detalle.unidad_venta_id,
+                                                                conversiones_count: detalle.conversiones?.length,
+                                                                conversiones: detalle.conversiones,
+                                                                precio_venta: detalle.producto?.precio_venta
+                                                            });
 
-                                                    if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
-                                                        // ✅ NUEVO: Determinar el valor inicial - si no hay unidad_venta_id, usar la primera conversión
-                                                        const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
+                                                            if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
+                                                                // ✅ NUEVO: Determinar el valor inicial - si no hay unidad_venta_id, usar la primera conversión
+                                                                const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
 
-                                                        return (
-                                                            <select
-                                                                disabled={readOnly}
-                                                                value={unidadInicial || ''}
-                                                                onChange={(e) => {
-                                                                    const unidadSeleccionada = Number(e.target.value);
+                                                                return (
+                                                                    <select
+                                                                        disabled={readOnly}
+                                                                        value={unidadInicial || ''}
+                                                                        onChange={(e) => {
+                                                                            const unidadSeleccionada = Number(e.target.value);
 
-                                                                    const nuevoPrecio = calcularPrecioPorUnidad(
-                                                                        detalle.producto?.precio_venta || 0,
-                                                                        unidadSeleccionada,
-                                                                        detalle.conversiones
-                                                                    );
+                                                                            const nuevoPrecio = calcularPrecioPorUnidad(
+                                                                                detalle.producto?.precio_venta || 0,
+                                                                                unidadSeleccionada,
+                                                                                detalle.conversiones
+                                                                            );
 
-                                                                    console.log(`💰 [ProductosTable] Cambio de unidad para detalle #${index}:`, {
-                                                                        unidad_anterior: detalle.unidad_venta_id,
-                                                                        unidad_nueva: unidadSeleccionada,
-                                                                        precio_base: detalle.producto?.precio_venta,
-                                                                        precio_nuevo: nuevoPrecio
-                                                                    });
+                                                                            console.log(`💰 [ProductosTable] Cambio de unidad para detalle #${index}:`, {
+                                                                                unidad_anterior: detalle.unidad_venta_id,
+                                                                                unidad_nueva: unidadSeleccionada,
+                                                                                precio_base: detalle.producto?.precio_venta,
+                                                                                precio_nuevo: nuevoPrecio
+                                                                            });
 
-                                                                    if (onUpdateDetailUnidadConPrecio) {
-                                                                        onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
-                                                                    } else {
-                                                                        handleUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
-                                                                        handleUpdateDetail(index, 'precio_unitario', nuevoPrecio);
-                                                                    }
-                                                                }}
-                                                                className="w-28 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            >
-                                                                <option value={detalle.unidad_medida_id || ''}>
-                                                                    {detalle.unidad_medida_nombre || 'Unidad Base'}
-                                                                </option>
-                                                                {detalle.conversiones.map((conv) => (
-                                                                    <option key={conv.unidad_destino_id} value={conv.unidad_destino_id}>
-                                                                        {conv.unidad_destino_nombre || `Unidad ${conv.unidad_destino_id}`}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        );
-                                                    } else {
-                                                        return (
-                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                                {detalle.unidad_medida_nombre || 'N/A'}
-                                                            </div>
-                                                        );
-                                                    }
-                                                })()}
-                                            </div>
-                                        )}
+                                                                            if (onUpdateDetailUnidadConPrecio) {
+                                                                                onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
+                                                                            } else {
+                                                                                handleUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
+                                                                                handleUpdateDetail(index, 'precio_unitario', nuevoPrecio);
+                                                                            }
+                                                                        }}
+                                                                        className="w-28 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        <option value={detalle.unidad_medida_id || ''}>
+                                                                            {detalle.unidad_medida_nombre || 'Unidad Base'}
+                                                                        </option>
+                                                                        {detalle.conversiones.map((conv) => (
+                                                                            <option key={conv.unidad_destino_id} value={conv.unidad_destino_id}>
+                                                                                {conv.unidad_destino_nombre || `Unidad ${conv.unidad_destino_id}`}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                );
+                                                            } else {
+                                                                return (
+                                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                        {detalle.unidad_medida_nombre || 'N/A'}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                        })()}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
-                                        
+
                                         {tipo === 'compra' && (
                                             <>
 
@@ -1611,11 +1627,10 @@ export default function ProductosTable({
 
                                             {/* Mostrar TODOS los componentes del combo */}
                                             {itemsAMostrar.map((item: any, itemIndex: number) => (
-                                                <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${
-                                                    item._isChecked === true
-                                                        ? 'bg-green-50 dark:bg-green-900/10 border-green-400'
-                                                        : 'bg-gray-100 dark:bg-gray-800/50 opacity-60 border-gray-300'
-                                                }`}>
+                                                <tr key={`combo-item-${index}-${itemIndex}`} className={`border-l-4 ${item._isChecked === true
+                                                    ? 'bg-green-50 dark:bg-green-900/10 border-green-400'
+                                                    : 'bg-gray-100 dark:bg-gray-800/50 opacity-60 border-gray-300'
+                                                    }`}>
                                                     <td className="px-4 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
                                                             {/* ✅ SIMPLIFICADO (2026-02-20): Checkbox para todos los items, editable si proforma es PENDIENTE */}
@@ -1658,7 +1673,7 @@ export default function ProductosTable({
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                             SKU: {item.producto_sku}
                                                         </div>
-                                                        
+
                                                     </td>
                                                     <td>
                                                         {/* Stock del producto */}

@@ -32,9 +32,10 @@ interface DashboardProps extends DashboardLogisticaProps {
 }
 
 export default function LogisticaDashboard({ estadisticas, proformasRecientes, localidades, usuariosAprobadores, estadosLogistica }: DashboardProps) {
-    console.log('=== LOGISTICA DASHBOARD PROPS ===');
-    console.log('Estadísticas recibidas (props):', estadisticas);
-    console.log('Proformas recientes recibidas (props):', proformasRecientes);
+    // ✅ OPTIMIZADO: Reducir logs de debug en producción
+    if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Dashboard cargado:', { proformasTotal: proformasRecientes.total });
+    }
     // Estados principales
     const [stats] = useState<DashboardLogisticaStats>(estadisticas);
     const [proformas, setProformas] = useState<ProformaAppExterna[]>(proformasRecientes.data);
@@ -53,6 +54,25 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         requestNotificationPermission();
     }, [requestNotificationPermission]);
 
+    // ✅ MEJORADO: Detectar si hay filtros activos
+    const tieneFilterosActivos = !!(
+        proformaFilters.searchProforma ||
+        proformaFilters.filtroEstadoProforma !== 'TODOS' ||
+        proformaFilters.soloVencidas ||
+        proformaFilters.filtroLocalidad ||
+        proformaFilters.filtroTipoEntrega ||
+        proformaFilters.filtroPoliticaPago ||
+        proformaFilters.filtroEstadoLogistica ||
+        proformaFilters.filtroCoordinacionCompletada ||
+        proformaFilters.filtroUsuarioAprobador ||
+        proformaFilters.filtroFechaVencimientoDesde ||
+        proformaFilters.filtroFechaVencimientoHasta ||
+        proformaFilters.filtroFechaEntregaSolicitadaDesde ||
+        proformaFilters.filtroFechaEntregaSolicitadaHasta ||
+        proformaFilters.filtroHoraEntregaSolicitadaDesde ||
+        proformaFilters.filtroHoraEntregaSolicitadaHasta
+    );
+
     // Hooks de estadísticas
     const {
         stats: logisticaStats,
@@ -60,7 +80,8 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         lastUpdate: logisticaLastUpdate,
         refresh: refreshLogisticaStats,
     } = useLogisticaStats({
-        autoRefresh: true,
+        // ✅ DESACTIVAR polling cuando hay filtros activos para evitar re-renders innecesarios
+        autoRefresh: !tieneFilterosActivos,
         refreshInterval: 30,
     });
 
@@ -69,7 +90,8 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         loading: loadingProformaStats,
         error: proformaError,
     } = useProformaStats({
-        autoRefresh: true,
+        // ✅ DESACTIVAR polling cuando hay filtros activos para evitar re-renders innecesarios
+        autoRefresh: !tieneFilterosActivos,
         refreshInterval: 30,
     });
 

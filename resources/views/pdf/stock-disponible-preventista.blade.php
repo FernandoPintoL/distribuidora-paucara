@@ -164,10 +164,12 @@
                 margin: 0;
                 padding: 0;
             }
+
             .page-break {
                 page-break-after: always;
             }
         }
+
     </style>
 </head>
 <body>
@@ -193,12 +195,11 @@
                     <th style="width: 13%; text-align: right;">Precio Venta</th>
                     <th style="width: 13%; text-align: right;">Precio Descuento</th>
                     <th style="width: 13%; text-align: right;">Precio Especial</th>
-                    <th style="width: 16%; text-align: right;">Stock Disponible</th>
                 </tr>
             </thead>
             <tbody>
                 @php
-                    $numero = 1;
+                $numero = 1;
                 @endphp
                 @foreach($filas as $fila)
                 <tr>
@@ -207,31 +208,28 @@
                     <td class="sku">{{ $fila['sku'] }}</td>
                     <td class="text-right precio-venta">
                         @if($fila['precio_venta'])
-                            Bs {{ number_format($fila['precio_venta'], 2) }}
+                        Bs {{ number_format($fila['precio_venta'], 2) }}
                         @else
-                            <span class="precio-null">-</span>
+                        <span class="precio-null">-</span>
                         @endif
                     </td>
                     <td class="text-right precio-descuento">
                         @if($fila['precio_descuento'])
-                            Bs {{ number_format($fila['precio_descuento'], 2) }}
+                        Bs {{ number_format($fila['precio_descuento'], 2) }}
                         @else
-                            <span class="precio-null">-</span>
+                        <span class="precio-null">-</span>
                         @endif
                     </td>
                     <td class="text-right precio-especial">
                         @if($fila['precio_especial'])
-                            Bs {{ number_format($fila['precio_especial'], 2) }}
+                        Bs {{ number_format($fila['precio_especial'], 2) }}
                         @else
-                            <span class="precio-null">-</span>
+                        <span class="precio-null">-</span>
                         @endif
-                    </td>
-                    <td class="text-right stock-disponible">
-                        {{ number_format($fila['stock_disponible'], 0) }}
                     </td>
                 </tr>
                 @php
-                    $numero++;
+                $numero++;
                 @endphp
                 @endforeach
             </tbody>

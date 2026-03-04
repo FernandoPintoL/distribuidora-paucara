@@ -124,12 +124,23 @@ class LogisticaController extends Controller
         }
 
         // ✅ Filtro por hora de entrega solicitada (desde/hasta)
-        if (request()->has('hora_entrega_solicitada_desde') && request('hora_entrega_solicitada_desde') !== '') {
-            $query->where('hora_entrega_solicitada', '>=', request('hora_entrega_solicitada_desde'));
+        $horaDesde = request('hora_entrega_solicitada_desde');
+        $horaHasta = request('hora_entrega_solicitada_hasta');
+
+        if ($horaDesde && $horaDesde !== '') {
+            // Si desde y hasta son iguales (hora específica), buscar el rango completo de esa hora
+            if ($horaDesde === $horaHasta) {
+                $horaFin = substr($horaDesde, 0, 5) . ':59'; // Ejemplo: 10:00 → 10:59
+                $query->whereBetween('hora_entrega_solicitada', [$horaDesde, $horaFin]);
+            } else {
+                // Si son diferentes, buscar rango normal
+                $query->where('hora_entrega_solicitada', '>=', $horaDesde);
+            }
         }
 
-        if (request()->has('hora_entrega_solicitada_hasta') && request('hora_entrega_solicitada_hasta') !== '') {
-            $query->where('hora_entrega_solicitada', '<=', request('hora_entrega_solicitada_hasta'));
+        if ($horaHasta && $horaHasta !== '' && $horaDesde !== $horaHasta) {
+            // Solo aplicar "hasta" si es diferente de "desde"
+            $query->where('hora_entrega_solicitada', '<=', $horaHasta);
         }
 
         if (request()->has('solo_vencidas') && request('solo_vencidas') === 'true') {
