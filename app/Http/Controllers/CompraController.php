@@ -206,8 +206,16 @@ class CompraController extends Controller
                         'precio_compra'  => $preciosMapeados['COSTO'] ?? 0,
                         'precio_venta'   => $preciosMapeados['VENTA_PUBLICO'] ?? 0,
                         'categoria'      => $producto->categoria?->nombre,
-                        'marca'          => $producto->marca?->nombre,
-                        'unidad'         => $producto->unidad?->nombre,
+                        // ✅ ARREGLADO 2026-03-06: Retornar objetos completos, no solo nombres (para método create)
+                        'marca'          => $producto->marca ? [
+                            'id'   => $producto->marca->id,
+                            'nombre' => $producto->marca->nombre
+                        ] : null,
+                        'unidad'         => $producto->unidad ? [
+                            'id'    => $producto->unidad->id,
+                            'codigo' => $producto->unidad->codigo,
+                            'nombre' => $producto->unidad->nombre
+                        ] : null,
                         'stock'          => $producto->stockTotal(),
                         'stock_minimo'   => $producto->stock_minimo,
                         'stock_maximo'   => $producto->stock_maximo,
@@ -243,7 +251,18 @@ class CompraController extends Controller
 
     public function edit($id)
     {
-        $compra = Compra::with(['detalles.producto', 'estadoDocumento', 'tipoPago', 'moneda', 'proveedor', 'usuario', 'almacen'])->findOrFail($id);
+        // ✅ NUEVO 2026-03-06: Cargar detalles con producto y sus relaciones (marca, unidad, codigosBarra)
+        $compra = Compra::with([
+            'detalles.producto.marca:id,nombre',
+            'detalles.producto.unidad:id,codigo,nombre',
+            'detalles.producto.codigosBarra:id,producto_id,codigo,es_principal',
+            'estadoDocumento',
+            'tipoPago',
+            'moneda',
+            'proveedor',
+            'usuario',
+            'almacen'
+        ])->findOrFail($id);
 
         Log::info('CompraController::edit() - Compra cargada', [
             'compra_id'              => $compra->id,
@@ -252,10 +271,63 @@ class CompraController extends Controller
             'estadoDocumento nombre' => $compra->estadoDocumento?->nombre ?? 'NULL',
         ]);
 
+        // ✅ NUEVO 2026-03-06: Mapear detalles con información completa del producto
+        $detallesMapeados = $compra->detalles->map(function ($detalle) {
+            $producto = $detalle->producto;
+
+            // Obtener código principal
+            $codigosBarra = $producto->codigosBarra ?? collect();
+            $codigoPrincipal = $codigosBarra->where('es_principal', true)->first()?->codigo
+                ?: ($producto->codigo_qr ?: $producto->codigo_barras);
+
+            return [
+                'id'                  => $detalle->id,
+                'producto_id'         => $detalle->producto_id,
+                'cantidad'            => $detalle->cantidad,
+                'precio_unitario'     => $detalle->precio_unitario,
+                'descuento'           => $detalle->descuento,
+                'subtotal'            => $detalle->subtotal,
+                'lote'                => $detalle->lote,
+                'fecha_vencimiento'   => $detalle->fecha_vencimiento,
+                // ✅ NUEVO 2026-03-06: Incluir producto con todos los campos
+                'producto'            => [
+                    'id'             => $producto->id,
+                    'nombre'         => $producto->nombre,
+                    'codigo'         => $codigoPrincipal, // ✅ SKU/Código
+                    'codigo_barras'  => $codigoPrincipal,
+                    'precio_venta'   => $producto->precio_venta,
+                    'precio_compra'  => $producto->precio_compra,
+                    // ✅ NUEVO 2026-03-06: Incluir marca y unidad como objetos completos
+                    'marca'          => $producto->marca ? [
+                        'id'   => $producto->marca->id,
+                        'nombre' => $producto->marca->nombre
+                    ] : null,
+                    'unidad'         => $producto->unidad ? [
+                        'id'    => $producto->unidad->id,
+                        'codigo' => $producto->unidad->codigo,
+                        'nombre' => $producto->unidad->nombre
+                    ] : null,
+                ],
+            ];
+        })->toArray();
+
+        // ✅ NUEVO 2026-03-06: Log para verificar estructura de detalles.producto
+        if (count($detallesMapeados) > 0) {
+            Log::info('CompraController::edit() - Estructura del primer detalle mapeado:', [
+                'detalle_id'      => $detallesMapeados[0]['id'],
+                'producto_id'     => $detallesMapeados[0]['producto_id'],
+                'producto_nombre' => $detallesMapeados[0]['producto']['nombre'],
+                'producto_codigo' => $detallesMapeados[0]['producto']['codigo'],
+                'producto_marca'  => $detallesMapeados[0]['producto']['marca'],
+                'producto_unidad' => $detallesMapeados[0]['producto']['unidad'],
+            ]);
+        }
+
         return Inertia::render('compras/create', [
             'compra'      => [
                  ...$compra->toArray(),
                 'estadoDocumento' => $compra->estadoDocumento?->toArray(),
+                'detalles'        => $detallesMapeados, // ✅ NUEVO 2026-03-06: Usar detalles mapeados
             ],
             'tipos_pago'  => TipoPago::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'proveedores' => Proveedor::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'email']),
@@ -302,8 +374,16 @@ class CompraController extends Controller
                         'precio_compra'  => $preciosMapeados['COSTO'] ?? 0,
                         'precio_venta'   => $preciosMapeados['VENTA_PUBLICO'] ?? 0,
                         'categoria'      => $producto->categoria?->nombre,
-                        'marca'          => $producto->marca?->nombre,
-                        'unidad'         => $producto->unidad?->nombre,
+                        // ✅ ARREGLADO 2026-03-06: Retornar objetos completos, no solo nombres (para método edit)
+                        'marca'          => $producto->marca ? [
+                            'id'   => $producto->marca->id,
+                            'nombre' => $producto->marca->nombre
+                        ] : null,
+                        'unidad'         => $producto->unidad ? [
+                            'id'    => $producto->unidad->id,
+                            'codigo' => $producto->unidad->codigo,
+                            'nombre' => $producto->unidad->nombre
+                        ] : null,
                         'stock'          => $producto->stockTotal(),
                         'stock_minimo'   => $producto->stock_minimo,
                         'stock_maximo'   => $producto->stock_maximo,

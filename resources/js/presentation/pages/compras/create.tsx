@@ -31,7 +31,17 @@ interface DetalleForm {
   lote: string;
   fecha_vencimiento: string;
   precio_costo?: number; // ✅ NUEVO: Precio de costo registrado
-  producto?: any; // ✅ NUEVO: Información completa del producto
+  producto?: { // ✅ NUEVO: Información completa del producto
+    id: number | string;
+    nombre: string;
+    codigo?: string;
+    codigo_barras?: string;
+    precio_compra?: number;
+    precio_venta?: number;
+    sku?: string; // ✅ NUEVO 2026-03-06
+    marca?: { id?: number; nombre?: string } | null; // ✅ NUEVO 2026-03-06: Mantener como objeto
+    unidad?: { id?: number; codigo?: string; nombre?: string } | null; // ✅ NUEVO 2026-03-06: Mantener como objeto
+  };
 }
 
 interface CompraFormData {
@@ -151,8 +161,29 @@ export default function CompraForm() {
       subtotal: d.subtotal,
       lote: d.lote ?? '',
       fecha_vencimiento: d.fecha_vencimiento ?? '',
+      // ✅ NUEVO 2026-03-06: Incluir información del producto para que ProductosTable lo reconozca
+      producto: d.producto ? {
+        id: d.producto.id,
+        nombre: d.producto.nombre,
+        codigo: d.producto.codigo ?? undefined,
+        codigo_barras: d.producto.codigo_barras ?? undefined,
+        precio_venta: d.producto.precio_venta,
+        precio_compra: d.producto.precio_compra,
+        // ✅ NUEVO 2026-03-06: Agregar SKU, marca y unidad (como objetos si existen)
+        sku: d.producto.codigo ?? undefined,
+        marca: d.producto.marca, // ← Mantener como objeto {id, nombre}
+        unidad: d.producto.unidad, // ← Mantener como objeto {id, codigo, nombre}
+      } : undefined,
     })) ?? [],
   });
+
+  // ✅ NUEVO 2026-03-06: Log para verificar estructura de detalles mapeados
+  useEffect(() => {
+    if (data.detalles && data.detalles.length > 0) {
+      console.log('📋 Detalles mapeados en create.tsx:', JSON.stringify(data.detalles, null, 2));
+      console.log('📦 Primer detalle - Objeto Producto:', data.detalles[0].producto);
+    }
+  }, [data.detalles]);
 
   const canCreate = can('compras.create');
   const canUpdate = can('compras.update');

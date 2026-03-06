@@ -42,6 +42,9 @@ export interface DetalleProducto {
         precio_costo?: number; // ✅ NUEVO: Precio de costo
         peso?: number; // ✅ NUEVO: Peso del producto en kg
         es_fraccionado?: boolean;
+        sku?: string; // ✅ NUEVO 2026-03-06
+        marca?: { id?: number; nombre?: string } | null; // ✅ NUEVO 2026-03-06: Mantener como objeto
+        unidad?: { id?: number; codigo?: string; nombre?: string } | null; // ✅ NUEVO 2026-03-06: Mantener como objeto
         conversiones?: Array<{
             unidad_destino_id: number | string;
             unidad_destino_nombre?: string;
@@ -327,6 +330,19 @@ export default function ProductosTable({
 
     // ✅ NUEVO: Función para agregar producto y limpiar input/sugerencias
     const handleAgregarProductoYLimpiar = (producto: Producto) => {
+        // ✅ NUEVO 2026-03-06: Log para ver estructura exacta del producto antes de agregar
+        console.log('📥 [handleAgregarProductoYLimpiar] Producto a agregar:', JSON.stringify(producto, null, 2));
+        console.log('🔍 [handleAgregarProductoYLimpiar] Campos específicos:', {
+            id: producto.id,
+            nombre: producto.nombre,
+            codigo: producto.codigo,
+            sku: producto.sku,
+            codigo_barras: producto.codigo_barras,
+            marca: producto.marca,
+            unidad: producto.unidad,
+            precio_compra: (producto as any).precio_compra,
+            precio_venta: (producto as any).precio_venta
+        });
         onAddProduct(producto);
         setProductSearch('');
         setProductosDisponibles([]);
@@ -391,6 +407,20 @@ export default function ProductosTable({
             const data = await response.json();
 
             console.log('✅ [ProductosTable] Respuesta API completa:', data.data);
+            // ✅ NUEVO 2026-03-06: Mostrar estructura del primer producto
+            if (data.data && data.data.length > 0) {
+                console.log('📦 [ProductosTable] Estructura del PRIMER PRODUCTO del endpoint:', JSON.stringify(data.data[0], null, 2));
+                console.log('🔍 [ProductosTable] Campos específicos:', {
+                    id: data.data[0].id,
+                    nombre: data.data[0].nombre,
+                    codigo: data.data[0].codigo,
+                    codigo_barras: data.data[0].codigo_barras,
+                    marca: data.data[0].marca,
+                    unidad: data.data[0].unidad,
+                    precio_compra: data.data[0].precio_compra,
+                    precio_venta: data.data[0].precio_venta
+                });
+            }
             console.log('🏥 [buscarProductos] Contexto de farmacia - es_farmacia:', es_farmacia);
 
             // Transformar respuesta de API a formato Producto
@@ -993,13 +1023,24 @@ export default function ProductosTable({
                                 const productoInfo = detalle.producto || productos.find(p => p.id === detalle.producto_id);
                                 const esCombo = productoInfo && (productoInfo as any).es_combo;
 
-                                // ✅ DEBUG: Loguear búsqueda de producto
+                                // ✅ DEBUG: Loguear búsqueda de producto y estructura completa
                                 console.log(`🔍 Detalle #${index}:`, {
                                     detalleProductoId: detalle.producto_id,
                                     detalleProductoNombre: detalle.producto?.nombre,
                                     productoInfo: productoInfo?.nombre || 'NO ENCONTRADO',
                                     usandoDetalleProducto: !!detalle.producto,
                                     buscandoEnArray: !detalle.producto
+                                });
+                                // ✅ NUEVO 2026-03-06: Mostrar estructura completa del objeto producto
+                                console.log(`📦 Detalle #${index} - Objeto Producto COMPLETO:`, detalle.producto);
+                                // ✅ NUEVO 2026-03-06: Mostrar productoInfo renderizado
+                                console.log(`📊 Detalle #${index} - productoInfo para renderizar:`, {
+                                    nombre: productoInfo?.nombre,
+                                    codigo: productoInfo?.codigo,
+                                    codigo_barras: productoInfo?.codigo_barras,
+                                    marca: (productoInfo as any)?.marca,
+                                    unidad: (productoInfo as any)?.unidad,
+                                    productoInfoCompleto: JSON.stringify(productoInfo, null, 2)
                                 });
 
                                 // ✅ NUEVO: Calcular diferencia entre precio ingresado y costo registrado (solo para compras)

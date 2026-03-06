@@ -2788,24 +2788,10 @@ class EntregaController extends Controller
             // Construir resumen con soporte para múltiples pagos
             // ✅ NOTA: total_esperado SOLO incluye ventas NO crédito
 
-            // ✅ NUEVO 2026-03-04: Obtener información del cliente de la primera venta
-            $cliente = null;
-            if ($ventasParaResumen->isNotEmpty()) {
-                $cliente = $ventasParaResumen->first()->cliente;
-            }
-
             $resumen = [
                 'entrega_id'     => $entrega->id,
                 'numero_entrega' => $entrega->numero_entrega,
                 'total_esperado' => (float) $ventasParaResumen->sum('total'), // ✅ Solo no-crédito
-                                                                              // ✅ NUEVO 2026-03-04: Agregar información del cliente
-                'cliente'        => $cliente ? [
-                    'id'              => $cliente->id,
-                    'nombre'          => $cliente->nombre,
-                    'nombre_completo' => $cliente->nombre,
-                    'email'           => $cliente->email,
-                    'telefono'        => $cliente->telefono,
-                ] : null,
                 'pagos'          => [],
                 'sin_registrar'  => [],
                 'total_recibido' => 0,
@@ -2860,6 +2846,14 @@ class EntregaController extends Controller
                                         'fotos'                   => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
                                         'firma_digital_url'       => $confirmacion->firma_digital_url,
                                         'observaciones_logistica' => $confirmacion->observaciones_logistica,
+                                        // ✅ NUEVO 2026-03-06: Incluir cliente específico de esta venta
+                                        'cliente'                 => $confirmacion->venta?->cliente ? [
+                                            'id'              => $confirmacion->venta->cliente->id,
+                                            'nombre'          => $confirmacion->venta->cliente->nombre,
+                                            'nombre_completo' => $confirmacion->venta->cliente->nombre,
+                                            'email'           => $confirmacion->venta->cliente->email,
+                                            'telefono'        => $confirmacion->venta->cliente->telefono,
+                                        ] : null,
                                         'detalles'                => $confirmacion->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
                                             'id'              => $d->id,
                                             'producto_id'     => $d->producto_id,
@@ -2898,6 +2892,14 @@ class EntregaController extends Controller
                                             'fotos'                   => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
                                             'firma_digital_url'       => $confirmacion->firma_digital_url,
                                             'observaciones_logistica' => $confirmacion->observaciones_logistica,
+                                            // ✅ NUEVO 2026-03-06: Incluir cliente específico de esta venta
+                                            'cliente'                 => $confirmacion->venta?->cliente ? [
+                                                'id'              => $confirmacion->venta->cliente->id,
+                                                'nombre'          => $confirmacion->venta->cliente->nombre,
+                                                'nombre_completo' => $confirmacion->venta->cliente->nombre,
+                                                'email'           => $confirmacion->venta->cliente->email,
+                                                'telefono'        => $confirmacion->venta->cliente->telefono,
+                                            ] : null,
                                             'detalles'                => $confirmacion->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
                                                 'id'              => $d->id,
                                                 'producto_id'     => $d->producto_id,
@@ -2950,6 +2952,14 @@ class EntregaController extends Controller
                                 'fotos'                   => is_array($c->fotos) ? $c->fotos : [],
                                 'firma_digital_url'       => $c->firma_digital_url,
                                 'observaciones_logistica' => $c->observaciones_logistica,
+                                // ✅ NUEVO 2026-03-06: Incluir cliente específico de esta venta
+                                'cliente'                 => $c->venta?->cliente ? [
+                                    'id'              => $c->venta->cliente->id,
+                                    'nombre'          => $c->venta->cliente->nombre,
+                                    'nombre_completo' => $c->venta->cliente->nombre,
+                                    'email'           => $c->venta->cliente->email,
+                                    'telefono'        => $c->venta->cliente->telefono,
+                                ] : null,
                                 'detalles'                => $c->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
                                     'id'              => $d->id,
                                     'producto_id'     => $d->producto_id,
@@ -2987,6 +2997,14 @@ class EntregaController extends Controller
                             'tipo_pago_id'     => $v->tipo_pago_id,
                             'tipo_pago'        => $v->tipoPago?->nombre ?? 'N/A',
                             'tipo_pago_codigo' => $v->tipoPago?->codigo ?? 'N/A',
+                            // ✅ NUEVO 2026-03-06: Incluir cliente de cada venta (no el genérico)
+                            'cliente'          => $v->cliente ? [
+                                'id'              => $v->cliente->id,
+                                'nombre'          => $v->cliente->nombre,
+                                'nombre_completo' => $v->cliente->nombre,
+                                'email'           => $v->cliente->email,
+                                'telefono'        => $v->cliente->telefono,
+                            ] : null,
                         ];
                     })->toArray()
                 );
