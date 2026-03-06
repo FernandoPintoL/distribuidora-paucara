@@ -41,6 +41,30 @@ export default function Index(props: CajasIndexProps) {
     // ✅ DEBUG: Ver todos los props que llegan del backend
     console.log('🔍 [Cajas/Index] Props recibidos del backend:', props);
 
+    // ✅ NUEVO: Mostrar sumatorias detalladas en consola
+    useEffect(() => {
+        const datosResumen = props.datosResumen;
+        if (datosResumen) {
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('💰 SUMATORIAS - CAJA DEL DÍA');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📊 Monto de Apertura:', `Bs. ${datosResumen.montoApertura?.toFixed(2) || '0.00'}`);
+            console.log('📈 Total Ventas:', `Bs. ${datosResumen.totalVentas?.toFixed(2) || '0.00'}`);
+            console.log('❌ Ventas Anuladas:', `Bs. ${datosResumen.ventasAnuladas?.toFixed(2) || '0.00'}`);
+            console.log('🔄 Devoluciones:', `Bs. ${datosResumen.devoluciones?.toFixed(2) || '0.00'}`);
+            console.log('💳 Depósitos:', `Bs. ${datosResumen.depositos?.toFixed(2) || '0.00'}`);
+            console.log('💸 Gastos:', `Bs. ${datosResumen.sumatorialGastos?.toFixed(2) || '0.00'}`);
+            console.log('💼 Pagos de Sueldo:', `Bs. ${datosResumen.sumatorialPagosSueldo?.toFixed(2) || '0.00'}`);
+            console.log('🛒 Compras:', `Bs. ${datosResumen.sumatorialCompras?.toFixed(2) || '0.00'}`);
+            console.log('───────────────────────────────────────────────────────────');
+            console.log('✅ Total de Egresos:', `Bs. ${datosResumen.totalEgresos?.toFixed(2) || '0.00'}`);
+            console.log('💵 Efectivo Esperado:', `Bs. ${datosResumen.efectivoEsperado?.toFixed(2) || '0.00'}`);
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📋 Datos Referenciales:', datosResumen.datos_ref);
+            console.log('═══════════════════════════════════════════════════════════');
+        }
+    }, [props.datosResumen]);
+
     const {
         showAperturaModal,
         showCierreModal,

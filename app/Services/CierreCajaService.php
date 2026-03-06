@@ -720,6 +720,32 @@ class CierreCajaService
         // EXCLUYE solo ANULACIONES (transacción cancelada que nunca pasó dinero real)
         $totalEgresos = $gastos + $pagosSueldo + $anticipos + $compras;
 
+        $efectivoEsperado = $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos;
+
+        // ✅ NUEVO (2026-03-06): Logs detallados para verificar el cálculo
+        Log::info('═══════════════════════════════════════════════════════════');
+        Log::info('💰 CÁLCULO DE EFECTIVO ESPERADO');
+        Log::info('═══════════════════════════════════════════════════════════');
+        Log::info('📊 ENTRADAS:');
+        Log::info('  - Monto Apertura: Bs. ' . number_format($montoApertura, 2));
+        Log::info('  - Ventas Efectivo (EFECTIVO + TRANSFERENCIA/QR): Bs. ' . number_format($ventasEfectivo, 2));
+        Log::info('  - Pagos de Crédito (TODOS los tipos): Bs. ' . number_format($pagosCreditoTotal, 2));
+        Log::info('  - Ventas Anuladas (no incluidas en total): Bs. ' . number_format($ventasAnuladas, 2));
+        Log::info('───────────────────────────────────────────────────────────');
+        Log::info('💸 SALIDAS:');
+        Log::info('  - Gastos: Bs. ' . number_format($gastos, 2));
+        Log::info('  - Pagos de Sueldo: Bs. ' . number_format($pagosSueldo, 2));
+        Log::info('  - Anticipos: Bs. ' . number_format($anticipos, 2));
+        Log::info('  - Compras: Bs. ' . number_format($compras, 2));
+        Log::info('  - Anulaciones (EXCLUIDAS del total): Bs. ' . number_format($anulaciones, 2));
+        Log::info('  - Total Egresos: Bs. ' . number_format($totalEgresos, 2));
+        Log::info('───────────────────────────────────────────────────────────');
+        Log::info('✅ FÓRMULA: Apertura + VentasEfectivo + PagosCrédito - TotalEgresos');
+        Log::info('✅ CÁLCULO: ' . number_format($montoApertura, 2) . ' + ' . number_format($ventasEfectivo, 2) . ' + ' . number_format($pagosCreditoTotal, 2) . ' - ' . number_format($totalEgresos, 2));
+        Log::info('═══════════════════════════════════════════════════════════');
+        Log::info('💵 EFECTIVO ESPERADO EN CAJA: Bs. ' . number_format($efectivoEsperado, 2));
+        Log::info('═══════════════════════════════════════════════════════════');
+
         return [
             'apertura' => $montoApertura,
             'ventas_efectivo' => $ventasEfectivo,
@@ -734,7 +760,7 @@ class CierreCajaService
             'total_egresos' => $totalEgresos,
             // ✅ CORRECTO: monto_esperado = Apertura + Entradas - Salidas
             // Es la cantidad TOTAL de dinero que debería haber en caja al cierre
-            'total' => $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos,
+            'total' => $efectivoEsperado,
         ];
     }
 

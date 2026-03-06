@@ -185,7 +185,12 @@ class CajaController extends Controller
             $sumatorialAnticipos = (float) ($datosCalculados['sumatorialAnticipos'] ?? 0);
             $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
 
-            $totalIngresos = $totalVentas + $pagosCredito;  // Ventas APROBADAS + Pagos CxC
+            // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
+            $ventasEfectivo = (float) ($datosCalculados['sumatorialVentasEfectivo'] ?? 0);
+
+            // ✅ FÓRMULA CORRECTA: Apertura + VentasEfectivo + PagosCrédito - TotalEgresos
+            // Esto excluye las ventas a crédito que no generan efectivo
+            $totalIngresos = $ventasEfectivo + $pagosCredito;  // Solo EFECTIVO/TRANSFERENCIA + Pagos CxC
             // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
             $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
             $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
