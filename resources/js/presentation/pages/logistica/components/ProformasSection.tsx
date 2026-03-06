@@ -420,18 +420,76 @@ export function ProformasSection({
                         </div>
                     </div>
 
-                    {/* ✅ NUEVO: Botón para filtrar solo vencidas */}
+                    {/* ✅ NUEVO: Filtrado rápido por fecha + Mostrar solo vencidas en una fila */}
                     <div>
-                        <Button
-                            onClick={() => setSoloVencidas(!soloVencidas)}
-                            className={`w-full transition-all ${soloVencidas
-                                ? 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800'
-                                : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50'
-                                }`}
-                        >
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            {soloVencidas ? '✓ Mostrando solo Vencidas' : '⚠️ Mostrar Solo Vencidas'}
-                        </Button>
+                        <label className="text-sm font-medium mb-2 block dark:text-gray-300">
+                            Fechas de Entrega Solicitada
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {/* Botón para filtrar solo vencidas */}
+                            <Button
+                                onClick={() => setSoloVencidas(!soloVencidas)}
+                                className={`transition-all text-sm ${soloVencidas
+                                    ? 'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800'
+                                    : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                                    }`}
+                            >
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                {soloVencidas ? '✓ Vencidas' : '⚠️ Vencidas'}
+                            </Button>
+
+                            {/* Ayer */}
+                            <Button
+                                onClick={() => {
+                                    const yesterday = new Date();
+                                    yesterday.setDate(yesterday.getDate() - 1);
+                                    const fechaStr = yesterday.toISOString().split('T')[0];
+                                    setFiltroFechaEntregaSolicitadaDesde(fechaStr);
+                                    setFiltroFechaEntregaSolicitadaHasta(fechaStr);
+                                }}
+                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
+                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()
+                                    ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800'
+                                    : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                                    }`}
+                            >
+                                📅 Ayer
+                            </Button>
+
+                            {/* Hoy */}
+                            <Button
+                                onClick={() => {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    setFiltroFechaEntregaSolicitadaDesde(today);
+                                    setFiltroFechaEntregaSolicitadaHasta(today);
+                                }}
+                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
+                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date().toDateString()
+                                    ? 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-800'
+                                    : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                    }`}
+                            >
+                                📆 Hoy
+                            </Button>
+
+                            {/* Mañana */}
+                            <Button
+                                onClick={() => {
+                                    const tomorrow = new Date();
+                                    tomorrow.setDate(tomorrow.getDate() + 1);
+                                    const fechaStr = tomorrow.toISOString().split('T')[0];
+                                    setFiltroFechaEntregaSolicitadaDesde(fechaStr);
+                                    setFiltroFechaEntregaSolicitadaHasta(fechaStr);
+                                }}
+                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
+                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date(new Date().setDate(new Date().getDate() + 1)).toDateString()
+                                    ? 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800'
+                                    : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-900/50'
+                                    }`}
+                            >
+                                📆 Mañana
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -803,8 +861,8 @@ export function ProformasSection({
                                                         setFiltroHoraEntregaSolicitadaHasta(hora);
                                                     }}
                                                     className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
-                                                            ? 'bg-blue-600 text-white shadow-md'
-                                                            : 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600'
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600'
                                                         }`}
                                                 >
                                                     {hora.split(':')[0]}
@@ -850,8 +908,8 @@ export function ProformasSection({
                                                         setFiltroHoraEntregaSolicitadaHasta(hora);
                                                     }}
                                                     className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
-                                                            ? 'bg-orange-600 text-white shadow-md'
-                                                            : 'bg-white dark:bg-slate-700 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-slate-600'
+                                                        ? 'bg-orange-600 text-white shadow-md'
+                                                        : 'bg-white dark:bg-slate-700 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-slate-600'
                                                         }`}
                                                 >
                                                     {hora.split(':')[0]}

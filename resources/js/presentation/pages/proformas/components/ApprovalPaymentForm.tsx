@@ -63,6 +63,11 @@ export function ApprovalPaymentForm({
     // ✅ NUEVO: Estado para datos de crédito del cliente
     const [clienteConCredito, setClienteConCredito] = useState(proforma.cliente);
 
+    // ✅ NUEVO: Estado para advertencia de fecha comprometida diferente a solicitada
+    const [userConfirmedDateWarning, setUserConfirmedDateWarning] = useState(false);
+    // ✅ NUEVO: Estado para mostrar cargando después de confirmar fecha
+    const [isLoadingAfterConfirm, setIsLoadingAfterConfirm] = useState(false);
+
     // ✅ NUEVO: Hook para obtener políticas de pago disponibles (desde API)
     const {
         loading: loadingPoliticas,
@@ -74,6 +79,31 @@ export function ApprovalPaymentForm({
     } = usePoliticasPago({
         cliente: clienteConCredito,
     });
+
+    // ✅ NUEVO: Helper para detectar si la fecha comprometida es diferente a la solicitada
+    const fechaSolicitada = proforma.fecha_entrega_solicitada?.split('T')[0];
+    const fechaComprometida = (coordinacion.fecha_entrega_confirmada || (() => {
+        const hoy = new Date();
+        const year = hoy.getFullYear();
+        const month = String(hoy.getMonth() + 1).padStart(2, '0');
+        const day = String(hoy.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    })()).split('T')[0];
+
+    const fechasDiferentes = fechaSolicitada !== fechaComprometida;
+
+    // ✅ NUEVO: Handler para botón de aprobación con advertencia de fecha
+    const handleApprobalWithDateWarning = () => {
+        if (fechasDiferentes && !userConfirmedDateWarning) {
+            // Primera vez: mostrar advertencia y estado de cargando
+            setIsLoadingAfterConfirm(true);
+            setUserConfirmedDateWarning(true);
+        } else {
+            // Segunda vez o fechas iguales: ejecutar aprobación
+            setIsLoadingAfterConfirm(false); // Resetear antes de enviar
+            onSubmit();
+        }
+    };
 
     // Cargar tipos de pago al montar el componente
     useEffect(() => {
@@ -373,17 +403,13 @@ export function ApprovalPaymentForm({
                 <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Fecha solicitada:</span>
-                        <span className="font-medium">{proforma.fecha_entrega_solicitada || 'N/A'}</span>
+                        <span className="font-medium">{fechaSolicitada || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Fecha confirmada:</span>
-                        <span className="font-medium">{coordinacion.fecha_entrega_confirmada || (() => {
-                            const hoy = new Date();
-                            const year = hoy.getFullYear();
-                            const month = String(hoy.getMonth() + 1).padStart(2, '0');
-                            const day = String(hoy.getDate()).padStart(2, '0');
-                            return `${year}-${month}-${day}`;
-                        })()}</span>
+                        <span className="text-muted-foreground">Fecha comprometida:</span>
+                        <span className={`font-medium ${fechasDiferentes ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {fechaComprometida}
+                        </span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Hora confirmada:</span>
@@ -402,6 +428,35 @@ export function ApprovalPaymentForm({
                     )}
                 </CardContent>
             </Card>
+
+            {/* ✅ NUEVO: Advertencia si la fecha comprometida es diferente a la solicitada */}
+            {fechasDiferentes && !userConfirmedDateWarning && (
+                <Alert className="border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+                    <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <AlertDescription className="text-orange-800 dark:text-orange-200">
+                        <div className="font-semibold mb-1">⚠️ Atención: Fecha de Entrega Comprometida Diferente</div>
+                        <p className="text-sm">
+                            Estás aprobando una proforma con una fecha de entrega comprometida (<strong>{fechaComprometida}</strong>) diferente a la solicitada por el cliente (<strong>{fechaSolicitada}</strong>).
+                        </p>
+                        <p className="text-sm mt-2">
+                            Haz clic en el botón "Aprobar" nuevamente para confirmar esta acción.
+                        </p>
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {/* ✅ NUEVO: Confirmación después de la primera advertencia */}
+            {fechasDiferentes && userConfirmedDateWarning && (
+                <Alert className="border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <AlertDescription className="text-green-800 dark:text-green-200">
+                        <div className="font-semibold">✓ Aprobación Confirmada</div>
+                        <p className="text-sm">
+                            Procederá a aprobar con fecha comprometida del <strong>{fechaComprometida}</strong>.
+                        </p>
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {/* ✅ NUEVO: Resumen de Política Solicitada */}
             {proforma.politica_pago && (
@@ -708,21 +763,27 @@ export function ApprovalPaymentForm({
             <div className="flex justify-end gap-2 pt-4">
                 <Button
                     variant="outline"
-                    onClick={onCancel}
+                    onClick={() => {
+                        setUserConfirmedDateWarning(false); // Resetear estado al cancelar
+                        setIsLoadingAfterConfirm(false); // Resetear cargando al cancelar
+                        onCancel();
+                    }}
                     disabled={isSubmitting || isRenovando || errorState?.code === 'RESERVAS_EXPIRADAS'}
                 >
                     Cancelar
                 </Button>
                 <Button
-                    onClick={onSubmit}
+                    onClick={handleApprobalWithDateWarning}
                     disabled={isSubmitting || !isPaymentValid() || isRenovando || errorState?.code === 'RESERVAS_EXPIRADAS'}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className={`text-white ${userConfirmedDateWarning && fechasDiferentes ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                     {isSubmitting ? (
                         <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             {payment.con_pago ? 'Aprobando y Convirtiendo...' : 'Aprobando...'}
                         </>
+                    ) : userConfirmedDateWarning && fechasDiferentes ? (
+                        payment.con_pago ? '✓ Confirmar: Aprobar y Convertir a Venta' : '✓ Confirmar: Aprobar'
                     ) : (
                         payment.con_pago ? 'Aprobar y Convertir a Venta' : 'Aprobar'
                     )}

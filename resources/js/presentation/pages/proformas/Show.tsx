@@ -357,8 +357,21 @@ const puedeSerEditada = (estado: string) => ['PENDIENTE', 'BORRADOR'].includes(e
 
 export default function ProformasShow({ item: proforma, tiposPrecio = [], almacen_id_empresa = 1 }: Props) {
     // APPLICATION LAYER: Lógica de negocio desde hook
-    console.log('📦 Proforma recibida en Show.tsx:', proforma);
-    console.log('💰 Tipos de Precio disponibles:', tiposPrecio);
+    // ✅ LOGS COMPLETOS - Ver qué datos llegan al componente
+    useEffect(() => {
+        console.log('═════════════════════════════════════════');
+        console.log('🔍 PROFORMAS/SHOW.TSX - DATOS COMPLETOS');
+        console.log('═════════════════════════════════════════');
+        console.log('📦 Proforma recibida:', proforma);
+        console.log('   - ID:', proforma?.id);
+        console.log('   - Número:', proforma?.numero);
+        console.log('   - Estado:', proforma?.estado);
+        console.log('   - Cliente:', proforma?.cliente);
+        console.log('   - Detalles:', proforma?.detalles);
+        console.log('💰 Tipos de Precio:', tiposPrecio);
+        console.log('🏢 Almacén ID Empresa:', almacen_id_empresa);
+        console.log('═════════════════════════════════════════');
+    }, [proforma, tiposPrecio, almacen_id_empresa]);
     const {
         isSubmitting,
         isConverting,
@@ -1558,7 +1571,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                         <div className="flex flex-wrap gap-4 text-sm text-blue-800 dark:text-blue-300">
                                             {proforma.fecha_entrega_solicitada && (
                                                 <p>
-                                                    📅 Fecha: <span className="font-semibold">{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                                    📅 Fecha: <span className="font-semibold">{proforma.fecha_entrega_solicitada.split('T')[0].split('-').reverse().join('-')}</span>
                                                 </p>
                                             )}
                                             {proforma.hora_entrega_solicitada && (
@@ -1706,7 +1719,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                     {proforma.fecha_vencimiento && (
                                         <div className="flex flex-col">
                                             <span className="text-xs text-muted-foreground font-medium">Vencimiento</span>
-                                            <span className="font-medium text-foreground">{new Date(proforma.fecha_vencimiento).toLocaleDateString('es-ES')}</span>
+                                            <span className="font-medium text-foreground">{proforma.fecha_vencimiento.split('T')[0].split('-').reverse().join('-')}</span>
                                         </div>
                                     )}
 
@@ -1993,7 +2006,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                         <div className="pt-[var(--space-sm)] border-t">
                                             <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase mb-1">Fecha Solicitada</div>
                                             <div className="text-[var(--text-sm)] font-medium">
-                                                {new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES')}
+                                                {proforma.fecha_entrega_solicitada.split('T')[0].split('-').reverse().join('-')}
                                             </div>
                                         </div>
                                     )}

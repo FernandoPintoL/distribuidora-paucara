@@ -7,6 +7,7 @@ use App\Models\EstadoLogistica;
 use App\Models\Localidad;
 use App\Models\Proforma;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class LogisticaController extends Controller
@@ -16,6 +17,12 @@ class LogisticaController extends Controller
      */
     public function dashboard()
     {
+        // ✅ NUEVO 2026-03-06: Log para verificar parámetros de entrada
+        Log::info('LogisticaController::dashboard - Parámetros recibidos:', [
+            'fecha_entrega_solicitada_desde' => request('fecha_entrega_solicitada_desde'),
+            'fecha_entrega_solicitada_hasta' => request('fecha_entrega_solicitada_hasta'),
+            'todos_los_params'               => request()->query(),
+        ]);
 
         // proformas recientes con paginación y filtros
         // Mostrar TODAS las proformas, no solo APP_EXTERNA
@@ -36,11 +43,11 @@ class LogisticaController extends Controller
             // Si estado === 'TODOS', no aplicar filtro (mostrar todos)
         } else {
             // Default: mostrar BORRADOR, PENDIENTE y APROBADA si no se proporciona filtro de estado
-            $estadoBorradorId = Proforma::obtenerIdEstado('BORRADOR', 'proforma');
+            $estadoBorradorId  = Proforma::obtenerIdEstado('BORRADOR', 'proforma');
             $estadoPendienteId = Proforma::obtenerIdEstado('PENDIENTE', 'proforma');
-            $estadoAprobadaId = Proforma::obtenerIdEstado('APROBADA', 'proforma');
-            $estadoIds = array_filter([$estadoBorradorId, $estadoPendienteId, $estadoAprobadaId]);
-            if (!empty($estadoIds)) {
+            $estadoAprobadaId  = Proforma::obtenerIdEstado('APROBADA', 'proforma');
+            $estadoIds         = array_filter([$estadoBorradorId, $estadoPendienteId, $estadoAprobadaId]);
+            if (! empty($estadoIds)) {
                 $query->whereIn('estado_proforma_id', $estadoIds);
             }
         }
@@ -51,7 +58,7 @@ class LogisticaController extends Controller
             $query->where(function ($q) use ($search) {
                 // Búsqueda en ID (solo si es numérico)
                 if (is_numeric($search)) {
-                    $q->where('id', (int)$search);
+                    $q->where('id', (int) $search);
                 }
                 // Búsqueda en número de proforma
                 $q->orWhereRaw('LOWER(numero) like ?', ["%{$search}%"])
@@ -115,13 +122,62 @@ class LogisticaController extends Controller
         }
 
         // ✅ Filtro por fecha de entrega solicitada (desde/hasta)
-        if (request()->has('fecha_entrega_solicitada_desde') && request('fecha_entrega_solicitada_desde') !== '') {
-            $query->where('fecha_entrega_solicitada', '>=', request('fecha_entrega_solicitada_desde'));
+        // ✅ MEJORADO 2026-03-06: Asegurar que se filtra por fecha completa (00:00:00 a 23:59:59)
+        // ✅ NUEVO: Si no hay parámetros, usar default: desde ayer hasta hoy
+        $fechaEntregaSolicitadaDesde = null;
+        $fechaEntregaSolicitadaHasta = null;
+
+        // Si no hay parámetro fecha_desde, aplicar default: AYER
+        if (!request()->has('fecha_entrega_solicitada_desde') || request('fecha_entrega_solicitada_desde') === '') {
+            $yesterday = now()->subDay();
+            $fechaEntregaSolicitadaDesde = $yesterday->format('Y-m-d 00:00:00');
+
+            Log::info('LogisticaController::dashboard - SIN parámetro fecha_desde, aplicando default (AYER)', [
+                'fecha_default' => $fechaEntregaSolicitadaDesde,
+            ]);
+            $query->where('fecha_entrega_solicitada', '>=', $fechaEntregaSolicitadaDesde);
+        } else {
+            $fechaEntregaSolicitadaDesde = request('fecha_entrega_solicitada_desde');
+            // Si solo tiene fecha (YYYY-MM-DD), agregar la hora de inicio del día
+            if (strlen($fechaEntregaSolicitadaDesde) === 10) {
+                $fechaEntregaSolicitadaDesde .= ' 00:00:00';
+            }
+            Log::info('LogisticaController::dashboard - Aplicando filtro fecha_desde (USUARIO)', [
+                'fecha_original'  => request('fecha_entrega_solicitada_desde'),
+                'fecha_procesada' => $fechaEntregaSolicitadaDesde,
+            ]);
+            $query->where('fecha_entrega_solicitada', '>=', $fechaEntregaSolicitadaDesde);
         }
 
-        if (request()->has('fecha_entrega_solicitada_hasta') && request('fecha_entrega_solicitada_hasta') !== '') {
-            $query->where('fecha_entrega_solicitada', '<=', request('fecha_entrega_solicitada_hasta') . ' 23:59:59');
+        // Si no hay parámetro fecha_hasta, aplicar default: HOY
+        if (!request()->has('fecha_entrega_solicitada_hasta') || request('fecha_entrega_solicitada_hasta') === '') {
+            $today = now();
+            $fechaEntregaSolicitadaHasta = $today->format('Y-m-d 23:59:59');
+
+            Log::info('LogisticaController::dashboard - SIN parámetro fecha_hasta, aplicando default (HOY)', [
+                'fecha_default' => $fechaEntregaSolicitadaHasta,
+            ]);
+            $query->where('fecha_entrega_solicitada', '<=', $fechaEntregaSolicitadaHasta);
+        } else {
+            $fechaEntregaSolicitadaHasta = request('fecha_entrega_solicitada_hasta');
+            // Si solo tiene fecha (YYYY-MM-DD), agregar la hora del final del día
+            if (strlen($fechaEntregaSolicitadaHasta) === 10) {
+                $fechaEntregaSolicitadaHasta .= ' 23:59:59';
+            }
+            Log::info('LogisticaController::dashboard - Aplicando filtro fecha_hasta (USUARIO)', [
+                'fecha_original'  => request('fecha_entrega_solicitada_hasta'),
+                'fecha_procesada' => $fechaEntregaSolicitadaHasta,
+            ]);
+            $query->where('fecha_entrega_solicitada', '<=', $fechaEntregaSolicitadaHasta);
         }
+
+        // ✅ NUEVO 2026-03-06: Log para verificar filtros de fecha de entrega
+        Log::info('LogisticaController::dashboard - Resumen después de filtros de fecha', [
+            'fecha_desde'           => $fechaEntregaSolicitadaDesde,
+            'fecha_hasta'           => $fechaEntregaSolicitadaHasta,
+            'proformas_encontradas' => $query->count(),
+            'sql_query'             => $query->toSql(),
+        ]);
 
         // ✅ Filtro por hora de entrega solicitada (desde/hasta)
         $horaDesde = request('hora_entrega_solicitada_desde');
@@ -149,7 +205,10 @@ class LogisticaController extends Controller
                 ->whereNotIn('estado_proforma_id', [3, 4]);
         }
 
-        $proformasPaginated = $query->orderBy('id', 'desc')
+        // ✅ ACTUALIZADO 2026-03-06: Ordenar por fecha_entrega_solicitada para priorizar las más urgentes
+        $proformasPaginated = $query
+            ->orderBy('fecha_entrega_solicitada', 'asc')  // ✅ Entrega más próxima primero
+            ->orderBy('id', 'desc')  // Secondary: ID descendente como tiebreaker
             ->paginate(15); // 15 por página
 
         $proformasRecientes = [
@@ -217,11 +276,11 @@ class LogisticaController extends Controller
 
         // ✅ Obtener usuarios aprobadores (que hayan aprobado proformas)
         $usuariosAprobadores = User::whereIn('id', function ($query) {
-                $query->select('usuario_aprobador_id')
-                    ->from('proformas')
-                    ->whereNotNull('usuario_aprobador_id')
-                    ->distinct();
-            })
+            $query->select('usuario_aprobador_id')
+                ->from('proformas')
+                ->whereNotNull('usuario_aprobador_id')
+                ->distinct();
+        })
             ->select('id', 'name')
             ->orderBy('name', 'asc')
             ->get()
@@ -234,11 +293,11 @@ class LogisticaController extends Controller
 
         // ✅ Obtener estados logísticos disponibles
         $estadosLogistica = EstadoLogistica::whereIn('id', function ($query) {
-                $query->select('estado_proforma_id')
-                    ->from('proformas')
-                    ->whereNotNull('estado_proforma_id')
-                    ->distinct();
-            })
+            $query->select('estado_proforma_id')
+                ->from('proformas')
+                ->whereNotNull('estado_proforma_id')
+                ->distinct();
+        })
             ->select('id', 'nombre', 'codigo')
             ->orderBy('nombre', 'asc')
             ->get()

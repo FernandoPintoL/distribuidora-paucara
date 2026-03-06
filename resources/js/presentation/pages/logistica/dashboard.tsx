@@ -80,8 +80,8 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         lastUpdate: logisticaLastUpdate,
         refresh: refreshLogisticaStats,
     } = useLogisticaStats({
-        // ✅ DESACTIVAR polling cuando hay filtros activos para evitar re-renders innecesarios
-        autoRefresh: !tieneFilterosActivos,
+        // ✅ ACTUALIZADO 2026-03-06: DESACTIVAR polling completamente
+        autoRefresh: false,
         refreshInterval: 30,
     });
 
@@ -90,8 +90,8 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         loading: loadingProformaStats,
         error: proformaError,
     } = useProformaStats({
-        // ✅ DESACTIVAR polling cuando hay filtros activos para evitar re-renders innecesarios
-        autoRefresh: !tieneFilterosActivos,
+        // ✅ ACTUALIZADO 2026-03-06: DESACTIVAR polling completamente
+        autoRefresh: false,
         refreshInterval: 30,
     });
 
@@ -132,20 +132,14 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [proformasRecientes]);
 
-    // ✅ NUEVO: Aplicar filtros por defecto (BORRADOR + PENDIENTE + APROBADA del día) cuando se abre el dashboard
+    // ✅ NOTA: El backend aplica automáticamente filtro por defecto (desde ayer hasta hoy)
+    // cuando no se proporcionan parámetros de fecha_entrega_solicitada
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        // Solo establecer filtros por defecto si NO hay parámetros de URL
-        if (urlParams.toString() === '') {
-            // Navegar a la URL con los filtros por defecto sin hacer reload
-            // Solo pasamos fecha para el día actual - el estado usa el default del servidor (BORRADOR + PENDIENTE + APROBADA)
-            const today = new Date().toISOString().split('T')[0]; // formato: YYYY-MM-DD
-            router.visit(`/logistica/dashboard?fecha_vencimiento_desde=${today}&fecha_vencimiento_hasta=${today}`, {
-                replace: true,
-                preserveState: false,
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const hasParams = urlParams.toString() !== '';
+
+        console.log('🔍 [Dashboard] Cargado. Backend aplicará filtro por defecto (ayer-hoy) si no hay parámetros');
+        console.log('   URL params:', urlParams.toString() || 'NINGUNO');
     }, []);
 
     // Verificar si proforma está vencida
