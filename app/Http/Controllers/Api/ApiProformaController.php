@@ -4304,6 +4304,9 @@ class ApiProformaController extends Controller
             // Recargar relaciones
             $proforma->load(['detalles.producto.imagenes', 'cliente.localidad', 'estadoLogistica']);
 
+            // ✅ NUEVO: Disparar evento de notificación a cliente y preventista
+            event(new ProformaActualizada($proforma));
+
             return response()->json([
                 'success' => true,
                 'message' => 'Detalles actualizados correctamente',

@@ -13,7 +13,7 @@ class EntregaVentaConfirmacion extends Model
         'entrega_id',
         'venta_id',
         'tipo_entrega',        // ✅ NUEVO: COMPLETA o CON_NOVEDAD
-        'tipo_novedad',        // ✅ NUEVO: CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADA, NO_CONTACTADO
+        'tipo_novedad',        // ✅ NUEVO: CLIENTE_CERRADO, DEVOLUCION_PARCIAL, RECHAZADO, NO_CONTACTADO
         'tuvo_problema',       // ✅ NUEVO: Flag para reportes
         'firma_digital_url',
         'fotos',

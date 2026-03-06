@@ -67,12 +67,13 @@ class ProformaNotificationService
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.aprobada', [
-            'proforma_numero' => $proforma->numero,
-            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id'      => $proforma->cliente_id,
-            'total'           => (float) $proforma->total,
-            'aprobador'       => $proforma->usuarioAprobador->name ?? 'Sistema',
-            'estado'          => $proforma->estado,
+            'proforma_numero'   => $proforma->numero,
+            'cliente_nombre'    => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'        => $proforma->cliente_id,
+            'total'             => (float) $proforma->total,
+            'aprobador'         => $proforma->usuarioAprobador->name ?? 'Sistema',
+            'estado'            => $proforma->estado,
+            'usuario_creador_id' => $proforma->usuario_creador_id,  // ✅ Agregado para notificar al preventista
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -92,13 +93,14 @@ class ProformaNotificationService
 
         // 2. Guardar en BD
         $this->dbNotificationService->create($userIds, 'proforma.rechazada', [
-            'proforma_numero' => $proforma->numero,
-            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id'      => $proforma->cliente_id,
-            'total'           => (float) $proforma->total,
-            'motivo_rechazo'  => $reason,
-            'rechazador'      => auth()->user()->name ?? 'Sistema',
-            'estado'          => $proforma->estado,
+            'proforma_numero'   => $proforma->numero,
+            'cliente_nombre'    => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'        => $proforma->cliente_id,
+            'total'             => (float) $proforma->total,
+            'motivo_rechazo'    => $reason,
+            'rechazador'        => auth()->user()->name ?? 'Sistema',
+            'estado'            => $proforma->estado,
+            'usuario_creador_id' => $proforma->usuario_creador_id,  // ✅ Agregado para notificar al preventista
         ], [
             'proforma_id' => $proforma->id,
         ]);
@@ -116,14 +118,15 @@ class ProformaNotificationService
         $users   = $this->getUsersForConverted($proforma);
         $userIds = $users->pluck('id')->toArray();
 
-        // 2. Guardar en BD
+        // 2. Guardar en BD (para cliente y preventista creador)
         $this->dbNotificationService->create($userIds, 'proforma.convertida', [
-            'proforma_numero' => $proforma->numero,
-            'venta_numero'    => $venta->numero ?? null,
-            'cliente_nombre'  => $proforma->cliente->nombre ?? 'Cliente',
-            'cliente_id'      => $proforma->cliente_id,
-            'total'           => (float) $venta->total ?? (float) $proforma->total,
-            'estado'          => $proforma->estado,
+            'proforma_numero'   => $proforma->numero,
+            'venta_numero'      => $venta->numero ?? null,
+            'cliente_nombre'    => $proforma->cliente->nombre ?? 'Cliente',
+            'cliente_id'        => $proforma->cliente_id,
+            'total'             => (float) $venta->total ?? (float) $proforma->total,
+            'estado'            => $proforma->estado,
+            'usuario_creador_id' => $proforma->usuario_creador_id,  // ✅ Agregado para referencia del preventista
         ], [
             'proforma_id' => $proforma->id,
             'venta_id'    => $venta->id,
@@ -236,40 +239,19 @@ class ProformaNotificationService
 
     /**
      * Usuarios para notificar cuando se CREA una proforma
-     * Criterio: Preventistas, Cajeros y Admins
+     * Criterio: Preventistas, Cajeros, Admins, Managers Y el Cliente propietario
      */
     private function getUsersForCreated(Proforma $proforma): Collection
     {
-        return User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['preventista', 'cajero', 'admin', 'manager', 'Preventista', 'Cajero', 'Admin', 'Manager']);
-        })->where('activo', true)->get();
-    }
-
-    /**
-     * Usuarios para notificar cuando se APRUEBA una proforma
-     * Criterio: Creador de la proforma, Cliente asociado, Admins
-     */
-    private function getUsersForApproved(Proforma $proforma): Collection
-    {
         $users = collect();
 
-        // 1. Admins y managers
-        $adminUsers = User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['admin', 'manager']);
+        // 1. Preventistas, Cajeros, Admins y Managers
+        $staffUsers = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['preventista', 'cajero', 'admin', 'manager', 'Preventista', 'Cajero', 'Admin', 'Manager']);
         })->where('activo', true)->get();
-        $users = $users->merge($adminUsers);
+        $users = $users->merge($staffUsers);
 
-        // 2. Usuario que creó la proforma
-        if ($proforma->usuario_creador_id) {
-            $creador = User::where('id', $proforma->usuario_creador_id)
-                ->where('activo', true)
-                ->first();
-            if ($creador) {
-                $users->push($creador);
-            }
-        }
-
-        // 3. Cliente (usuario asociado al cliente, si existe)
+        // 2. ✅ NUEVO: Cliente propietario de la proforma
         if ($proforma->cliente && $proforma->cliente->user_id) {
             $clienteUser = User::where('id', $proforma->cliente->user_id)
                 ->where('activo', true)
@@ -283,20 +265,22 @@ class ProformaNotificationService
     }
 
     /**
-     * Usuarios para notificar cuando se RECHAZA una proforma
-     * Criterio: Creador de la proforma (MUY IMPORTANTE), Cliente asociado, Admins
+     * Usuarios para notificar cuando se APRUEBA una proforma
+     * Criterio: Creador de la proforma, Cliente asociado, Admins
      */
-    private function getUsersForRejected(Proforma $proforma): Collection
+    /**
+     * ✅ CORREGIDO: Usuarios para notificar cuando se APRUEBA una proforma
+     * Criterio: Cliente propietario + Preventista que la creó
+     *
+     * Son los dos usuarios clave:
+     * - Cliente: Quiere saber que su proforma fue aprobada
+     * - Preventista: Quiere saber que la proforma que creó fue aprobada
+     */
+    private function getUsersForApproved(Proforma $proforma): Collection
     {
         $users = collect();
 
-        // 1. Admins y managers
-        $adminUsers = User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['admin', 'manager']);
-        })->where('activo', true)->get();
-        $users = $users->merge($adminUsers);
-
-        // 2. Usuario que creó la proforma (debe saber que fue rechazada)
+        // 1. ✅ Preventista que creó la proforma (si aplica)
         if ($proforma->usuario_creador_id) {
             $creador = User::where('id', $proforma->usuario_creador_id)
                 ->where('activo', true)
@@ -306,7 +290,42 @@ class ProformaNotificationService
             }
         }
 
-        // 3. Cliente (usuario asociado al cliente)
+        // 2. ✅ Cliente propietario de la proforma
+        if ($proforma->cliente && $proforma->cliente->user_id) {
+            $clienteUser = User::where('id', $proforma->cliente->user_id)
+                ->where('activo', true)
+                ->first();
+            if ($clienteUser) {
+                $users->push($clienteUser);
+            }
+        }
+
+        return $users->unique('id');
+    }
+
+    /**
+     * ✅ CORREGIDO: Usuarios para notificar cuando se RECHAZA una proforma
+     * Criterio: Cliente propietario + Preventista que la creó
+     *
+     * Son los dos usuarios clave:
+     * - Cliente: DEBE saber que su proforma fue rechazada
+     * - Preventista: DEBE saber que la proforma que creó fue rechazada
+     */
+    private function getUsersForRejected(Proforma $proforma): Collection
+    {
+        $users = collect();
+
+        // 1. ✅ Preventista que creó la proforma (debe saber que fue rechazada)
+        if ($proforma->usuario_creador_id) {
+            $creador = User::where('id', $proforma->usuario_creador_id)
+                ->where('activo', true)
+                ->first();
+            if ($creador) {
+                $users->push($creador);
+            }
+        }
+
+        // 2. ✅ Cliente propietario (debe saber que su proforma fue rechazada)
         if ($proforma->cliente && $proforma->cliente->user_id) {
             $clienteUser = User::where('id', $proforma->cliente->user_id)
                 ->where('activo', true)
@@ -323,33 +342,37 @@ class ProformaNotificationService
      * Usuarios para notificar cuando se CONVIERTE una proforma a venta
      * Criterio: Logística, Cobradores, Creador, Cliente, Admins
      */
+    /**
+     * ✅ CORREGIDO: Usuarios para notificar cuando se CONVIERTE una proforma a venta
+     * Criterio: Cliente propietario + Preventista que la creó
+     *
+     * Son los dos usuarios clave:
+     * - Cliente: "Tu pedido ha sido confirmado"
+     * - Preventista: "La proforma que creaste fue convertida a venta"
+     */
     private function getUsersForConverted(Proforma $proforma): Collection
     {
         $users = collect();
 
-        // 1. Logística, cobradores y admins
-        $logisticaUsers = User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['logistica', 'cobrador', 'admin', 'manager']);
-        })->where('activo', true)->get();
-        $users = $users->merge($logisticaUsers);
-
-        // 2. Usuario que creó la proforma
-        if ($proforma->usuario_creador_id) {
-            $creador = User::where('id', $proforma->usuario_creador_id)
-                ->where('activo', true)
-                ->first();
-            if ($creador) {
-                $users->push($creador);
-            }
-        }
-
-        // 3. Cliente (usuario asociado al cliente)
+        // 1. ✅ Cliente propietario de la proforma
+        // Notificación DIRECTA: "Tu pedido ha sido confirmado"
         if ($proforma->cliente && $proforma->cliente->user_id) {
             $clienteUser = User::where('id', $proforma->cliente->user_id)
                 ->where('activo', true)
                 ->first();
             if ($clienteUser) {
                 $users->push($clienteUser);
+            }
+        }
+
+        // 2. ✅ Preventista que creó la proforma
+        // Notificación: "La proforma que creaste fue convertida a venta"
+        if ($proforma->usuario_creador_id) {
+            $preventista = User::where('id', $proforma->usuario_creador_id)
+                ->where('activo', true)
+                ->first();
+            if ($preventista) {
+                $users->push($preventista);
             }
         }
 

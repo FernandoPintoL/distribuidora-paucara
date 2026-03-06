@@ -178,7 +178,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     
     dashboardRedirect.form = dashboardRedirectForm
 /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
 export const preventistas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -192,7 +192,7 @@ preventistas.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
 preventistas.url = (options?: RouteQueryOptions) => {
@@ -200,7 +200,7 @@ preventistas.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
 preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -208,7 +208,7 @@ preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
 preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -217,7 +217,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
     const preventistasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -226,7 +226,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
         preventistasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -234,7 +234,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/api.php:299
+ * @see [serialized-closure]:2
  * @route '/api/preventistas'
  */
         preventistasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

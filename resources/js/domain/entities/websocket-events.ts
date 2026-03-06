@@ -134,6 +134,24 @@ export interface EntregaRechazadaEvent {
   clienteNombre: string;
 }
 
+export interface EntregaEstadoCambioEvent {
+  entrega_id: number;
+  numero_entrega: string;
+  estado_nuevo: string;
+  chofer: {
+    id: number;
+    nombre: string;
+  };
+  vehiculo: {
+    placa: string;
+    marca: string;
+  };
+  cantidad_ventas: number;
+  monto_total: number;
+  fecha_cambio: string;
+  destinatario: 'admins' | 'cajeros';
+}
+
 // ==================== UBICACION EVENTS ====================
 export interface UbicacionActualizadaEvent {
   id: number;
@@ -312,6 +330,7 @@ export type WebSocketEvent =
   | { event: 'entrega.completada'; data: EntregaCompletadaEvent }
   | { event: 'entrega.creada'; data: EntregaCreadaEvent }
   | { event: 'entrega.rechazada'; data: EntregaRechazadaEvent }
+  | { event: 'entrega.estado-cambio'; data: EntregaEstadoCambioEvent }
   | { event: 'ubicacion.actualizada'; data: UbicacionActualizadaEvent }
   | { event: 'ubicacion.llegada-confirmada'; data: MarcarLlegadaConfirmadaEvent }
   | { event: 'ruta.planificada'; data: RutaPlanificadaEvent }
@@ -344,6 +363,7 @@ export const EVENT_ROLE_MAPPING: Record<string, string[]> = {
   'entrega.completada': ['cliente', 'logistica', 'cobrador', 'manager', 'admin'],
   'entrega.creada': ['logistica', 'manager', 'admin'],
   'entrega.rechazada': ['logistica', 'manager', 'admin', 'cliente'],
+  'entrega.estado-cambio': ['logistica', 'cajero', 'manager', 'admin'],
 
   'ubicacion.actualizada': ['logistica', 'cobrador', 'manager', 'admin', 'cliente'],
   'ubicacion.llegada-confirmada': ['cliente', 'logistica', 'manager', 'admin'],

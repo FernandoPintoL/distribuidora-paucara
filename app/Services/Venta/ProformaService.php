@@ -3,6 +3,7 @@ namespace App\Services\Venta;
 
 use App\DTOs\Venta\CrearProformaDTO;
 use App\DTOs\Venta\ProformaResponseDTO;
+use App\Events\ProformaRechazada;
 use App\Exceptions\Caja\CajaNoAbiertaException;
 use App\Exceptions\Stock\StockInsuficientException;
 use App\Exceptions\Venta\EstadoInvalidoException;
@@ -439,9 +440,8 @@ class ProformaService
                 'observaciones'      => ($proforma->observaciones ?? '') . "\nMotivo rechazo: {$motivo}",
             ]);
 
-            // ⚠️ COMENTADO: WebSocket endpoint no configurado, event broadcasting deshabilitado
-            // Las reservas ya fueron liberadas correctamente arriba
-            // event(new \App\Events\ProformaRechazada($proforma, $motivo));
+            // ✅ NUEVO: Disparar evento de notificación a cliente y preventista
+            event(new \App\Events\ProformaRechazada($proforma, $motivo));
 
             return $proforma;
         });

@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import websocketService from '@/infrastructure/services/websocket.service';
 import {
   BaseNotification,
@@ -144,6 +145,10 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
         title: '✅ Entrega Finalizada',
         message: (d) => `Entrega ${d.numero_entrega} completada - ${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} entregada${d.cantidad_ventas > 1 ? 's' : ''}`,
       },
+      'entrega.estado-cambio': {
+        title: '📊 Cambio de Estado de Entrega',
+        message: (d) => `Entrega ${d.numero_entrega} cambió a ${d.estado_nuevo} - ${d.cantidad_ventas || 1} venta${d.cantidad_ventas > 1 ? 's' : ''} por Bs. ${(d.monto_total || 0).toFixed(2)}`,
+      },
       'ubicacion.actualizada': {
         title: '📍 Ubicación Actualizada',
         message: (d) => `${d.choferNombre} - En ruta`,
@@ -263,6 +268,13 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
           onNotification(notification);
         }
 
+        // ✅ NUEVO: Show toast in the UI (top right corner)
+        console.log('🍞 Attempting to show toast for:', notification.title);
+        toast(`${notification.title} - ${notification.message}`, {
+          duration: 4000,
+          icon: '🔔',
+        });
+
         // Show browser notification if permission granted
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification(notification.title, {
@@ -329,6 +341,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
       'entrega.completada',
       'entrega.creada',
       'entrega.rechazada',
+      'entrega.estado-cambio',
       'venta.preparacion-carga',
       'venta.listo-para-entrega',
       'venta.listo-para-entrega-admin',

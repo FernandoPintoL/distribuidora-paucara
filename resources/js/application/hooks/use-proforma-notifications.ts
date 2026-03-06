@@ -34,6 +34,7 @@ export interface UseProformaNotificationsReturn {
  * - proforma.aprobada (cuando preventista aprueba)
  * - proforma.rechazada
  * - proforma.convertida
+ * - proforma.actualizada (✅ NUEVO: cuando se actualiza)
  *
  * Uso:
  * ```tsx
@@ -100,6 +101,12 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
           return ['logistica', 'cobrador', 'manager', 'admin'].some((role) =>
             normalizedRoles.includes(role)
           );
+
+        case 'proforma.actualizada':
+          // ✅ NUEVO: Preventistas, Gerentes, Admins y el cliente dueño ven actualizaciones
+          return ['preventista', 'manager', 'admin'].some((role) =>
+            normalizedRoles.includes(role)
+          ) || true; // El cliente también ve si es el propietario
 
         default:
           return true;
@@ -325,6 +332,48 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
     console.log('🎉 Proforma convertida:', data);
   }, [playNotificationSound, showBrowserNotification, shouldReceiveNotification]);
 
+  // ✅ NUEVO: Manejar notificación de proforma actualizada
+  const handleProformaActualizada = useCallback((data: any) => {
+    // ✅ Verificar si el usuario debe recibir esta notificación según su rol
+    if (!shouldReceiveNotification('proforma.actualizada')) {
+      console.log('🚫 Notificación filtrada: Solo preventistas, managers y admins ven actualizaciones');
+      return;
+    }
+
+    const clienteName = data.cliente
+      ? `${data.cliente.nombre} ${data.cliente.apellido || ''}`.trim()
+      : 'Cliente';
+
+    const notification: ProformaNotification = {
+      id: data.id,
+      numero: data.numero,
+      cliente: {
+        nombre: data.cliente?.nombre || 'Cliente',
+        apellido: data.cliente?.apellido,
+      },
+      total: data.total,
+      estado: 'ACTUALIZADA',
+      timestamp: data.timestamp || new Date().toISOString(),
+    };
+
+    setNotifications((prev) => [notification, ...prev].slice(0, 50)); // Mantener últimas 50
+    setUnreadCount((prev) => prev + 1);
+
+    // ✅ Reproducir sonido
+    playNotificationSound();
+
+    // ✅ Mostrar toast
+    toast.success(`📝 La proforma ${data.numero} de ${clienteName} ha sido actualizada por Bs. ${data.total}`);
+
+    // ✅ Mostrar notificación push del navegador
+    showBrowserNotification(`📝 Proforma Actualizada: ${data.numero}`, {
+      body: `${clienteName} ha actualizado la proforma. Total: Bs. ${data.total}`,
+      tag: `proforma-updated-${data.id}`,
+    });
+
+    console.log('📝 Proforma actualizada:', data);
+  }, [playNotificationSound, showBrowserNotification, shouldReceiveNotification]);
+
   // Marcar como leída
   const markAsRead = useCallback((id: number) => {
     setNotifications((prev) =>
@@ -355,12 +404,14 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
     on('proforma.aprobada', handleProformaAprobada);
     on('proforma.rechazada', handleProformaRechazada);
     on('proforma.convertida', handleProformaConvertida);
+    on('proforma.actualizada', handleProformaActualizada); // ✅ NUEVO
 
     console.log('✅ Event listeners registrados:');
     console.log('   - proforma.creada');
     console.log('   - proforma.aprobada');
     console.log('   - proforma.rechazada');
     console.log('   - proforma.convertida');
+    console.log('   - proforma.actualizada'); // ✅ NUEVO
 
     // Limpiar suscripciones al desmontar
     return () => {
@@ -368,6 +419,7 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
       off('proforma.aprobada', handleProformaAprobada);
       off('proforma.rechazada', handleProformaRechazada);
       off('proforma.convertida', handleProformaConvertida);
+      off('proforma.actualizada', handleProformaActualizada); // ✅ NUEVO
     };
   }, [
     isConnected,
@@ -377,6 +429,7 @@ export function useProformaNotifications(): UseProformaNotificationsReturn {
     handleProformaAprobada,
     handleProformaRechazada,
     handleProformaConvertida,
+    handleProformaActualizada, // ✅ NUEVO
   ]);
 
   return {

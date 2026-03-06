@@ -109,6 +109,7 @@ abstract class BaseWebSocketService
             Log::info('🔍 [BaseWebSocketService::send] POST response', [
                 'endpoint' => $endpoint,
                 'url' => $url,
+                'user_id_sent' => $data['user_id'] ?? 'NOT_SET',
                 'status' => $response->status(),
                 'successful' => $response->successful(),
                 'body' => $response->body(),

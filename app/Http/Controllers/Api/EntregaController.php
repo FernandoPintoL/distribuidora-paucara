@@ -1,30 +1,28 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Events\EntregaAsignada;
-use App\Events\UbicacionActualizada;
-use App\Events\MarcarLlegadaConfirmada;
-use App\Events\EntregaConfirmada;
-use App\Events\NovedadEntregaReportada;
 use App\Events\EntregaCancelada;
+use App\Events\EntregaConfirmada;
+use App\Events\MarcarLlegadaConfirmada;
+use App\Events\NovedadEntregaReportada;
+use App\Events\UbicacionActualizada;
 use App\Http\Controllers\Controller;
 use App\Models\Entrega;
+use App\Models\EntregaVentaConfirmacion;
 use App\Models\EstadoLogistica;
-use App\Models\Proforma;
-use App\Models\Venta;  // ✅ Importar modelo Venta
-use App\Models\EntregaVentaConfirmacion;  // ✅ Importar modelo confirmaciones
-use App\Services\ImpresionEntregaService;  // ✅ NUEVO: Importar servicio de productos
-use App\Services\WebSocket\EntregaWebSocketService;  // ✅ NUEVO: WebSocket service
-use App\Services\EntregaLocalidadesService;  // ✅ NUEVO: Servicio de localidades de entrega
+use App\Models\Proforma;                            // ✅ Importar modelo Venta
+use App\Models\Venta;                               // ✅ Importar modelo confirmaciones
+use App\Services\EntregaLocalidadesService;         // ✅ NUEVO: Importar servicio de productos
+use App\Services\ImpresionEntregaService;           // ✅ NUEVO: WebSocket service
+use App\Services\WebSocket\EntregaWebSocketService; // ✅ NUEVO: Servicio de localidades de entrega
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class EntregaController extends Controller
 {
@@ -33,8 +31,102 @@ class EntregaController extends Controller
 
     public function __construct(ImpresionEntregaService $impresionService, EntregaLocalidadesService $localidadesService)
     {
-        $this->impresionService = $impresionService;
+        $this->impresionService   = $impresionService;
         $this->localidadesService = $localidadesService;
+    }
+
+    /**
+     * ✅ TEST: Endpoint para debuguear notificaciones WebSocket venta.estado-cambio
+     * POST /api/entregas/test-notificacion-venta
+     * Envía una notificación simulada para verificar que el flujo funciona completo
+     */
+    public function testVentaNotificacion(Request $request)
+    {
+        try {
+            $ventaId     = $request->input('venta_id', 1);
+            $estadoNuevo = $request->input('estado_nuevo', 'EN_TRANSITO');
+
+            \Log::info('🧪 TEST: Iniciando test de notificación WebSocket', [
+                'venta_id'     => $ventaId,
+                'estado_nuevo' => $estadoNuevo,
+            ]);
+
+            $venta = Venta::with(['cliente', 'entrega'])->find($ventaId);
+            if (! $venta) {
+                return response()->json([
+                    'error'    => 'Venta no encontrada',
+                    'venta_id' => $ventaId,
+                ], 404);
+            }
+
+            \Log::info('🧪 TEST: Datos de venta', [
+                'venta_id'        => $venta->id,
+                'cliente_id'      => $venta->cliente_id,
+                'cliente_user_id' => $venta->cliente?->user_id, // ⬅️ CLAVE
+                'cliente_nombre'  => $venta->cliente?->nombre,
+                'preventista_id'  => $venta->preventista_id,
+            ]);
+
+            // Construir datos de notificación simulados
+            $notificationData = [
+                'venta_id'       => $venta->id,
+                'venta_numero'   => $venta->numero,
+                'cliente_id'     => $venta->cliente_id,
+                'cliente_nombre' => $venta->cliente?->nombre,
+                'user_id'        => $venta->cliente?->user_id, // ⬅️ ESTO ES LO QUE NODE.JS RECIBE
+                'estado_nuevo'   => [
+                    'codigo' => $estadoNuevo,
+                    'nombre' => $estadoNuevo,
+                ],
+                'entrega'        => $venta->entrega ? [
+                    'id'             => $venta->entrega->id,
+                    'numero_entrega' => $venta->entrega->numero_entrega,
+                ] : null,
+            ];
+
+            \Log::info('🧪 TEST: Notificación a enviar', [
+                'user_id_for_routing' => $notificationData['user_id'],
+                'venta_id'            => $notificationData['venta_id'],
+                'cliente_nombre'      => $notificationData['cliente_nombre'],
+            ]);
+
+            // Enviar al WebSocket
+            $webSocketService = app(EntregaWebSocketService::class);
+            $result           = $webSocketService->send('notify/venta-estado-cambio', $notificationData);
+
+            return response()->json([
+                'success'            => true,
+                'message'            => 'Notificación enviada a WebSocket',
+                'sent'               => $result,
+                'data'               => $notificationData,
+                'debug_instructions' => [
+                    'Paso 1: Verificar Laravel logs',
+                    '  - Busca "🧪 TEST: Datos de venta"',
+                    '  - Verifica que cliente_user_id NO sea null',
+                    '',
+                    'Paso 2: Verificar Node.js console',
+                    '  - Busca "📤 EMITIR A USUARIO:"',
+                    '  - Busca "Sala: user_{cliente_user_id}"',
+                    '  - CRÍTICO: "Clientes conectados en sala:" debe ser > 0',
+                    '  - Si es 0, el usuario Flutter NO está en esa sala',
+                    '',
+                    'Paso 3: Verificar Flutter console',
+                    '  - Busca "📊 Venta estado cambió:"',
+                    '  - Busca "📊 Venta cambió estado - Mostrando notificación"',
+                    '  - Busca "✅ NOTIFICACIÓN MOSTRADA EXITOSAMENTE"',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('❌ TEST: Error en test de notificación', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error'   => 'Error al enviar notificación',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -53,8 +145,8 @@ class EntregaController extends Controller
 
             // DEBUG: Log para verificar qué user.id está siendo usado
             Log::info('📱 [misTrabjos] User autenticado', [
-                'user_id' => $user->id,
-                'name' => $user->name,
+                'user_id'  => $user->id,
+                'name'     => $user->name,
                 'usernick' => $user->usernick,
             ]);
 
@@ -70,18 +162,18 @@ class EntregaController extends Controller
             // Obtener entregas asignadas al chofer (user actual)
             // FK chofer_id en entregas apunta a users.id
             $perPage = $request->per_page ?? 15;
-            $page = $request->page ?? 1;
-            $estado = $request->estado;
+            $page    = $request->page ?? 1;
+            $estado  = $request->estado;
 
             // DEBUG: Log todas las entregas del chofer sin filtro
             $todasEntregas = Entrega::where('chofer_id', $user->id)
                 ->get();
 
             Log::info('📱 [misTrabjos] Todas las entregas sin filtro', [
-                'user_id' => $user->id,
-                'chofer_id' => $user->id,
-                'cantidad_total' => count($todasEntregas),
-                'estados' => $todasEntregas->pluck('estado')->unique()->toArray(),
+                'user_id'             => $user->id,
+                'chofer_id'           => $user->id,
+                'cantidad_total'      => count($todasEntregas),
+                'estados'             => $todasEntregas->pluck('estado')->unique()->toArray(),
                 'entregas_por_estado' => $todasEntregas->groupBy('estado')->map(fn($grupo) => count($grupo))->toArray(),
             ]);
 
@@ -91,27 +183,27 @@ class EntregaController extends Controller
             // - created_desde: rango desde (created_at) - si no se proporciona, usa hoy
             // - created_hasta: rango hasta (created_at) - si no se proporciona, usa hoy
             $fechaFiltro = $request->fecha_asignacion;
-            $search = $request->search;  // ✅ NUEVO: búsqueda case-insensitive
-            $localidadId = $request->localidad_id;  // ✅ NUEVO: filtro por localidad
+            $search      = $request->search;       // ✅ NUEVO: búsqueda case-insensitive
+            $localidadId = $request->localidad_id; // ✅ NUEVO: filtro por localidad
 
-            // ✅ NUEVO: Filtro por rango de created_at (fecha de creación)
-            $createdDesde = $request->created_desde ?? today()->toDateString();  // Por defecto: hoy
-            $createdHasta = $request->created_hasta ?? today()->toDateString();  // Por defecto: hoy
+                                                                                // ✅ NUEVO: Filtro por rango de created_at (fecha de creación)
+            $createdDesde = $request->created_desde ?? today()->toDateString(); // Por defecto: hoy
+            $createdHasta = $request->created_hasta ?? today()->toDateString(); // Por defecto: hoy
 
             // Seleccionar solo campos necesarios para la lista
             $entregas = Entrega::where('chofer_id', $user->id)
                 ->when($fechaFiltro, function ($q) use ($fechaFiltro) {
-                    return $q->whereDate('fecha_asignacion', $fechaFiltro);  // ✅ FILTRA SOLO SI SE PROPORCIONA FECHA
+                    return $q->whereDate('fecha_asignacion', $fechaFiltro); // ✅ FILTRA SOLO SI SE PROPORCIONA FECHA
                 })
-                // ✅ NUEVO: Filtro por rango de created_at (fecha de creación de la entrega)
+            // ✅ NUEVO: Filtro por rango de created_at (fecha de creación de la entrega)
                 ->whereBetween('created_at', [
                     Carbon::parse($createdDesde)->startOfDay(),
-                    Carbon::parse($createdHasta)->endOfDay()
+                    Carbon::parse($createdHasta)->endOfDay(),
                 ])
                 ->when($estado, function ($q) use ($estado) {
                     return $q->where('estado', $estado);
                 })
-                // ✅ NUEVO: Búsqueda case-insensitive por ID, número entrega, número venta, y cliente info
+            // ✅ NUEVO: Búsqueda case-insensitive por ID, número entrega, número venta, y cliente info
                 ->when($search, function ($q) use ($search) {
                     $searchLower = strtolower($search);
                     return $q->where(function ($query) use ($searchLower, $search) {
@@ -125,16 +217,16 @@ class EntregaController extends Controller
                         $query->orWhereHas('ventas', function ($q) use ($searchLower, $search) {
                             // Número de venta
                             $q->whereRaw('LOWER(numero) LIKE ?', ["%{$searchLower}%"])
-                              // Nombre del cliente (case-insensitive)
-                              ->orWhereHas('cliente', function ($cq) use ($searchLower, $search) {
-                                  $cq->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
-                                    ->orWhereRaw('LOWER(nit) LIKE ?', ["%{$searchLower}%"])
-                                    ->orWhereRaw('LOWER(telefono) LIKE ?', ["%{$searchLower}%"]);
-                              });
+                            // Nombre del cliente (case-insensitive)
+                                ->orWhereHas('cliente', function ($cq) use ($searchLower, $search) {
+                                    $cq->whereRaw('LOWER(nombre) LIKE ?', ["%{$searchLower}%"])
+                                        ->orWhereRaw('LOWER(nit) LIKE ?', ["%{$searchLower}%"])
+                                        ->orWhereRaw('LOWER(telefono) LIKE ?', ["%{$searchLower}%"]);
+                                });
                         });
                     });
                 })
-                // ✅ NUEVO: Filtrar por localidad
+            // ✅ NUEVO: Filtrar por localidad
                 ->when($localidadId, function ($q) use ($localidadId) {
                     return $q->whereHas('ventas.cliente.localidad', function ($query) use ($localidadId) {
                         $query->where('id', $localidadId);
@@ -143,30 +235,30 @@ class EntregaController extends Controller
                 ->select([
                     'id', 'numero_entrega', 'estado', 'estado_entrega_id',
                     'fecha_asignacion', 'fecha_entrega', 'observaciones',
-                    'peso_kg', 'vehiculo_id', 'chofer_id'
+                    'peso_kg', 'vehiculo_id', 'chofer_id',
                 ])
                 ->with([
-                    'estadoEntrega:id,codigo,nombre,color,icono',  // Solo campos necesarios
+                    'estadoEntrega:id,codigo,nombre,color,icono', // Solo campos necesarios
                     'ventas:id,numero,subtotal,impuesto,total,estado_logistico_id,fecha_entrega_comprometida,cliente_id,direccion_cliente_id,entrega_id',
-                    'ventas.cliente:id,nombre,nit,telefono,razon_social,localidad_id',  // ✅ AGREGADO: razon_social
+                    'ventas.cliente:id,nombre,nit,telefono,razon_social,localidad_id', // ✅ AGREGADO: razon_social
                     'ventas.cliente.localidad:id,nombre,codigo',
                     'ventas.direccionCliente:id,direccion,latitud,longitud',
                     'ventas.estadoLogistica:id,codigo,nombre,color,icono',
-                    'vehiculo:id,placa,marca,modelo'
+                    'vehiculo:id,placa,marca,modelo',
                 ])
                 ->get();
 
             // DEBUG: Log cantidad de entregas encontradas CON filtro
             Log::info('📱 [misTrabjos] Entregas encontradas CON FILTRO', [
-                'user_id' => $user->id,
+                'user_id'                 => $user->id,
                 'fecha_asignacion_filtro' => $fechaFiltro,
-                'created_desde' => $createdDesde,  // ✅ NUEVO
-                'created_hasta' => $createdHasta,  // ✅ NUEVO
-                'estado_filtro' => $estado,
-                'search' => $search,
-                'localidad_id' => $localidadId,
-                'cantidad' => count($entregas),
-                'entregas' => $entregas->pluck('id')->toArray(),
+                'created_desde'           => $createdDesde, // ✅ NUEVO
+                'created_hasta'           => $createdHasta, // ✅ NUEVO
+                'estado_filtro'           => $estado,
+                'search'                  => $search,
+                'localidad_id'            => $localidadId,
+                'cantidad'                => count($entregas),
+                'entregas'                => $entregas->pluck('id')->toArray(),
             ]);
 
             // ✅ Transformar a estructura limpia (sin duplicación)
@@ -174,83 +266,83 @@ class EntregaController extends Controller
                 // Calcular totales
                 $subtotalTotal = $entrega->ventas->sum('subtotal');
                 $impuestoTotal = $entrega->ventas->sum('impuesto');
-                $totalGeneral = $entrega->ventas->sum('total');
+                $totalGeneral  = $entrega->ventas->sum('total');
 
                 // Preparar ventas sin IDs redundantes ni visual
                 $ventasLimpias = $entrega->ventas->map(function ($venta) {
                     return [
-                        'id' => $venta->id,
-                        'numero' => $venta->numero,
-                        'subtotal' => $venta->subtotal,
-                        'impuesto' => $venta->impuesto,
-                        'total' => $venta->total,
-                        'estado_logistico_id' => $venta->estado_logistico_id,
+                        'id'                         => $venta->id,
+                        'numero'                     => $venta->numero,
+                        'subtotal'                   => $venta->subtotal,
+                        'impuesto'                   => $venta->impuesto,
+                        'total'                      => $venta->total,
+                        'estado_logistico_id'        => $venta->estado_logistico_id,
                         'fecha_entrega_comprometida' => $venta->fecha_entrega_comprometida,
-                        'cliente' => $venta->cliente ? [
-                            'id' => $venta->cliente->id,
-                            'nombre' => $venta->cliente->nombre,
-                            'nit' => $venta->cliente->nit,
-                            'telefono' => $venta->cliente->telefono,
-                            'razon_social' => $venta->cliente->razon_social,  // ✅ AGREGADO
-                            'localidad' => $venta->cliente->localidad ? [
-                                'id' => $venta->cliente->localidad->id,
+                        'cliente'                    => $venta->cliente ? [
+                            'id'           => $venta->cliente->id,
+                            'nombre'       => $venta->cliente->nombre,
+                            'nit'          => $venta->cliente->nit,
+                            'telefono'     => $venta->cliente->telefono,
+                            'razon_social' => $venta->cliente->razon_social, // ✅ AGREGADO
+                            'localidad'    => $venta->cliente->localidad ? [
+                                'id'     => $venta->cliente->localidad->id,
                                 'nombre' => $venta->cliente->localidad->nombre,
                                 'codigo' => $venta->cliente->localidad->codigo ?? null,
                             ] : null,
                         ] : null,
-                        'direccion_cliente' => $venta->direccionCliente ? [
-                            'id' => $venta->direccionCliente->id,
+                        'direccion_cliente'          => $venta->direccionCliente ? [
+                            'id'        => $venta->direccionCliente->id,
                             'direccion' => $venta->direccionCliente->direccion,
-                            'latitud' => $venta->direccionCliente->latitud,
-                            'longitud' => $venta->direccionCliente->longitud,
+                            'latitud'   => $venta->direccionCliente->latitud,
+                            'longitud'  => $venta->direccionCliente->longitud,
                         ] : null,
-                        'estado_logistica' => $venta->estadoLogistica ? [
-                            'id' => $venta->estadoLogistica->id,
+                        'estado_logistica'           => $venta->estadoLogistica ? [
+                            'id'     => $venta->estadoLogistica->id,
                             'codigo' => $venta->estadoLogistica->codigo,
                             'nombre' => $venta->estadoLogistica->nombre,
-                            'color' => $venta->estadoLogistica->color,
-                            'icono' => $venta->estadoLogistica->icono,
+                            'color'  => $venta->estadoLogistica->color,
+                            'icono'  => $venta->estadoLogistica->icono,
                         ] : null,
                     ];
                 })->toArray();
 
                 // ✅ NUEVO: Obtener localidades de la entrega usando el service
                 $localidadesResumen = $this->localidadesService->obtenerLocalidadesResumen($entrega);
-                $localidades = $this->localidadesService->obtenerLocalidades($entrega);
+                $localidades        = $this->localidadesService->obtenerLocalidades($entrega);
 
                 return [
-                    'id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'estado' => $entrega->estado,
-                    'estado_entrega_id' => $entrega->estado_entrega_id,
-                    'estado_entrega' => $entrega->estadoEntrega ? [
-                        'id' => $entrega->estadoEntrega->id,
+                    'id'                   => $entrega->id,
+                    'numero_entrega'       => $entrega->numero_entrega,
+                    'estado'               => $entrega->estado,
+                    'estado_entrega_id'    => $entrega->estado_entrega_id,
+                    'estado_entrega'       => $entrega->estadoEntrega ? [
+                        'id'     => $entrega->estadoEntrega->id,
                         'codigo' => $entrega->estadoEntrega->codigo,
                         'nombre' => $entrega->estadoEntrega->nombre,
-                        'color' => $entrega->estadoEntrega->color,
-                        'icono' => $entrega->estadoEntrega->icono,
+                        'color'  => $entrega->estadoEntrega->color,
+                        'icono'  => $entrega->estadoEntrega->icono,
                     ] : null,
-                    'fecha_asignacion' => $entrega->fecha_asignacion,
-                    'fecha_entrega' => $entrega->fecha_entrega,
-                    'observaciones' => $entrega->observaciones,
-                    'peso_kg' => $entrega->peso_kg,
-                    'vehiculo' => $entrega->vehiculo ? [
-                        'id' => $entrega->vehiculo->id,
-                        'placa' => $entrega->vehiculo->placa,
-                        'marca' => $entrega->vehiculo->marca,
+                    'fecha_asignacion'     => $entrega->fecha_asignacion,
+                    'fecha_entrega'        => $entrega->fecha_entrega,
+                    'observaciones'        => $entrega->observaciones,
+                    'peso_kg'              => $entrega->peso_kg,
+                    'vehiculo'             => $entrega->vehiculo ? [
+                        'id'     => $entrega->vehiculo->id,
+                        'placa'  => $entrega->vehiculo->placa,
+                        'marca'  => $entrega->vehiculo->marca,
                         'modelo' => $entrega->vehiculo->modelo,
                     ] : null,
-                    'subtotal_total' => (float) $subtotalTotal,
-                    'impuesto_total' => (float) $impuestoTotal,
-                    'total_general' => (float) $totalGeneral,
-                    'localidades' => $localidades->map(fn($loc) => [
-                        'id' => $loc->id,
+                    'subtotal_total'       => (float) $subtotalTotal,
+                    'impuesto_total'       => (float) $impuestoTotal,
+                    'total_general'        => (float) $totalGeneral,
+                    'localidades'          => $localidades->map(fn($loc) => [
+                        'id'     => $loc->id,
                         'nombre' => $loc->nombre,
                         'codigo' => $loc->codigo ?? null,
                     ])->toArray(),
-                    'localidades_resumen' => $localidadesResumen,
+                    'localidades_resumen'  => $localidadesResumen,
                     'cantidad_localidades' => count($localidades),
-                    'ventas' => $ventasLimpias,
+                    'ventas'               => $ventasLimpias,
                 ];
             });
 
@@ -269,28 +361,28 @@ class EntregaController extends Controller
                 $perPage,
                 $page,
                 [
-                    'path' => $request->url(),
+                    'path'  => $request->url(),
                     'query' => $request->query(),
                 ]
             );
 
             return response()->json([
-                'success' => true,
-                'data' => $paginado->items(),
+                'success'    => true,
+                'data'       => $paginado->items(),
                 'pagination' => [
-                    'total' => $paginado->total(),
-                    'per_page' => $paginado->perPage(),
+                    'total'        => $paginado->total(),
+                    'per_page'     => $paginado->perPage(),
                     'current_page' => $paginado->currentPage(),
-                    'last_page' => $paginado->lastPage(),
-                    'from' => $paginado->firstItem(),
-                    'to' => $paginado->lastItem(),
+                    'last_page'    => $paginado->lastPage(),
+                    'from'         => $paginado->firstItem(),
+                    'to'           => $paginado->lastItem(),
                 ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener trabajos',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -306,20 +398,20 @@ class EntregaController extends Controller
     {
         try {
             $user = Auth::user();
-            $hoy = Carbon::today();
+            $hoy  = Carbon::today();
 
             // DEBUG: Loguear información del usuario
             Log::info('📊 [estadisticasChofer] Debug', [
-                'user_id' => $user->id,
+                'user_id'   => $user->id,
                 'user_name' => $user->name,
-                'hoy' => $hoy->toDateString(),
+                'hoy'       => $hoy->toDateString(),
             ]);
 
             // Obtener todas las entregas del chofer (SIN filtro de fecha por ahora)
             // Usar with() para cargar relación estadoEntrega
             $entregas = Entrega::where('chofer_id', $user->id)
-                // DEBUG: Quitamos el filtro de fecha temporalmente para ver si hay entregas
-                // ->whereDate('fecha_asignacion', '>=', $hoy)
+            // DEBUG: Quitamos el filtro de fecha temporalmente para ver si hay entregas
+            // ->whereDate('fecha_asignacion', '>=', $hoy)
                 ->select(['id', 'estado_entrega_id', 'numero_entrega', 'fecha_asignacion', 'fecha_entrega'])
                 ->with(['estadoEntrega:id,codigo,es_estado_final', 'vehiculo:id,placa'])
                 ->get();
@@ -327,8 +419,8 @@ class EntregaController extends Controller
             // DEBUG: Loguear entregas encontradas
             Log::info('📊 [estadisticasChofer] Entregas encontradas', [
                 'cantidad' => $entregas->count(),
-                'ids' => $entregas->pluck('id')->toArray(),
-                'números' => $entregas->pluck('numero_entrega')->toArray(),
+                'ids'      => $entregas->pluck('id')->toArray(),
+                'números'  => $entregas->pluck('numero_entrega')->toArray(),
             ]);
 
             // Calcular estadísticas usando relación estadoEntrega
@@ -338,7 +430,7 @@ class EntregaController extends Controller
             // Estados de PREPARACIÓN (PREPARACION_CARGA + EN_CARGA)
             $entregasEnPreparacion = $entregas->filter(function ($e) {
                 return $e->estadoEntrega &&
-                       in_array($e->estadoEntrega->codigo, ['PREPARACION_CARGA', 'EN_CARGA']);
+                in_array($e->estadoEntrega->codigo, ['PREPARACION_CARGA', 'EN_CARGA']);
             })->count();
 
             // Estados LISTO PARA ENTREGA
@@ -349,7 +441,7 @@ class EntregaController extends Controller
             // Estados EN RUTA (EN_TRANSITO + EN_CAMINO + LLEGO)
             $entregasEnRuta = $entregas->filter(function ($e) {
                 return $e->estadoEntrega &&
-                       in_array($e->estadoEntrega->codigo, ['EN_TRANSITO', 'EN_CAMINO', 'LLEGO']);
+                in_array($e->estadoEntrega->codigo, ['EN_TRANSITO', 'EN_CAMINO', 'LLEGO']);
             })->count();
 
             // Estados ENTREGADO (completadas con éxito)
@@ -364,7 +456,7 @@ class EntregaController extends Controller
 
             // Entregas pendientes: NOT estado_final
             $entregasPendientes = $entregas->filter(function ($e) {
-                return !($e->estadoEntrega && $e->estadoEntrega->es_estado_final);
+                return ! ($e->estadoEntrega && $e->estadoEntrega->es_estado_final);
             })->count();
 
             $tasaExito = $totalEntregas > 0
@@ -388,7 +480,7 @@ class EntregaController extends Controller
             $kmEstimados = $entregasPendientes > 0 ? ($entregasPendientes * 15.5) : 0;
 
             // Calcular tiempo promedio de entrega (de las completadas hoy)
-            $tiempoPromedio = 0;
+            $tiempoPromedio         = 0;
             $entregasCompletadasHoy = Entrega::where('chofer_id', $user->id)
                 ->whereDate('fecha_entrega', $hoy)
                 ->whereHas('estadoEntrega', function ($q) {
@@ -410,47 +502,47 @@ class EntregaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => [
+                'data'    => [
                     // Contadores principales (totales)
-                    'total_entregas' => $totalEntregas,
-                    'entregas_completadas' => $entregasCompletadas,
-                    'entregas_pendientes' => $entregasPendientes,
+                    'total_entregas'          => $totalEntregas,
+                    'entregas_completadas'    => $entregasCompletadas,
+                    'entregas_pendientes'     => $entregasPendientes,
 
-                    // ✅ ESTADOS PRINCIPALES DEL CHOFER (agrupados)
-                    'entregas_en_preparacion' => $entregasEnPreparacion,     // PREPARACION_CARGA + EN_CARGA
-                    'entregas_listas_entrega' => $entregasListasEntrega,     // LISTO_PARA_ENTREGA
-                    'entregas_en_ruta' => $entregasEnRuta,                   // EN_TRANSITO + EN_CAMINO + LLEGO
-                    'entregas_entregadas' => $entregasEntregadas,            // ENTREGADO
+                                                                         // ✅ ESTADOS PRINCIPALES DEL CHOFER (agrupados)
+                    'entregas_en_preparacion' => $entregasEnPreparacion, // PREPARACION_CARGA + EN_CARGA
+                    'entregas_listas_entrega' => $entregasListasEntrega, // LISTO_PARA_ENTREGA
+                    'entregas_en_ruta'        => $entregasEnRuta,        // EN_TRANSITO + EN_CAMINO + LLEGO
+                    'entregas_entregadas'     => $entregasEntregadas,    // ENTREGADO
 
                     // KPIs
-                    'tasa_exito' => $tasaExito,
-                    'km_estimados' => round($kmEstimados, 2),
+                    'tasa_exito'              => $tasaExito,
+                    'km_estimados'            => round($kmEstimados, 2),
                     'tiempo_promedio_minutos' => $tiempoPromedio,
 
                     // Próxima entrega
-                    'proxima_entrega' => $proximaEntrega ? [
-                        'id' => $proximaEntrega->id,
+                    'proxima_entrega'         => $proximaEntrega ? [
+                        'id'             => $proximaEntrega->id,
                         'numero_entrega' => $proximaEntrega->numero_entrega,
-                        'codigo_estado' => $proximaEntrega->estadoEntrega?->codigo,
-                        'nombre_estado' => $proximaEntrega->estadoEntrega?->nombre,
-                        'vehiculo' => $proximaEntrega->vehiculo ? [
+                        'codigo_estado'  => $proximaEntrega->estadoEntrega?->codigo,
+                        'nombre_estado'  => $proximaEntrega->estadoEntrega?->nombre,
+                        'vehiculo'       => $proximaEntrega->vehiculo ? [
                             'placa' => $proximaEntrega->vehiculo->placa,
                         ] : null,
                     ] : null,
-                    'timestamp' => now()->toIso8601String(),
+                    'timestamp'               => now()->toIso8601String(),
                 ],
             ]);
         } catch (\Exception $e) {
             Log::error('Error en estadisticasChofer', [
                 'user_id' => Auth::id(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estadísticas',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -469,9 +561,10 @@ class EntregaController extends Controller
             $entregas = Entrega::where('chofer_id', $user->id)
                 ->with([
                     'ventas.cliente',
-                    'ventas.direccionCliente',  // NUEVO: Cargar ubicación de entrega desde venta
-                    'ventas.estadoLogistica',   // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
-                    'vehiculo'
+                    'ventas.direccionCliente', // NUEVO: Cargar ubicación de entrega desde venta
+                    'ventas.estadoLogistica',  // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
+                    'ventas.confirmaciones.tipoPago',  // ✅ NUEVO 2026-03-05: Cargar confirmación de entrega con tipo de pago
+                    'vehiculo',
                 ])
                 ->when($request->estado, function ($q) use ($request) {
                     return $q->where('estado', $request->estado);
@@ -481,13 +574,13 @@ class EntregaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $entregas,
+                'data'    => $entregas,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener entregas',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -499,26 +592,25 @@ class EntregaController extends Controller
     public function showEntrega($id)
     {
         try {
-            $user = Auth::user();
+            $user    = Auth::user();
             $entrega = Entrega::with([
                 'ventas.cliente',
-                'ventas.direccionCliente',  // NUEVO: Cargar ubicación de entrega desde venta
-                'ventas.estadoLogistica',   // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
-                'ventas.tipoPago',  // ✅ NUEVO: Cargar tipo de pago de venta para mostrar en Flutter
-                'ventas.detalles.producto.unidad',  // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
-                'ventas.cliente.localidad',  // ✅ NUEVO: Cargar localidad del cliente
-                'chofer',  // FASE 3: chofer apunta a users.id, no a empleados.id
+                'ventas.direccionCliente',         // NUEVO: Cargar ubicación de entrega desde venta
+                'ventas.estadoLogistica',          // NUEVO: Cargar estado logístico de venta (tabla estados_logistica)
+                'ventas.tipoPago',                 // ✅ NUEVO: Cargar tipo de pago de venta para mostrar en Flutter
+                'ventas.detalles.producto.unidad', // ✅ ACTUALIZADO: Incluir unidad (correcta relación) para obtenerProductosGenerico()
+                'ventas.cliente.localidad',        // ✅ NUEVO: Cargar localidad del cliente
+                'ventas.confirmaciones.tipoPago',  // ✅ NUEVO 2026-03-05: Cargar confirmación de entrega con tipo de pago
+                'chofer',                          // FASE 3: chofer apunta a users.id, no a empleados.id
                 'vehiculo',
-                'reportes',
                 'ubicaciones',
-                'historialEstados',
-                'estadoEntrega',  // NUEVO: Cargar estado logístico de entrega desde table estados_logistica
+                'estadoEntrega', // NUEVO: Cargar estado logístico de entrega desde table estados_logistica
             ])->findOrFail($id);
 
             // Verificar autorización
             // Solo el chofer asignado o admin pueden ver la entrega
             // (En el futuro se pueden agregar más validaciones)
-            if ($entrega->chofer_id !== $user->id && !auth()->user()->hasRole(['admin', 'Admin', 'ADMIN', 'manager', 'Manager', 'MANAGER'])) {
+            if ($entrega->chofer_id !== $user->id && ! auth()->user()->hasRole(['admin', 'Admin', 'ADMIN', 'manager', 'Manager', 'MANAGER'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado',
@@ -530,26 +622,26 @@ class EntregaController extends Controller
 
             // 🔍 DEBUG: Verificar que los productos se están obteniendo
             Log::info('📦 [API_SHOWENTREGA] Obteniendo productos genéricos', [
-                'entrega_id' => $entrega->id,
+                'entrega_id'         => $entrega->id,
                 'cantidad_productos' => $productosGenerico->count(),
-                'ventas_asignadas' => $entrega->ventas->count(),
+                'ventas_asignadas'   => $entrega->ventas->count(),
             ]);
 
             // ✅ NUEVO: Obtener localidades de la entrega usando el servicio
             $localidadesService = new EntregaLocalidadesService();
-            $localidades = $localidadesService->obtenerDatosCompletos($entrega);
+            $localidades        = $localidadesService->obtenerDatosCompletos($entrega);
 
             Log::info('📍 [API_SHOWENTREGA] Localidades obtenidas', [
-                'entrega_id' => $entrega->id,
+                'entrega_id'           => $entrega->id,
                 'cantidad_localidades' => $localidades['cantidad_localidades'],
-                'localidades' => array_column($localidades['localidades'], 'nombre'),
+                'localidades'          => array_column($localidades['localidades'], 'nombre'),
             ]);
 
             return response()->json([
-                'success' => true,
-                'data' => $entrega,
-                'productos' => $productosGenerico->toArray(),  // ✅ Productos genéricos
-                'localidades' => $localidades,  // ✅ NUEVO: Incluir localidades
+                'success'     => true,
+                'data'        => $entrega,
+                'productos'   => $productosGenerico->toArray(), // ✅ Productos genéricos
+                'localidades' => $localidades,                  // ✅ NUEVO: Incluir localidades
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -560,7 +652,7 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener entrega',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -605,7 +697,7 @@ class EntregaController extends Controller
     {
         try {
             Log::info('📍 Obteniendo localidades de entrega', [
-                'entrega_id' => $entrega->id,
+                'entrega_id'     => $entrega->id,
                 'numero_entrega' => $entrega->numero_entrega,
             ]);
 
@@ -613,14 +705,14 @@ class EntregaController extends Controller
             $datos = $service->obtenerDatosCompletos($entrega);
 
             Log::info('✅ Localidades obtenidas', [
-                'entrega_id' => $entrega->id,
-                'cantidad' => $datos['cantidad_localidades'],
+                'entrega_id'  => $entrega->id,
+                'cantidad'    => $datos['cantidad_localidades'],
                 'localidades' => array_column($datos['localidades'], 'nombre'),
             ]);
 
             return response()->json([
                 'success' => true,
-                'data' => array_merge($datos, [
+                'data'    => array_merge($datos, [
                     'tiene_multiples_localidades' => $datos['es_consolidada'],
                 ]),
             ], 200);
@@ -628,13 +720,13 @@ class EntregaController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error obteniendo localidades', [
                 'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener localidades',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -655,28 +747,26 @@ class EntregaController extends Controller
                 Entrega::ESTADO_LISTO_PARA_ENTREGA,
             ];
 
-            if (!in_array($entrega->estado, $estadosValidos)) {
+            if (! in_array($entrega->estado, $estadosValidos)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'La entrega debe estar en estado ASIGNADA o LISTO_PARA_ENTREGA',
                 ], 422);
             }
 
+            // ✅ GUARDAR ESTADO ANTERIOR ANTES DE CAMBIAR
+            $estadoAnteriorCodigo = $entrega->estado;
+
             // Determinar el próximo estado según el estado actual
             $nuevoEstado = $entrega->estado === Entrega::ESTADO_ASIGNADA
                 ? Entrega::ESTADO_EN_CAMINO
                 : Entrega::ESTADO_EN_TRANSITO;
 
-            // Cambiar estado de la entrega
-            $entrega->cambiarEstado(
-                $nuevoEstado,
-                'Chofer inició la ruta',
-                Auth::user()
-            );
-
-            // Actualizar todas las ventas a EN_TRANSITO (cuando la entrega está en el flujo nuevo)
+            // ✅ CRÍTICO: Actualizar ventas ANTES de cambiar estado de entrega
+            // Esto asegura que cuando el Observer envía notificaciones,
+            // las ventas ya tengan el estado_logistico_id correcto
             if ($nuevoEstado === Entrega::ESTADO_EN_TRANSITO) {
-                // ✅ NUEVO: Obtener IDs de estados EN_TRANSITO y PENDIENTE_ENVIO
+                // Obtener IDs de estados EN_TRANSITO y PENDIENTE_ENVIO
                 $estadoEnTransitoId = \App\Models\EstadoLogistica::where('codigo', 'EN_TRANSITO')
                     ->where('categoria', 'venta_logistica')
                     ->value('id');
@@ -686,7 +776,7 @@ class EntregaController extends Controller
                     ->value('id');
 
                 if ($estadoEnTransitoId && $estadoPendienteEnvioId) {
-                    // ✅ MEJORADO: Solo actualizar ventas que están en PENDIENTE_ENVIO → EN_TRANSITO
+                    // Solo actualizar ventas que están en PENDIENTE_ENVIO → EN_TRANSITO
                     $ventasCount = $entrega->ventas()
                         ->where('estado_logistico_id', $estadoPendienteEnvioId)
                         ->update([
@@ -694,13 +784,13 @@ class EntregaController extends Controller
                             'updated_at'          => now(),
                         ]);
 
-                    Log::info('✅ [INICIAR_RUTA] Ventas actualizadas a EN_TRANSITO', [
-                        'entrega_id'              => $entrega->id,
-                        'ventas_actualizadas'    => $ventasCount,
-                        'estado_anterior_id'     => $estadoPendienteEnvioId,
-                        'estado_logistico_id'    => $estadoEnTransitoId,
+                    Log::info('✅ [INICIAR_RUTA] Ventas actualizadas a EN_TRANSITO ANTES DE cambiar estado', [
+                        'entrega_id'          => $entrega->id,
+                        'ventas_actualizadas' => $ventasCount,
+                        'estado_anterior_id'  => $estadoPendienteEnvioId,
+                        'estado_logistico_id' => $estadoEnTransitoId,
                     ]);
-                } elseif ($estadoEnTransitoId && !$estadoPendienteEnvioId) {
+                } elseif ($estadoEnTransitoId && ! $estadoPendienteEnvioId) {
                     // Fallback: Si no encuentra PENDIENTE_ENVIO, actualiza todas
                     $ventasCount = $entrega->ventas()->update([
                         'estado_logistico_id' => $estadoEnTransitoId,
@@ -708,34 +798,33 @@ class EntregaController extends Controller
                     ]);
 
                     Log::warning('⚠️ [INICIAR_RUTA] Estado PENDIENTE_ENVIO no encontrado, se actualizaron todas las ventas', [
-                        'entrega_id' => $entrega->id,
+                        'entrega_id'          => $entrega->id,
                         'ventas_actualizadas' => $ventasCount,
-                    ]);
-                }
-
-                // ✅ NUEVO: Notificar a clientes, admins y cajeros sobre el cambio de estado
-                try {
-                    $entrega->load(['ventas.cliente', 'chofer', 'vehiculo']);
-                    $notificationService = app(\App\Services\Notifications\EntregaNotificationService::class);
-                    $notificationService->notificarClientesEnTransito($entrega);
-                } catch (\Exception $e) {
-                    Log::error('❌ Error notificando sobre inicio de tránsito', [
-                        'entrega_id' => $entrega->id,
-                        'error'      => $e->getMessage(),
                     ]);
                 }
             }
 
+            // Cambiar estado de la entrega (esto triggers Observer con ventas ya actualizadas)
+            $entrega->cambiarEstado(
+                $nuevoEstado,
+                'Chofer inició la ruta',
+                Auth::user()
+            );
+
+            // ✅ CARGAR LA ENTREGA ACTUALIZADA CON RELACIÓN A ESTADO
+            $entrega->refresh();
+            $entrega->load('estadoEntrega');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega iniciada',
-                'data' => $entrega->fresh(),
+                'data'    => $entrega->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al iniciar ruta',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -748,7 +837,7 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'estado' => 'required|in:EN_CAMINO,LLEGO,ENTREGADO,NOVEDAD,CANCELADA',
+                'estado'     => 'required|in:EN_CAMINO,LLEGO,ENTREGADO,NOVEDAD,CANCELADA',
                 'comentario' => 'nullable|string',
             ]);
 
@@ -756,15 +845,15 @@ class EntregaController extends Controller
 
             // Validar transición de estado
             $estadosValidos = [
-                Entrega::ESTADO_ASIGNADA => [Entrega::ESTADO_EN_CAMINO, Entrega::ESTADO_CANCELADA],
+                Entrega::ESTADO_ASIGNADA  => [Entrega::ESTADO_EN_CAMINO, Entrega::ESTADO_CANCELADA],
                 Entrega::ESTADO_EN_CAMINO => [Entrega::ESTADO_LLEGO, Entrega::ESTADO_NOVEDAD],
-                Entrega::ESTADO_LLEGO => [Entrega::ESTADO_ENTREGADO, Entrega::ESTADO_NOVEDAD],
+                Entrega::ESTADO_LLEGO     => [Entrega::ESTADO_ENTREGADO, Entrega::ESTADO_NOVEDAD],
                 Entrega::ESTADO_ENTREGADO => [],
-                Entrega::ESTADO_NOVEDAD => [Entrega::ESTADO_EN_CAMINO],
+                Entrega::ESTADO_NOVEDAD   => [Entrega::ESTADO_EN_CAMINO],
                 Entrega::ESTADO_CANCELADA => [],
             ];
 
-            if (!isset($estadosValidos[$entrega->estado]) || !in_array($validated['estado'], $estadosValidos[$entrega->estado])) {
+            if (! isset($estadosValidos[$entrega->estado]) || ! in_array($validated['estado'], $estadosValidos[$entrega->estado])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Transición de estado no permitida',
@@ -780,13 +869,13 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Estado actualizado',
-                'data' => $entrega->fresh(),
+                'data'    => $entrega->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar estado',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -808,11 +897,11 @@ class EntregaController extends Controller
             }
 
             // Obtener coordenadas GPS del request
-            $latitud = $request->input('latitud', null);
+            $latitud  = $request->input('latitud', null);
             $longitud = $request->input('longitud', null);
 
             $entrega->update([
-                'estado' => Entrega::ESTADO_LLEGO,
+                'estado'        => Entrega::ESTADO_LLEGO,
                 'fecha_llegada' => now(),
             ]);
 
@@ -826,7 +915,7 @@ class EntregaController extends Controller
             event(new MarcarLlegadaConfirmada(
                 $entrega->fresh(),
                 [
-                    'latitud' => $latitud,
+                    'latitud'  => $latitud,
                     'longitud' => $longitud,
                 ]
             ));
@@ -834,13 +923,13 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Llegada registrada',
-                'data' => $entrega->fresh(),
+                'data'    => $entrega->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al marcar llegada',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -867,48 +956,50 @@ class EntregaController extends Controller
         try {
             // ✅ MEJORADO: Soporta múltiples formas de pago + productos rechazados
             $validated = $request->validate([
-                'fotos' => 'nullable|array',
-                'fotos.*' => 'string',
-                'observaciones' => 'nullable|string|max:500',
-                'observaciones_logistica' => 'nullable|string|max:1000',
-                'tienda_abierta' => 'nullable|boolean',
-                'cliente_presente' => 'nullable|boolean',
-                'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
+                'fotos'                                  => 'nullable|array',
+                'fotos.*'                                => 'string',
+                'observaciones'                          => 'nullable|string|max:500',
+                'observaciones_logistica'                => 'nullable|string|max:1000',
+                'tienda_abierta'                         => 'nullable|boolean',
+                'cliente_presente'                       => 'nullable|boolean',
+                'motivo_rechazo'                         => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
+                // ✅ NUEVA 2026-03-05: Validación para tipo_novedad
+                'tipo_novedad'                           => 'nullable|in:DEVOLUCION_PARCIAL,RECHAZADO,NO_CONTACTADO,CLIENTE_CERRADO',
 
                 // ✅ OPCIÓN A: Múltiples pagos (nuevo)
-                'pagos' => 'nullable|array',
-                'pagos.*.tipo_pago_id' => 'required_with:pagos|exists:tipos_pago,id',
-                'pagos.*.monto' => 'required_with:pagos|numeric|min:0',
-                'pagos.*.referencia' => 'nullable|string|max:100',
+                'pagos'                                  => 'nullable|array',
+                'pagos.*.tipo_pago_id'                   => 'required_with:pagos|exists:tipos_pago,id',
+                'pagos.*.monto'                          => 'required_with:pagos|numeric|min:0',
+                'pagos.*.referencia'                     => 'nullable|string|max:100',
 
                 // ✅ OPCIÓN B: Pago único (backward compatibility)
-                'monto_recibido' => 'nullable|numeric|min:0',
-                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',
+                'monto_recibido'                         => 'nullable|numeric|min:0',
+                'tipo_pago_id'                           => 'nullable|exists:tipos_pago,id',
 
                 // ✅ CAMBIO: Soporte para crédito como boolean (promesa de pago)
-                'es_credito' => 'nullable|boolean',
-                'tipo_confirmacion' => 'nullable|in:COMPLETA,CON_NOVEDAD',
+                'es_credito'                             => 'nullable|boolean',
+                'tipo_confirmacion'                      => 'nullable|in:COMPLETA,CON_NOVEDAD',
 
                 // ✅ NUEVO: Productos rechazados/devueltos (devolución parcial)
-                'productos_rechazados' => 'nullable|array',
-                'productos_rechazados.*.producto_id' => 'required_with:productos_rechazados|integer',
+                'productos_rechazados'                   => 'nullable|array',
+                'productos_rechazados.*.producto_id'     => 'required_with:productos_rechazados|integer',
                 'productos_rechazados.*.producto_nombre' => 'required_with:productos_rechazados|string|max:255',
-                'productos_rechazados.*.cantidad' => 'required_with:productos_rechazados|numeric|min:0',
+                'productos_rechazados.*.cantidad'        => 'required_with:productos_rechazados|numeric|min:0',
                 'productos_rechazados.*.precio_unitario' => 'required_with:productos_rechazados|numeric|min:0',
-                'productos_rechazados.*.subtotal' => 'required_with:productos_rechazados|numeric|min:0',
+                'productos_rechazados.*.subtotal'        => 'required_with:productos_rechazados|numeric|min:0',
             ]);
 
             $entrega = Entrega::with('estadoEntrega')->findOrFail($id);
-            $venta = Venta::with('estadoLogistica')
+            $venta   = Venta::with('estadoLogistica')
                 ->where('entrega_id', $id)
                 ->findOrFail($venta_id);
 
             // ✅ Validar que la entrega esté en estado permitido (EN_TRANSITO, EN_CAMINO, LLEGO)
             $estadosPermitidos = ['EN_CAMINO', 'EN_TRANSITO', 'LLEGO'];
-            if (!$entrega->estadoEntrega || !in_array($entrega->estadoEntrega->codigo, $estadosPermitidos)) {
+            if (! $entrega->estadoEntrega || ! in_array($entrega->estadoEntrega->codigo, $estadosPermitidos)) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'La entrega debe estar en tránsito para confirmar ventas',
+                    'success'       => false,
+                    'message'       => 'La entrega debe estar en tránsito para confirmar ventas',
                     'estado_actual' => $entrega->estadoEntrega?->codigo ?? $entrega->estado,
                 ], 422);
             }
@@ -919,32 +1010,32 @@ class EntregaController extends Controller
                 ->firstOrFail();
 
             // ✅ NUEVO: Procesar múltiples pagos o pago único
-            $desglosePagos = null;
+            $desglosePagos       = null;
             $totalDineroRecibido = 0;
-            $montoPendiente = 0;
+            $montoPendiente      = 0;
 
-            if (isset($validated['pagos']) && !empty($validated['pagos'])) {
+            if (isset($validated['pagos']) && ! empty($validated['pagos'])) {
                 // Opción A: Múltiples pagos
                 $desglosePagos = [];
                 foreach ($validated['pagos'] as $pago) {
-                    $tipoPago = \App\Models\TipoPago::find($pago['tipo_pago_id']);
-                    $desglosePagos[] = [
-                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                    $tipoPago         = \App\Models\TipoPago::find($pago['tipo_pago_id']);
+                    $desglosePagos[]  = [
+                        'tipo_pago_id'     => $pago['tipo_pago_id'],
                         'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
-                        'monto' => (float) $pago['monto'],
-                        'referencia' => $pago['referencia'] ?? null,
+                        'monto'            => (float) $pago['monto'],
+                        'referencia'       => $pago['referencia'] ?? null,
                     ];
                     $totalDineroRecibido += (float) $pago['monto'];
                 }
                 \Log::debug('💳 [MÚLTIPLES PAGOS] Recibidos ' . count($desglosePagos) . ' tipos de pago');
             } else if (isset($validated['monto_recibido']) && $validated['monto_recibido'] > 0) {
                 // Opción B: Pago único (backward compatibility)
-                $tipoPago = \App\Models\TipoPago::find($validated['tipo_pago_id']);
+                $tipoPago      = \App\Models\TipoPago::find($validated['tipo_pago_id']);
                 $desglosePagos = [[
-                    'tipo_pago_id' => $validated['tipo_pago_id'],
+                    'tipo_pago_id'     => $validated['tipo_pago_id'],
                     'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
-                    'monto' => (float) $validated['monto_recibido'],
-                    'referencia' => null,
+                    'monto'            => (float) $validated['monto_recibido'],
+                    'referencia'       => null,
                 ]];
                 $totalDineroRecibido = (float) $validated['monto_recibido'];
             }
@@ -956,8 +1047,8 @@ class EntregaController extends Controller
             $estadoPago = 'NO_PAGADO';
             if (isset($validated['es_credito']) && $validated['es_credito']) {
                 // Si es crédito, marca como CREDITO (promesa de pago, no dinero real)
-                $estadoPago = 'CREDITO';
-                $totalDineroRecibido = 0;  // NO entra dinero a caja
+                $estadoPago          = 'CREDITO';
+                $totalDineroRecibido = 0; // NO entra dinero a caja
             } else if ($totalDineroRecibido >= $venta->total) {
                 $estadoPago = 'PAGADO';
             } else if ($totalDineroRecibido > 0) {
@@ -965,39 +1056,53 @@ class EntregaController extends Controller
             }
 
             \Log::debug('💰 [PAGO] Total recibido: $' . $totalDineroRecibido .
-                      ' | Pendiente: $' . $montoPendiente .
-                      ' | Estado: ' . $estadoPago);
+                ' | Pendiente: $' . $montoPendiente .
+                ' | Estado: ' . $estadoPago);
 
             // ✅ NUEVO: Procesar productos rechazados (devolución parcial)
             $productosDevueltos = null;
-            $montoDevuelto = 0;
-            $montoAceptado = $venta->total;
+            $montoDevuelto      = 0;
+            $montoAceptado      = $venta->total;
 
-            if (isset($validated['productos_rechazados']) && !empty($validated['productos_rechazados'])) {
+            if (isset($validated['productos_rechazados']) && ! empty($validated['productos_rechazados'])) {
                 $productosDevueltos = [];
                 foreach ($validated['productos_rechazados'] as $producto) {
-                    $productosDevueltos[] = [
-                        'producto_id' => (int) $producto['producto_id'],
+                    $productosDevueltos[]  = [
+                        'producto_id'     => (int) $producto['producto_id'],
                         'producto_nombre' => $producto['producto_nombre'],
-                        'cantidad' => (float) $producto['cantidad'],
+                        'cantidad'        => (float) $producto['cantidad'],
                         'precio_unitario' => (float) $producto['precio_unitario'],
-                        'subtotal' => (float) $producto['subtotal'],
+                        'subtotal'        => (float) $producto['subtotal'],
                     ];
                     $montoDevuelto += (float) $producto['subtotal'];
                 }
                 // Calcular lo que fue aceptado
                 $montoAceptado = $venta->total - $montoDevuelto;
-                $montoAceptado = max(0, $montoAceptado);  // No negativo
+                $montoAceptado = max(0, $montoAceptado); // No negativo
 
                 \Log::debug('📦 [DEVOLUCIÓN PARCIAL] Productos rechazados: ' . count($productosDevueltos) .
-                          ' | Monto devuelto: $' . $montoDevuelto .
-                          ' | Monto aceptado: $' . $montoAceptado);
+                    ' | Monto devuelto: $' . $montoDevuelto .
+                    ' | Monto aceptado: $' . $montoAceptado);
             }
 
-            // ✅ SIMPLIFICADO: Guardar fotos opcionalmente
-            $fotosUrls = [];
-            if (!empty($validated['fotos'])) {
+            // ✅ FIX 2026-03-05: Guardar fotos opcionalmente (MERGE con existentes en edición)
+            $fotosUrls             = [];
+            $confirmacionExistente = EntregaVentaConfirmacion::where('entrega_id', $id)
+                ->where('venta_id', $venta_id)
+                ->first();
+
+            // Mantener fotos existentes si no hay nuevas
+            if ($confirmacionExistente && ! empty($confirmacionExistente->fotos)) {
+                $fotosUrls = $confirmacionExistente->fotos;
+            }
+
+            // Agregar fotos nuevas
+            if (! empty($validated['fotos'])) {
                 foreach ($validated['fotos'] as $foto) {
+                    // Si es una URL o base64 que ya existe, no procesar
+                    // (Las fotos existentes ya están en $fotosUrls del paso anterior)
+                    // Aquí SIEMPRE se asume que son fotos NUEVAS de frontend
+                    // Es nueva foto en base64, guardar archivo
                     $fotoUrl = $this->guardarArchivoBase64($foto, 'entregas');
                     if ($fotoUrl) {
                         $fotosUrls[] = $fotoUrl;
@@ -1005,10 +1110,18 @@ class EntregaController extends Controller
                 }
             }
 
+            // ✅ FIX 2026-03-05: MERGE observaciones_logistica (no reemplazar)
+            // Definir primero, antes de usarla en $datosActualizacion
+            $observacionesFinales = $validated['observaciones_logistica'] ?? null;
+            if (empty($observacionesFinales) && $confirmacionExistente) {
+                // Si no hay nuevas observaciones, mantener las existentes
+                $observacionesFinales = $confirmacionExistente->observaciones_logistica;
+            }
+
             // ✅ CAMBIAR VENTA A ENTREGADA
             $datosActualizacion = [
-                'estado_logistico_id' => $estadoEntregada->id,
-                'observaciones_logistica' => $validated['observaciones_logistica'] ?? null,  // ✅ NUEVO: Guardar observaciones de entrega
+                'estado_logistico_id'     => $estadoEntregada->id,
+                'observaciones_logistica' => $observacionesFinales,
             ];
 
             // ✅ NUEVO: Si la entrega es completa, cambiar estado_pago a PAGADO
@@ -1022,64 +1135,80 @@ class EntregaController extends Controller
             $venta->update($datosActualizacion);
 
             // ✅ MEJORADO: Usar tipo_confirmacion y tipo_novedad del frontend (no derivar de observaciones)
-            $tipoEntrega = $validated['tipo_confirmacion'] ?? 'COMPLETA';
-            $tipoNovedad = $validated['tipo_novedad'] ?? null;
-            $tuvoProblema = $tipoEntrega === 'CON_NOVEDAD';  // Hay problema si no es COMPLETA
+            $tipoEntrega  = $validated['tipo_confirmacion'] ?? 'COMPLETA';
+            $tipoNovedad  = $validated['tipo_novedad'] ?? null;
+            $tuvoProblema = $tipoEntrega === 'CON_NOVEDAD'; // Hay problema si no es COMPLETA
 
-            // ✅ MEJORADO: Guardar la confirmación con soporte para múltiples pagos + productos rechazados
-            $confirmacion = EntregaVentaConfirmacion::updateOrCreate(
-                [
-                    'entrega_id' => $id,
-                    'venta_id' => $venta_id,
-                ],
-                [
-                    'tipo_entrega' => $tipoEntrega,
-                    'tipo_novedad' => $tipoNovedad,
-                    'tuvo_problema' => $tuvoProblema,
-                    'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,
-                    'observaciones_logistica' => $validated['observaciones_logistica'] ?? null,
-                    'observaciones' => $validated['observaciones'] ?? null,
-                    'tienda_abierta' => $validated['tienda_abierta'] ?? null,
-                    'cliente_presente' => $validated['cliente_presente'] ?? null,
-                    'motivo_rechazo' => $validated['motivo_rechazo'] ?? null,
+            // ✅ NUEVA 2026-03-05: Si es COMPLETA, eliminar fotos (no son necesarias para entregas completas)
+            if ($tipoEntrega === 'COMPLETA') {
+                $fotosUrls = null; // Limpiar fotos si es entrega completa
+                \Log::info('📸 [FOTOS ELIMINADAS] Cambio a COMPLETA - fotos limpiadas');
+            }
 
-                    // ✅ NUEVO: Desglose de múltiples pagos
-                    'desglose_pagos' => $desglosePagos,              // Array JSON de pagos
-                    'total_dinero_recibido' => $totalDineroRecibido, // Total en efectivo/transferencia
-                    'monto_pendiente' => $montoPendiente,            // Dinero pendiente de cobro
-                    'tipo_confirmacion' => $validated['tipo_confirmacion'] ?? 'COMPLETA',
+            // ✅ FIX 2026-03-05: ELIMINAR y CREAR de nuevo (updateOrCreate no actualiza correctamente)
+            $confirmacionExistente = EntregaVentaConfirmacion::where('entrega_id', $id)
+                ->where('venta_id', $venta_id)
+                ->first();
 
-                    // ✅ NUEVO: Productos rechazados (devolución parcial)
-                    'productos_devueltos' => $productosDevueltos,    // Array JSON de productos rechazados
-                    'monto_devuelto' => $montoDevuelto > 0 ? $montoDevuelto : null,  // Total devuelto
-                    'monto_aceptado' => $montoAceptado,              // Total aceptado por cliente
+            if ($confirmacionExistente) {
+                $confirmacionExistente->delete();
+                \Log::info('🗑️ [CONFIRMAR_VENTA] Registro anterior eliminado para recreación', [
+                    'entrega_id'               => $id,
+                    'venta_id'                 => $venta_id,
+                    'confirmacion_id_eliminada' => $confirmacionExistente->id,
+                    'tipo_entrega_anterior'    => $confirmacionExistente->tipo_entrega,
+                    'tipo_novedad_anterior'    => $confirmacionExistente->tipo_novedad,
+                ]);
+            }
 
-                    // Backward compatibility: guardar también el primer pago en campos antiguos
-                    'monto_recibido' => $totalDineroRecibido > 0 ? $totalDineroRecibido : null,
-                    'tipo_pago_id' => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : null,
-                    'estado_pago' => $estadoPago,
-
-                    'confirmado_por' => Auth::id(),
-                    'confirmado_en' => now(),
-                ]
-            );
+            // ✅ CREAR nuevo registro con datos actualizados
+            $confirmacion = EntregaVentaConfirmacion::create([
+                'entrega_id'            => $id,
+                'venta_id'              => $venta_id,
+                'tipo_entrega'          => $tipoEntrega,
+                'tipo_novedad'          => $tipoNovedad,
+                'tuvo_problema'         => $tuvoProblema,
+                // ✅ FIX 2026-03-05: Proteger contra count() en null cuando tipo_entrega es COMPLETA
+                'fotos'                 => (is_array($fotosUrls) && count($fotosUrls) > 0) ? $fotosUrls : null,
+                'observaciones_logistica' => $observacionesFinales,
+                'observaciones'         => $validated['observaciones'] ?? null,
+                'tienda_abierta'        => $validated['tienda_abierta'] ?? null,
+                'cliente_presente'      => $validated['cliente_presente'] ?? null,
+                'motivo_rechazo'        => $validated['motivo_rechazo'] ?? null,
+                // ✅ NUEVO: Desglose de múltiples pagos
+                'desglose_pagos'        => $desglosePagos,       // Array JSON de pagos
+                'total_dinero_recibido' => $totalDineroRecibido, // Total en efectivo/transferencia
+                'monto_pendiente'       => $montoPendiente,      // Dinero pendiente de cobro
+                'tipo_confirmacion'     => $validated['tipo_confirmacion'] ?? 'COMPLETA',
+                // ✅ NUEVO: Productos rechazados (devolución parcial)
+                'productos_devueltos'   => $productosDevueltos,                        // Array JSON de productos rechazados
+                'monto_devuelto'        => $montoDevuelto > 0 ? $montoDevuelto : null, // Total devuelto
+                'monto_aceptado'        => $montoAceptado,                             // Total aceptado por cliente
+                // Backward compatibility: guardar también el primer pago en campos antiguos
+                'monto_recibido'        => $totalDineroRecibido > 0 ? $totalDineroRecibido : null,
+                'tipo_pago_id'          => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : null,
+                'estado_pago'           => $estadoPago,
+                'confirmado_por'        => Auth::id(),
+                'confirmado_en'         => now(),
+            ]);
 
             // ✅ SIMPLIFICADO: SIN LÓGICA DE PAGO NI MOVIMIENTOS DE CAJA
             // El pago se gestiona por separado, no aquí
             // Si necesita detallar pago, puede escribir en observaciones
 
             Log::info('✅ Venta entregada - Confirmación de pago registrada', [
-                'entrega_id' => $id,
-                'venta_id' => $venta_id,
-                'confirmacion_id' => $confirmacion->id,
-                'fotos_guardadas' => count($fotosUrls),
-                'desglose_pagos' => $desglosePagos,
+                'entrega_id'            => $id,
+                'venta_id'              => $venta_id,
+                'confirmacion_id'       => $confirmacion->id,
+                // ✅ FIX 2026-03-05: Proteger count() cuando $fotosUrls es null
+                'fotos_guardadas'       => count($fotosUrls ?? []),
+                'desglose_pagos'        => $desglosePagos,
                 'total_dinero_recibido' => $totalDineroRecibido,
-                'monto_pendiente' => $montoPendiente,
-                'estado_pago' => $estadoPago,
-                'productos_devueltos' => count($productosDevueltos ?? []),
-                'monto_devuelto' => $montoDevuelto,
-                'monto_aceptado' => $montoAceptado,
+                'monto_pendiente'       => $montoPendiente,
+                'estado_pago'           => $estadoPago,
+                'productos_devueltos'   => count($productosDevueltos ?? []),
+                'monto_devuelto'        => $montoDevuelto,
+                'monto_aceptado'        => $montoAceptado,
             ]);
 
             // ✅ Recargar entrega con todas sus relaciones
@@ -1094,44 +1223,54 @@ class EntregaController extends Controller
             // ✅ NUEVO: Notificar a cliente, admin y cajero que venta fue entregada
             try {
                 $wsService = app(EntregaWebSocketService::class);
-                $wsService->notifyVentaEntregada($venta, $entrega, $venta->cliente);
+                // Pasar información sobre tipo de entrega y confirmación para personalizar notificaciones
+                $wsService->notifyVentaEntregada(
+                    venta: $venta,
+                    entrega: $entrega,
+                    cliente: $venta->cliente,
+                    tipoEntrega: $tipoEntrega ?? 'COMPLETA',
+                    tipoNovedad: $tipoNovedad,
+                    confirmacion: $confirmacion,
+                    estadoPago: $estadoPago,
+                    totalRecibido: $totalDineroRecibido ?? 0
+                );
                 Log::info('✅ Notificación WebSocket enviada sobre venta entregada');
             } catch (\Exception $e) {
                 Log::warning('⚠️ No se pudo enviar notificación WebSocket sobre venta entregada', [
                     'venta_id' => $venta_id,
-                    'error' => $e->getMessage(),
+                    'error'    => $e->getMessage(),
                 ]);
                 // No interrumpir el flujo si falla la notificación WebSocket
             }
 
             return response()->json([
-                'success' => true,
-                'message' => 'Venta entregada correctamente',
-                'data' => $entrega,
+                'success'  => true,
+                'message'  => 'Venta entregada correctamente',
+                'data'     => $entrega,
                 'metadata' => [
                     'venta_confirmada' => [
-                        'venta_id' => $venta->id,
-                        'venta_numero' => $venta->numero,
-                        'confirmacion_id' => $confirmacion->id,
+                        'venta_id'         => $venta->id,
+                        'venta_numero'     => $venta->numero,
+                        'confirmacion_id'  => $confirmacion->id,
                         'estado_logistico' => 'ENTREGADA',
                     ],
-                    'archivos' => [
-                        'fotos_guardadas' => count($fotosUrls),
+                    'archivos'         => [
+                        'fotos_guardadas' => count($fotosUrls ?? []),
                     ],
                 ],
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Error en confirmarVentaEntregada', [
                 'entrega_id' => $id ?? null,
-                'venta_id' => $venta_id ?? null,
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
+                'venta_id'   => $venta_id ?? null,
+                'error'      => $e->getMessage(),
+                'line'       => $e->getLine(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al confirmar venta entregada',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1147,35 +1286,35 @@ class EntregaController extends Controller
         try {
             // ✅ Validar datos (misma validación que confirmarVentaEntregada)
             $validated = $request->validate([
-                'fotos' => 'nullable|array',
-                'fotos.*' => 'string',
-                'observaciones' => 'nullable|string|max:500',
-                'observaciones_logistica' => 'nullable|string|max:1000',
-                'tienda_abierta' => 'nullable|boolean',
-                'cliente_presente' => 'nullable|boolean',
-                'motivo_rechazo' => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
+                'fotos'                                 => 'nullable|array',
+                'fotos.*'                               => 'string',
+                'observaciones'                         => 'nullable|string|max:500',
+                'observaciones_logistica'               => 'nullable|string|max:1000',
+                'tienda_abierta'                        => 'nullable|boolean',
+                'cliente_presente'                      => 'nullable|boolean',
+                'motivo_rechazo'                        => 'nullable|string|in:TIENDA_CERRADA,CLIENTE_AUSENTE,CLIENTE_RECHAZA,DIRECCION_INCORRECTA,CLIENTE_NO_IDENTIFICADO,OTRO',
 
                 // ✅ Múltiples pagos (nuevo)
-                'pagos' => 'nullable|array',
-                'pagos.*.tipo_pago_id' => 'required_with:pagos|exists:tipos_pago,id',
-                'pagos.*.monto' => 'required_with:pagos|numeric|min:0',
-                'pagos.*.referencia' => 'nullable|string|max:100',
+                'pagos'                                 => 'nullable|array',
+                'pagos.*.tipo_pago_id'                  => 'required_with:pagos|exists:tipos_pago,id',
+                'pagos.*.monto'                         => 'required_with:pagos|numeric|min:0',
+                'pagos.*.referencia'                    => 'nullable|string|max:100',
 
                 // ✅ Pago único (backward compatibility)
-                'monto_recibido' => 'nullable|numeric|min:0',
-                'tipo_pago_id' => 'nullable|exists:tipos_pago,id',
+                'monto_recibido'                        => 'nullable|numeric|min:0',
+                'tipo_pago_id'                          => 'nullable|exists:tipos_pago,id',
 
                 // ✅ Tipo de confirmación
-                'tipo_confirmacion' => 'nullable|in:COMPLETA,CON_NOVEDAD',
-                'tipo_novedad' => 'nullable|string|in:CLIENTE_CERRADO,DEVOLUCION_PARCIAL,RECHAZADO,NO_CONTACTADO',
+                'tipo_confirmacion'                     => 'nullable|in:COMPLETA,CON_NOVEDAD',
+                'tipo_novedad'                          => 'nullable|string|in:CLIENTE_CERRADO,DEVOLUCION_PARCIAL,RECHAZADO,NO_CONTACTADO',
 
                 // ✅ Productos devueltos (devolución parcial)
-                'productos_devueltos' => 'nullable|array',
-                'productos_devueltos.*.producto_id' => 'required_with:productos_devueltos|integer',
+                'productos_devueltos'                   => 'nullable|array',
+                'productos_devueltos.*.producto_id'     => 'required_with:productos_devueltos|integer',
                 'productos_devueltos.*.producto_nombre' => 'required_with:productos_devueltos|string|max:255',
-                'productos_devueltos.*.cantidad' => 'required_with:productos_devueltos|numeric|min:0',
+                'productos_devueltos.*.cantidad'        => 'required_with:productos_devueltos|numeric|min:0',
                 'productos_devueltos.*.precio_unitario' => 'required_with:productos_devueltos|numeric|min:0',
-                'productos_devueltos.*.subtotal' => 'required_with:productos_devueltos|numeric|min:0',
+                'productos_devueltos.*.subtotal'        => 'required_with:productos_devueltos|numeric|min:0',
             ]);
 
             // ✅ Obtener la confirmación existente
@@ -1189,41 +1328,41 @@ class EntregaController extends Controller
             }
 
             $entrega = Entrega::findOrFail($id);
-            $venta = Venta::findOrFail($venta_id);
+            $venta   = Venta::findOrFail($venta_id);
 
             // ✅ Procesar múltiples pagos o pago único
-            $desglosePagos = null;
+            $desglosePagos       = null;
             $totalDineroRecibido = 0;
-            $montoPendiente = 0;
+            $montoPendiente      = 0;
 
-            if (isset($validated['pagos']) && !empty($validated['pagos'])) {
+            if (isset($validated['pagos']) && ! empty($validated['pagos'])) {
                 // Opción A: Múltiples pagos
                 $desglosePagos = [];
                 foreach ($validated['pagos'] as $pago) {
-                    $tipoPago = \App\Models\TipoPago::find($pago['tipo_pago_id']);
-                    $desglosePagos[] = [
-                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                    $tipoPago         = \App\Models\TipoPago::find($pago['tipo_pago_id']);
+                    $desglosePagos[]  = [
+                        'tipo_pago_id'     => $pago['tipo_pago_id'],
                         'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
-                        'monto' => (float) $pago['monto'],
-                        'referencia' => $pago['referencia'] ?? null,
+                        'monto'            => (float) $pago['monto'],
+                        'referencia'       => $pago['referencia'] ?? null,
                     ];
                     $totalDineroRecibido += (float) $pago['monto'];
                 }
             } else if (isset($validated['monto_recibido']) && $validated['monto_recibido'] > 0) {
                 // Opción B: Pago único
-                $tipoPago = \App\Models\TipoPago::find($validated['tipo_pago_id']);
+                $tipoPago      = \App\Models\TipoPago::find($validated['tipo_pago_id']);
                 $desglosePagos = [[
-                    'tipo_pago_id' => $validated['tipo_pago_id'],
+                    'tipo_pago_id'     => $validated['tipo_pago_id'],
                     'tipo_pago_nombre' => $tipoPago->nombre ?? 'Desconocido',
-                    'monto' => (float) $validated['monto_recibido'],
-                    'referencia' => null,
+                    'monto'            => (float) $validated['monto_recibido'],
+                    'referencia'       => null,
                 ]];
                 $totalDineroRecibido = (float) $validated['monto_recibido'];
             }
 
             // Calcular monto pendiente
             $montoAjustado = $venta->total;
-            if (isset($validated['productos_devueltos']) && !empty($validated['productos_devueltos'])) {
+            if (isset($validated['productos_devueltos']) && ! empty($validated['productos_devueltos'])) {
                 foreach ($validated['productos_devueltos'] as $producto) {
                     $montoAjustado -= (float) $producto['subtotal'];
                 }
@@ -1240,18 +1379,18 @@ class EntregaController extends Controller
 
             // ✅ Procesar productos devueltos
             $productosDevueltos = null;
-            $montoDevuelto = 0;
-            $montoAceptado = $venta->total;
+            $montoDevuelto      = 0;
+            $montoAceptado      = $venta->total;
 
-            if (isset($validated['productos_devueltos']) && !empty($validated['productos_devueltos'])) {
+            if (isset($validated['productos_devueltos']) && ! empty($validated['productos_devueltos'])) {
                 $productosDevueltos = [];
                 foreach ($validated['productos_devueltos'] as $producto) {
-                    $productosDevueltos[] = [
-                        'producto_id' => (int) $producto['producto_id'],
+                    $productosDevueltos[]  = [
+                        'producto_id'     => (int) $producto['producto_id'],
                         'producto_nombre' => $producto['producto_nombre'],
-                        'cantidad' => (float) $producto['cantidad'],
+                        'cantidad'        => (float) $producto['cantidad'],
                         'precio_unitario' => (float) $producto['precio_unitario'],
-                        'subtotal' => (float) $producto['subtotal'],
+                        'subtotal'        => (float) $producto['subtotal'],
                     ];
                     $montoDevuelto += (float) $producto['subtotal'];
                 }
@@ -1260,8 +1399,8 @@ class EntregaController extends Controller
 
             // ✅ Guardar fotos nuevas (opcionalmente)
             $fotosUrls = $confirmacion->fotos ?? [];
-            if (!empty($validated['fotos'])) {
-                $fotosUrls = [];  // Reemplazar fotos existentes
+            if (! empty($validated['fotos'])) {
+                $fotosUrls = []; // Reemplazar fotos existentes
                 foreach ($validated['fotos'] as $foto) {
                     // Si es una URL ya existente (starts with http), mantenerla
                     if (strpos($foto, 'http') === 0) {
@@ -1278,50 +1417,50 @@ class EntregaController extends Controller
 
             // ✅ Determinar tipo_entrega basado en tipo_confirmacion
             $tipoConfirmacionActualizado = $validated['tipo_confirmacion'] ?? $confirmacion->tipo_confirmacion ?? 'COMPLETA';
-            $tipoNovedadActualizado = $validated['tipo_novedad'] ?? $confirmacion->tipo_novedad;
+            $tipoNovedadActualizado      = $validated['tipo_novedad'] ?? $confirmacion->tipo_novedad;
 
             // ✅ Actualizar la confirmación
             $confirmacion->update([
-                'tipo_entrega' => $tipoConfirmacionActualizado,  // ✅ COMPLETA o CON_NOVEDAD
-                'tipo_confirmacion' => $tipoConfirmacionActualizado,
-                'tipo_novedad' => $tipoNovedadActualizado,
-                'tienda_abierta' => $validated['tienda_abierta'] ?? $confirmacion->tienda_abierta,
-                'cliente_presente' => $validated['cliente_presente'] ?? $confirmacion->cliente_presente,
-                'motivo_rechazo' => $validated['motivo_rechazo'] ?? $confirmacion->motivo_rechazo,
+                'tipo_entrega'            => $tipoConfirmacionActualizado, // ✅ COMPLETA o CON_NOVEDAD
+                'tipo_confirmacion'       => $tipoConfirmacionActualizado,
+                'tipo_novedad'            => $tipoNovedadActualizado,
+                'tienda_abierta'          => $validated['tienda_abierta'] ?? $confirmacion->tienda_abierta,
+                'cliente_presente'        => $validated['cliente_presente'] ?? $confirmacion->cliente_presente,
+                'motivo_rechazo'          => $validated['motivo_rechazo'] ?? $confirmacion->motivo_rechazo,
                 'observaciones_logistica' => $validated['observaciones_logistica'] ?? $confirmacion->observaciones_logistica,
-                'observaciones' => $validated['observaciones'] ?? $confirmacion->observaciones,
+                'observaciones'           => $validated['observaciones'] ?? $confirmacion->observaciones,
 
                 // Pagos
-                'desglose_pagos' => $desglosePagos ?? $confirmacion->desglose_pagos,
-                'total_dinero_recibido' => $totalDineroRecibido ?: $confirmacion->total_dinero_recibido,
-                'monto_pendiente' => $montoPendiente,
-                'estado_pago' => $estadoPago,
-                'tipo_pago_id' => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : $confirmacion->tipo_pago_id,
-                'monto_recibido' => $totalDineroRecibido ?: $confirmacion->monto_recibido,
+                'desglose_pagos'          => $desglosePagos ?? $confirmacion->desglose_pagos,
+                'total_dinero_recibido'   => $totalDineroRecibido ?: $confirmacion->total_dinero_recibido,
+                'monto_pendiente'         => $montoPendiente,
+                'estado_pago'             => $estadoPago,
+                'tipo_pago_id'            => $desglosePagos ? $desglosePagos[0]['tipo_pago_id'] : $confirmacion->tipo_pago_id,
+                'monto_recibido'          => $totalDineroRecibido ?: $confirmacion->monto_recibido,
 
                 // Devoluciones
-                'productos_devueltos' => $productosDevueltos ?? $confirmacion->productos_devueltos,
-                'monto_devuelto' => $montoDevuelto > 0 ? $montoDevuelto : $confirmacion->monto_devuelto,
-                'monto_aceptado' => $montoAceptado,
+                'productos_devueltos'     => $productosDevueltos ?? $confirmacion->productos_devueltos,
+                'monto_devuelto'          => $montoDevuelto > 0 ? $montoDevuelto : $confirmacion->monto_devuelto,
+                'monto_aceptado'          => $montoAceptado,
 
                 // Fotos
-                'fotos' => count($fotosUrls) > 0 ? $fotosUrls : null,
+                'fotos'                   => (is_array($fotosUrls) && count($fotosUrls) > 0) ? $fotosUrls : null,
 
-                'confirmado_por' => Auth::id(),
-                'confirmado_en' => now(),
+                'confirmado_por'          => Auth::id(),
+                'confirmado_en'           => now(),
             ]);
 
             Log::info('✅ Confirmación de entrega actualizada', [
-                'entrega_id' => $id,
-                'venta_id' => $venta_id,
-                'confirmacion_id' => $confirmacion_id,
-                'estado_pago' => $estadoPago,
+                'entrega_id'            => $id,
+                'venta_id'              => $venta_id,
+                'confirmacion_id'       => $confirmacion_id,
+                'estado_pago'           => $estadoPago,
                 'total_dinero_recibido' => $totalDineroRecibido,
             ]);
 
             return response()->json([
-                'success' => true,
-                'message' => 'Confirmación actualizada correctamente',
+                'success'      => true,
+                'message'      => 'Confirmación actualizada correctamente',
                 'confirmacion' => $confirmacion->fresh(),
             ]);
 
@@ -1329,11 +1468,11 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Errores de validación',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('❌ Error en actualizarConfirmacionVenta', [
-                'error' => $e->getMessage(),
+                'error'           => $e->getMessage(),
                 'confirmacion_id' => $confirmacion_id,
             ]);
             return response()->json([
@@ -1360,20 +1499,20 @@ class EntregaController extends Controller
         try {
             $validated = $request->validate([
                 'firma_digital_base64' => 'nullable|string',
-                'fotos' => 'nullable|array',
-                'fotos.*' => 'string',
-                'observaciones' => 'nullable|string',
-                'monto_recolectado' => 'nullable|numeric|min:0',  // ✅ Dinero recolectado
+                'fotos'                => 'nullable|array',
+                'fotos.*'              => 'string',
+                'observaciones'        => 'nullable|string',
+                'monto_recolectado'    => 'nullable|numeric|min:0', // ✅ Dinero recolectado
             ]);
 
             $entrega = Entrega::with('estadoEntrega', 'ventas.estadoLogistica')->findOrFail($id);
 
             // ✅ Validar que la entrega esté en estado permitido
             $estadosPermitidos = ['EN_CAMINO', 'EN_TRANSITO', 'LLEGO'];
-            if (!$entrega->estadoEntrega || !in_array($entrega->estadoEntrega->codigo, $estadosPermitidos)) {
+            if (! $entrega->estadoEntrega || ! in_array($entrega->estadoEntrega->codigo, $estadosPermitidos)) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'La entrega no está en estado para ser finalizada',
+                    'success'       => false,
+                    'message'       => 'La entrega no está en estado para ser finalizada',
                     'estado_actual' => $entrega->estadoEntrega?->codigo ?? $entrega->estado,
                 ], 422);
             }
@@ -1401,24 +1540,24 @@ class EntregaController extends Controller
 
             // ✅ Guardar firma y fotos
             $firmaUrl = null;
-            if (!empty($validated['firma_digital_base64'])) {
+            if (! empty($validated['firma_digital_base64'])) {
                 $firmaUrl = $this->guardarArchivoBase64($validated['firma_digital_base64'], 'firmas');
             }
 
             $fotoUrl = null;
-            if (!empty($validated['fotos'])) {
+            if (! empty($validated['fotos'])) {
                 $fotoUrl = $this->guardarArchivoBase64($validated['fotos'][0], 'entregas');
             }
 
             // ✅ Actualizar entrega (FINAL)
             $entrega->update([
-                'estado' => Entrega::ESTADO_ENTREGADO,
-                'estado_entrega_id' => $estadoEntregado->id,
-                'fecha_entrega' => now(),
+                'estado'              => Entrega::ESTADO_ENTREGADO,
+                'estado_entrega_id'   => $estadoEntregado->id,
+                'fecha_entrega'       => now(),
                 'fecha_firma_entrega' => now(),
-                'firma_digital_url' => $firmaUrl,
-                'foto_entrega_url' => $fotoUrl,
-                'observaciones' => $validated['observaciones'] ?? null,
+                'firma_digital_url'   => $firmaUrl,
+                'foto_entrega_url'    => $fotoUrl,
+                'observaciones'       => $validated['observaciones'] ?? null,
                 // ✅ Aquí podría guardar monto_recolectado si existe la columna
             ]);
 
@@ -1432,8 +1571,8 @@ class EntregaController extends Controller
             ]);
 
             Log::info('✅ Entrega finalizada', [
-                'entrega_id' => $id,
-                'estado_nuevo' => $entrega->estado,
+                'entrega_id'    => $id,
+                'estado_nuevo'  => $entrega->estado,
                 'fecha_entrega' => $entrega->fecha_entrega,
             ]);
 
@@ -1445,32 +1584,32 @@ class EntregaController extends Controller
             } catch (\Exception $e) {
                 Log::warning('⚠️ No se pudo enviar notificación WebSocket sobre entrega finalizada', [
                     'entrega_id' => $id,
-                    'error' => $e->getMessage(),
+                    'error'      => $e->getMessage(),
                 ]);
                 // No interrumpir el flujo si falla la notificación WebSocket
             }
 
             return response()->json([
-                'success' => true,
-                'message' => 'Entrega finalizada correctamente',
-                'data' => $entrega,  // ✅ Retornar Entrega completa
-                'metadata' => [      // ✅ Metadatos de la finalización
-                    'firma_guardada' => $firmaUrl ? true : false,
-                    'foto_guardada' => $fotoUrl ? true : false,
+                'success'  => true,
+                'message'  => 'Entrega finalizada correctamente',
+                'data'     => $entrega, // ✅ Retornar Entrega completa
+                'metadata' => [         // ✅ Metadatos de la finalización
+                    'firma_guardada'    => $firmaUrl ? true : false,
+                    'foto_guardada'     => $fotoUrl ? true : false,
                     'monto_recolectado' => $validated['monto_recolectado'] ?? null,
                 ],
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Error al finalizar entrega', [
                 'entrega_id' => $id,
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
+                'error'      => $e->getMessage(),
+                'line'       => $e->getLine(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al finalizar entrega',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1484,14 +1623,14 @@ class EntregaController extends Controller
         try {
             $validated = $request->validate([
                 'firma_digital_base64' => 'nullable|string',
-                'fotos' => 'nullable|array',
-                'fotos.*' => 'string',
-                'observaciones' => 'nullable|string',
+                'fotos'                => 'nullable|array',
+                'fotos.*'              => 'string',
+                'observaciones'        => 'nullable|string',
             ]);
 
             $entrega = Entrega::findOrFail($id);
 
-            if (!in_array($entrega->estado, [Entrega::ESTADO_LLEGO, Entrega::ESTADO_EN_CAMINO])) {
+            if (! in_array($entrega->estado, [Entrega::ESTADO_LLEGO, Entrega::ESTADO_EN_CAMINO])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'La entrega debe estar en tránsito para ser entregada',
@@ -1500,23 +1639,23 @@ class EntregaController extends Controller
 
             // Guardar firma (en producción, esto iría a storage)
             $firmaUrl = null;
-            if (!empty($validated['firma_digital_base64'])) {
+            if (! empty($validated['firma_digital_base64'])) {
                 $firmaUrl = $this->guardarArchivoBase64($validated['firma_digital_base64'], 'firmas');
             }
 
             // Guardar fotos (en producción, esto iría a storage)
             $fotoUrl = null;
-            if (!empty($validated['fotos'])) {
+            if (! empty($validated['fotos'])) {
                 $fotoUrl = $this->guardarArchivoBase64($validated['fotos'][0], 'entregas');
             }
 
             $entrega->update([
-                'estado' => Entrega::ESTADO_ENTREGADO,
-                'fecha_entrega' => now(),
+                'estado'              => Entrega::ESTADO_ENTREGADO,
+                'fecha_entrega'       => now(),
                 'fecha_firma_entrega' => now(),
-                'firma_digital_url' => $firmaUrl,
-                'foto_entrega_url' => $fotoUrl,
-                'observaciones' => $validated['observaciones'] ?? null,
+                'firma_digital_url'   => $firmaUrl,
+                'foto_entrega_url'    => $fotoUrl,
+                'observaciones'       => $validated['observaciones'] ?? null,
             ]);
 
             $entrega->cambiarEstado(
@@ -1538,13 +1677,13 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega confirmada',
-                'data' => $entregaFresh,
+                'data'    => $entregaFresh,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al confirmar entrega',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1557,9 +1696,9 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'motivo' => 'required|string',
+                'motivo'      => 'required|string',
                 'descripcion' => 'nullable|string',
-                'foto' => 'nullable|string',
+                'foto'        => 'nullable|string',
             ]);
 
             $entrega = Entrega::findOrFail($id);
@@ -1577,9 +1716,9 @@ class EntregaController extends Controller
             }
 
             $entrega->update([
-                'estado' => Entrega::ESTADO_NOVEDAD,
-                'motivo_novedad' => $validated['motivo'],
-                'observaciones' => $validated['descripcion'] ?? null,
+                'estado'           => Entrega::ESTADO_NOVEDAD,
+                'motivo_novedad'   => $validated['motivo'],
+                'observaciones'    => $validated['descripcion'] ?? null,
                 'foto_entrega_url' => $fotoUrl,
             ]);
 
@@ -1602,13 +1741,13 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Novedad reportada',
-                'data' => $entregaFresh,
+                'data'    => $entregaFresh,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al reportar novedad',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1621,19 +1760,19 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'latitud' => 'required|numeric|between:-90,90',
-                'longitud' => 'required|numeric|between:-180,180',
+                'latitud'   => 'required|numeric|between:-90,90',
+                'longitud'  => 'required|numeric|between:-180,180',
                 'velocidad' => 'nullable|numeric|min:0',
-                'rumbo' => 'nullable|numeric|between:0,360',
-                'altitud' => 'nullable|numeric',
+                'rumbo'     => 'nullable|numeric|between:0,360',
+                'altitud'   => 'nullable|numeric',
                 'precision' => 'nullable|numeric',
-                'evento' => 'nullable|in:inicio_ruta,llegada,entrega',
+                'evento'    => 'nullable|in:inicio_ruta,llegada,entrega',
             ]);
 
             $entrega = Entrega::findOrFail($id);
 
             // Verificar que el usuario tiene rol de chofer (verifica ambas variantes: chofer y Chofer)
-            if (!Auth::user()->hasAnyRole(['chofer', 'Chofer'])) {
+            if (! Auth::user()->hasAnyRole(['chofer', 'Chofer'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene rol de chofer',
@@ -1644,17 +1783,17 @@ class EntregaController extends Controller
             $ubicacion = $entrega->ubicaciones()->updateOrCreate(
                 [
                     'entrega_id' => $entrega->id,
-                    'chofer_id' => Auth::user()->id,
+                    'chofer_id'  => Auth::user()->id,
                 ],
                 [
-                    'latitud' => $validated['latitud'],
-                    'longitud' => $validated['longitud'],
+                    'latitud'   => $validated['latitud'],
+                    'longitud'  => $validated['longitud'],
                     'velocidad' => $validated['velocidad'] ?? null,
-                    'rumbo' => $validated['rumbo'] ?? null,
-                    'altitud' => $validated['altitud'] ?? null,
+                    'rumbo'     => $validated['rumbo'] ?? null,
+                    'altitud'   => $validated['altitud'] ?? null,
                     'precision' => $validated['precision'] ?? null,
                     'timestamp' => now(),
-                    'evento' => $validated['evento'] ?? null,
+                    'evento'    => $validated['evento'] ?? null,
                 ]
             );
 
@@ -1680,13 +1819,13 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Ubicación registrada',
-                'data' => $ubicacion,
+                'data'    => $ubicacion,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al registrar ubicación',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1710,13 +1849,13 @@ class EntregaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $entregas,
+                'data'    => $entregas,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener historial',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1735,7 +1874,7 @@ class EntregaController extends Controller
             $proforma = Proforma::with('cliente')->findOrFail($proformaId);
 
             // Verificar que el usuario sea cliente de la proforma
-            if (Auth::user()->id !== $proforma->cliente->user_id && !Auth::user()->hasRole(['Admin', 'Manager'])) {
+            if (Auth::user()->id !== $proforma->cliente->user_id && ! Auth::user()->hasRole(['Admin', 'Manager'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado',
@@ -1744,7 +1883,7 @@ class EntregaController extends Controller
 
             $entrega = $proforma->entrega;
 
-            if (!$entrega) {
+            if (! $entrega) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No hay entrega para este pedido',
@@ -1757,25 +1896,25 @@ class EntregaController extends Controller
             $choferData = null;
             if ($entrega->chofer) {
                 $choferData = [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                    'activo' => $entrega->chofer->activo,
+                    'id'       => $entrega->chofer->id,
+                    'nombre'   => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
+                    'activo'   => $entrega->chofer->activo,
                     'telefono' => $entrega->chofer->empleado?->telefono,
                 ];
             }
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'entrega' => $entrega->only([
+                'data'    => [
+                    'entrega'             => $entrega->only([
                         'id', 'estado', 'fecha_asignacion', 'fecha_inicio', 'fecha_llegada',
                         'fecha_entrega', 'observaciones', 'motivo_novedad',
                     ]),
-                    'chofer' => $choferData,
-                    'vehiculo' => $entrega->vehiculo ? $entrega->vehiculo->only([
+                    'chofer'              => $choferData,
+                    'vehiculo'            => $entrega->vehiculo ? $entrega->vehiculo->only([
                         'id', 'placa', 'marca', 'modelo',
                     ]) : null,
-                    'ubicacion_actual' => $ubicacionActual ? $ubicacionActual->only([
+                    'ubicacion_actual'    => $ubicacionActual ? $ubicacionActual->only([
                         'latitud', 'longitud', 'velocidad', 'timestamp',
                     ]) : null,
                     'ultimas_ubicaciones' => $entrega->ubicaciones()
@@ -1789,7 +1928,7 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener tracking',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1822,13 +1961,13 @@ class EntregaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $entregas,
+                'data'    => $entregas,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al listar entregas',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1841,7 +1980,7 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'chofer_id' => 'required|exists:empleados,id',
+                'chofer_id'   => 'required|exists:empleados,id',
                 'vehiculo_id' => 'required|exists:vehiculos,id',
             ]);
 
@@ -1855,21 +1994,21 @@ class EntregaController extends Controller
             }
 
             $entrega->update([
-                'chofer_id' => $validated['chofer_id'],
-                'vehiculo_id' => $validated['vehiculo_id'],
+                'chofer_id'        => $validated['chofer_id'],
+                'vehiculo_id'      => $validated['vehiculo_id'],
                 'fecha_asignacion' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega asignada',
-                'data' => $entrega->fresh()->load(['chofer', 'vehiculo']),
+                'data'    => $entrega->fresh()->load(['chofer', 'vehiculo']),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al asignar entrega',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1890,24 +2029,24 @@ class EntregaController extends Controller
                 ->get()
                 ->map(function ($entrega) {
                     return [
-                        'id' => $entrega->id,
-                        'estado' => $entrega->estado,
-                        'chofer' => $entrega->chofer,
-                        'vehiculo' => $entrega->vehiculo,
+                        'id'               => $entrega->id,
+                        'estado'           => $entrega->estado,
+                        'chofer'           => $entrega->chofer,
+                        'vehiculo'         => $entrega->vehiculo,
                         'ubicacion_actual' => $entrega->ultimaUbicacion(),
-                        'fecha_inicio' => $entrega->fecha_inicio,
+                        'fecha_inicio'     => $entrega->fecha_inicio,
                     ];
                 });
 
             return response()->json([
                 'success' => true,
-                'data' => $entregas,
+                'data'    => $entregas,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener entregas activas',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1920,12 +2059,12 @@ class EntregaController extends Controller
     {
         try {
             $entregaService = app(\App\Services\Logistica\EntregaService::class);
-            $dto = $entregaService->confirmarCarga($id);
+            $dto            = $entregaService->confirmarCarga($id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Carga confirmada exitosamente',
-                'data' => $dto,
+                'data'    => $dto,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1943,12 +2082,12 @@ class EntregaController extends Controller
     {
         try {
             $entregaService = app(\App\Services\Logistica\EntregaService::class);
-            $dto = $entregaService->marcarListoParaEntrega($id);
+            $dto            = $entregaService->marcarListoParaEntrega($id);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega marcada como lista para partida',
-                'data' => $dto,
+                'data'    => $dto,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1966,12 +2105,12 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'latitud' => 'required|numeric|between:-90,90',
+                'latitud'  => 'required|numeric|between:-90,90',
                 'longitud' => 'required|numeric|between:-180,180',
             ]);
 
             $entregaService = app(\App\Services\Logistica\EntregaService::class);
-            $dto = $entregaService->iniciarTransito(
+            $dto            = $entregaService->iniciarTransito(
                 $id,
                 (float) $validated['latitud'],
                 (float) $validated['longitud']
@@ -1980,7 +2119,7 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Tránsito iniciado exitosamente',
-                'data' => $dto,
+                'data'    => $dto,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1998,7 +2137,7 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'latitud' => 'required|numeric|between:-90,90',
+                'latitud'  => 'required|numeric|between:-90,90',
                 'longitud' => 'required|numeric|between:-180,180',
             ]);
 
@@ -2075,20 +2214,20 @@ class EntregaController extends Controller
         try {
             Log::info('📍 crearEntregaConsolidada request received', [
                 'request_data' => $request->all(),
-                'user_id' => Auth::id(),
+                'user_id'      => Auth::id(),
             ]);
 
             $validated = $request->validate([
-                'venta_ids' => 'required|array|min:1',
-                'venta_ids.*' => 'integer|exists:ventas,id',
-                'vehiculo_id' => 'required|integer|exists:vehiculos,id',
+                'venta_ids'         => 'required|array|min:1',
+                'venta_ids.*'       => 'integer|exists:ventas,id',
+                'vehiculo_id'       => 'required|integer|exists:vehiculos,id',
                 // ✅ CORREGIDO: chofer_id apunta a users.id, no empleados.id
-                'chofer_id' => 'required|integer|exists:users,id',
-                'entregador_id' => 'nullable|integer|exists:users,id',
-                'zona_id' => 'nullable|integer|exists:localidades,id',
-                'observaciones' => 'nullable|string|max:500',
+                'chofer_id'         => 'required|integer|exists:users,id',
+                'entregador_id'     => 'nullable|integer|exists:users,id',
+                'zona_id'           => 'nullable|integer|exists:localidades,id',
+                'observaciones'     => 'nullable|string|max:500',
                 // ✅ NUEVO: Campos opcionales para caso single (1 venta)
-                'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
+                'fecha_programada'  => 'nullable|date_format:Y-m-d\TH:i',
                 'direccion_entrega' => 'nullable|string|max:255',
             ]);
 
@@ -2100,7 +2239,7 @@ class EntregaController extends Controller
 
             // ✅ NUEVO: Construir observaciones incluyendo dirección si se proporciona
             $observacionesCompletas = $validated['observaciones'] ?? '';
-            if (!empty($validated['direccion_entrega'])) {
+            if (! empty($validated['direccion_entrega'])) {
                 $observacionesCompletas = trim($observacionesCompletas ? "{$observacionesCompletas}\n📍 Dirección: {$validated['direccion_entrega']}" : "📍 Dirección: {$validated['direccion_entrega']}");
             }
 
@@ -2110,12 +2249,12 @@ class EntregaController extends Controller
                 choferId: $validated['chofer_id'],
                 zonaId: $validated['zona_id'],
                 datos: [
-                    'observaciones' => !empty($observacionesCompletas) ? $observacionesCompletas : null,
+                    'observaciones'    => ! empty($observacionesCompletas) ? $observacionesCompletas : null,
                     // ✅ NUEVO: Parámetros opcionales para caso single (1 venta)
                     'fecha_programada' => $validated['fecha_programada'] ?? null,
-                    'usuario_id' => Auth::id(),
+                    'usuario_id'       => Auth::id(),
                     // ✅ NUEVO: Campo entregador_id (relación a users)
-                    'entregador_id' => $validated['entregador_id'] ?? null,
+                    'entregador_id'    => $validated['entregador_id'] ?? null,
                 ]
             );
 
@@ -2125,21 +2264,21 @@ class EntregaController extends Controller
             try {
                 event(new EntregaAsignada($entrega));
                 Log::info('📢 Evento EntregaAsignada disparado exitosamente', [
-                    'entrega_id' => $entrega->id,
+                    'entrega_id'     => $entrega->id,
                     'numero_entrega' => $entrega->numero_entrega,
-                    'chofer_id' => $entrega->chofer_id,
+                    'chofer_id'      => $entrega->chofer_id,
                 ]);
             } catch (Exception $broadcastError) {
                 Log::warning('⚠️  Error al emitir evento de entrega asignada (no crítico)', [
                     'entrega_id' => $entrega->id,
-                    'error' => $broadcastError->getMessage(),
+                    'error'      => $broadcastError->getMessage(),
                 ]);
                 // La entrega ya fue creada exitosamente, así que continuamos
             }
 
             // Cargar relaciones para la respuesta
             Log::info('📍 Loading relationships...', ['entrega_id' => $entrega->id]);
-            $entrega->load(['vehiculo:id,placa', 'chofer:id,name']);  // FASE 3: chofer apunta a users, no empleados
+            $entrega->load(['vehiculo:id,placa', 'chofer:id,name']); // FASE 3: chofer apunta a users, no empleados
             Log::info('✅ Relationships loaded');
 
             // Obtener ventas y sus clientes con query simple
@@ -2173,15 +2312,15 @@ class EntregaController extends Controller
                     } catch (\Exception $e) {
                         Log::error('❌ Error finding cliente', [
                             'cliente_id' => $venta->cliente_id,
-                            'error' => $e->getMessage(),
+                            'error'      => $e->getMessage(),
                         ]);
                         $cliente = null;
                     }
 
                     return [
-                        'id' => $venta->id,
-                        'numero' => $venta->numero,
-                        'cliente' => $cliente?->nombre,
+                        'id'       => $venta->id,
+                        'numero'   => $venta->numero,
+                        'cliente'  => $cliente?->nombre,
                         'subtotal' => $venta->subtotal,
                     ];
                 })->all();
@@ -2192,24 +2331,24 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega consolidada creada exitosamente',
-                'data' => [
-                    'id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'estado' => $entrega->estado,
+                'data'    => [
+                    'id'               => $entrega->id,
+                    'numero_entrega'   => $entrega->numero_entrega,
+                    'estado'           => $entrega->estado,
                     'fecha_asignacion' => $entrega->fecha_asignacion,
-                    'entregador' => $entrega->entregador,
-                    'vehiculo' => [
-                        'id' => $entrega->vehiculo?->id,
+                    'entregador'       => $entrega->entregador,
+                    'vehiculo'         => [
+                        'id'    => $entrega->vehiculo?->id,
                         'placa' => $entrega->vehiculo?->placa,
                     ],
-                    'chofer' => [
-                        'id' => $entrega->chofer?->id,
+                    'chofer'           => [
+                        'id'     => $entrega->chofer?->id,
                         'nombre' => $entrega->chofer?->user?->name,
                     ],
-                    'ventas_count' => $ventasCount,
-                    'ventas' => $ventas,
-                    'peso_kg' => $entrega->peso_kg,
-                    'volumen_m3' => $entrega->volumen_m3,
+                    'ventas_count'     => $ventasCount,
+                    'ventas'           => $ventas,
+                    'peso_kg'          => $entrega->peso_kg,
+                    'volumen_m3'       => $entrega->volumen_m3,
                 ],
             ], 201);
 
@@ -2218,30 +2357,30 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validación fallida',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
             $errorDetails = [
                 'exception_class' => get_class($e),
-                'message' => $e->getMessage(),
-                'code' => $e->getCode(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
+                'message'         => $e->getMessage(),
+                'code'            => $e->getCode(),
+                'file'            => $e->getFile(),
+                'line'            => $e->getLine(),
+                'trace'           => $e->getTraceAsString(),
             ];
 
             Log::error('❌ Exception in crearEntregaConsolidada', $errorDetails);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Error creando entrega consolidada',
-                'error' => $e->getMessage(),
+                'success'    => false,
+                'message'    => 'Error creando entrega consolidada',
+                'error'      => $e->getMessage(),
                 'error_code' => $e->getCode(),
-                'debug' => [
+                'debug'      => [
                     'exception_class' => get_class($e),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => explode("\n", $e->getTraceAsString()),
+                    'file'            => $e->getFile(),
+                    'line'            => $e->getLine(),
+                    'trace'           => explode("\n", $e->getTraceAsString()),
                 ],
             ], 500);
         }
@@ -2268,8 +2407,8 @@ class EntregaController extends Controller
     {
         try {
             Log::info('📍 cancelarEntrega request received', [
-                'entrega_id' => $id,
-                'user_id' => Auth::id(),
+                'entrega_id'   => $id,
+                'user_id'      => Auth::id(),
                 'request_data' => $request->all(),
             ]);
 
@@ -2277,7 +2416,7 @@ class EntregaController extends Controller
             // VALIDAR ENTRADA
             // ═══════════════════════════════════════════════════════════
             $validated = $request->validate([
-                'motivo' => 'required|string|max:500',
+                'motivo'         => 'required|string|max:500',
                 'reabrir_ventas' => 'nullable|boolean',
             ]);
 
@@ -2309,12 +2448,12 @@ class EntregaController extends Controller
                 event(new EntregaCancelada($entrega, $validated['motivo']));
                 Log::info('📢 Evento EntregaCancelada disparado exitosamente', [
                     'entrega_id' => $id,
-                    'motivo' => $validated['motivo'],
+                    'motivo'     => $validated['motivo'],
                 ]);
             } catch (\Exception $broadcastError) {
                 Log::warning('⚠️ Error al emitir evento de cancelación (no crítico)', [
                     'entrega_id' => $id,
-                    'error' => $broadcastError->getMessage(),
+                    'error'      => $broadcastError->getMessage(),
                 ]);
                 // La entrega ya fue cancelada exitosamente, así que continuamos
             }
@@ -2340,22 +2479,22 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Entrega cancelada exitosamente',
-                'data' => [
-                    'id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'estado' => $entrega->estado,
-                    'fecha_cancelacion' => $entrega->updated_at,
-                    'vehiculo' => [
-                        'id' => $entrega->vehiculo?->id,
+                'data'    => [
+                    'id'                                  => $entrega->id,
+                    'numero_entrega'                      => $entrega->numero_entrega,
+                    'estado'                              => $entrega->estado,
+                    'fecha_cancelacion'                   => $entrega->updated_at,
+                    'vehiculo'                            => [
+                        'id'    => $entrega->vehiculo?->id,
                         'placa' => $entrega->vehiculo?->placa,
                     ],
-                    'chofer' => [
-                        'id' => $entrega->chofer?->id,
+                    'chofer'                              => [
+                        'id'     => $entrega->chofer?->id,
                         'nombre' => $entrega->chofer?->name,
                     ],
-                    'ventas_desvinculadas' => $ventasCount,
+                    'ventas_desvinculadas'                => $ventasCount,
                     'ventas_reabiertos_para_reasignacion' => $validated['reabrir_ventas'] ?? false,
-                    'motivo_cancelacion' => $validated['motivo'],
+                    'motivo_cancelacion'                  => $validated['motivo'],
                 ],
             ], 200);
 
@@ -2364,31 +2503,31 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validación fallida',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Throwable $e) {
             $errorDetails = [
                 'exception_class' => get_class($e),
-                'message' => $e->getMessage(),
-                'code' => $e->getCode(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
+                'message'         => $e->getMessage(),
+                'code'            => $e->getCode(),
+                'file'            => $e->getFile(),
+                'line'            => $e->getLine(),
+                'trace'           => $e->getTraceAsString(),
             ];
 
             Log::error('❌ Exception in cancelarEntrega', $errorDetails);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Error cancelando entrega',
-                'error' => $e->getMessage(),
+                'success'    => false,
+                'message'    => 'Error cancelando entrega',
+                'error'      => $e->getMessage(),
                 'error_code' => $e->getCode(),
-                'debug' => [
+                'debug'      => [
                     'exception_class' => get_class($e),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => explode("\n", $e->getTraceAsString()),
+                    'file'            => $e->getFile(),
+                    'line'            => $e->getLine(),
+                    'trace'           => explode("\n", $e->getTraceAsString()),
                 ],
             ], 500);
         }
@@ -2407,7 +2546,7 @@ class EntregaController extends Controller
     {
         // Validar que el usuario tiene uno de los roles permitidos
         $rolesPermitidos = ['admin', 'Admin', 'cajero', 'Cajero', 'chofer', 'Chofer'];
-        if (!Auth::user()->hasAnyRole($rolesPermitidos)) {
+        if (! Auth::user()->hasAnyRole($rolesPermitidos)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No tienes permisos para confirmar ventas cargadas. Roles permitidos: ' . implode(', ', $rolesPermitidos),
@@ -2416,17 +2555,17 @@ class EntregaController extends Controller
 
         try {
             $entrega = Entrega::findOrFail($id);
-            $venta = \App\Models\Venta::findOrFail($venta_id);
+            $venta   = \App\Models\Venta::findOrFail($venta_id);
 
             // Validar que la venta pertenece a la entrega (buscar en ambas relaciones: nueva + legacy)
             $ventaEnEntrega = $entrega->ventas()->where('ventas.id', $venta_id)->exists()
-                || $entrega->ventasLegacy()->where('ventas.id', $venta_id)->exists();
+            || $entrega->ventasLegacy()->where('ventas.id', $venta_id)->exists();
 
-            if (!$ventaEnEntrega) {
+            if (! $ventaEnEntrega) {
                 Log::warning('❌ [confirmarVentaCargada] Validación fallida', [
-                    'entrega_id' => $id,
-                    'venta_id' => $venta_id,
-                    'ventas_en_relacion_nueva' => $entrega->ventas()->pluck('id')->toArray(),
+                    'entrega_id'                => $id,
+                    'venta_id'                  => $venta_id,
+                    'ventas_en_relacion_nueva'  => $entrega->ventas()->pluck('id')->toArray(),
                     'ventas_en_relacion_legacy' => $entrega->ventasLegacy()->pluck('id')->toArray(),
                 ]);
                 return response()->json([
@@ -2448,10 +2587,10 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Venta confirmada como cargada',
-                'data' => [
-                    'entrega_id' => $entrega->id,
-                    'venta_id' => $venta->id,
-                    'confirmado_por' => Auth::user()->name,
+                'data'    => [
+                    'entrega_id'         => $entrega->id,
+                    'venta_id'           => $venta->id,
+                    'confirmado_por'     => Auth::user()->name,
                     'fecha_confirmacion' => now(),
                 ],
             ]);
@@ -2472,17 +2611,17 @@ class EntregaController extends Controller
     {
         try {
             $entrega = Entrega::findOrFail($id);
-            $venta = \App\Models\Venta::findOrFail($venta_id);
+            $venta   = \App\Models\Venta::findOrFail($venta_id);
 
             // Validar que la venta pertenece a la entrega (buscar en ambas relaciones: nueva + legacy)
             $ventaEnEntrega = $entrega->ventas()->where('ventas.id', $venta_id)->exists()
-                || $entrega->ventasLegacy()->where('ventas.id', $venta_id)->exists();
+            || $entrega->ventasLegacy()->where('ventas.id', $venta_id)->exists();
 
-            if (!$ventaEnEntrega) {
+            if (! $ventaEnEntrega) {
                 Log::warning('❌ [desmarcarVentaCargada] Validación fallida', [
-                    'entrega_id' => $id,
-                    'venta_id' => $venta_id,
-                    'ventas_en_relacion_nueva' => $entrega->ventas()->pluck('id')->toArray(),
+                    'entrega_id'                => $id,
+                    'venta_id'                  => $venta_id,
+                    'ventas_en_relacion_nueva'  => $entrega->ventas()->pluck('id')->toArray(),
                     'ventas_en_relacion_legacy' => $entrega->ventasLegacy()->pluck('id')->toArray(),
                 ]);
                 return response()->json([
@@ -2526,35 +2665,35 @@ class EntregaController extends Controller
             // Obtener detalles de entregas para cada venta
             $ventasDetalles = [];
             foreach ($entrega->ventas as $venta) {
-                $detalles = $sincronizador->obtenerDetalleEntregas($venta);
+                $detalles         = $sincronizador->obtenerDetalleEntregas($venta);
                 $ventasDetalles[] = [
                     'venta_id' => $venta->id,
-                    'numero' => $venta->numero,
-                    'cliente' => $venta->cliente->nombre,
+                    'numero'   => $venta->numero,
+                    'cliente'  => $venta->cliente->nombre,
                     'detalles' => $detalles,
                 ];
             }
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'estado' => $entrega->estado,
-                    'fecha_asignacion' => $entrega->fecha_asignacion,
-                    'vehiculo' => [
-                        'id' => $entrega->vehiculo->id,
-                        'placa' => $entrega->vehiculo->placa,
+                'data'    => [
+                    'id'                     => $entrega->id,
+                    'numero_entrega'         => $entrega->numero_entrega,
+                    'estado'                 => $entrega->estado,
+                    'fecha_asignacion'       => $entrega->fecha_asignacion,
+                    'vehiculo'               => [
+                        'id'           => $entrega->vehiculo->id,
+                        'placa'        => $entrega->vehiculo->placa,
                         'capacidad_kg' => $entrega->vehiculo->capacidad_kg,
                     ],
-                    'chofer' => $entrega->chofer ? [
-                        'id' => $entrega->chofer->id,
+                    'chofer'                 => $entrega->chofer ? [
+                        'id'     => $entrega->chofer->id,
                         'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
                     ] : null,
-                    'peso_kg' => $entrega->peso_kg,
-                    'volumen_m3' => $entrega->volumen_m3,
+                    'peso_kg'                => $entrega->peso_kg,
+                    'volumen_m3'             => $entrega->volumen_m3,
                     'porcentaje_utilizacion' => $entrega->obtenerPorcentajeUtilizacion(),
-                    'ventas' => $ventasDetalles,
+                    'ventas'                 => $ventasDetalles,
                 ],
             ]);
 
@@ -2579,15 +2718,15 @@ class EntregaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'entrega_id' => $entrega->id,
+                'data'    => [
+                    'entrega_id'     => $entrega->id,
                     'numero_entrega' => $entrega->numero_entrega,
-                    'estado' => $entrega->estado,
-                    'confirmadas' => $progreso['confirmadas'],
-                    'total' => $progreso['total'],
-                    'pendientes' => $progreso['pendientes'],
-                    'porcentaje' => $progreso['porcentaje'],
-                    'completado' => $progreso['completado'],
+                    'estado'         => $entrega->estado,
+                    'confirmadas'    => $progreso['confirmadas'],
+                    'total'          => $progreso['total'],
+                    'pendientes'     => $progreso['pendientes'],
+                    'porcentaje'     => $progreso['porcentaje'],
+                    'completado'     => $progreso['completado'],
                 ],
             ]);
 
@@ -2611,14 +2750,16 @@ class EntregaController extends Controller
     {
         try {
             $entrega = Entrega::with(['ventas' => function ($q) {
-                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago', 'tipo_pago_id')
-                  ->with('tipoPago:id,codigo,nombre')
-                  ->with(['detalles' => function ($d) {  // ✅ NUEVO: Incluir detalles de productos
-                      $d->select('id', 'venta_id', 'producto_id', 'cantidad', 'precio_unitario', 'subtotal')
-                        ->with(['producto' => function ($p) {
-                            $p->select('id', 'nombre')->with('codigoPrincipal:id,codigo');
-                        }]);
-                  }]);
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_logistico_id', 'estado_pago', 'tipo_pago_id', 'cliente_id')
+                    ->with('tipoPago:id,codigo,nombre')
+                // ✅ NUEVO 2026-03-04: Cargar información del cliente
+                    ->with('cliente:id,nombre,email,telefono')
+                    ->with(['detalles' => function ($d) { // ✅ NUEVO: Incluir detalles de productos
+                        $d->select('id', 'venta_id', 'producto_id', 'cantidad', 'precio_unitario', 'subtotal')
+                            ->with(['producto' => function ($p) {
+                                $p->select('id', 'nombre')->with('codigoPrincipal:id,codigo');
+                            }]);
+                    }]);
             }])->findOrFail($id);
 
             // ✅ CRÍTICO: Filtrar SOLO ventas NO a crédito (excluir CREDITO del resumen)
@@ -2634,31 +2775,46 @@ class EntregaController extends Controller
             // NOTE: 'referencia' no es columna directa, está dentro de desglose_pagos JSON
             $confirmaciones = EntregaVentaConfirmacion::select(
                 'id', 'entrega_id', 'venta_id', 'tipo_pago_id', 'monto_recibido',
-                'fotos', 'firma_digital_url', 'observaciones_logistica',  // ✅ NUEVO: campos de confirmación
+                'fotos', 'firma_digital_url', 'observaciones_logistica', // ✅ NUEVO: campos de confirmación
                 'tipo_entrega', 'tipo_novedad', 'desglose_pagos',
                 'total_dinero_recibido', 'monto_pendiente', 'tipo_confirmacion',
-                'productos_devueltos', 'monto_devuelto', 'monto_aceptado',  // ✅ NUEVO 2026-02-18: campos de devolución
+                'productos_devueltos', 'monto_devuelto', 'monto_aceptado', // ✅ NUEVO 2026-02-18: campos de devolución
                 'created_at'
             )
-            ->with('tipoPago:id,codigo,nombre')
-            ->whereIn('venta_id', $ventasIds)
-            ->get();
+                ->with('tipoPago:id,codigo,nombre')
+                ->whereIn('venta_id', $ventasIds)
+                ->get();
 
             // Construir resumen con soporte para múltiples pagos
             // ✅ NOTA: total_esperado SOLO incluye ventas NO crédito
+
+            // ✅ NUEVO 2026-03-04: Obtener información del cliente de la primera venta
+            $cliente = null;
+            if ($ventasParaResumen->isNotEmpty()) {
+                $cliente = $ventasParaResumen->first()->cliente;
+            }
+
             $resumen = [
-                'entrega_id' => $entrega->id,
+                'entrega_id'     => $entrega->id,
                 'numero_entrega' => $entrega->numero_entrega,
-                'total_esperado' => (float) $ventasParaResumen->sum('total'),  // ✅ Solo no-crédito
-                'pagos' => [],
-                'sin_registrar' => [],
+                'total_esperado' => (float) $ventasParaResumen->sum('total'), // ✅ Solo no-crédito
+                                                                              // ✅ NUEVO 2026-03-04: Agregar información del cliente
+                'cliente'        => $cliente ? [
+                    'id'              => $cliente->id,
+                    'nombre'          => $cliente->nombre,
+                    'nombre_completo' => $cliente->nombre,
+                    'email'           => $cliente->email,
+                    'telefono'        => $cliente->telefono,
+                ] : null,
+                'pagos'          => [],
+                'sin_registrar'  => [],
                 'total_recibido' => 0,
             ];
 
             // Procesar confirmaciones agrupadas por tipo de pago
             $porTipoPago = $confirmaciones->groupBy(function ($item) {
                 // Si tiene desglose_pagos (múltiples pagos), agrupar por cada tipo en el desglose
-                if (!empty($item->desglose_pagos)) {
+                if (! empty($item->desglose_pagos)) {
                     return 'multiple';
                 }
                 // Si tiene tipo_pago_id único, agrupar por eso
@@ -2669,11 +2825,11 @@ class EntregaController extends Controller
                 if ($grupoKey === 'multiple') {
                     // ✅ NUEVA 2026-02-12: Procesar múltiples pagos por desglose
                     foreach ($confirmacionesGrupo as $confirmacion) {
-                        if (!empty($confirmacion->desglose_pagos)) {
+                        if (! empty($confirmacion->desglose_pagos)) {
                             foreach ($confirmacion->desglose_pagos as $pago) {
                                 $tipoPagoNombre = $pago['tipo_pago_nombre'] ?? 'Desconocido';
                                 $tipoPagoCodigo = $this->obtenerCodigoTipoPago($tipoPagoNombre);
-                                $montoPago = (float) ($pago['monto'] ?? 0);
+                                $montoPago      = (float) ($pago['monto'] ?? 0);
 
                                 // Buscar si ya existe este tipo en el resumen
                                 $existeIndex = null;
@@ -2688,67 +2844,73 @@ class EntregaController extends Controller
                                     // Actualizar existente
                                     $resumen['pagos'][$existeIndex]['total'] += $montoPago;
                                     $resumen['pagos'][$existeIndex]['cantidad_ventas']++;
-                                    $resumen['pagos'][$existeIndex]['ventas'][] = [
-                                        'venta_id' => $confirmacion->venta_id,
-                                        'venta_numero' => $confirmacion->venta?->numero,
-                                        'venta_total' => (float) ($confirmacion->venta?->total ?? 0),
-                                        'monto_recibido' => $montoPago,
-                                        'referencia' => $pago['referencia'] ?? null,
-                                        'tipo_entrega' => $confirmacion->tipo_entrega,
-                                        'tipo_novedad' => $confirmacion->tipo_novedad,
+                                    $resumen['pagos'][$existeIndex]['ventas'][]  = [
+                                        'venta_id'                => $confirmacion->venta_id,
+                                        'venta_numero'            => $confirmacion->venta?->numero,
+                                        'venta_total'             => (float) ($confirmacion->venta?->total ?? 0),
+                                        'monto_recibido'          => $montoPago,
+                                        'referencia'              => $pago['referencia'] ?? null,
+                                        'tipo_pago_id'            => $confirmacion->venta?->tipo_pago_id,
+                                        'tipo_pago_nombre'        => $confirmacion->venta?->tipoPago?->nombre,
+                                        'tipo_pago_codigo'        => $confirmacion->venta?->tipoPago?->codigo,
+                                        'tipo_entrega'            => $confirmacion->tipo_entrega,
+                                        'tipo_novedad'            => $confirmacion->tipo_novedad,
                                         // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
                                         // ✅ FIX 2026-02-26: fotos ya es array por casting en modelo, no decodificar
-                                        'fotos' => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
-                                        'firma_digital_url' => $confirmacion->firma_digital_url,
+                                        'fotos'                   => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
+                                        'firma_digital_url'       => $confirmacion->firma_digital_url,
                                         'observaciones_logistica' => $confirmacion->observaciones_logistica,
-                                        'detalles' => $confirmacion->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
-                                            'id' => $d->id,
-                                            'producto_id' => $d->producto_id,
+                                        'detalles'                => $confirmacion->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
+                                            'id'              => $d->id,
+                                            'producto_id'     => $d->producto_id,
                                             'producto_nombre' => $d->producto?->nombre,
                                             'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
-                                            'cantidad' => (float) $d->cantidad,
+                                            'cantidad'        => (float) $d->cantidad,
                                             'precio_unitario' => (float) $d->precio_unitario,
-                                            'subtotal' => (float) $d->subtotal,
+                                            'subtotal'        => (float) $d->subtotal,
                                         ])->toArray() ?? [],
-                                            // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
-                                            'productos_devueltos' => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
-                                            'monto_devuelto' => (float) ($confirmacion->monto_devuelto ?? 0),
-                                            'monto_aceptado' => (float) ($confirmacion->monto_aceptado ?? 0),
+                                        // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
+                                        'productos_devueltos'     => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
+                                        'monto_devuelto'          => (float) ($confirmacion->monto_devuelto ?? 0),
+                                        'monto_aceptado'          => (float) ($confirmacion->monto_aceptado ?? 0),
                                     ];
                                 } else {
                                     // Crear nuevo tipo
                                     $resumen['pagos'][] = [
-                                        'tipo_pago_id' => $pago['tipo_pago_id'] ?? null,
-                                        'tipo_pago' => $tipoPagoNombre,
+                                        'tipo_pago_id'     => $pago['tipo_pago_id'] ?? null,
+                                        'tipo_pago'        => $tipoPagoNombre,
                                         'tipo_pago_codigo' => $tipoPagoCodigo,
-                                        'total' => $montoPago,
-                                        'cantidad_ventas' => 1,
-                                        'ventas' => [[
-                                            'venta_id' => $confirmacion->venta_id,
-                                            'venta_numero' => $confirmacion->venta?->numero,
-                                            'venta_total' => (float) ($confirmacion->venta?->total ?? 0),
-                                            'monto_recibido' => $montoPago,
-                                            'referencia' => $pago['referencia'] ?? null,
-                                            'tipo_entrega' => $confirmacion->tipo_entrega,
-                                            'tipo_novedad' => $confirmacion->tipo_novedad,
+                                        'total'            => $montoPago,
+                                        'cantidad_ventas'  => 1,
+                                        'ventas'           => [[
+                                            'venta_id'                => $confirmacion->venta_id,
+                                            'venta_numero'            => $confirmacion->venta?->numero,
+                                            'venta_total'             => (float) ($confirmacion->venta?->total ?? 0),
+                                            'monto_recibido'          => $montoPago,
+                                            'referencia'              => $pago['referencia'] ?? null,
+                                            'tipo_pago_id'            => $confirmacion->venta?->tipo_pago_id,
+                                            'tipo_pago_nombre'        => $confirmacion->venta?->tipoPago?->nombre,
+                                            'tipo_pago_codigo'        => $confirmacion->venta?->tipoPago?->codigo,
+                                            'tipo_entrega'            => $confirmacion->tipo_entrega,
+                                            'tipo_novedad'            => $confirmacion->tipo_novedad,
                                             // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
                                             // NOTE: fotos is already cast as array in model, so just use it directly
-                                            'fotos' => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
-                                            'firma_digital_url' => $confirmacion->firma_digital_url,
+                                            'fotos'                   => is_array($confirmacion->fotos) ? $confirmacion->fotos : [],
+                                            'firma_digital_url'       => $confirmacion->firma_digital_url,
                                             'observaciones_logistica' => $confirmacion->observaciones_logistica,
-                                            'detalles' => $confirmacion->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
-                                                'id' => $d->id,
-                                                'producto_id' => $d->producto_id,
+                                            'detalles'                => $confirmacion->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
+                                                'id'              => $d->id,
+                                                'producto_id'     => $d->producto_id,
                                                 'producto_nombre' => $d->producto?->nombre,
                                                 'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
-                                                'cantidad' => (float) $d->cantidad,
+                                                'cantidad'        => (float) $d->cantidad,
                                                 'precio_unitario' => (float) $d->precio_unitario,
-                                                'subtotal' => (float) $d->subtotal,
+                                                'subtotal'        => (float) $d->subtotal,
                                             ])->toArray() ?? [],
                                             // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
-                                            'productos_devueltos' => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
-                                            'monto_devuelto' => (float) ($confirmacion->monto_devuelto ?? 0),
-                                            'monto_aceptado' => (float) ($confirmacion->monto_aceptado ?? 0),
+                                            'productos_devueltos'     => $this->parseProductosDevueltos($confirmacion->productos_devueltos),
+                                            'monto_devuelto'          => (float) ($confirmacion->monto_devuelto ?? 0),
+                                            'monto_aceptado'          => (float) ($confirmacion->monto_aceptado ?? 0),
                                         ]],
                                     ];
                                 }
@@ -2759,7 +2921,7 @@ class EntregaController extends Controller
                     }
                 } else {
                     // Procesar pago único (backward compatible)
-                    $tipoPago = $confirmacionesGrupo->first()?->tipoPago;
+                    $tipoPago  = $confirmacionesGrupo->first()?->tipoPago;
                     $totalPago = (float) $confirmacionesGrupo->sum('total_dinero_recibido');
                     if ($totalPago == 0) {
                         $totalPago = (float) $confirmacionesGrupo->sum('monto_recibido');
@@ -2767,37 +2929,40 @@ class EntregaController extends Controller
                     $cantidad = $confirmacionesGrupo->count();
 
                     $resumen['pagos'][] = [
-                        'tipo_pago_id' => $grupoKey,
-                        'tipo_pago' => $tipoPago?->nombre ?? 'Sin especificar',
+                        'tipo_pago_id'     => $grupoKey,
+                        'tipo_pago'        => $tipoPago?->nombre ?? 'Sin especificar',
                         'tipo_pago_codigo' => $tipoPago?->codigo ?? 'N/A',
-                        'total' => $totalPago,
-                        'cantidad_ventas' => $cantidad,
-                        'ventas' => $confirmacionesGrupo->map(function ($c) {
+                        'total'            => $totalPago,
+                        'cantidad_ventas'  => $cantidad,
+                        'ventas'           => $confirmacionesGrupo->map(function ($c) {
                             return [
-                                'venta_id' => $c->venta_id,
-                                'venta_numero' => $c->venta?->numero,
-                                'venta_total' => (float) ($c->venta?->total ?? 0),
-                                'monto_recibido' => (float) ($c->total_dinero_recibido ?? $c->monto_recibido),
-                                'tipo_entrega' => $c->tipo_entrega,
-                                'tipo_novedad' => $c->tipo_novedad,
+                                'venta_id'                => $c->venta_id,
+                                'venta_numero'            => $c->venta?->numero,
+                                'venta_total'             => (float) ($c->venta?->total ?? 0),
+                                'monto_recibido'          => (float) ($c->total_dinero_recibido ?? $c->monto_recibido),
+                                'tipo_pago_id'            => $c->venta?->tipo_pago_id,
+                                'tipo_pago_nombre'        => $c->venta?->tipoPago?->nombre,
+                                'tipo_pago_codigo'        => $c->venta?->tipoPago?->codigo,
+                                'tipo_entrega'            => $c->tipo_entrega,
+                                'tipo_novedad'            => $c->tipo_novedad,
                                 // ✅ ACTUALIZADO 2026-02-17: Agregar información de confirmación de entrega
                                 // NOTE: fotos is already cast as array in model, so just use it directly
-                                'fotos' => is_array($c->fotos) ? $c->fotos : [],
-                                'firma_digital_url' => $c->firma_digital_url,
+                                'fotos'                   => is_array($c->fotos) ? $c->fotos : [],
+                                'firma_digital_url'       => $c->firma_digital_url,
                                 'observaciones_logistica' => $c->observaciones_logistica,
-                                'detalles' => $c->venta?->detalles?->map(fn($d) => [  // ✅ NUEVO: Incluir productos
-                                    'id' => $d->id,
-                                    'producto_id' => $d->producto_id,
+                                'detalles'                => $c->venta?->detalles?->map(fn($d) => [ // ✅ NUEVO: Incluir productos
+                                    'id'              => $d->id,
+                                    'producto_id'     => $d->producto_id,
                                     'producto_nombre' => $d->producto?->nombre,
                                     'producto_codigo' => $d->producto?->codigoPrincipal?->codigo,
-                                    'cantidad' => (float) $d->cantidad,
+                                    'cantidad'        => (float) $d->cantidad,
                                     'precio_unitario' => (float) $d->precio_unitario,
-                                    'subtotal' => (float) $d->subtotal,
+                                    'subtotal'        => (float) $d->subtotal,
                                 ])->toArray() ?? [],
                                 // ✅ NUEVO 2026-02-18: Incluir productos devueltos para DEVOLUCION_PARCIAL
-                                'productos_devueltos' => $this->parseProductosDevueltos($c->productos_devueltos),
-                                'monto_devuelto' => (float) ($c->monto_devuelto ?? 0),
-                                'monto_aceptado' => (float) ($c->monto_aceptado ?? 0),
+                                'productos_devueltos'     => $this->parseProductosDevueltos($c->productos_devueltos),
+                                'monto_devuelto'          => (float) ($c->monto_devuelto ?? 0),
+                                'monto_aceptado'          => (float) ($c->monto_aceptado ?? 0),
                             ];
                         })->toArray(),
                     ];
@@ -2809,18 +2974,18 @@ class EntregaController extends Controller
             // Ventas sin confirmación de pago
             // ✅ CRÍTICO: Solo incluir ventas NO crédito en sin_registrar
             $ventasConfirmadas = $confirmaciones->pluck('venta_id')->unique()->toArray();
-            $ventasSinPago = $ventasParaResumen->whereNotIn('id', $ventasConfirmadas);  // ✅ Usar ventasParaResumen (filtradas)
+            $ventasSinPago     = $ventasParaResumen->whereNotIn('id', $ventasConfirmadas); // ✅ Usar ventasParaResumen (filtradas)
 
             // ✅ IMPORTANTE: Convertir a values() para que sea un array puro, no un map con índices
             if ($ventasSinPago->isNotEmpty()) {
                 $resumen['sin_registrar'] = array_values(
                     $ventasSinPago->map(function ($v) {
                         return [
-                            'venta_id' => $v->id,
-                            'venta_numero' => $v->numero,
-                            'monto' => (float) $v->total,
-                            'tipo_pago_id' => $v->tipo_pago_id,
-                            'tipo_pago' => $v->tipoPago?->nombre ?? 'N/A',
+                            'venta_id'         => $v->id,
+                            'venta_numero'     => $v->numero,
+                            'monto'            => (float) $v->total,
+                            'tipo_pago_id'     => $v->tipo_pago_id,
+                            'tipo_pago'        => $v->tipoPago?->nombre ?? 'N/A',
                             'tipo_pago_codigo' => $v->tipoPago?->codigo ?? 'N/A',
                         ];
                     })->toArray()
@@ -2828,21 +2993,21 @@ class EntregaController extends Controller
             }
 
             // Calcular diferencia
-            $resumen['diferencia'] = (float) ($resumen['total_esperado'] - $resumen['total_recibido']);
+            $resumen['diferencia']          = (float) ($resumen['total_esperado'] - $resumen['total_recibido']);
             $resumen['porcentaje_recibido'] = $resumen['total_esperado'] > 0
                 ? round(($resumen['total_recibido'] / $resumen['total_esperado']) * 100, 2)
                 : 0;
 
             return response()->json([
                 'success' => true,
-                'data' => $resumen,
+                'data'    => $resumen,
             ]);
 
         } catch (\Throwable $e) {
             \Log::error('Error en obtenerResumenPagos:', [
                 'entrega_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -2857,11 +3022,25 @@ class EntregaController extends Controller
     {
         $nombre = strtoupper($nombre);
 
-        if (str_contains($nombre, 'EFECTIVO')) return 'EFECTIVO';
-        if (str_contains($nombre, 'TRANSFERENCIA') || str_contains($nombre, 'QR')) return 'TRANSFERENCIA';
-        if (str_contains($nombre, 'TARJETA')) return 'TARJETA';
-        if (str_contains($nombre, 'CHEQUE')) return 'CHEQUE';
-        if (str_contains($nombre, 'CRÉDITO')) return 'CREDITO';
+        if (str_contains($nombre, 'EFECTIVO')) {
+            return 'EFECTIVO';
+        }
+
+        if (str_contains($nombre, 'TRANSFERENCIA') || str_contains($nombre, 'QR')) {
+            return 'TRANSFERENCIA';
+        }
+
+        if (str_contains($nombre, 'TARJETA')) {
+            return 'TARJETA';
+        }
+
+        if (str_contains($nombre, 'CHEQUE')) {
+            return 'CHEQUE';
+        }
+
+        if (str_contains($nombre, 'CRÉDITO')) {
+            return 'CREDITO';
+        }
 
         return 'OTRO';
     }
@@ -2900,22 +3079,22 @@ class EntregaController extends Controller
     {
         try {
             Log::info('🔧 [Actualizar Entrega Consolidada] Request recibida', [
-                'entrega_id' => $entrega->id,
-                'venta_ids' => $request->input('venta_ids'),
+                'entrega_id'  => $entrega->id,
+                'venta_ids'   => $request->input('venta_ids'),
                 'vehiculo_id' => $request->input('vehiculo_id'),
-                'chofer_id' => $request->input('chofer_id'),
+                'chofer_id'   => $request->input('chofer_id'),
             ]);
 
             // Validar datos
             $validated = $request->validate([
-                'venta_ids' => 'required|array|min:1',
-                'venta_ids.*' => 'integer|exists:ventas,id',
-                'vehiculo_id' => 'required|integer|exists:vehiculos,id',
-                'chofer_id' => 'required|integer|exists:users,id',
-                'entregador_id' => 'nullable|integer|exists:users,id',
-                'zona_id' => 'nullable|integer',
-                'observaciones' => 'nullable|string|max:1000',
-                'fecha_programada' => 'nullable|date_format:Y-m-d\TH:i',
+                'venta_ids'         => 'required|array|min:1',
+                'venta_ids.*'       => 'integer|exists:ventas,id',
+                'vehiculo_id'       => 'required|integer|exists:vehiculos,id',
+                'chofer_id'         => 'required|integer|exists:users,id',
+                'entregador_id'     => 'nullable|integer|exists:users,id',
+                'zona_id'           => 'nullable|integer',
+                'observaciones'     => 'nullable|string|max:1000',
+                'fecha_programada'  => 'nullable|date_format:Y-m-d\TH:i',
                 'direccion_entrega' => 'nullable|string|max:500',
             ]);
 
@@ -2928,38 +3107,38 @@ class EntregaController extends Controller
             try {
                 // Actualizar datos principales de la entrega
                 $entrega->update([
-                    'vehiculo_id' => $validated['vehiculo_id'],
-                    'chofer_id' => $validated['chofer_id'],
-                    'entregador_id' => $validated['entregador_id'] ?? $entrega->entregador_id,
-                    'zona_id' => $validated['zona_id'] ?? $entrega->zona_id,
-                    'observaciones' => $validated['observaciones'] ?? $entrega->observaciones,
-                    'fecha_programada' => $validated['fecha_programada'] ?? $entrega->fecha_programada,
+                    'vehiculo_id'       => $validated['vehiculo_id'],
+                    'chofer_id'         => $validated['chofer_id'],
+                    'entregador_id'     => $validated['entregador_id'] ?? $entrega->entregador_id,
+                    'zona_id'           => $validated['zona_id'] ?? $entrega->zona_id,
+                    'observaciones'     => $validated['observaciones'] ?? $entrega->observaciones,
+                    'fecha_programada'  => $validated['fecha_programada'] ?? $entrega->fecha_programada,
                     'direccion_entrega' => $validated['direccion_entrega'] ?? $entrega->direccion_entrega,
                 ]);
 
                 // Reemplazar ventas asociadas
                 // Primero, obtener las ventas actuales
                 $ventasActuales = $entrega->ventas()->pluck('id')->toArray();
-                $ventasNuevas = $validated['venta_ids'];
+                $ventasNuevas   = $validated['venta_ids'];
 
                 // Desasociar ventas que fueron removidas
                 $ventasARemover = array_diff($ventasActuales, $ventasNuevas);
-                if (!empty($ventasARemover)) {
+                if (! empty($ventasARemover)) {
                     Venta::whereIn('id', $ventasARemover)->update(['entrega_id' => null]);
                 }
 
                 // Asociar nuevas ventas
                 $ventasAAgregar = array_diff($ventasNuevas, $ventasActuales);
-                if (!empty($ventasAAgregar)) {
+                if (! empty($ventasAAgregar)) {
                     Venta::whereIn('id', $ventasAAgregar)->update(['entrega_id' => $entrega->id]);
                 }
 
                 DB::commit();
 
                 Log::info('✅ [Actualizar Entrega] Exitoso', [
-                    'entrega_id' => $entrega->id,
+                    'entrega_id'     => $entrega->id,
                     'numero_entrega' => $entrega->numero_entrega,
-                    'ventas_count' => count($ventasNuevas),
+                    'ventas_count'   => count($ventasNuevas),
                 ]);
 
                 // Disparar evento de actualización
@@ -2968,23 +3147,23 @@ class EntregaController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Entrega actualizada correctamente',
-                    'data' => [
-                        'id' => $entrega->id,
+                    'data'    => [
+                        'id'             => $entrega->id,
                         'numero_entrega' => $entrega->numero_entrega,
-                        'estado' => $entrega->estado,
-                        'vehiculo' => [
-                            'id' => $vehiculo->id,
+                        'estado'         => $entrega->estado,
+                        'vehiculo'       => [
+                            'id'    => $vehiculo->id,
                             'placa' => $vehiculo->placa,
                         ],
-                        'chofer' => [
-                            'id' => $entrega->chofer_id,
+                        'chofer'         => [
+                            'id'     => $entrega->chofer_id,
                             'nombre' => $entrega->chofer?->name ?? 'N/A',
                         ],
-                        'entregador' => $entrega->entregador ? [
-                            'id' => $entrega->entregador?->id,
+                        'entregador'     => $entrega->entregador ? [
+                            'id'   => $entrega->entregador?->id,
                             'name' => $entrega->entregador?->name,
                         ] : null,
-                        'ventas_count' => count($ventasNuevas),
+                        'ventas_count'   => count($ventasNuevas),
                     ],
                 ], 200);
 
@@ -2996,20 +3175,20 @@ class EntregaController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('❌ [Actualizar Entrega] Validación fallida', [
                 'entrega_id' => $entrega->id,
-                'errors' => $e->errors(),
+                'errors'     => $e->errors(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Datos inválidos',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Throwable $e) {
             Log::error('❌ [Actualizar Entrega] Error', [
                 'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -3031,21 +3210,21 @@ class EntregaController extends Controller
     {
         try {
             $request->validate([
-                'desglose_pagos' => 'required|array',
-                'desglose_pagos.*.tipo_pago_id' => 'required|integer|exists:tipos_pago,id',
+                'desglose_pagos'                    => 'required|array',
+                'desglose_pagos.*.tipo_pago_id'     => 'required|integer|exists:tipos_pago,id',
                 'desglose_pagos.*.tipo_pago_nombre' => 'required|string',
-                'desglose_pagos.*.monto' => 'required|numeric|min:0',
-                'desglose_pagos.*.referencia' => 'nullable|string',
-                'observacion' => 'nullable|string|max:500',
+                'desglose_pagos.*.monto'            => 'required|numeric|min:0',
+                'desglose_pagos.*.referencia'       => 'nullable|string',
+                'observacion'                       => 'nullable|string|max:500',
             ]);
 
             $confirmacion = EntregaVentaConfirmacion::where('entrega_id', $entregaId)
                 ->where('venta_id', $ventaId)
                 ->firstOrFail();
 
-            $venta = Venta::findOrFail($ventaId);
+            $venta         = Venta::findOrFail($ventaId);
             $desglosePagos = $request->input('desglose_pagos');
-            $observacion = $request->input('observacion', '');
+            $observacion   = $request->input('observacion', '');
 
             // Calcular nuevo total recibido
             $totalRecibido = collect($desglosePagos)->sum('monto');
@@ -3071,39 +3250,39 @@ class EntregaController extends Controller
             // Construir nuevo texto de observación con timestamp
             $observacionNueva = $confirmacion->observaciones_logistica ?? '';
             if ($observacion) {
-                $prefix = $observacionNueva ? ' | ' : '';
+                $prefix            = $observacionNueva ? ' | ' : '';
                 $observacionNueva .= $prefix . '[CORRECCIÓN ' . now()->format('d/m/Y H:i') . '] ' . $observacion;
             }
 
             // Actualizar confirmación
             $confirmacion->update([
-                'desglose_pagos' => $desglosePagos,
-                'total_dinero_recibido' => $totalRecibido,
-                'monto_recibido' => $totalRecibido,
-                'estado_pago' => $estadoPago,
-                'monto_pendiente' => $montoPendiente,
+                'desglose_pagos'          => $desglosePagos,
+                'total_dinero_recibido'   => $totalRecibido,
+                'monto_recibido'          => $totalRecibido,
+                'estado_pago'             => $estadoPago,
+                'monto_pendiente'         => $montoPendiente,
                 'observaciones_logistica' => $observacionNueva,
             ]);
 
             // Log de auditoría
             \Log::channel('default')->info('Pagos corregidos en entrega', [
-                'entrega_id' => $entregaId,
-                'venta_id' => $ventaId,
+                'entrega_id'     => $entregaId,
+                'venta_id'       => $ventaId,
                 'total_anterior' => $totalRecibido,
-                'nuevo_estado' => $estadoPago,
-                'user_id' => auth()->id(),
+                'nuevo_estado'   => $estadoPago,
+                'user_id'        => auth()->id(),
             ]);
 
             return response()->json([
-                'success' => true,
-                'message' => 'Pagos corregidos exitosamente',
+                'success'      => true,
+                'message'      => 'Pagos corregidos exitosamente',
                 'confirmacion' => $confirmacion->fresh(),
             ]);
         } catch (\Throwable $e) {
             \Log::error('Error al corregir pagos', [
                 'entrega_id' => $entregaId,
-                'venta_id' => $ventaId,
-                'error' => $e->getMessage(),
+                'venta_id'   => $ventaId,
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -3124,7 +3303,7 @@ class EntregaController extends Controller
         try {
             $venta = Venta::find($ventaId);
 
-            if (!$venta) {
+            if (! $venta) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Venta no encontrada',
@@ -3135,62 +3314,62 @@ class EntregaController extends Controller
             $entrega = Entrega::whereHas('ventas', function ($q) use ($ventaId) {
                 $q->where('ventas.id', $ventaId);
             })
-            ->with([
-                'chofer',
-                'vehiculo',
-                'estadoEntrega',
-                'ventas.cliente',
-                'ventas.tipoPago',
-                'ventas.detalles.producto',
-            ])
-            ->first();
+                ->with([
+                    'chofer',
+                    'vehiculo',
+                    'estadoEntrega',
+                    'ventas.cliente',
+                    'ventas.tipoPago',
+                    'ventas.detalles.producto',
+                ])
+                ->first();
 
             // Si no hay entrega asignada, retornar null
-            if (!$entrega) {
+            if (! $entrega) {
                 return response()->json([
                     'success' => true,
-                    'data' => null,
+                    'data'    => null,
                     'message' => 'Venta sin entrega asignada',
                 ]);
             }
 
             // Construir respuesta con datos de entrega
             $data = [
-                'id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado' => $entrega->estado,
-                'estado_codigo' => $entrega->estadoEntregaCodigo,
-                'estado_nombre' => $entrega->estadoEntregaNombre,
-                'estado_color' => $entrega->estadoEntregaColor,
-                'estado_icono' => $entrega->estadoEntregaIcono,
+                'id'               => $entrega->id,
+                'numero_entrega'   => $entrega->numero_entrega,
+                'estado'           => $entrega->estado,
+                'estado_codigo'    => $entrega->estadoEntregaCodigo,
+                'estado_nombre'    => $entrega->estadoEntregaNombre,
+                'estado_color'     => $entrega->estadoEntregaColor,
+                'estado_icono'     => $entrega->estadoEntregaIcono,
                 'fecha_asignacion' => $entrega->fecha_asignacion?->format('Y-m-d H:i'),
-                'fecha_inicio' => $entrega->fecha_inicio?->format('Y-m-d H:i'),
-                'fecha_entrega' => $entrega->fecha_entrega?->format('Y-m-d H:i'),
-                'observaciones' => $entrega->observaciones,
-                'motivo_novedad' => $entrega->motivo_novedad,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
+                'fecha_inicio'     => $entrega->fecha_inicio?->format('Y-m-d H:i'),
+                'fecha_entrega'    => $entrega->fecha_entrega?->format('Y-m-d H:i'),
+                'observaciones'    => $entrega->observaciones,
+                'motivo_novedad'   => $entrega->motivo_novedad,
+                'chofer'           => $entrega->chofer ? [
+                    'id'       => $entrega->chofer->id,
+                    'nombre'   => $entrega->chofer->name,
                     'telefono' => $entrega->chofer->phone,
                 ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
+                'vehiculo'         => $entrega->vehiculo ? [
+                    'id'     => $entrega->vehiculo->id,
+                    'placa'  => $entrega->vehiculo->placa,
+                    'marca'  => $entrega->vehiculo->marca,
                     'modelo' => $entrega->vehiculo->modelo,
                 ] : null,
-                'cantidad_ventas' => $entrega->ventas->count(),
+                'cantidad_ventas'  => $entrega->ventas->count(),
             ];
 
             return response()->json([
                 'success' => true,
-                'data' => $data,
+                'data'    => $data,
             ]);
 
         } catch (\Throwable $e) {
             \Log::error('Error al obtener entrega por venta', [
                 'venta_id' => $ventaId,
-                'error' => $e->getMessage(),
+                'error'    => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -3216,7 +3395,7 @@ class EntregaController extends Controller
         try {
             $validated = $request->validate([
                 'tipo_entrega' => 'required|in:COMPLETA,CON_NOVEDAD',
-                'tipo_novedad' => 'required_if:tipo_entrega,CON_NOVEDAD|in:DEVOLUCION_PARCIAL,RECHAZADA,NO_CONTACTADO,CLIENTE_CERRADO',
+                'tipo_novedad' => 'required_if:tipo_entrega,CON_NOVEDAD|in:DEVOLUCION_PARCIAL,RECHAZADO,NO_CONTACTADO,CLIENTE_CERRADO',
             ]);
 
             $confirmacion = EntregaVentaConfirmacion::where('entrega_id', $entregaId)
@@ -3226,33 +3405,64 @@ class EntregaController extends Controller
             $tipoEntrega = $validated['tipo_entrega'];
             $tipoNovedad = $validated['tipo_novedad'] ?? null;
 
-            // Actualizar confirmación con nuevo tipo de entrega
-            $confirmacion->update([
-                'tipo_entrega' => $tipoEntrega,
-                'tipo_novedad' => $tipoNovedad,
-            ]);
+            // ✅ NUEVO 2026-03-05: Preparar datos según tipo de entrega
+            $datosActualizar = [
+                'tipo_entrega'  => $tipoEntrega,
+                'tipo_novedad'  => $tipoNovedad,
+                'tuvo_problema' => ($tipoEntrega === 'CON_NOVEDAD'), // true si es CON_NOVEDAD
+            ];
 
-            // Log de auditoría
-            Log::info('✅ Tipo de entrega actualizado', [
-                'entrega_id' => $entregaId,
-                'venta_id' => $ventaId,
+            // Si cambia a CON_NOVEDAD y el tipo no espera pago, limpiar pagos
+            $tiposNovedadSinPago = ['RECHAZADO', 'CLIENTE_CERRADO', 'NO_CONTACTADO'];
+
+            if ($tipoEntrega === 'CON_NOVEDAD' && in_array($tipoNovedad, $tiposNovedadSinPago)) {
+                // No se espera pago para estos tipos
+                $datosActualizar['estado_pago']           = null;
+                $datosActualizar['monto_recibido']        = null;
+                $datosActualizar['tipo_pago_id']          = null;
+                $datosActualizar['desglose_pagos']        = null; // Limpiar pagos previos
+                $datosActualizar['total_dinero_recibido'] = null;
+                $datosActualizar['monto_pendiente']       = null;
+            }
+
+            // Si cambia a COMPLETA, asegurar que tipo_novedad sea NULL
+            if ($tipoEntrega === 'COMPLETA') {
+                $datosActualizar['tipo_novedad'] = null;
+            }
+
+            // Actualizar confirmación con nuevo tipo de entrega
+            $confirmacion->update($datosActualizar);
+
+            // Log de auditoría detallado
+            $logMessage = '✅ Tipo de entrega actualizado';
+            $logData    = [
+                'entrega_id'   => $entregaId,
+                'venta_id'     => $ventaId,
                 'tipo_entrega' => $tipoEntrega,
                 'tipo_novedad' => $tipoNovedad,
-                'user_id' => auth()->id(),
-            ]);
+                'user_id'      => auth()->id(),
+            ];
+
+            // Agregar información sobre limpieza de pagos
+            if ($tipoEntrega === 'CON_NOVEDAD' && in_array($tipoNovedad, ['RECHAZADO', 'CLIENTE_CERRADO', 'NO_CONTACTADO'])) {
+                $logMessage                  .= ' (pagos limpiados - no se espera pago)';
+                $logData['campos_limpiados']  = ['estado_pago', 'monto_recibido', 'tipo_pago_id', 'desglose_pagos'];
+            }
+
+            Log::info($logMessage, $logData);
 
             return response()->json([
                 'success' => true,
                 'message' => $tipoEntrega === 'COMPLETA'
                     ? 'Entrega marcada como completa'
                     : 'Entrega marcada con novedad',
-                'data' => $confirmacion->fresh(),
+                'data'    => $confirmacion->fresh(),
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validación fallida',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -3262,14 +3472,14 @@ class EntregaController extends Controller
         } catch (\Throwable $e) {
             \Log::error('Error al cambiar tipo de entrega', [
                 'entrega_id' => $entregaId,
-                'venta_id' => $ventaId,
-                'error' => $e->getMessage(),
+                'venta_id'   => $ventaId,
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar tipo de entrega',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -3296,15 +3506,15 @@ class EntregaController extends Controller
 
             if ($imagenDecodificada === false) {
                 Log::warning('❌ Error decodificando Base64 en guardarArchivoBase64', [
-                    'carpeta' => $carpeta,
+                    'carpeta'       => $carpeta,
                     'base64_length' => strlen($base64),
                 ]);
                 return '';
             }
 
             // Generar nombre único
-            $timestamp = now()->format('YmdHis');
-            $random = substr(md5($base64), 0, 8);
+            $timestamp     = now()->format('YmdHis');
+            $random        = substr(md5($base64), 0, 8);
             $nombreArchivo = "{$carpeta}/{$timestamp}_{$random}.jpg";
 
             // Guardar en storage
@@ -3314,9 +3524,9 @@ class EntregaController extends Controller
             $url = \Storage::disk('public')->url($nombreArchivo);
 
             Log::info('✅ Archivo guardado correctamente', [
-                'carpeta' => $carpeta,
-                'nombre' => $nombreArchivo,
-                'url' => $url,
+                'carpeta'      => $carpeta,
+                'nombre'       => $nombreArchivo,
+                'url'          => $url,
                 'tamaño_bytes' => strlen($imagenDecodificada),
             ]);
 
@@ -3325,8 +3535,8 @@ class EntregaController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error guardando archivo Base64', [
                 'carpeta' => $carpeta,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
             return '';
         }
@@ -3342,24 +3552,24 @@ class EntregaController extends Controller
         try {
             $entregasDisponibles = Entrega::with(['chofer', 'vehiculo', 'estadoEntrega'])
                 ->where('id', '!=', $id)
-                // ✅ Sin filtro de estado - permite reasignar a CUALQUIER entrega
+            // ✅ Sin filtro de estado - permite reasignar a CUALQUIER entrega
                 ->orderByDesc('numero_entrega')
                 ->get();
 
             return response()->json([
                 'success' => true,
-                'data' => $entregasDisponibles,
+                'data'    => $entregasDisponibles,
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Error obteniendo entregas disponibles', [
                 'entrega_id' => $id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener entregas disponibles',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -3382,16 +3592,16 @@ class EntregaController extends Controller
     {
         try {
             $validated = $request->validate([
-                'venta_id' => 'required|integer|exists:ventas,id',
+                'venta_id'           => 'required|integer|exists:ventas,id',
                 'entrega_destino_id' => 'required|integer|exists:entregas,id',
             ]);
 
-            $ventaId = $validated['venta_id'];
+            $ventaId          = $validated['venta_id'];
             $entregaDestinoId = $validated['entrega_destino_id'];
 
             // Validar que la entrega origen exista
             $entregaOrigen = Entrega::find($id);
-            if (!$entregaOrigen) {
+            if (! $entregaOrigen) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Entrega origen no encontrada',
@@ -3400,7 +3610,7 @@ class EntregaController extends Controller
 
             // Validar que la entrega destino exista
             $entregaDestino = Entrega::find($entregaDestinoId);
-            if (!$entregaDestino) {
+            if (! $entregaDestino) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Entrega destino no encontrada',
@@ -3417,7 +3627,7 @@ class EntregaController extends Controller
 
             // Obtener la venta
             $venta = Venta::find($ventaId);
-            if (!$venta) {
+            if (! $venta) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Venta no encontrada',
@@ -3426,17 +3636,17 @@ class EntregaController extends Controller
 
             // Verificar si la venta está asignada a la entrega origen
             // Soporta ambos tipos de relación:
-            $estaEnOrigen = false;
+            $estaEnOrigen      = false;
             $esRelacionDirecta = false;
 
             // Tipo 1: Relación DIRECTA (ventas.entrega_id)
             if ($venta->entrega_id == $id) {
-                $estaEnOrigen = true;
+                $estaEnOrigen      = true;
                 $esRelacionDirecta = true;
             }
 
             // Tipo 2: Relación LEGACY (entrega_venta pivot)
-            if (!$estaEnOrigen) {
+            if (! $estaEnOrigen) {
                 $ventaEnOrigen = DB::table('entrega_venta')
                     ->where('entrega_id', $id)
                     ->where('venta_id', $ventaId)
@@ -3444,7 +3654,7 @@ class EntregaController extends Controller
                 $estaEnOrigen = $ventaEnOrigen !== null;
             }
 
-            if (!$estaEnOrigen) {
+            if (! $estaEnOrigen) {
                 return response()->json([
                     'success' => false,
                     'message' => 'La venta no está asignada a esta entrega',
@@ -3465,20 +3675,20 @@ class EntregaController extends Controller
 
                 // Log de auditoría
                 Log::info('✅ Venta reasignada a nueva entrega', [
-                    'venta_id' => $ventaId,
-                    'entrega_origen_id' => $id,
+                    'venta_id'           => $ventaId,
+                    'entrega_origen_id'  => $id,
                     'entrega_destino_id' => $entregaDestinoId,
-                    'tipo_relacion' => $esRelacionDirecta ? 'DIRECTA' : 'LEGACY',
-                    'usuario_id' => Auth::id(),
-                    'timestamp' => now(),
+                    'tipo_relacion'      => $esRelacionDirecta ? 'DIRECTA' : 'LEGACY',
+                    'usuario_id'         => Auth::id(),
+                    'timestamp'          => now(),
                 ]);
             });
 
             return response()->json([
-                'success' => true,
-                'message' => 'Venta reasignada exitosamente',
-                'venta_id' => $ventaId,
-                'entrega_origen_id' => $id,
+                'success'            => true,
+                'message'            => 'Venta reasignada exitosamente',
+                'venta_id'           => $ventaId,
+                'entrega_origen_id'  => $id,
                 'entrega_destino_id' => $entregaDestinoId,
             ], 200);
 
@@ -3486,15 +3696,15 @@ class EntregaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validación fallida',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('❌ Error reasignando venta', [
-                'venta_id' => $ventaId ?? null,
-                'entrega_origen_id' => $id,
+                'venta_id'           => $ventaId ?? null,
+                'entrega_origen_id'  => $id,
                 'entrega_destino_id' => $entregaDestinoId ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error'              => $e->getMessage(),
+                'trace'              => $e->getTraceAsString(),
             ]);
 
             return response()->json([

@@ -806,6 +806,10 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
     // ✅ PHASE 2: ENTREGAS (Simples y en Lote)
     Route::prefix('entregas')->group(function () {
+        // ✅ TEST: Debug endpoint para notificaciones WebSocket
+        Route::post('/test-notificacion-venta', [EntregaController::class, 'testVentaNotificacion'])
+            ->name('api.entregas.test-notificacion-venta');
+
         // Crear entrega simple (1 venta)
         Route::post('/', [\App\Http\Controllers\EntregaController::class, 'store'])
             ->middleware('permission:entregas.create')

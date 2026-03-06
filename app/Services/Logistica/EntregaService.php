@@ -1048,26 +1048,10 @@ class EntregaService
 
         $this->logSuccess('Entrega marcada como lista para partida', ['entrega_id' => $entregaId]);
 
-        // ✅ NUEVO: Notificar a clientes sobre cambio de estado logístico
-        try {
-            $notificationService = app(\App\Services\Notifications\EntregaNotificationService::class);
-            $notificationService->notificarClientesListoParaEntrega($entrega);
-        } catch (\Exception $e) {
-            $this->logError('Error notificando a clientes sobre estado logístico', [
-                'entrega_id' => $entregaId,
-                'error'      => $e->getMessage(),
-            ]);
-        }
-
-        // Notificar por WebSocket a chofer y cliente
-        try {
-            $this->webSocketService->notifyListoParaEntrega($entrega);
-        } catch (\Exception $e) {
-            $this->logError('Error enviando notificación WebSocket de listo para entrega', [
-                'entrega_id' => $entregaId,
-                'error'      => $e->getMessage(),
-            ]);
-        }
+        // ✅ NOTA: Las notificaciones son manejadas automáticamente por EntregaObserver::updated()
+        // El Observer dispara automáticamente:
+        // - notifyEstadoSincronizado() para notificar a clientes y preventistas
+        // - notifyEstadoConValidacionSLA() para validaciones especiales
 
         return EntregaResponseDTO::fromModel($entrega);
     }

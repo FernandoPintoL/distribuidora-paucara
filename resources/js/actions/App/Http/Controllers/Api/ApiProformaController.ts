@@ -157,7 +157,7 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     stats.form = statsForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
 export const searchClientes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -172,7 +172,7 @@ searchClientes.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
 searchClientes.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ searchClientes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
 searchClientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -190,7 +190,7 @@ searchClientes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
 searchClientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -200,7 +200,7 @@ searchClientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
     const searchClientesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -210,7 +210,7 @@ searchClientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
         searchClientesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -219,7 +219,7 @@ searchClientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchClientes
- * @see app/Http/Controllers/Api/ApiProformaController.php:4910
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4913
  * @route '/api/proformas/search/clientes'
  */
         searchClientesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +235,7 @@ searchClientes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     searchClientes.form = searchClientesForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
 export const searchUsuarios = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -250,7 +250,7 @@ searchUsuarios.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
 searchUsuarios.url = (options?: RouteQueryOptions) => {
@@ -259,7 +259,7 @@ searchUsuarios.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
 searchUsuarios.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -268,7 +268,7 @@ searchUsuarios.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
 searchUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -278,7 +278,7 @@ searchUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
     const searchUsuariosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -288,7 +288,7 @@ searchUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
         searchUsuariosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -297,7 +297,7 @@ searchUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::searchUsuarios
- * @see app/Http/Controllers/Api/ApiProformaController.php:4955
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4958
  * @route '/api/proformas/search/usuarios'
  */
         searchUsuariosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -313,7 +313,7 @@ searchUsuarios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
     searchUsuarios.form = searchUsuariosForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::prepararImpresion
- * @see app/Http/Controllers/Api/ApiProformaController.php:5001
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5004
  * @route '/api/proformas/preparar-impresion'
  */
 export const prepararImpresion = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -328,7 +328,7 @@ prepararImpresion.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::prepararImpresion
- * @see app/Http/Controllers/Api/ApiProformaController.php:5001
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5004
  * @route '/api/proformas/preparar-impresion'
  */
 prepararImpresion.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ prepararImpresion.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::prepararImpresion
- * @see app/Http/Controllers/Api/ApiProformaController.php:5001
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5004
  * @route '/api/proformas/preparar-impresion'
  */
 prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -347,7 +347,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::prepararImpresion
- * @see app/Http/Controllers/Api/ApiProformaController.php:5001
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5004
  * @route '/api/proformas/preparar-impresion'
  */
     const prepararImpresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -357,7 +357,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::prepararImpresion
- * @see app/Http/Controllers/Api/ApiProformaController.php:5001
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5004
  * @route '/api/proformas/preparar-impresion'
  */
         prepararImpresionForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -368,7 +368,7 @@ prepararImpresion.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
     prepararImpresion.form = prepararImpresionForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
 export const descargarPdfProformas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -383,7 +383,7 @@ descargarPdfProformas.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.url = (options?: RouteQueryOptions) => {
@@ -392,7 +392,7 @@ descargarPdfProformas.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -401,7 +401,7 @@ descargarPdfProformas.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
 descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -411,7 +411,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
     const descargarPdfProformasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -421,7 +421,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
         descargarPdfProformasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -430,7 +430,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformas
- * @see app/Http/Controllers/Api/ApiProformaController.php:5211
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5214
  * @route '/api/proformas/descargar-pdf'
  */
         descargarPdfProformasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -446,7 +446,7 @@ descargarPdfProformas.head = (options?: RouteQueryOptions): RouteDefinition<'hea
     descargarPdfProformas.form = descargarPdfProformasForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
 export const descargarPdfProformasConFiltros = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -461,7 +461,7 @@ descargarPdfProformasConFiltros.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
 descargarPdfProformasConFiltros.url = (options?: RouteQueryOptions) => {
@@ -470,7 +470,7 @@ descargarPdfProformasConFiltros.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
 descargarPdfProformasConFiltros.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -479,7 +479,7 @@ descargarPdfProformasConFiltros.get = (options?: RouteQueryOptions): RouteDefini
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
 descargarPdfProformasConFiltros.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -489,7 +489,7 @@ descargarPdfProformasConFiltros.head = (options?: RouteQueryOptions): RouteDefin
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
     const descargarPdfProformasConFiltrosForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -499,7 +499,7 @@ descargarPdfProformasConFiltros.head = (options?: RouteQueryOptions): RouteDefin
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
         descargarPdfProformasConFiltrosForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -508,7 +508,7 @@ descargarPdfProformasConFiltros.head = (options?: RouteQueryOptions): RouteDefin
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::descargarPdfProformasConFiltros
- * @see app/Http/Controllers/Api/ApiProformaController.php:5094
+ * @see app/Http/Controllers/Api/ApiProformaController.php:5097
  * @route '/api/proformas/descargar-pdf-con-filtros'
  */
         descargarPdfProformasConFiltrosForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1739,7 +1739,7 @@ obtenerProductosDisponibles.head = (options?: RouteQueryOptions): RouteDefinitio
     obtenerProductosDisponibles.form = obtenerProductosDisponiblesForm
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
 export const obtenerSiguientePendiente = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1754,7 +1754,7 @@ obtenerSiguientePendiente.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.url = (options?: RouteQueryOptions) => {
@@ -1763,7 +1763,7 @@ obtenerSiguientePendiente.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1772,7 +1772,7 @@ obtenerSiguientePendiente.get = (options?: RouteQueryOptions): RouteDefinition<'
 })
 /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
 obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1782,7 +1782,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
 
     /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
     const obtenerSiguientePendienteForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1792,7 +1792,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
 
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
         obtenerSiguientePendienteForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1801,7 +1801,7 @@ obtenerSiguientePendiente.head = (options?: RouteQueryOptions): RouteDefinition<
         })
             /**
 * @see \App\Http\Controllers\Api\ApiProformaController::obtenerSiguientePendiente
- * @see app/Http/Controllers/Api/ApiProformaController.php:4362
+ * @see app/Http/Controllers/Api/ApiProformaController.php:4365
  * @route '/api/proformas/siguiente-pendiente'
  */
         obtenerSiguientePendienteForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

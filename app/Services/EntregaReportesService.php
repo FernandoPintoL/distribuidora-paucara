@@ -106,7 +106,7 @@ class EntregaReportesService
         return [
             'cliente_cerrado' => $query->where('tipo_novedad', 'CLIENTE_CERRADO')->count(),
             'devolucion_parcial' => $query->where('tipo_novedad', 'DEVOLUCION_PARCIAL')->count(),
-            'rechazada' => $query->where('tipo_novedad', 'RECHAZADA')->count(),
+            'rechazada' => $query->where('tipo_novedad', 'RECHAZADO')->count(),
         ];
     }
 

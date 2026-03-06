@@ -15,6 +15,7 @@ class Entrega extends Model
     protected $fillable = [
         // Asignación de recursos
         'chofer_id',
+        'created_by',               // ✅ Usuario que creó la entrega
         'vehiculo_id',
         'zona_id',                  // ✅ FK a tabla localidades (localidad de entrega)
 
@@ -297,6 +298,15 @@ class Entrega extends Model
     public function iniciadorEntrega(): BelongsTo
     {
         return $this->belongsTo(User::class, 'iniciada_entrega_por');
+    }
+
+    /**
+     * ✅ NUEVO: Usuario que creó la entrega
+     * Permite notificar al creador de cambios de estado
+     */
+    public function creador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

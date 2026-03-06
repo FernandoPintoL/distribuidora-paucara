@@ -18,6 +18,9 @@ use App\Observers\PrecioProductoObserver;
 use App\Observers\ProformaObserver;
 use App\Observers\RutaObserver;
 use App\Observers\RutaDetalleObserver;
+use App\Services\Notifications\EntregaNotificationService;
+use App\Services\Notifications\DatabaseNotificationService;
+use App\Services\WebSocket\EntregaWebSocketService;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,7 +31,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // ✅ FASE 6: Registrar servicios de notificación de entrega para inyección de dependencias
+        $this->app->singleton(EntregaNotificationService::class, function ($app) {
+            return new EntregaNotificationService(
+                $app->make(DatabaseNotificationService::class),
+                $app->make(EntregaWebSocketService::class)
+            );
+        });
     }
 
     /**

@@ -3,53 +3,30 @@
 namespace App\Events;
 
 use App\Models\Proforma;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ProformaRechazada implements ShouldBroadcast
+/**
+ * Evento que se dispara cuando se rechaza una proforma
+ *
+ * La notificación WebSocket se envía a través de SendProformaRejectedNotification listener
+ * que hace HTTP POST al servidor Node.js (no usamos Broadcasting nativo de Laravel)
+ */
+class ProformaRechazada
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, SerializesModels;
 
     public Proforma $proforma;
     public string $motivoRechazo;
 
+    /**
+     * Create a new event instance.
+     */
     public function __construct(Proforma $proforma, string $motivoRechazo)
     {
         $this->proforma = $proforma;
         $this->motivoRechazo = $motivoRechazo;
 
         $this->proforma->load(['cliente']);
-    }
-
-    public function broadcastOn(): array
-    {
-        return [
-            new Channel('proforma.rechazada'),
-        ];
-    }
-
-    public function broadcastWith(): array
-    {
-        return [
-            'event' => 'proforma.rechazada',
-            'id' => $this->proforma->id,
-            'proforma_numero' => $this->proforma->numero,
-            'cliente' => [
-                'id' => $this->proforma->cliente?->id,
-                'nombre' => $this->proforma->cliente?->nombre,
-            ],
-            'cliente_id' => $this->proforma->cliente_id,
-            'motivo_rechazo' => $this->motivoRechazo,
-            'fecha_rechazo' => now()->toIso8601String(),
-            'estado' => 'RECHAZADA',
-        ];
-    }
-
-    public function broadcastEventName(): string
-    {
-        return 'proforma.rechazada';
     }
 }

@@ -45,6 +45,7 @@ class ProformaWebSocketService extends BaseWebSocketService
 
     /**
      * Notificar aprobación de proforma
+     * ✅ Incluye usuario_creador_id para que Node.js notifique al preventista que creó la proforma
      */
     public function notifyApproved($proforma): bool
     {
@@ -54,6 +55,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'cliente_id' => $proforma->cliente_id,
             'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
             'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente', // ✅ NUEVO: Nombre del cliente para notificación personalizada
+            'usuario_creador_id' => $proforma->usuario_creador_id, // ✅ NUEVO: ID del preventista creador para notificarlo
             'estado' => $proforma->estado,
             'total' => (float) $proforma->total,
             'usuario_aprobador' => [
@@ -67,6 +69,7 @@ class ProformaWebSocketService extends BaseWebSocketService
 
     /**
      * Notificar rechazo de proforma
+     * ✅ Incluye usuario_creador_id para que Node.js notifique al preventista que creó la proforma
      */
     public function notifyRejected($proforma, ?string $motivoRechazo = null): bool
     {
@@ -75,6 +78,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'numero' => $proforma->numero,
             'cliente_id' => $proforma->cliente_id,
             'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
+            'usuario_creador_id' => $proforma->usuario_creador_id, // ✅ NUEVO: ID del preventista creador para notificarlo
             'estado' => $proforma->estado,
             'usuario_rechazador' => [
                 'id' => $proforma->usuario_aprobador_id ?? auth()->id(),
@@ -87,6 +91,7 @@ class ProformaWebSocketService extends BaseWebSocketService
 
     /**
      * Notificar conversión de proforma a venta
+     * ✅ Incluye usuario_creador_id para que Node.js notifique tanto al cliente como al preventista
      */
     public function notifyConverted($proforma, $venta): bool
     {
@@ -97,6 +102,7 @@ class ProformaWebSocketService extends BaseWebSocketService
             'venta_numero' => $venta->numero ?? null,
             'cliente_id' => $proforma->cliente_id,
             'user_id' => $proforma->cliente?->user_id, // ✅ NUEVO: Incluir user_id para routing correcto en WebSocket
+            'usuario_creador_id' => $proforma->usuario_creador_id, // ✅ NUEVO: ID del preventista creador para notificarlo
             'cliente_nombre' => $proforma->cliente?->nombre ?? 'Cliente', // ✅ NUEVO: Incluir nombre del cliente
             'total' => (float) $proforma->total,
             'fecha_conversion' => now()->toIso8601String(),

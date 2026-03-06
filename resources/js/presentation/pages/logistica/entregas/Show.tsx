@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/presentation/components/ui/tabs';
 import { ArrowLeft, Package, Wifi, WifiOff, CheckCircle2, Navigation, Flag } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import type { Entrega, VehiculoCompleto, EstadoEntrega } from '@/domain/entities/entregas';
@@ -122,59 +123,6 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
             off(`${channel}:estado-cambio`, handleEstadoCambio);
         };
     }, [on, off, isConnected, entrega.id]);
-
-    // WebSocket listener para actualizaciones de ubicación en tiempo real
-    /* useEffect(() => {
-        if (!isConnected) return;
-
-        const channel = `entrega.${entrega.id}`;
-
-        const handleUbicacionActualizada = (data: any) => {
-            console.log('[SHOW] Nueva ubicación recibida en tiempo real:', {
-                latitud: data.latitud,
-                longitud: data.longitud,
-                velocidad: data.velocidad,
-                timestamp: data.timestamp,
-            });
-
-            // El componente EstregaMap se actualiza automáticamente
-            // porque el hook useTracking recibe los datos vía WebSocket
-            // No necesitamos hacer nada aquí, es solo para logging
-        };
-
-        on(`${channel}:ubicacion.actualizada`, handleUbicacionActualizada);
-
-        return () => {
-            off(`${channel}:ubicacion.actualizada`, handleUbicacionActualizada);
-        };
-    }, [on, off, isConnected, entrega.id]); */
-
-    // Monitor de conexión WebSocket
-    /* useEffect(() => {
-        const handleConnect = () => {
-            console.log('[SHOW] WebSocket conectado');
-            setIsLive(true);
-        };
-
-        const handleDisconnect = () => {
-            console.log('[SHOW] WebSocket desconectado');
-            setIsLive(false);
-        };
-
-        if (isConnected) {
-            on('websocket:connected', handleConnect);
-            on('websocket:disconnected', handleDisconnect);
-
-            setIsLive(true);
-
-            return () => {
-                off('websocket:connected', handleConnect);
-                off('websocket:disconnected', handleDisconnect);
-            };
-        } else {
-            setIsLive(false);
-        }
-    }, [on, off, isConnected]); */
 
     // ✅ NUEVO: Handler para marcar entrega como listo para entrega
     const handleMarcarListoParaEntrega = async () => {
@@ -368,7 +316,7 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
         <AppLayout>
             <Head title={`Entrega ${numero}`} />
 
-            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 mx-auto bg-white dark:bg-slate-950 min-h-screen">
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-white dark:bg-slate-950 w-full">
                 {/* Header - Responsive */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     {/* Título y Info */}
@@ -544,39 +492,66 @@ export default function EntregaShow({ entrega: initialEntrega, tiposPago }: Show
                     </div>
                 )}
 
-                {/* Productos Agrupados - Consolidación de productos de todas las ventas */}
-                {entrega.id && (
-                    <ProductosAgrupados
-                        entregaId={entrega.id as number}
-                        mostrarDetalleVentas={true}
-                    />
-                )}
+                {/* ✅ NUEVO: Tabs para Ventas, Resumen de Pagos, Reportes y Productos */}
+                {entrega.ventas && entrega.ventas.length > 0 && entrega.id && (
+                    <Tabs defaultValue="ventas" className="w-full">
+                        <TabsList className="grid w-full grid-cols-4">
+                            <TabsTrigger value="ventas">
+                                📦 Ventas ({entrega.ventas.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="pagos">
+                                💳 Resumen de Pagos
+                            </TabsTrigger>
+                            <TabsTrigger value="reportes">
+                                📋 Reportes del Chofer
+                            </TabsTrigger>
+                            <TabsTrigger value="productos">
+                                📦 Productos
+                            </TabsTrigger>
+                        </TabsList>
 
-                {entrega.ventas && entrega.ventas.length > 0 && (
-                    <VentasEntregaSection
-                        entrega={entrega}
-                        ventas={entrega.ventas}
-                        totalVentas={entrega.ventas.length}
-                        onConfirmarEntrega={(venta) => {
-                            setConfirmandoEntrega(venta);
-                        }}
-                        onCorregirPago={(ventaId, ventaNumero, ventaTotal, desglose) => {
-                            setCorrigiendo({ ventaId, ventaNumero, ventaTotal, desglose });
-                        }}
-                    />
-                )}
+                        {/* TAB 1: Ventas */}
+                        <TabsContent value="ventas" className="w-full mt-6">
+                            <VentasEntregaSection
+                                entrega={entrega}
+                                ventas={entrega.ventas}
+                                totalVentas={entrega.ventas.length}
+                                onConfirmarEntrega={(venta) => {
+                                    setConfirmandoEntrega(venta);
+                                }}
+                                onCorregirPago={(ventaId, ventaNumero, ventaTotal, desglose) => {
+                                    setCorrigiendo({ ventaId, ventaNumero, ventaTotal, desglose });
+                                }}
+                            />
+                        </TabsContent>
 
-                {/* ✅ NUEVA 2026-02-12: Resumen de Pagos */}
-                {entrega.id && (
-                    <ResumenPagosEntrega entregaId={entrega.id} />
-                )}
+                        {/* TAB 2: Resumen de Pagos */}
+                        <TabsContent value="pagos" className="w-full mt-6">
+                            <ResumenPagosEntrega entregaId={entrega.id} />
+                        </TabsContent>
 
-                {/* ✅ NUEVA 2026-02-17: Reportes del Chofer - Confirmaciones de Entregas */}
-                {entrega.confirmacionesVentas && entrega.confirmacionesVentas.length > 0 && (
-                    <ConfirmacionesEntregaSection
-                        confirmaciones={entrega.confirmacionesVentas}
-                        ventasEnEntrega={entrega.ventas}
-                    />
+                        {/* TAB 3: Reportes del Chofer */}
+                        <TabsContent value="reportes" className="w-full mt-6">
+                            {entrega.confirmacionesVentas && entrega.confirmacionesVentas.length > 0 ? (
+                                <ConfirmacionesEntregaSection
+                                    confirmaciones={entrega.confirmacionesVentas}
+                                    ventasEnEntrega={entrega.ventas}
+                                />
+                            ) : (
+                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <p>No hay reportes de entrega disponibles</p>
+                                </div>
+                            )}
+                        </TabsContent>
+
+                        {/* TAB 4: Productos */}
+                        <TabsContent value="productos" className="w-full mt-6">
+                            <ProductosAgrupados
+                                entregaId={entrega.id as number}
+                                mostrarDetalleVentas={true}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 )}
 
                 {/* Historial de Cambios de Estado */}

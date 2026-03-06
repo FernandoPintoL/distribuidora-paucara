@@ -150,7 +150,7 @@ class EventServiceProvider extends ServiceProvider
 
         EntregaAsignada::class => [
             BroadcastEntregaAsignada::class,
-            SendEntregaAsignadaNotification::class, // ✅ NUEVO: Guarda notificación en BD para chofer
+            SendEntregaAsignadaNotification::class, // ✅ Notifica a cliente y preventista cuando venta es asignada a entrega
         ],
 
         EntregaEnCamino::class => [

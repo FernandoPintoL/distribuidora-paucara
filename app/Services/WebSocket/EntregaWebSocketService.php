@@ -4,966 +4,303 @@ namespace App\Services\WebSocket;
 
 /**
  * Servicio especializado para notificaciones WebSocket de entregas
- *
- * FASE 5: SINCRONIZACIÓN DE ESTADOS VENTA-ENTREGA
- *
  * Maneja todas las notificaciones en tiempo real relacionadas con entregas
- * y cambios de estado en el flujo de carga
- *
- * NUEVO EN FASE 5:
- * ✓ Notifica cambios de estado de VENTA también (no solo Entrega)
- * ✓ Envía mapeos automáticos (qué estado corresponde a venta)
- * ✓ Notificaciones para cliente sobre su venta específica
- * ✓ Incluye SLA y ventana de entrega en notificaciones
- * ✓ Auditoría de sincronización en tiempo real
- *
- * ESTADOS SOPORTADOS:
- * - PREPARACION_CARGA: Reporte generado, pendiente de confirmación
- * - EN_CARGA: Carga física en progreso
- * - LISTO_PARA_ENTREGA: Carga completada, lista para partida
- * - EN_TRANSITO: En ruta hacia cliente, GPS activo
- * - ENTREGADO: Entrega completada
  */
 class EntregaWebSocketService extends BaseWebSocketService
 {
-    private \App\Services\Logistica\SincronizacionVentaEntregaService $sincronizador;
-
-    public function __construct(
-        \App\Services\Logistica\SincronizacionVentaEntregaService $sincronizador
-    ) {
-        $this->sincronizador = $sincronizador;
-    }
     /**
-     * Notificar creación de entrega
+     * Notificar creación de entrega consolidada
      */
     public function notifyCreated($entrega): bool
     {
-        return $this->send('notify/entrega-created', [
-            'id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'venta_id' => $entrega->venta_id,
-            'chofer_id' => $entrega->chofer_id,
-            'cliente_id' => $entrega->venta?->cliente_id,
+        return $this->send('notify/entrega-creada', [
+            'entrega_id' => $entrega->id,
+            'entrega_numero' => $entrega->numero_entrega,
             'estado' => $entrega->estado,
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'apellido' => $entrega->chofer->empleado?->apellido ?? '',
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-                'apellido' => $entrega->venta->cliente->apellido ?? '',
-                'telefono' => $entrega->venta->cliente->telefono ?? null,
-            ] : null,
-            'vehiculo' => $entrega->vehiculo ? [
-                'id' => $entrega->vehiculo->id,
-                'placa' => $entrega->vehiculo->placa,
-                'marca' => $entrega->vehiculo->marca,
-                'modelo' => $entrega->vehiculo->modelo,
-            ] : null,
-            'fecha_programada' => $entrega->fecha_programada?->toIso8601String(),
-            'direccion_entrega' => $entrega->direccion_entrega,
-            'fecha_creacion' => $entrega->created_at?->toIso8601String(),
+            'chofer_id' => $entrega->chofer_id,
+            'chofer_nombre' => $entrega->chofer?->name ?? 'Chofer',
+            'vehiculo_id' => $entrega->vehiculo_id,
+            'vehiculo_placa' => $entrega->vehiculo?->placa ?? 'Vehículo',
+            'ventas_count' => $entrega->ventas()->count() ?? 0,
+            'fecha_asignacion' => $entrega->fecha_asignacion?->toIso8601String(),
         ]);
     }
 
     /**
-     * ✅ NUEVO: Notificar asignación de entrega al chofer
-     * Cuando se crea una entrega consolidada, el chofer recibe notificación para comenzar a cargar
+     * ✅ NUEVO: Notificar al chofer que le fue asignada una entrega
+     * Incluye todos los detalles de la entrega y usa user_id para routing correcto
      */
-    public function notifyAsignada($entrega): bool
+    public function notifyChoferAsignado($entrega): bool
     {
-        \Illuminate\Support\Facades\Log::info('🔍 [EntregaWebSocketService::notifyAsignada] INICIO', [
-            'entrega_id' => $entrega->id,
-            'chofer_id' => $entrega->chofer_id,
-            'is_enabled' => $this->isEnabled(),
-        ]);
+        // ✅ Cargar relación del chofer si no está cargada
+        if (!$entrega->relationLoaded('chofer')) {
+            $entrega->load('chofer');
+        }
 
-        $datos = [
+        // Obtener user_id del chofer
+        $choferUserId = $entrega->chofer?->id; // El chofer_id apunta a users.id
+
+        if (!$choferUserId) {
+            \Log::warning('EntregaWebSocketService: Chofer user_id es null', [
+                'entrega_id' => $entrega->id,
+                'chofer_id' => $entrega->chofer_id,
+            ]);
+            return false;
+        }
+
+        return $this->send('notify/entrega-asignada', [
             'entrega_id' => $entrega->id,
             'numero_entrega' => $entrega->numero_entrega,
+            'estado' => $entrega->estado,
             'chofer_id' => $entrega->chofer_id,
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->name,
-            ] : null,
+            'user_id' => $choferUserId, // ✅ user_id del chofer para routing en Node.js
+            'chofer_nombre' => $entrega->chofer?->name ?? 'Chofer',
+            'vehiculo_id' => $entrega->vehiculo_id,
             'vehiculo' => $entrega->vehiculo ? [
                 'id' => $entrega->vehiculo->id,
                 'placa' => $entrega->vehiculo->placa,
                 'marca' => $entrega->vehiculo->marca,
-                'modelo' => $entrega->vehiculo->modelo,
             ] : null,
-            'peso_kg' => $entrega->peso_kg,
-            'volumen_m3' => $entrega->volumen_m3,
-            'estado' => $entrega->estado,
+            'ventas_count' => $entrega->ventas()->count() ?? 0,
+            'peso_kg' => $entrega->peso_total ?? 0,
+            'volumen_m3' => $entrega->volumen_total ?? 0,
             'fecha_asignacion' => $entrega->fecha_asignacion?->toIso8601String(),
-            'mensaje' => '🚚 Nueva entrega asignada. Por favor inicia la carga de mercadería.',
-            'timestamp' => now()->toIso8601String(),
-        ];
-
-        $resultado = $this->send('notify/entrega-asignada', $datos);
-
-        \Illuminate\Support\Facades\Log::info('🔍 [EntregaWebSocketService::notifyAsignada] RESULTADO', [
-            'entrega_id' => $entrega->id,
-            'resultado' => $resultado ? 'SUCCESS' : 'FAILED',
         ]);
-
-        return $resultado;
     }
 
     /**
-     * Notificar generación de reporte de carga
-     * Transición: PROGRAMADO → PREPARACION_CARGA
+     * Notificar que una venta fue asignada a una entrega
+     * ✅ Incluye nombre del estado logístico y mensaje centralizado
+     */
+    public function notifyVentaAsignada($venta, $entrega): bool
+    {
+        // ✅ Cargar relación del estado logístico si no está cargada
+        if (!$venta->relationLoaded('estadoLogistico')) {
+            $venta->load('estadoLogistico');
+        }
+
+        // ✅ NUEVO: Usar servicio centralizado de mensajes
+        $estadoLogisticoNombre = $venta->estadoLogistico?->nombre ?? 'Pendiente';
+        $mensaje = \App\Services\Notifications\NotificationMessageService::ventasAsignadasAEntrega(
+            entregaId: $entrega->id,
+            estadoLogistico: $estadoLogisticoNombre,
+            clienteNombre: $venta->cliente?->nombre
+        );
+
+        return $this->send('notify/venta-asignada-entrega', [
+            'venta_id' => $venta->id,
+            'venta_numero' => $venta->numero,
+            'entrega_id' => $entrega->id,
+            'entrega_numero' => $entrega->numero_entrega,
+            'cliente_id' => $venta->cliente_id,
+            'cliente_nombre' => $venta->cliente?->nombre ?? 'Cliente',
+            'user_id' => $venta->cliente?->user_id, // Para routing correcto en WebSocket
+            'preventista_id' => $venta->preventista_id,
+            'total' => (float) $venta->total,
+            'chofer_nombre' => $entrega->chofer?->name ?? 'Chofer asignado',
+            'vehiculo_placa' => $entrega->vehiculo?->placa ?? 'Vehículo',
+            'estado_logistico_nombre' => $estadoLogisticoNombre,  // ✅ Estado logístico
+            'mensaje' => $mensaje,  // ✅ NUEVO: Mensaje centralizado
+            'fecha_asignacion' => $entrega->fecha_asignacion?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Notificar que un reporte de carga fue generado
      */
     public function notifyReporteCargoGenerado($entrega, $reporte): bool
     {
-        return $this->send('notify/entrega-reporte-generado', [
+        return $this->send('notify/reporte-cargo-generado', [
             'entrega_id' => $entrega->id,
-            'reporte_carga_id' => $reporte->id,
-            'numero_reporte' => $reporte->numero_reporte,
-            'estado_entrega' => 'PREPARACION_CARGA',
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-            ] : null,
-            'peso_total_kg' => $reporte->peso_total_kg,
-            'volumen_total_m3' => $reporte->volumen_total_m3,
-            'fecha_generacion' => $reporte->created_at?->toIso8601String(),
-        ]);
-    }
-
-    /**
-     * Notificar confirmación de carga
-     * Transición: PREPARACION_CARGA → EN_CARGA
-     */
-    public function notifyCargoConfirmado($entrega): bool
-    {
-        return $this->send('notify/entrega-carga-confirmada', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'EN_CARGA',
-            'estado_anterior' => 'PREPARACION_CARGA',
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-                'apellido' => $entrega->venta->cliente->apellido ?? '',
-            ] : null,
-            'confirmado_por' => $entrega->confirmador?->name ?? 'Sistema',
-            'confirmado_en' => $entrega->fecha_confirmacion_carga?->toIso8601String(),
-            'mensaje' => 'La carga ha sido confirmada y se está iniciando el proceso de carga física',
-        ]);
-    }
-
-    /**
-     * Notificar que entrega está lista para partida
-     * Transición: EN_CARGA → LISTO_PARA_ENTREGA
-     */
-    public function notifyListoParaEntrega($entrega): bool
-    {
-        return $this->send('notify/entrega-listo-para-entrega', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'LISTO_PARA_ENTREGA',
-            'estado_anterior' => 'EN_CARGA',
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-            ] : null,
-            'vehiculo' => $entrega->vehiculo ? [
-                'id' => $entrega->vehiculo->id,
-                'placa' => $entrega->vehiculo->placa,
-                'marca' => $entrega->vehiculo->marca,
-                'modelo' => $entrega->vehiculo->modelo,
-            ] : null,
-            'direccion_entrega' => $entrega->direccion_entrega,
-            'fecha_listo' => now()->toIso8601String(),
-            'mensaje' => 'Entrega completada y lista para que el chofer inicie viaje',
-        ]);
-    }
-
-    /**
-     * Notificar inicio de tránsito con ubicación GPS inicial
-     * Transición: LISTO_PARA_ENTREGA → EN_TRANSITO
-     */
-    public function notifyInicioTransito($entrega, float $latitud, float $longitud): bool
-    {
-        return $this->send('notify/entrega-inicio-transito', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'EN_TRANSITO',
-            'estado_anterior' => 'LISTO_PARA_ENTREGA',
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-                'telefono' => $entrega->venta->cliente->telefono ?? null,
-            ] : null,
-            'ubicacion_inicial' => [
-                'latitud' => $latitud,
-                'longitud' => $longitud,
-                'timestamp' => now()->toIso8601String(),
-            ],
-            'direccion_destino' => $entrega->direccion_entrega,
-            'vehiculo' => $entrega->vehiculo ? [
-                'placa' => $entrega->vehiculo->placa,
-                'marca' => $entrega->vehiculo->marca,
-            ] : null,
-            'mensaje' => 'Chofer ha iniciado el viaje - GPS activo',
-        ]);
-    }
-
-    /**
-     * Notificar actualización de ubicación GPS en tiempo real
-     * Se utiliza mientras la entrega está EN_TRANSITO
-     */
-    public function notifyActualizacionUbicacion($entrega, float $latitud, float $longitud): bool
-    {
-        return $this->send('notify/entrega-ubicacion-actualizada', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'EN_TRANSITO',
-            'ubicacion_actual' => [
-                'latitud' => $latitud,
-                'longitud' => $longitud,
-                'timestamp' => now()->toIso8601String(),
-            ],
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-            ] : null,
-            'cliente_id' => $entrega->venta?->cliente_id,
-            'direccion_destino' => $entrega->direccion_entrega,
-        ]);
-    }
-
-    /**
-     * Notificar entrega completada
-     * Transición: EN_TRANSITO → ENTREGADO
-     */
-    public function notifyEntregaCompletada($entrega, ?array $fotoUrl = null, ?array $firmaUrl = null): bool
-    {
-        return $this->send('notify/entrega-completada', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'ENTREGADO',
-            'estado_anterior' => 'EN_TRANSITO',
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-                'telefono' => $entrega->venta->cliente->telefono ?? null,
-            ] : null,
-            'fecha_entrega' => $entrega->fecha_entrega?->toIso8601String(),
-            'ubicacion_final' => [
-                'latitud' => $entrega->latitud_actual,
-                'longitud' => $entrega->longitud_actual,
-            ],
-            'evidencia' => [
-                'foto_entrega' => $fotoUrl,
-                'firma_digital' => $firmaUrl,
-            ],
-            'mensaje' => 'Entrega completada exitosamente',
-        ]);
-    }
-
-    /**
-     * Notificar rechazo o novedad en entrega
-     */
-    public function notifyNovedad($entrega, string $motivo, bool $requiereReintento = true): bool
-    {
-        return $this->send('notify/entrega-novedad', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado' => 'NOVEDAD',
-            'motivo_novedad' => $motivo,
-            'requiere_reintento' => $requiereReintento,
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'cliente' => $entrega->venta?->cliente ? [
-                'id' => $entrega->venta->cliente->id,
-                'nombre' => $entrega->venta->cliente->nombre,
-                'telefono' => $entrega->venta->cliente->telefono ?? null,
-            ] : null,
-            'fecha_novedad' => now()->toIso8601String(),
-            'ubicacion' => [
-                'latitud' => $entrega->latitud_actual,
-                'longitud' => $entrega->longitud_actual,
-            ],
-        ]);
-    }
-
-    /**
-     * Notificar a roles específicos sobre cambios de entrega
-     *
-     * Útil para notificar equipos de logística sobre cambios en lote
-     */
-    public function notifyEquipoLogistica($entrega, string $tipo): bool
-    {
-        $mensaje = match ($tipo) {
-            'carga_completada' => 'Una carga ha sido completada y está lista para entrega',
-            'en_transito' => 'Una entrega ha iniciado su viaje',
-            'entregada' => 'Una entrega ha sido completada exitosamente',
-            'novedad' => 'Se ha reportado una novedad en una entrega',
-            default => 'Actualización de entrega'
-        };
-
-        return $this->send('notify/entrega-equipo-logistica', [
-            'entrega_id' => $entrega->id,
-            'numero' => $entrega->numero ?? "#E-{$entrega->id}",
+            'entrega_numero' => $entrega->numero_entrega,
+            'reporte_id' => $reporte->id,
+            'reporte_numero' => $reporte->numero,
             'estado' => $entrega->estado,
-            'tipo_notificacion' => $tipo,
-            'mensaje' => $mensaje,
-            'venta_id' => $entrega->venta_id,
-            'cliente' => $entrega->venta?->cliente ? [
-                'nombre' => $entrega->venta->cliente->nombre,
-            ] : null,
-            'chofer' => $entrega->chofer ? [
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-            ] : null,
-            'timestamp' => now()->toIso8601String(),
+            'chofer_nombre' => $entrega->chofer?->name ?? 'Chofer',
+            'vehiculo_placa' => $entrega->vehiculo?->placa ?? 'Vehículo',
+            'ventas_count' => $entrega->ventas()->count() ?? 0,
+            'fecha_generacion' => now()->toIso8601String(),
         ]);
     }
 
     /**
-     * NUEVO - FASE 5: Notificar cambio de estado SINCRONIZADO de Entrega y Ventas
+     * ✅ NUEVO: Notificar cambio de estado de entrega a clientes y preventistas
      *
-     * Cuando entrega cambia de estado → ventas se sincronizan automáticamente
-     * Esta notificación informa a todos los clientes y admin sobre el cambio coordinado
+     * Cuando el chofer marca la entrega como "LISTO_PARA_ENTREGA", "EN_TRANSITO", etc.
+     * Se notifica a todos los clientes y preventistas cuyas ventas están en esa entrega
      *
-     * @param \App\Models\Entrega $entrega Entrega que cambió de estado
-     * @param string $estadoNuevo Nuevo estado de entrega (código)
-     * @param string|null $estadoAnterior Estado anterior (para auditoría)
+     * @param $entrega - Modelo de entrega
+     * @param string $estadoNuevo - Código del nuevo estado (ej: "LISTO_PARA_ENTREGA")
+     * @param string|null $estadoAnterior - Código del estado anterior
      */
-    public function notifyEstadoSincronizado(
-        \App\Models\Entrega $entrega,
-        string $estadoNuevo,
-        ?string $estadoAnterior = null
-    ): bool {
-        // Obtener mapeo para saber qué estado tienen las ventas ahora
-        $mapeo = \App\Models\MapeoEstado::query()
-            ->where('categoria_origen', 'entrega')
-            ->whereHas('estadoOrigen', function ($q) use ($estadoNuevo) {
-                $q->where('codigo', $estadoNuevo);
-            })
-            ->where('categoria_destino', 'venta_logistica')
-            ->first();
-
-        $estadoVentaTarget = $mapeo?->estadoDestino?->codigo ?? null;
-
-        // Obtener ventas sincronizadas
-        $ventas = $entrega->ventas()->get()->map(function ($venta) {
-            return [
-                'id' => $venta->id,
-                'numero' => $venta->numero,
-                'cliente_id' => $venta->cliente_id,
-                'cliente_nombre' => $venta->cliente?->nombre,
-                'estado_logistico' => $venta->estadoLogistico?->codigo ?? 'DESCONOCIDO',
-            ];
-        });
-
-        $payload = [
-            'tipo_evento' => 'sincronizacion_estados',
-            'entrega_id' => $entrega->id,
-            'numero_entrega' => $entrega->numero ?? "#E-{$entrega->id}",
-            'estado_anterior' => $estadoAnterior,
-            'estado_nuevo_entrega' => $estadoNuevo,
-            'estado_nuevo_venta' => $estadoVentaTarget,
-            'mapeo' => [
-                'desde_categoria' => 'entrega',
-                'desde_estado' => $estadoNuevo,
-                'hacia_categoria' => 'venta_logistica',
-                'hacia_estado' => $estadoVentaTarget,
-            ],
-            'ventas_sincronizadas' => $ventas,
-            'cantidad_ventas' => $ventas->count(),
-            'sla' => [
-                'fecha_entrega_comprometida' => $entrega->fecha_entrega_comprometida?->toDateString(),
-                'ventana_entrega_ini' => $entrega->ventana_entrega_ini?->format('H:i:s'),
-                'ventana_entrega_fin' => $entrega->ventana_entrega_fin?->format('H:i:s'),
-            ],
-            'chofer' => $entrega->chofer ? [
-                'id' => $entrega->chofer->id,
-                'nombre' => $entrega->chofer->empleado?->nombre ?? $entrega->chofer->name,
-                'telefono' => $entrega->chofer->empleado?->telefono ?? null,
-            ] : null,
-            'vehiculo' => $entrega->vehiculo ? [
-                'id' => $entrega->vehiculo->id,
-                'placa' => $entrega->vehiculo->placa,
-            ] : null,
-            'timestamp' => now()->toIso8601String(),
-        ];
-
-        // Enviar a 3 canales
-        return $this->send('notify/sincronizacion-entrega-venta', $payload)
-            && $this->sendToClientes($entrega, $payload)
-            && $this->sendToAdminLogistica($entrega, $payload);
-    }
-
-    /**
-     * NUEVO - Notificar a CLIENTES sobre cambio en su venta específica
-     *
-     * Cada cliente recibe notificación de qué pasó con su venta
-     * Incluye tracking, SLA, y estado actualizado
-     */
-    private function sendToClientes(\App\Models\Entrega $entrega, array $syncPayload): bool
-    {
-        $success = true;
-
-        // Enviar a cada cliente una notificación específica de su venta
-        foreach ($syncPayload['ventas_sincronizadas'] as $ventaData) {
-            $venta = \App\Models\Venta::find($ventaData['id']);
-
-            if (!$venta || !$venta->cliente_id) {
-                continue;
-            }
-
-            $clientePayload = [
-                'tipo_evento' => 'seguimiento_venta',
-                'venta_id' => $venta->id,
-                'numero_venta' => $venta->numero,
-                'cliente_id' => $venta->cliente_id,
-                'estado_logistico' => $ventaData['estado_logistico'],
-                'entrega_numero' => $syncPayload['numero_entrega'],
-                'chofer' => $syncPayload['chofer'],
-                'sla' => $syncPayload['sla'],
-                'ubicacion_chofer' => [
-                    'latitud' => $entrega->latitud_actual,
-                    'longitud' => $entrega->longitud_actual,
-                    'timestamp' => $entrega->fecha_ultima_ubicacion?->toIso8601String(),
-                ],
-                'mensaje' => "Tu pedido #{$venta->numero} está {$this->getEstadoHumano($ventaData['estado_logistico'])}",
-                'timestamp' => now()->toIso8601String(),
-            ];
-
-            // Enviar al cliente (usuario autenticado)
-            $sent = $this->send(
-                "cliente.{$venta->cliente_id}.seguimiento",
-                $clientePayload
-            );
-
-            $success = $success && $sent;
-        }
-
-        return $success;
-    }
-
-    /**
-     * NUEVO - Notificar a equipo de logística/admin
-     */
-    private function sendToAdminLogistica(\App\Models\Entrega $entrega, array $syncPayload): bool
-    {
-        return $this->send('notify/admin-sincronizacion-entrega', [
-            'entrega_id' => $entrega->id,
-            'numero_entrega' => $syncPayload['numero_entrega'],
-            'estado_entrega_anterior' => $syncPayload['estado_anterior'],
-            'estado_entrega_nuevo' => $syncPayload['estado_nuevo_entrega'],
-            'estado_venta_nuevo' => $syncPayload['estado_nuevo_venta'],
-            'ventas_sincronizadas' => $syncPayload['ventas_sincronizadas'],
-            'cantidad_ventas' => $syncPayload['cantidad_ventas'],
-            'chofer' => $syncPayload['chofer'],
-            'vehiculo' => $syncPayload['vehiculo'],
-            'timestamp' => $syncPayload['timestamp'],
-        ]);
-    }
-
-    /**
-     * Convertir código de estado a texto humano para clientes
-     */
-    private function getEstadoHumano(string $codigoEstado): string
-    {
-        return match ($codigoEstado) {
-            'PENDIENTE_ENVIO' => 'pendiente de preparación',
-            'PREPARANDO' => 'siendo preparado en almacén',
-            'EN_PREPARACION' => 'completando preparación',
-            'EN_TRANSITO' => 'en camino hacia ti',
-            'ENTREGADO' => 'entregado',
-            'PROBLEMAS' => 'con novedad, nos comunicaremos pronto',
-            'CANCELADA' => 'cancelado',
-            default => 'en proceso'
-        };
-    }
-
-    /**
-     * ✅ FASE 2: Notificar cambio de estado a todos los clientes conectados
-     *
-     * Método centralizado que es llamado desde el Listener SincronizarWebSocketEstadoEntrega
-     * cuando se dispara el evento EntregaEstadoCambiado.
-     *
-     * RESPONSABILIDADES:
-     * ✓ Envía cambio de estado al WebSocket via HTTP
-     * ✓ Soporta diferentes endpoints según el tipo de cambio
-     * ✓ Maneja errores sin afectar el flujo principal
-     *
-     * @param array $payload Datos del cambio de estado desde EntregaEstadoCambiado
-     * @param string $endpoint Endpoint específico (entrega-estado-cambio, entrega-en-transito, etc.)
-     * @return bool Éxito de la notificación
-     */
-    public function notifyEstadoCambio(array $payload, string $endpoint = 'entrega-estado-cambio'): bool
+    public function notifyEstadoSincronizado($entrega, string $estadoNuevo, ?string $estadoAnterior = null): bool
     {
         try {
-            // Mapear nombre de endpoint a ruta WebSocket correcta
-            $rutaEndpoint = 'notify/' . $endpoint;
+            // Cargar ventas con relaciones necesarias
+            $ventas = $entrega->ventas()
+                ->with(['cliente', 'cliente.user', 'preventista', 'estadoLogistica'])
+                ->get();
 
-            return $this->send($rutaEndpoint, $payload);
-
-        } catch (\Exception $e) {
-            \Log::error('❌ [FASE 2] Error notificando cambio de estado al WebSocket', [
-                'entrega_id' => $payload['entrega_id'] ?? null,
-                'endpoint' => $endpoint,
-                'error' => $e->getMessage(),
-            ]);
-
-            // NO relanzar excepción - el cambio ya está guardado en BD
-            return false;
-        }
-    }
-
-    /**
-     * ✅ FASE 3: Notificar actualización de ubicación GPS en tiempo real
-     *
-     * Método que es llamado desde el Listener SincronizarWebSocketUbicacion
-     * cuando TrackingService registra una nueva ubicación.
-     *
-     * RESPONSABILIDADES:
-     * ✓ Envía ubicación actual al WebSocket via HTTP
-     * ✓ Actualiza mapa en admin y cliente en tiempo real
-     * ✓ Maneja errores sin afectar el almacenamiento
-     *
-     * @param array $payload Datos de ubicación desde UbicacionActualizada
-     * @return bool Éxito de la notificación
-     */
-    public function notifyUbicacion(array $payload): bool
-    {
-        try {
-            return $this->send('notify/entrega-ubicacion', $payload);
-
-        } catch (\Exception $e) {
-            \Log::error('❌ [FASE 3] Error notificando ubicación al WebSocket', [
-                'entrega_id' => $payload['entrega_id'] ?? null,
-                'error' => $e->getMessage(),
-            ]);
-
-            // NO relanzar excepción - la ubicación ya está guardada en BD
-            return false;
-        }
-    }
-
-    /**
-     * NUEVO - Notificar cambio de estado con sincronización de SLA
-     *
-     * Incluye validación de SLA (on-time vs delay) al cambiar de estado
-     */
-    public function notifyEstadoConValidacionSLA(
-        \App\Models\Entrega $entrega,
-        string $estadoNuevo
-    ): bool {
-        // Calcular si estamos on-time o con delay
-        $ahora = now();
-        $ventanaFin = $entrega->ventana_entrega_fin
-            ? $entrega->fecha_entrega_comprometida?->copy()->setTimeFromTimeString($entrega->ventana_entrega_fin->format('H:i:s'))
-            : null;
-
-        $slaStatus = 'on_schedule';
-        $minutoDelay = 0;
-
-        if ($ventanaFin && $ahora->isAfter($ventanaFin)) {
-            $slaStatus = 'delayed';
-            $minutoDelay = $ahora->diffInMinutes($ventanaFin);
-        }
-
-        return $this->send('notify/estado-con-sla', [
-            'entrega_id' => $entrega->id,
-            'estado_nuevo' => $estadoNuevo,
-            'sla_status' => $slaStatus,
-            'minutos_delay' => $minutoDelay,
-            'fecha_comprometida' => $entrega->fecha_entrega_comprometida?->toIso8601String(),
-            'ventana_fin' => $ventanaFin?->toIso8601String(),
-            'timestamp' => now()->toIso8601String(),
-        ]);
-    }
-
-    /**
-     * ✅ NUEVO: Notificar a CLIENTES que sus ventas están en preparación de carga
-     *
-     * Se ejecuta cuando se crea una entrega consolidada
-     * - Obtiene el user_id del cliente (NO cliente_id)
-     * - Notifica al cliente sobre sus ventas específicas
-     * - Incluye detalles de la entrega (número, vehículo, chofer, etc.)
-     *
-     * @param int $userId El user_id del cliente (cliente.user_id, no cliente_id)
-     * @param \App\Models\Entrega $entrega La entrega creada
-     * @param \Illuminate\Support\Collection $ventasCliente Las ventas del cliente en esta entrega
-     * @return bool True si la notificación se envió correctamente
-     */
-    public function notifyClienteVentasEnPreparacion(int $userId, $entrega, $ventasCliente): bool
-    {
-        try {
-            // Preparar lista de números de ventas
-            $ventasNumeros = $ventasCliente->pluck('numero')->toArray();
-            $ventasIds = $ventasCliente->pluck('id')->toArray();
-            $totalVentas = $ventasCliente->count();
-
-            \Illuminate\Support\Facades\Log::info('📬 WebSocket: Notificando cliente sobre ventas en preparación', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'ventas_count' => $totalVentas,
-                'ventas_numeros' => $ventasNumeros,
-            ]);
-
-            return $this->send('notify/venta-preparacion-carga', [
-                'user_id' => $userId,  // ✅ user_id para enrutamiento correcto
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'PREPARACION_CARGA',
-                'ventas_ids' => $ventasIds,
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'peso_kg' => $entrega->peso_kg,
-                'volumen_m3' => $entrega->volumen_m3,
-                'mensaje' => $totalVentas === 1
-                    ? "Tu venta {$ventasNumeros[0]} está en preparación de carga - Entrega {$entrega->numero_entrega}"
-                    : "Tus {$totalVentas} ventas están en preparación de carga - Entrega {$entrega->numero_entrega}",
-                'fecha_asignacion' => $entrega->fecha_asignacion?->toIso8601String(),
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket a cliente', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * ✅ NUEVO: Notificar cliente cuando sus ventas cambian de EN_PREPARACION a PENDIENTE_ENVIO
-     * (Entrega lista para partir)
-     *
-     * Evento: notify/venta-listo-para-entrega
-     * Cliente recibe: venta:listo-para-entrega
-     */
-    public function notifyClienteVentasListoParaEntrega(int $userId, $entrega, $ventasCliente): bool
-    {
-        try {
-            // Preparar lista de números de ventas
-            $ventasArray = is_array($ventasCliente) ? $ventasCliente : $ventasCliente->toArray();
-            $ventasNumeros = collect($ventasArray)->pluck('numero_venta')->filter()->toArray();
-            $ventasIds = collect($ventasArray)->pluck('id')->toArray();
-            $totalVentas = count($ventasArray);
-
-            \Illuminate\Support\Facades\Log::info('📬 WebSocket: Notificando cliente sobre ventas listo para entrega', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'ventas_count' => $totalVentas,
-                'ventas_numeros' => $ventasNumeros,
-                'nuevo_estado' => 'PENDIENTE_ENVIO',
-            ]);
-
-            return $this->send('notify/venta-listo-para-entrega', [
-                'user_id' => $userId,  // ✅ user_id para enrutamiento correcto
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'LISTO_PARA_ENTREGA',
-                'estado_logistico_anterior' => 'EN_PREPARACION',
-                'estado_logistico_nuevo' => 'PENDIENTE_ENVIO',
-                'ventas_ids' => $ventasIds,
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'peso_kg' => $entrega->peso_kg,
-                'volumen_m3' => $entrega->volumen_m3,
-                'mensaje' => $totalVentas === 1
-                    ? "Tu venta {$ventasNumeros[0]} está lista para ser enviada - Entrega {$entrega->numero_entrega}"
-                    : "Tus {$totalVentas} ventas están listas para ser enviadas - Entrega {$entrega->numero_entrega}",
-                'fecha_confirmacion' => now()->toIso8601String(),
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket de listo para entrega', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * ✅ NUEVO: Notificar a ADMINS Y CAJEROS cuando ventas cambian a PENDIENTE_ENVIO
-     * Evento: notify/venta-listo-para-entrega-admin
-     * Se envía a roles: admins, cajeros, managers
-     */
-    public function notifyAdminsListoParaEntrega($entrega, $ventas): bool
-    {
-        try {
-            $totalVentas = $ventas->count();
-            $ventasNumeros = $ventas->pluck('numero_venta')->filter()->toArray();
-            $ventasIds = $ventas->pluck('id')->toArray();
-
-            // Agrupar clientes únicos
-            $clientesUnicos = $ventas->pluck('cliente')->unique('id')->count();
-            $clientesNombres = $ventas->pluck('cliente.nombre_completo')->unique()->join(', ');
-
-            \Illuminate\Support\Facades\Log::info('📢 WebSocket: Notificando admins/cajeros sobre ventas listo para entrega', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'ventas_count' => $totalVentas,
-                'clientes_count' => $clientesUnicos,
-                'clientes_nombres' => $clientesNombres,
-            ]);
-
-            return $this->send('notify/venta-listo-para-entrega-admin', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'LISTO_PARA_ENTREGA',
-                'estado_logistico_anterior' => 'EN_PREPARACION',
-                'estado_logistico_nuevo' => 'PENDIENTE_ENVIO',
-                'ventas_ids' => $ventasIds,
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'clientes_unicos' => $clientesUnicos,
-                'clientes_nombres' => $clientesNombres,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'peso_kg' => $entrega->peso_kg,
-                'volumen_m3' => $entrega->volumen_m3,
-                'mensaje' => $totalVentas === 1
-                    ? "{$ventasNumeros[0]} del cliente {$clientesNombres} está lista para ser enviada"
-                    : "{$totalVentas} ventas de {$clientesUnicos} cliente" . ($clientesUnicos > 1 ? 's' : '') . " están listas para ser enviadas",
-                'fecha_confirmacion' => now()->toIso8601String(),
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket a admins/cajeros', [
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * ✅ NUEVO: Notificar CLIENTE cuando su entrega está EN_TRANSITO
-     * Evento: notify/venta-en-transito
-     * Cliente recibe: venta:en-transito
-     */
-    public function notifyClienteEnTransito(int $userId, $entrega, $ventasCliente): bool
-    {
-        try {
-            $ventasArray = is_array($ventasCliente) ? $ventasCliente : $ventasCliente->toArray();
-            $ventasNumeros = collect($ventasArray)->pluck('numero_venta')->filter()->toArray();
-            $ventasIds = collect($ventasArray)->pluck('id')->toArray();
-            $totalVentas = count($ventasArray);
-
-            \Illuminate\Support\Facades\Log::info('📬 WebSocket: Notificando cliente sobre venta en tránsito', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'ventas_count' => $totalVentas,
-            ]);
-
-            return $this->send('notify/venta-en-transito', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'EN_TRANSITO',
-                'estado_logistico_anterior' => 'PENDIENTE_ENVIO',
-                'estado_logistico_nuevo' => 'EN_TRANSITO',
-                'ventas_ids' => $ventasIds,
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'mensaje' => $totalVentas === 1
-                    ? "Tu venta {$ventasNumeros[0]} está en tránsito - Chofer: {$entrega->chofer?->name}"
-                    : "Tus {$totalVentas} ventas están en tránsito - Chofer: {$entrega->chofer?->name}",
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket de en tránsito', [
-                'user_id' => $userId,
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * ✅ NUEVO: Notificar ADMINS Y CAJEROS cuando entrega está EN_TRANSITO
-     * Evento: notify/entrega-en-transito-admin
-     */
-    public function notifyAdminsEnTransito($entrega, $ventas): bool
-    {
-        try {
-            $totalVentas = $ventas->count();
-            $ventasNumeros = $ventas->pluck('numero_venta')->filter()->toArray();
-            $clientesUnicos = $ventas->pluck('cliente')->unique('id')->count();
-            $clientesNombres = $ventas->pluck('cliente.nombre_completo')->unique()->join(', ');
-
-            \Illuminate\Support\Facades\Log::info('📢 WebSocket: Notificando admins/cajeros sobre entrega en tránsito', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'ventas_count' => $totalVentas,
-                'clientes_count' => $clientesUnicos,
-            ]);
-
-            return $this->send('notify/entrega-en-transito-admin', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'EN_TRANSITO',
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'clientes_unicos' => $clientesUnicos,
-                'clientes_nombres' => $clientesNombres,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'mensaje' => $totalVentas === 1
-                    ? "{$ventasNumeros[0]} del cliente {$clientesNombres} en tránsito"
-                    : "{$totalVentas} ventas de {$clientesUnicos} cliente" . ($clientesUnicos > 1 ? 's' : '') . " en tránsito",
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket a admins/cajeros en tránsito', [
-                'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * Notificar cuando una venta individual fue entregada
-     * Se envía cada vez que chofer confirma una venta como ENTREGADA
-     * Notifica al cliente, admin y cajero
-     */
-    public function notifyVentaEntregada($venta, $entrega, $cliente): bool
-    {
-        try {
-            // ✅ Notificar al CLIENTE que su venta fue entregada
-            if ($cliente && $cliente->user_id) {
-                \Illuminate\Support\Facades\Log::info('📢 WebSocket: Notificando cliente sobre venta entregada', [
-                    'venta_id' => $venta->id,
-                    'venta_numero' => $venta->numero,
-                    'cliente_id' => $cliente->id,
-                    'user_id' => $cliente->user_id,
+            if ($ventas->isEmpty()) {
+                \Log::info('EntregaWebSocketService: No hay ventas en entrega', [
                     'entrega_id' => $entrega->id,
                 ]);
+                return false;
+            }
 
-                $this->send('notify/venta-entregada-cliente', [
-                    'venta_id' => $venta->id,
-                    'venta_numero' => $venta->numero,
-                    'user_id' => $cliente->user_id,  // ✅ Para router a sala user_{user_id}
-                    'cliente_nombre' => $cliente->nombre_completo,
+            \Log::info('📢 EntregaWebSocketService::notifyEstadoSincronizado', [
+                'entrega_id' => $entrega->id,
+                'estado_nuevo' => $estadoNuevo,
+                'cantidad_ventas' => $ventas->count(),
+            ]);
+
+            $exitosas = 0;
+
+            // Notificar a clientes y preventistas de cada venta
+            foreach ($ventas as $venta) {
+                try {
+                    // Obtener nombre del estado logístico
+                    $estadoLogisticoNombre = $venta->estadoLogistica?->nombre ?? $estadoNuevo;
+
+                    // Construir mensaje centralizado
+                    $mensaje = \App\Services\Notifications\NotificationMessageService::ventaEstadoCambio(
+                        ventaId: $venta->id,
+                        nuevoEstado: $estadoLogisticoNombre,
+                        entregaId: $entrega->id,
+                        clienteNombre: $venta->cliente?->nombre
+                    );
+
+                    // Datos comunes para todas las notificaciones
+                    $notificacionData = [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'cliente_id' => $venta->cliente_id,
+                        'cliente' => [
+                            'id' => $venta->cliente->id,
+                            'nombre' => $venta->cliente->nombre,
+                        ],
+                        'estado_nuevo' => [
+                            'codigo' => $estadoNuevo,
+                            'nombre' => $estadoLogisticoNombre,
+                        ],
+                        'entrega' => [
+                            'id' => $entrega->id,
+                            'numero' => $entrega->numero_entrega,
+                        ],
+                        'chofer' => [
+                            'id' => $entrega->chofer_id,
+                            'nombre' => $entrega->chofer?->name,
+                        ],
+                        'razon' => 'Cambio de estado de entrega',
+                        'total' => (float) $venta->total,
+                        'mensaje' => $mensaje,
+                        'fecha_cambio' => now()->toIso8601String(),
+                        'categoria' => 'venta_logistica',
+                    ];
+
+                    // 1️⃣ Notificar al CLIENTE
+                    if ($venta->cliente?->user_id) {
+                        \Log::info('📢 Enviando notificación a CLIENTE', [
+                            'venta_id' => $venta->id,
+                            'cliente_id' => $venta->cliente->id,
+                            'cliente_user_id' => $venta->cliente->user_id,
+                            'estado_nuevo' => $estadoNuevo,
+                        ]);
+                        $this->send('notify/venta-estado-cambio', array_merge($notificacionData, [
+                            'user_id' => $venta->cliente->user_id, // ✅ Usar user_id para routing
+                        ]));
+                        $exitosas++;
+                    } else {
+                        \Log::warning('⚠️ Cliente NO tiene user_id', [
+                            'venta_id' => $venta->id,
+                            'cliente_id' => $venta->cliente_id,
+                            'cliente' => $venta->cliente ? ['id' => $venta->cliente->id, 'nombre' => $venta->cliente->nombre] : null,
+                        ]);
+                    }
+
+                    // 2️⃣ Notificar al PREVENTISTA (si existe)
+                    if ($venta->preventista_id) {
+                        \Log::info('📢 Enviando notificación a PREVENTISTA', [
+                            'venta_id' => $venta->id,
+                            'preventista_id' => $venta->preventista_id,
+                            'estado_nuevo' => $estadoNuevo,
+                        ]);
+                        $this->send('notify/venta-estado-cambio', array_merge($notificacionData, [
+                            'user_id' => $venta->preventista_id, // Preventista es User
+                        ]));
+                        $exitosas++;
+                    }
+
+                } catch (\Exception $e) {
+                    \Log::warning('EntregaWebSocketService: Error notificando venta', [
+                        'venta_id' => $venta->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // 3️⃣ Notificar a ADMINS y CAJEROS (supervisión de estado de entregas)
+            try {
+                $datosEntrega = [
                     'entrega_id' => $entrega->id,
                     'numero_entrega' => $entrega->numero_entrega,
-                    'mensaje' => "Tu venta {$venta->numero} ha sido entregada",
-                    'timestamp' => now()->toIso8601String(),
+                    'estado_nuevo' => $estadoNuevo,
+                    'chofer' => [
+                        'id' => $entrega->chofer_id,
+                        'nombre' => $entrega->chofer?->name,
+                    ],
+                    'vehiculo' => [
+                        'placa' => $entrega->vehiculo?->placa,
+                        'marca' => $entrega->vehiculo?->marca,
+                    ],
+                    'cantidad_ventas' => $ventas->count(),
+                    'monto_total' => $ventas->sum('total'),
+                    'fecha_cambio' => now()->toIso8601String(),
+                ];
+
+                // Emitir a ADMINS (supervisión completa)
+                $this->send('notify/entrega-estado-cambio', array_merge($datosEntrega, [
+                    'destinatario' => 'admins',
+                ]));
+
+                // Emitir a CAJEROS (control de pagos)
+                $this->send('notify/entrega-estado-cambio', array_merge($datosEntrega, [
+                    'destinatario' => 'cajeros',
+                ]));
+
+                // ✅ NUEVO: Emitir al CREADOR (quién creó la entrega)
+                if ($entrega->created_by) {
+                    $this->send('notify/entrega-estado-cambio', array_merge($datosEntrega, [
+                        'destinatario' => 'creador',
+                        'user_id' => $entrega->created_by, // ✅ ID del creador para routing en Node.js
+                    ]));
+                    $exitosas++;
+                }
+
+                $exitosas += 2; // admins + cajeros
+
+                \Log::info('✅ Notificaciones enviadas a admins, cajeros y creador', [
+                    'entrega_id' => $entrega->id,
+                    'estado_nuevo' => $estadoNuevo,
+                    'creador_id' => $entrega->created_by,
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::warning('EntregaWebSocketService: Error notificando admins/cajeros/creador', [
+                    'entrega_id' => $entrega->id,
+                    'error' => $e->getMessage(),
                 ]);
             }
 
-            // ✅ Notificar a ADMIN/CAJERO que una venta se entregó
-            \Illuminate\Support\Facades\Log::info('📢 WebSocket: Notificando admins/cajeros sobre venta entregada', [
-                'venta_id' => $venta->id,
-                'venta_numero' => $venta->numero,
+            \Log::info('✅ Notificaciones enviadas a clientes/preventistas', [
                 'entrega_id' => $entrega->id,
-                'cliente_nombre' => $cliente?->nombre_completo,
+                'notificaciones_exitosas' => $exitosas,
             ]);
 
-            $this->send('notify/venta-entregada-admin', [
-                'venta_id' => $venta->id,
-                'venta_numero' => $venta->numero,
-                'cliente_nombre' => $cliente?->nombre_completo,
-                'cliente_id' => $cliente?->id,
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'mensaje' => "Venta {$venta->numero} de {$cliente?->nombre_completo} ha sido entregada",
-                'timestamp' => now()->toIso8601String(),
-            ]);
-
-            return true;
+            return $exitosas > 0;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket sobre venta entregada', [
-                'venta_id' => $venta->id,
+            \Log::error('❌ EntregaWebSocketService::notifyEstadoSincronizado Error', [
                 'entrega_id' => $entrega->id,
                 'error' => $e->getMessage(),
             ]);
@@ -972,56 +309,223 @@ class EntregaWebSocketService extends BaseWebSocketService
     }
 
     /**
-     * Notificar a admin/cajero que una entrega fue finalizada (ENTREGADO)
-     * Se envía cuando el chofer confirma que todas las ventas fueron entregadas
+     * ✅ NUEVO: Notificar cuando entrega cambia a "EN_TRANSITO" con validación SLA
+     *
+     * @param $entrega
+     * @param string $estadoNuevo
      */
-    public function notifyAdminsEntregaFinalizada($entrega, $ventas): bool
+    public function notifyEstadoConValidacionSLA($entrega, string $estadoNuevo): bool
     {
+        // Por ahora, usar el mismo método de sincronización
+        // En el futuro se puede agregar lógica de SLA
+        return $this->notifyEstadoSincronizado($entrega, $estadoNuevo);
+    }
+
+    /**
+     * ✅ NUEVO: Notificar cuando una VENTA es confirmada como ENTREGADA o con NOVEDAD
+     * Envía notificaciones personalizadas según tipo de entrega:
+     * - COMPLETA: Entrega exitosa sin problemas
+     * - CON_NOVEDAD: Hay problemas (tienda cerrada, cliente rechaza, devolución, etc)
+     */
+    public function notifyVentaEntregada(
+        $venta,
+        $entrega,
+        $cliente,
+        ?string $tipoEntrega = 'COMPLETA',
+        ?string $tipoNovedad = null,
+        $confirmacion = null,
+        ?string $estadoPago = 'PAGADO',
+        ?float $totalRecibido = 0
+    ): bool {
         try {
-            $totalVentas = $ventas->count();
-            $ventasNumeros = $ventas->pluck('numero')->filter()->toArray();
-            $clientesUnicos = $ventas->pluck('cliente')->unique('id')->count();
-            $clientesNombres = $ventas->pluck('cliente.nombre_completo')->unique()->join(', ');
+            // Cargar relaciones si no están cargadas
+            if (!$venta->relationLoaded('cliente')) {
+                $venta->load('cliente');
+            }
 
-            \Illuminate\Support\Facades\Log::info('📢 WebSocket: Notificando admins/cajeros sobre entrega finalizada', [
+            \Log::info('📢 EntregaWebSocketService::notifyVentaEntregada', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
                 'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'ventas_count' => $totalVentas,
-                'clientes_count' => $clientesUnicos,
-                'chofer' => $entrega->chofer?->name,
+                'cliente_id' => $venta->cliente_id,
+                'tipo_entrega' => $tipoEntrega,
+                'tipo_novedad' => $tipoNovedad,
+                'estado_pago' => $estadoPago,
             ]);
 
-            return $this->send('notify/entrega-finalizada-admin', [
+            $exitosas = 0;
+
+            // ✅ Generar mensajes personalizados según tipo de entrega
+            $mensajeCliente = $this->generarMensajeEntrega(
+                tipoEntrega: $tipoEntrega,
+                tipoNovedad: $tipoNovedad,
+                venta: $venta,
+                entrega: $entrega,
+                estadoPago: $estadoPago,
+                totalRecibido: $totalRecibido,
+                rol: 'cliente'
+            );
+
+            $mensajeAdmin = $this->generarMensajeEntrega(
+                tipoEntrega: $tipoEntrega,
+                tipoNovedad: $tipoNovedad,
+                venta: $venta,
+                entrega: $entrega,
+                estadoPago: $estadoPago,
+                totalRecibido: $totalRecibido,
+                rol: 'admin'
+            );
+
+            // Datos comunes para la notificación
+            $notificacionData = [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'cliente_id' => $venta->cliente_id,
+                'cliente_nombre' => $venta->cliente?->nombre ?? 'Cliente',
                 'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'estado_entrega' => 'ENTREGADO',
-                'ventas_numeros' => $ventasNumeros,
-                'cantidad_ventas' => $totalVentas,
-                'clientes_unicos' => $clientesUnicos,
-                'clientes_nombres' => $clientesNombres,
-                'chofer' => $entrega->chofer ? [
-                    'id' => $entrega->chofer->id,
-                    'nombre' => $entrega->chofer->name,
-                ] : null,
-                'vehiculo' => $entrega->vehiculo ? [
-                    'id' => $entrega->vehiculo->id,
-                    'placa' => $entrega->vehiculo->placa,
-                    'marca' => $entrega->vehiculo->marca,
-                    'modelo' => $entrega->vehiculo->modelo,
-                ] : null,
-                'fecha_entrega' => $entrega->fecha_entrega,
-                'mensaje' => $totalVentas === 1
-                    ? "Entrega {$entrega->numero_entrega} completada: {$ventasNumeros[0]} entregada a {$clientesNombres}"
-                    : "Entrega {$entrega->numero_entrega} completada: {$totalVentas} ventas a {$clientesUnicos} cliente" . ($clientesUnicos > 1 ? 's' : ''),
-                'timestamp' => now()->toIso8601String(),
+                'entrega_numero' => $entrega->numero_entrega,
+                'chofer' => [
+                    'id' => $entrega->chofer_id,
+                    'nombre' => $entrega->chofer?->name ?? 'Chofer',
+                ],
+                'total' => (float) $venta->total,
+                'tipo_entrega' => $tipoEntrega,
+                'tipo_novedad' => $tipoNovedad,
+                'estado_pago' => $estadoPago,
+                'total_recibido' => $totalRecibido ?? 0,
+                'estado' => 'ENTREGADA',
+                'fecha_entrega' => now()->toIso8601String(),
+                'categoria' => 'venta_entregada',
+            ];
+
+            // 1️⃣ Notificar al CLIENTE
+            if ($venta->cliente?->user_id) {
+                \Log::info('📢 Enviando notificación a CLIENTE de venta entregada', [
+                    'venta_id' => $venta->id,
+                    'cliente_id' => $venta->cliente->id,
+                    'cliente_user_id' => $venta->cliente->user_id,
+                    'tipo_entrega' => $tipoEntrega,
+                ]);
+                $this->send('notify/venta-entregada-cliente', array_merge($notificacionData, [
+                    'user_id' => $venta->cliente->user_id,
+                    'mensaje' => $mensajeCliente,
+                ]));
+                $exitosas++;
+            }
+
+            // 2️⃣ Notificar al PREVENTISTA (si existe)
+            if ($venta->preventista_id) {
+                \Log::info('📢 Enviando notificación a PREVENTISTA de venta entregada', [
+                    'venta_id' => $venta->id,
+                    'preventista_id' => $venta->preventista_id,
+                    'tipo_entrega' => $tipoEntrega,
+                ]);
+                $this->send('notify/venta-entregada-cliente', array_merge($notificacionData, [
+                    'user_id' => $venta->preventista_id,
+                    'mensaje' => $mensajeCliente,
+                ]));
+                $exitosas++;
+            }
+
+            // 3️⃣ Notificar a ADMINS (supervisión)
+            try {
+                \Log::info('📢 Enviando notificación a ADMINS de venta entregada', [
+                    'venta_id' => $venta->id,
+                    'entrega_id' => $entrega->id,
+                    'tipo_entrega' => $tipoEntrega,
+                ]);
+                $this->send('notify/venta-entregada-admin', array_merge($notificacionData, [
+                    'destinatario' => 'admins',
+                    'mensaje' => $mensajeAdmin,
+                ]));
+                $exitosas++;
+            } catch (\Exception $e) {
+                \Log::warning('Error notificando a admins', ['error' => $e->getMessage()]);
+            }
+
+            // 4️⃣ Notificar a CAJEROS (control de pagos)
+            try {
+                \Log::info('📢 Enviando notificación a CAJEROS de venta entregada', [
+                    'venta_id' => $venta->id,
+                    'total' => $venta->total,
+                    'estado_pago' => $estadoPago,
+                ]);
+                $this->send('notify/venta-entregada-admin', array_merge($notificacionData, [
+                    'destinatario' => 'cajeros',
+                    'mensaje' => $mensajeAdmin,
+                ]));
+                $exitosas++;
+            } catch (\Exception $e) {
+                \Log::warning('Error notificando a cajeros', ['error' => $e->getMessage()]);
+            }
+
+            \Log::info('✅ Notificaciones de venta entregada enviadas', [
+                'venta_id' => $venta->id,
+                'notificaciones_exitosas' => $exitosas,
+                'tipo_entrega' => $tipoEntrega,
             ]);
+
+            return $exitosas > 0;
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('❌ Error enviando notificación WebSocket a admins/cajeros - entrega finalizada', [
-                'entrega_id' => $entrega->id,
+            \Log::error('❌ EntregaWebSocketService::notifyVentaEntregada Error', [
+                'venta_id' => $venta->id,
                 'error' => $e->getMessage(),
             ]);
             return false;
+        }
+    }
+
+    /**
+     * ✅ Generar mensaje personalizado según tipo de entrega y novedad
+     * Mensajes diferentes para cliente vs admin
+     */
+    private function generarMensajeEntrega(
+        string $tipoEntrega,
+        ?string $tipoNovedad,
+        $venta,
+        $entrega,
+        ?string $estadoPago,
+        ?float $totalRecibido,
+        string $rol = 'cliente'
+    ): string {
+        $cliente = $venta->cliente?->nombre ?? 'Cliente';
+        $chofer = $entrega->chofer?->name ?? 'Chofer';
+
+        if ($tipoEntrega === 'COMPLETA') {
+            // ✅ Entrega exitosa
+            if ($rol === 'cliente') {
+                return match ($estadoPago) {
+                    'PAGADO' => "✅ Tu venta #{$venta->numero} fue entregada y pagada correctamente por {$chofer}",
+                    'PARCIAL' => "✅ Tu venta #{$venta->numero} fue entregada. Pago recibido: Bs. {$totalRecibido} (Saldo pendiente)",
+                    'NO_PAGADO' => "✅ Tu venta #{$venta->numero} fue entregada sin pago registrado",
+                    default => "✅ Tu venta #{$venta->numero} fue entregada exitosamente por {$chofer}"
+                };
+            } else {
+                return match ($estadoPago) {
+                    'PAGADO' => "✅ Venta #{$venta->numero} ({$cliente}) - Entregada y pagada - Bs. {$venta->total}",
+                    'PARCIAL' => "✅ Venta #{$venta->numero} ({$cliente}) - Entregada, pago parcial: Bs. {$totalRecibido}",
+                    'NO_PAGADO' => "⚠️ Venta #{$venta->numero} ({$cliente}) - Entregada sin pago - Monto: Bs. {$venta->total}",
+                    default => "✅ Venta #{$venta->numero} ({$cliente}) entregada correctamente"
+                };
+            }
+        } else {
+            // ❌ Entrega con NOVEDAD
+            $mensajeNovedad = match ($tipoNovedad) {
+                'TIENDA_CERRADA' => '🏪 Tienda cerrada',
+                'CLIENTE_AUSENTE' => '👤 Cliente ausente',
+                'CLIENTE_RECHAZA' => '❌ Cliente rechazó la entrega',
+                'CLIENTE_NO_IDENTIFICADO' => '🚫 Cliente no identificado',
+                'DEVOLUCIÓN_PARCIAL' => '📦 Devolución parcial de productos',
+                'OTRO' => '⚠️ Novedad en la entrega',
+                default => '⚠️ Entrega con novedad'
+            };
+
+            if ($rol === 'cliente') {
+                return "⚠️ Tu venta #{$venta->numero} tiene una novedad: {$mensajeNovedad}. Por favor, contacta con el equipo de logística";
+            } else {
+                return "{$mensajeNovedad} - Venta #{$venta->numero} ({$cliente}) - Requiere acción";
+            }
         }
     }
 }

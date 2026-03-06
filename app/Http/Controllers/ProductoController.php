@@ -1533,7 +1533,7 @@ class ProductoController extends Controller
             'imagenes',
             // ✅ NUEVO: Cargar combos con productos relacionados
             'comboItems' => fn($query) => $query->with('producto:id,nombre,sku,descripcion'),
-            'comboGrupos' => fn($query) => $query->with('productosDetalle:id,combo_grupo_id,producto_id,producto_nombre,producto_sku'),
+            'comboGrupos' => fn($query) => $query->with('items.producto:id,nombre,sku,descripcion'),
         ]);
 
         // Consolidar stock por almacén (suma de lotes)

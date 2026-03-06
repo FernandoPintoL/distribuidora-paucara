@@ -534,6 +534,7 @@ class CrearEntregaPorLocalidadService
             'numero_entrega' => '',  // Temporal, se actualizará después
             'vehiculo_id' => $vehiculoId,
             'chofer_id' => $choferId,
+            'created_by' => $datos['usuario_id'] ?? \Illuminate\Support\Facades\Auth::id(),  // ✅ Usuario que creó la entrega
             'entregador_id' => $datos['entregador_id'] ?? null,  // ✅ FK a users con rol chofer
             'zona_id' => $localidadId,  // Usar localidadId (puede ser null)
             'peso_kg' => $metricas['peso_total'],

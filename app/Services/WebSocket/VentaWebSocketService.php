@@ -73,6 +73,7 @@ class VentaWebSocketService extends BaseWebSocketService
             'venta_id' => $venta->id,
             'venta_numero' => $venta->numero,
             'cliente_id' => $venta->cliente_id,
+            'user_id' => $venta->cliente?->user_id,
             'cliente' => $venta->cliente ? [
                 'id' => $venta->cliente->id,
                 'nombre' => $venta->cliente->nombre,
@@ -120,6 +121,7 @@ class VentaWebSocketService extends BaseWebSocketService
             'venta_id' => $venta->id,
             'venta_numero' => $venta->numero,
             'cliente_id' => $venta->cliente_id,
+            'user_id' => $venta->cliente?->user_id,
             'estado_codigo' => 'EN_TRANSITO',
             'estado_nombre' => 'En Tránsito',
             'cliente' => $venta->cliente ? [
@@ -161,6 +163,7 @@ class VentaWebSocketService extends BaseWebSocketService
             'venta_id' => $venta->id,
             'venta_numero' => $venta->numero,
             'cliente_id' => $venta->cliente_id,
+            'user_id' => $venta->cliente?->user_id,
             'estado_codigo' => 'ENTREGADA',
             'estado_nombre' => 'Entregada',
             'cliente' => $venta->cliente ? [
@@ -194,6 +197,7 @@ class VentaWebSocketService extends BaseWebSocketService
             'venta_id' => $venta->id,
             'venta_numero' => $venta->numero,
             'cliente_id' => $venta->cliente_id,
+            'user_id' => $venta->cliente?->user_id,
             'estado_codigo' => 'PROBLEMAS',
             'estado_nombre' => 'Problemas',
             'color' => $estadoProblema->color,

@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Models\Entrega;
+use App\Models\Venta;
 use App\Models\User;
 use App\Services\WebSocket\EntregaWebSocketService;
 use Illuminate\Support\Collection;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\Log;
  * - Notificaciones en tiempo real (EntregaWebSocketService)
  *
  * Responsabilidad única: Lógica de negocio de notificaciones de entregas
- * ✅ NUEVO: Guarda notificaciones para choferes cuando se asignan entregas
  */
 class EntregaNotificationService
 {
@@ -32,110 +32,49 @@ class EntregaNotificationService
     }
 
     /**
-     * Notificar asignación de entrega a chofer
-     * - Guarda en BD para el chofer asignado
+     * ✅ NUEVO: Notificar creación de entrega
+     * - Guarda en BD para todos los usuarios relevantes
      * - Envía notificación en tiempo real vía WebSocket
-     *
-     * ✅ NUEVO: Este método es crucial para que el chofer vea notificaciones persistentes
      */
-    public function notifyAsignada(Entrega $entrega): bool
+    public function notifyCreated(Entrega $entrega): bool
     {
-        if (!$entrega->chofer_id) {
-            Log::warning('⚠️ Intento de notificar entrega sin chofer asignado', [
-                'entrega_id' => $entrega->id,
-            ]);
-            return false;
-        }
-
         try {
-            // 1. Obtener el chofer
-            $chofer = User::find($entrega->chofer_id);
-            if (!$chofer) {
-                Log::warning('⚠️ Chofer no encontrado para asignación', [
+            // 1. Obtener usuarios a notificar
+            $users   = $this->getUsersForCreated($entrega);
+            $userIds = $users->pluck('id')->toArray();
+
+            if (empty($userIds)) {
+                Log::warning('EntregaNotificationService::notifyCreated - No hay usuarios para notificar', [
                     'entrega_id' => $entrega->id,
-                    'chofer_id' => $entrega->chofer_id,
                 ]);
-                return false;
+                return true;
             }
 
-            // 2. Guardar en BD (persistente) ✅ CRÍTICO
-            $this->dbNotificationService->create(
-                $chofer->id,
-                'entrega.asignada',
-                [
-                    'entrega_numero' => $entrega->numero_entrega ?? "ENT-{$entrega->id}",
-                    'entrega_id' => $entrega->id,
-                    'cliente_nombre' => $entrega->cliente ?? 'Cliente',
-                    'direccion' => $entrega->direccion,
-                    'estado' => $entrega->estado,
-                    'peso_kg' => $entrega->peso_kg,
-                    'mensaje' => "Nueva entrega asignada: {$entrega->numero_entrega}",
-                ],
-                [
-                    'entrega_id' => $entrega->id,
-                ]
-            );
-
-            Log::info('✅ Notificación de entrega asignada guardada en BD', [
+            // 2. Guardar en BD (persistente)
+            $this->dbNotificationService->create($userIds, 'entrega.creada', [
+                'entrega_numero'  => $entrega->numero_entrega,
+                'entrega_id'      => $entrega->id,
+                'chofer_nombre'   => $entrega->chofer?->name ?? 'Sin asignar',
+                'chofer_id'       => $entrega->chofer_id,
+                'vehiculo_placa'  => $entrega->vehiculo?->placa ?? 'Sin vehículo',
+                'ventas_count'    => $entrega->ventas()->count() ?? 0,
+                'estado'          => $entrega->estado,
+            ], [
                 'entrega_id' => $entrega->id,
-                'chofer_id' => $chofer->id,
-                'chofer_nombre' => $chofer->name,
             ]);
 
-            // 3. ✅ Enviar notificación en tiempo real vía WebSocket (usando método especializado)
-            return $this->wsService->notifyAsignada($entrega);
+            // 3. Enviar notificación en tiempo real vía WebSocket
+            $this->wsService->notifyCreated($entrega);
 
-        } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificación de entrega asignada', [
+            Log::info('✅ EntregaNotificationService::notifyCreated enviado', [
                 'entrega_id' => $entrega->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * Notificar cambio de estado de entrega
-     */
-    public function notifyEstadoCambio(Entrega $entrega, string $estadoAnterior): bool
-    {
-        if (!$entrega->chofer_id) {
-            return false;
-        }
-
-        try {
-            $chofer = User::find($entrega->chofer_id);
-            if (!$chofer) {
-                return false;
-            }
-
-            // Guardar en BD
-            $this->dbNotificationService->create(
-                $chofer->id,
-                'entrega.estado_cambio',
-                [
-                    'entrega_numero' => $entrega->numero_entrega ?? "ENT-{$entrega->id}",
-                    'entrega_id' => $entrega->id,
-                    'estado_anterior' => $estadoAnterior,
-                    'estado_nuevo' => $entrega->estado,
-                    'mensaje' => "Estado de entrega cambió a: {$entrega->estado}",
-                ],
-                [
-                    'entrega_id' => $entrega->id,
-                ]
-            );
-
-            Log::info('✅ Notificación de cambio de estado guardada en BD', [
-                'entrega_id' => $entrega->id,
-                'estado_anterior' => $estadoAnterior,
-                'estado_nuevo' => $entrega->estado,
+                'usuarios_notificados' => count($userIds),
             ]);
 
             return true;
 
         } catch (\Exception $e) {
-            Log::error('❌ Error notificando cambio de estado de entrega', [
+            Log::error('❌ Error en EntregaNotificationService::notifyCreated', [
                 'entrega_id' => $entrega->id,
                 'error' => $e->getMessage(),
             ]);
@@ -144,44 +83,55 @@ class EntregaNotificationService
     }
 
     /**
-     * Notificar finalización de entrega
+     * ✅ NUEVO: Notificar cambio de estado de entrega
+     * - Cuando el chofer marca la entrega como LISTO_PARA_ENTREGA, EN_TRANSITO, etc.
+     * - Se notifica a clientes, preventistas, admins, cajeros y creador
      */
-    public function notifyCompletada(Entrega $entrega): bool
+    public function notifyEstadoSincronizado(Entrega $entrega, string $estadoNuevo, ?string $estadoAnterior = null): bool
     {
-        if (!$entrega->chofer_id) {
-            return false;
-        }
-
         try {
-            $chofer = User::find($entrega->chofer_id);
-            if (!$chofer) {
-                return false;
+            // 1. Obtener usuarios a notificar
+            $users   = $this->getUsersForEstadoSincronizado($entrega);
+            $userIds = $users->pluck('id')->toArray();
+
+            if (empty($userIds)) {
+                Log::warning('EntregaNotificationService::notifyEstadoSincronizado - No hay usuarios para notificar', [
+                    'entrega_id' => $entrega->id,
+                    'estado_nuevo' => $estadoNuevo,
+                ]);
+                return true;
             }
 
-            // Guardar en BD
-            $this->dbNotificationService->create(
-                $chofer->id,
-                'entrega.completada',
-                [
-                    'entrega_numero' => $entrega->numero_entrega ?? "ENT-{$entrega->id}",
-                    'entrega_id' => $entrega->id,
-                    'fecha_entrega' => $entrega->fecha_entrega?->toIso8601String(),
-                    'mensaje' => "Entrega completada: {$entrega->numero_entrega}",
-                ],
-                [
-                    'entrega_id' => $entrega->id,
-                ]
-            );
-
-            Log::info('✅ Notificación de entrega completada guardada en BD', [
+            // 2. Guardar en BD (persistente)
+            $this->dbNotificationService->create($userIds, 'entrega.estado_cambio', [
+                'entrega_numero'   => $entrega->numero_entrega,
+                'entrega_id'       => $entrega->id,
+                'estado_anterior'  => $estadoAnterior,
+                'estado_nuevo'     => $estadoNuevo,
+                'chofer_nombre'    => $entrega->chofer?->name ?? 'Sin asignar',
+                'chofer_id'        => $entrega->chofer_id,
+                'vehiculo_placa'   => $entrega->vehiculo?->placa ?? 'Sin vehículo',
+                'cantidad_ventas'  => $entrega->ventas()->count() ?? 0,
+                'monto_total'      => $entrega->ventas()->sum('total') ?? 0,
+            ], [
                 'entrega_id' => $entrega->id,
+            ]);
+
+            // 3. Enviar notificación en tiempo real vía WebSocket
+            $this->wsService->notifyEstadoSincronizado($entrega, $estadoNuevo, $estadoAnterior);
+
+            Log::info('✅ EntregaNotificationService::notifyEstadoSincronizado enviado', [
+                'entrega_id' => $entrega->id,
+                'estado_nuevo' => $estadoNuevo,
+                'usuarios_notificados' => count($userIds),
             ]);
 
             return true;
 
         } catch (\Exception $e) {
-            Log::error('❌ Error notificando entrega completada', [
+            Log::error('❌ Error en EntregaNotificationService::notifyEstadoSincronizado', [
                 'entrega_id' => $entrega->id,
+                'estado_nuevo' => $estadoNuevo,
                 'error' => $e->getMessage(),
             ]);
             return false;
@@ -189,432 +139,329 @@ class EntregaNotificationService
     }
 
     /**
-     * ✅ NUEVO: Notificar a CLIENTES que sus ventas están en preparación de carga
-     *
-     * Se ejecuta cuando se crea una entrega consolidada
-     * - Obtiene todas las ventas de la entrega
-     * - Agrupa por cliente
-     * - Para cada cliente, obtiene su user_id (cliente.user_id, NO cliente_id)
-     * - Notifica al cliente vía BD + WebSocket
-     *
-     * @param Entrega $entrega La entrega creada
-     * @return bool True si todas las notificaciones se enviaron correctamente
+     * ✅ NUEVO: Notificar asignación de chofer a entrega (alias del anterior para consistencia)
+     * - Se notifica al chofer que fue asignado
+     * - Se notifica a admins y creador
      */
-    public function notificarClientesEntregaEnPreparacion(Entrega $entrega): bool
+    public function notifyChoferAsignado(Entrega $entrega): bool
     {
         try {
-            // 1. Obtener todas las ventas de la entrega con sus clientes
-            $ventas = $entrega->ventas()->with('cliente')->get();
+            // 1. Obtener usuarios a notificar
+            $users   = $this->getUsersForChoferAsignado($entrega);
+            $userIds = $users->pluck('id')->toArray();
 
-            if ($ventas->isEmpty()) {
-                Log::warning('⚠️  Entrega sin ventas asociadas', [
+            if (empty($userIds)) {
+                Log::warning('EntregaNotificationService::notifyChoferAsignado - No hay usuarios para notificar', [
                     'entrega_id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
                 ]);
-                return false;
+                return true;
             }
 
-            Log::info('📋 Notificando clientes - Entregas en preparación', [
+            // 2. Guardar en BD (persistente)
+            $this->dbNotificationService->create($userIds, 'entrega.chofer_asignado', [
+                'entrega_numero'  => $entrega->numero_entrega,
+                'entrega_id'      => $entrega->id,
+                'chofer_nombre'   => $entrega->chofer?->name ?? 'Sin asignar',
+                'chofer_id'       => $entrega->chofer_id,
+                'vehiculo_placa'  => $entrega->vehiculo?->placa ?? 'Sin vehículo',
+                'ventas_count'    => $entrega->ventas()->count() ?? 0,
+                'peso_kg'         => $entrega->peso_total ?? 0,
+                'volumen_m3'      => $entrega->volumen_total ?? 0,
+            ], [
                 'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'total_ventas' => $ventas->count(),
             ]);
 
-            // 2. Agrupar ventas por cliente_id
-            $ventasPorCliente = $ventas->groupBy('cliente_id');
-            $clientesNotificados = 0;
-            $clientesSinUserID = 0;
+            // 3. Enviar notificación en tiempo real vía WebSocket
+            $this->wsService->notifyChoferAsignado($entrega);
 
-            // 3. Para cada cliente, notificar
-            foreach ($ventasPorCliente as $clienteId => $ventasCliente) {
-                $cliente = $ventasCliente->first()?->cliente;
-
-                // ✅ CRÍTICO: Verificar que cliente existe y tiene user_id
-                // cliente_id es tabla clientes.id, pero WebSocket necesita cliente.user_id (users.id)
-                if (!$cliente) {
-                    Log::warning('⚠️  Cliente no encontrado', [
-                        'cliente_id' => $clienteId,
-                        'entrega_id' => $entrega->id,
-                    ]);
-                    continue;
-                }
-
-                if (!$cliente->user_id) {
-                    Log::warning('⚠️  Cliente sin user_id asociado - No se puede notificar', [
-                        'cliente_id' => $cliente->id,
-                        'cliente_nombre' => $cliente->nombre,
-                        'entrega_id' => $entrega->id,
-                    ]);
-                    $clientesSinUserID++;
-                    continue;
-                }
-
-                try {
-                    // Preparar datos de notificación
-                    $ventasNumeros = $ventasCliente->pluck('numero')->toArray();
-                    $ventasIds = $ventasCliente->pluck('id')->toArray();
-
-                    Log::info('📬 Notificando cliente - Venta en preparación', [
-                        'cliente_id' => $cliente->id,
-                        'cliente_nombre' => $cliente->nombre,
-                        'user_id' => $cliente->user_id,  // ✅ Esto es lo que WebSocket necesita
-                        'ventas_count' => $ventasCliente->count(),
-                        'ventas_numeros' => $ventasNumeros,
-                        'entrega_numero' => $entrega->numero_entrega,
-                    ]);
-
-                    // ✅ 1. Guardar notificación en BD (persistente)
-                    $this->dbNotificationService->create(
-                        $cliente->user_id,  // ✅ user_id, no cliente_id
-                        'venta.preparacion_carga',
-                        [
-                            'entrega_id' => $entrega->id,
-                            'entrega_numero' => $entrega->numero_entrega,
-                            'cliente_id' => $cliente->id,
-                            'cliente_nombre' => $cliente->nombre,
-                            'ventas_ids' => $ventasIds,
-                            'ventas_numeros' => $ventasNumeros,
-                            'cantidad_ventas' => $ventasCliente->count(),
-                            'peso_kg' => $entrega->peso_kg,
-                            'volumen_m3' => $entrega->volumen_m3,
-                            'mensaje' => count($ventasNumeros) === 1
-                                ? "Tu venta {$ventasNumeros[0]} está en preparación de carga - Entrega {$entrega->numero_entrega}"
-                                : "Tus " . count($ventasNumeros) . " ventas están en preparación de carga - Entrega {$entrega->numero_entrega}",
-                        ],
-                        [
-                            'entrega_id' => $entrega->id,
-                            'cliente_id' => $cliente->id,
-                        ]
-                    );
-
-                    Log::info('✅ Notificación guardada en BD para cliente', [
-                        'cliente_id' => $cliente->id,
-                        'user_id' => $cliente->user_id,
-                        'entrega_id' => $entrega->id,
-                    ]);
-
-                    // ✅ 2. Enviar notificación en tiempo real vía WebSocket
-                    $this->wsService->notifyClienteVentasEnPreparacion(
-                        $cliente->user_id,  // ✅ user_id para WebSocket
-                        $entrega,
-                        $ventasCliente
-                    );
-
-                    $clientesNotificados++;
-
-                } catch (\Exception $e) {
-                    Log::error('❌ Error notificando cliente individual', [
-                        'cliente_id' => $cliente->id,
-                        'user_id' => $cliente->user_id,
-                        'entrega_id' => $entrega->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                    continue;
-                }
-            }
-
-            Log::info('📊 Resumen de notificaciones a clientes', [
+            Log::info('✅ EntregaNotificationService::notifyChoferAsignado enviado', [
                 'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'clientes_notificados' => $clientesNotificados,
-                'clientes_sin_user_id' => $clientesSinUserID,
-                'total_clientes' => $ventasPorCliente->count(),
+                'chofer_id' => $entrega->chofer_id,
+                'usuarios_notificados' => count($userIds),
             ]);
 
-            return $clientesNotificados > 0;
+            return true;
 
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificaciones a clientes', [
+            Log::error('❌ Error en EntregaNotificationService::notifyChoferAsignado', [
                 'entrega_id' => $entrega->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
             return false;
         }
     }
 
     /**
-     * ✅ NUEVO: Notificar a clientes, admins y cajeros cuando sus ventas pasan de EN_PREPARACION a PENDIENTE_ENVIO
-     * (cuando la entrega está lista para partir)
-     *
-     * Flujo:
-     * 1. Obtener todas las ventas de la entrega
-     * 2. Agrupar por cliente
-     * 3. Para cada cliente, notificar del cambio de estado
-     * 4. Notificar a admins y cajeros
-     * 5. Guardar en BD (persistente)
-     * 6. Enviar vía WebSocket (tiempo real)
+     * ✅ ANTERIOR: Notificar al chofer que le fue asignada una entrega (mantener para compatibilidad)
      */
-    public function notificarClientesListoParaEntrega(Entrega $entrega): bool
+    public function notifyChoferEntregaAsignada(Entrega $entrega): bool
+    {
+        return $this->notifyChoferAsignado($entrega);
+    }
+
+    /**
+     * Notificar que una venta fue asignada a una entrega
+     * Notifica al cliente y al preventista
+     */
+    public function notifyVentaAsignada(Venta $venta, Entrega $entrega): bool
     {
         try {
-            // 1. Obtener todas las ventas de la entrega con sus clientes
-            $ventas = $entrega->ventas()
-                ->with('cliente.user')
+            // 1. Obtener usuarios a notificar
+            $users = $this->getUsersForVentaAsignada($venta);
+            $userIds = $users->pluck('id')->toArray();
+
+            Log::info('📢 [EntregaNotificationService::notifyVentaAsignada] Notificando usuarios', [
+                'venta_id' => $venta->id,
+                'entrega_id' => $entrega->id,
+                'usuarios_count' => count($userIds),
+                'usuarios_ids' => $userIds,
+            ]);
+
+            // 2. Guardar en BD para usuarios relevantes
+            if (!empty($userIds)) {
+                $this->dbNotificationService->create($userIds, 'entrega.venta_asignada', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'entrega_id' => $entrega->id,
+                    'entrega_numero' => $entrega->numero_entrega,
+                    'cliente_nombre' => $venta->cliente?->nombre ?? 'Cliente',
+                    'cliente_id' => $venta->cliente_id,
+                    'total' => (float) $venta->total,
+                    'chofer_nombre' => $entrega->chofer?->name ?? 'Chofer asignado',
+                    'vehiculo_placa' => $entrega->vehiculo?->placa ?? 'Vehículo',
+                ], [
+                    'venta_id' => $venta->id,
+                    'entrega_id' => $entrega->id,
+                ]);
+            }
+
+            // 3. Enviar notificación en tiempo real vía WebSocket
+            return $this->wsService->notifyVentaAsignada($venta, $entrega);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [EntregaNotificationService::notifyVentaAsignada] Error', [
+                'venta_id' => $venta->id,
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    // ========================================
+    // MÉTODOS PRIVADOS - LÓGICA DE USUARIOS
+    // ========================================
+
+    /**
+     * ✅ NUEVO: Usuarios para notificar cuando se CREA una entrega
+     * Criterio: Admins, Managers, Logística, Creador y Clientes de las ventas
+     */
+    private function getUsersForCreated(Entrega $entrega): Collection
+    {
+        $users = collect();
+
+        try {
+            // 1. Admins, Managers, Logística (staff de entregas)
+            $staffUsers = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['admin', 'manager', 'logistica', 'Admin', 'Manager', 'Logistica']);
+            })->where('activo', true)->get();
+            $users = $users->merge($staffUsers);
+
+            // 2. Usuario que creó la entrega (creador)
+            if ($entrega->created_by) {
+                $creador = User::where('id', $entrega->created_by)
+                    ->where('activo', true)
+                    ->first();
+                if ($creador) {
+                    $users->push($creador);
+                }
+            }
+
+            // 3. Clientes de las ventas en la entrega
+            $clientes = $entrega->ventas()
+                ->whereHas('cliente', function ($q) {
+                    $q->whereNotNull('user_id');
+                })
+                ->get()
+                ->pluck('cliente.user_id')
+                ->unique()
+                ->filter();
+
+            foreach ($clientes as $clienteUserId) {
+                $clienteUser = User::where('id', $clienteUserId)
+                    ->where('activo', true)
+                    ->first();
+                if ($clienteUser) {
+                    $users->push($clienteUser);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error en getUsersForCreated', [
+                'entrega_id' => $entrega->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $users->unique('id');
+    }
+
+    /**
+     * ✅ NUEVO: Usuarios para notificar cuando CAMBIA ESTADO de entrega
+     * Criterio:
+     * - Clientes de las ventas en la entrega
+     * - Preventistas asociados a las ventas
+     * - Admins
+     * - Cajeros
+     * - Creador de la entrega
+     */
+    private function getUsersForEstadoSincronizado(Entrega $entrega): Collection
+    {
+        $users = collect();
+
+        try {
+            // 1. Clientes de las ventas
+            $ventasConCliente = $entrega->ventas()
+                ->with('cliente')
                 ->get();
 
-            if ($ventas->isEmpty()) {
-                Log::warning('⚠️ Entrega sin ventas para notificar', [
-                    'entrega_id' => $entrega->id,
-                ]);
-                return false;
-            }
-
-            // 2. Agrupar ventas por cliente_id
-            $ventasPorCliente = $ventas->groupBy('cliente_id');
-            $clientesNotificados = 0;
-            $clientesSinUserID = 0;
-
-            // Resumen para admins/cajeros
-            $totalVentasEnPreparacion = $ventas->count();
-            $ventasNumeros = $ventas->pluck('numero_venta')->filter()->join(', ');
-
-            // 3. Iterar sobre cada cliente y notificar
-            foreach ($ventasPorCliente as $clienteId => $ventasDelCliente) {
-                try {
-                    // Obtener el cliente y su user_id
-                    $cliente = $ventasDelCliente->first()?->cliente;
-
-                    if (!$cliente || !$cliente->user_id) {
-                        Log::warning('⚠️ Cliente sin user_id, omitiendo notificación', [
-                            'entrega_id' => $entrega->id,
-                            'cliente_id' => $clienteId,
-                        ]);
-                        $clientesSinUserID++;
-                        continue;
+            foreach ($ventasConCliente as $venta) {
+                if ($venta->cliente && $venta->cliente->user_id) {
+                    $clienteUser = User::where('id', $venta->cliente->user_id)
+                        ->where('activo', true)
+                        ->first();
+                    if ($clienteUser) {
+                        $users->push($clienteUser);
                     }
+                }
 
-                    $userId = $cliente->user_id;
-                    $ventasNumerosPorCliente = $ventasDelCliente->pluck('numero_venta')->filter()->join(', ');
-                    $cantidadVentas = $ventasDelCliente->count();
-
-                    // 4. Guardar en BD (persistente) para el CLIENTE
-                    $this->dbNotificationService->create(
-                        $userId,
-                        'venta.estado_logistico_cambio',
-                        [
-                            'tipo_cambio' => 'PENDIENTE_ENVIO',
-                            'estado_anterior' => 'EN_PREPARACION',
-                            'estado_nuevo' => 'PENDIENTE_ENVIO',
-                            'entrega_id' => $entrega->id,
-                            'numero_entrega' => $entrega->numero_entrega ?? "ENT-{$entrega->id}",
-                            'cantidad_ventas' => $cantidadVentas,
-                            'ventas_numeros' => $ventasNumerosPorCliente,
-                            'cliente_nombre' => $cliente->nombre_completo,
-                            'mensaje' => $cantidadVentas === 1
-                                ? "Tu venta {$ventasNumerosPorCliente} está lista para ser enviada (Entrega {$entrega->numero_entrega})"
-                                : "Tus {$cantidadVentas} ventas están listas para ser enviadas (Entrega {$entrega->numero_entrega})",
-                        ],
-                        [
-                            'entrega_id' => $entrega->id,
-                            'cliente_id' => $clienteId,
-                        ]
-                    );
-
-                    Log::info('📬 Notificación de cambio de estado logístico guardada en BD (CLIENTE)', [
-                        'entrega_id' => $entrega->id,
-                        'usuario_id' => $userId,
-                        'cliente_id' => $clienteId,
-                        'cliente_nombre' => $cliente->nombre_completo,
-                        'cantidad_ventas' => $cantidadVentas,
-                        'estado_nuevo' => 'PENDIENTE_ENVIO',
-                    ]);
-
-                    // 5. Enviar vía WebSocket (tiempo real) al CLIENTE
-                    $this->wsService->notifyClienteVentasListoParaEntrega(
-                        $userId,
-                        $entrega,
-                        $ventasDelCliente->toArray()
-                    );
-
-                    $clientesNotificados++;
-
-                } catch (\Exception $e) {
-                    Log::error('❌ Error notificando a cliente individual', [
-                        'entrega_id' => $entrega->id,
-                        'cliente_id' => $clienteId,
-                        'error' => $e->getMessage(),
-                    ]);
-                    continue;
+                // 2. Preventistas asociados a las ventas
+                if ($venta->preventista_id) {
+                    $preventista = User::where('id', $venta->preventista_id)
+                        ->where('activo', true)
+                        ->first();
+                    if ($preventista) {
+                        $users->push($preventista);
+                    }
                 }
             }
 
-            // ✅ NUEVO: Notificar también a ADMINS Y CAJEROS
-            try {
-                Log::info('📢 Enviando notificación a admins y cajeros', [
-                    'entrega_id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'total_ventas' => $totalVentasEnPreparacion,
-                ]);
+            // 3. Admins y Cajeros
+            $adminsCajeros = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['admin', 'cajero', 'Admin', 'Cajero']);
+            })->where('activo', true)->get();
+            $users = $users->merge($adminsCajeros);
 
-                $this->wsService->notifyAdminsListoParaEntrega($entrega, $ventas);
-
-            } catch (\Exception $e) {
-                Log::error('❌ Error notificando a admins/cajeros', [
-                    'entrega_id' => $entrega->id,
-                    'error' => $e->getMessage(),
-                ]);
+            // 4. Creador de la entrega
+            if ($entrega->created_by) {
+                $creador = User::where('id', $entrega->created_by)
+                    ->where('activo', true)
+                    ->first();
+                if ($creador) {
+                    $users->push($creador);
+                }
             }
 
-            Log::info('📊 Resumen: clientes, admins y cajeros notificados de cambio de estado logístico', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'clientes_notificados' => $clientesNotificados,
-                'clientes_sin_user_id' => $clientesSinUserID,
-                'total_clientes' => $ventasPorCliente->count(),
-                'nuevo_estado' => 'PENDIENTE_ENVIO',
-                'admins_y_cajeros' => 'NOTIFICADOS',
-            ]);
-
-            return $clientesNotificados > 0;
-
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificaciones de cambio de estado logístico', [
+            Log::error('Error en getUsersForEstadoSincronizado', [
                 'entrega_id' => $entrega->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
-            return false;
         }
+
+        return $users->unique('id');
     }
 
     /**
-     * ✅ NUEVO: Notificar a clientes, admins y cajeros cuando la entrega pasa a EN_TRANSITO
-     * (ventas cambian de PENDIENTE_ENVIO a EN_TRANSITO)
-     *
-     * Flujo:
-     * 1. Notificar a cada cliente individualmente
-     * 2. Notificar a admins y cajeros con resumen
-     * 3. Guardar en BD (persistente)
-     * 4. Enviar vía WebSocket (tiempo real)
+     * ✅ NUEVO: Usuarios para notificar cuando se ASIGNA CHOFER
+     * Criterio:
+     * - El chofer asignado
+     * - Admins
+     * - Creador de la entrega
      */
-    public function notificarClientesEnTransito(Entrega $entrega): bool
+    private function getUsersForChoferAsignado(Entrega $entrega): Collection
     {
+        $users = collect();
+
         try {
-            // 1. Obtener todas las ventas de la entrega con sus clientes
-            $ventas = $entrega->ventas()
-                ->with('cliente.user')
-                ->get();
-
-            if ($ventas->isEmpty()) {
-                Log::warning('⚠️ Entrega sin ventas para notificar', [
-                    'entrega_id' => $entrega->id,
-                ]);
-                return false;
-            }
-
-            // 2. Agrupar ventas por cliente_id
-            $ventasPorCliente = $ventas->groupBy('cliente_id');
-            $clientesNotificados = 0;
-            $clientesSinUserID = 0;
-
-            // Resumen para admins/cajeros
-            $totalVentasEnTransito = $ventas->count();
-            $ventasNumeros = $ventas->pluck('numero_venta')->filter()->join(', ');
-
-            // 3. Iterar sobre cada cliente y notificar
-            foreach ($ventasPorCliente as $clienteId => $ventasDelCliente) {
-                try {
-                    // Obtener el cliente y su user_id
-                    $cliente = $ventasDelCliente->first()?->cliente;
-
-                    if (!$cliente || !$cliente->user_id) {
-                        Log::warning('⚠️ Cliente sin user_id, omitiendo notificación', [
-                            'entrega_id' => $entrega->id,
-                            'cliente_id' => $clienteId,
-                        ]);
-                        $clientesSinUserID++;
-                        continue;
-                    }
-
-                    $userId = $cliente->user_id;
-                    $ventasNumerosPorCliente = $ventasDelCliente->pluck('numero_venta')->filter()->join(', ');
-                    $cantidadVentas = $ventasDelCliente->count();
-
-                    // 4. Guardar en BD (persistente) para el CLIENTE
-                    $this->dbNotificationService->create(
-                        $userId,
-                        'venta.en_transito',
-                        [
-                            'tipo_cambio' => 'EN_TRANSITO',
-                            'estado_anterior' => 'PENDIENTE_ENVIO',
-                            'estado_nuevo' => 'EN_TRANSITO',
-                            'entrega_id' => $entrega->id,
-                            'numero_entrega' => $entrega->numero_entrega ?? "ENT-{$entrega->id}",
-                            'cantidad_ventas' => $cantidadVentas,
-                            'ventas_numeros' => $ventasNumerosPorCliente,
-                            'cliente_nombre' => $cliente->nombre_completo,
-                            'chofer' => $entrega->chofer?->name,
-                            'mensaje' => $cantidadVentas === 1
-                                ? "Tu venta {$ventasNumerosPorCliente} está en tránsito - Chofer: {$entrega->chofer?->name}"
-                                : "Tus {$cantidadVentas} ventas están en tránsito - Chofer: {$entrega->chofer?->name}",
-                        ],
-                        [
-                            'entrega_id' => $entrega->id,
-                            'cliente_id' => $clienteId,
-                        ]
-                    );
-
-                    Log::info('📬 Notificación de en tránsito guardada en BD (CLIENTE)', [
-                        'entrega_id' => $entrega->id,
-                        'usuario_id' => $userId,
-                        'cliente_id' => $clienteId,
-                        'cantidad_ventas' => $cantidadVentas,
-                    ]);
-
-                    // 5. Enviar vía WebSocket (tiempo real) al CLIENTE
-                    $this->wsService->notifyClienteEnTransito(
-                        $userId,
-                        $entrega,
-                        $ventasDelCliente->toArray()
-                    );
-
-                    $clientesNotificados++;
-
-                } catch (\Exception $e) {
-                    Log::error('❌ Error notificando a cliente individual', [
-                        'entrega_id' => $entrega->id,
-                        'cliente_id' => $clienteId,
-                        'error' => $e->getMessage(),
-                    ]);
-                    continue;
+            // 1. Chofer asignado (user_id del chofer)
+            if ($entrega->chofer_id) {
+                $chofer = User::where('id', $entrega->chofer_id)
+                    ->where('activo', true)
+                    ->first();
+                if ($chofer) {
+                    $users->push($chofer);
                 }
             }
 
-            // ✅ NUEVO: Notificar también a ADMINS Y CAJEROS
-            try {
-                Log::info('📢 Enviando notificación a admins y cajeros sobre entrega en tránsito', [
-                    'entrega_id' => $entrega->id,
-                    'numero_entrega' => $entrega->numero_entrega,
-                    'total_ventas' => $totalVentasEnTransito,
-                ]);
+            // 2. Admins
+            $admins = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['admin', 'Admin']);
+            })->where('activo', true)->get();
+            $users = $users->merge($admins);
 
-                $this->wsService->notifyAdminsEnTransito($entrega, $ventas);
-
-            } catch (\Exception $e) {
-                Log::error('❌ Error notificando a admins/cajeros sobre en tránsito', [
-                    'entrega_id' => $entrega->id,
-                    'error' => $e->getMessage(),
-                ]);
+            // 3. Creador de la entrega
+            if ($entrega->created_by) {
+                $creador = User::where('id', $entrega->created_by)
+                    ->where('activo', true)
+                    ->first();
+                if ($creador) {
+                    $users->push($creador);
+                }
             }
 
-            Log::info('📊 Resumen: clientes, admins y cajeros notificados de entrega en tránsito', [
-                'entrega_id' => $entrega->id,
-                'numero_entrega' => $entrega->numero_entrega,
-                'clientes_notificados' => $clientesNotificados,
-                'clientes_sin_user_id' => $clientesSinUserID,
-                'total_clientes' => $ventasPorCliente->count(),
-            ]);
-
-            return $clientesNotificados > 0;
-
         } catch (\Exception $e) {
-            Log::error('❌ Error procesando notificaciones de entrega en tránsito', [
+            Log::error('Error en getUsersForChoferAsignado', [
                 'entrega_id' => $entrega->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
-            return false;
         }
+
+        return $users->unique('id');
+    }
+
+    /**
+     * ✅ ANTERIOR: Usuarios para notificar cuando una venta es asignada a entrega
+     * Criterio: Cliente propietario, Preventista asignado, Admins, Managers
+     */
+    private function getUsersForVentaAsignada(Venta $venta): Collection
+    {
+        $users = collect();
+
+        try {
+            // 1. Admins y managers (supervisión)
+            $staffUsers = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['admin', 'manager', 'Admin', 'Manager']);
+            })->where('activo', true)->get();
+            $users = $users->merge($staffUsers);
+
+            // 2. Preventista asignado a la venta
+            if ($venta->preventista_id) {
+                $preventista = User::where('id', $venta->preventista_id)
+                    ->where('activo', true)
+                    ->first();
+                if ($preventista) {
+                    $users->push($preventista);
+                }
+            }
+
+            // 3. Cliente propietario de la venta (si tiene usuario asociado)
+            if ($venta->cliente && $venta->cliente->user_id) {
+                $clienteUser = User::where('id', $venta->cliente->user_id)
+                    ->where('activo', true)
+                    ->first();
+                if ($clienteUser) {
+                    $users->push($clienteUser);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error en getUsersForVentaAsignada', [
+                'venta_id' => $venta->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $users->unique('id');
     }
 }
