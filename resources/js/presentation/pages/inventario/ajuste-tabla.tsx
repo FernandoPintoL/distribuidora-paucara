@@ -86,54 +86,90 @@ function DropdownPortal({
         if (!inputRef.current || !visible) return;
 
         const rect = inputRef.current.getBoundingClientRect();
+        // ✅ getBoundingClientRect() ya da posición relativa al viewport
+        // para fixed positioning, NO necesitamos sumar scrollY/scrollX
         setPosition({
-            top: rect.bottom + window.scrollY + 4,
-            left: rect.left + window.scrollX,
+            top: rect.bottom + 4,   // Posición exacta debajo del input
+            left: rect.left,        // Posición exacta a la izquierda del input
             width: rect.width,
         });
     }, [visible, inputRef, searchResults]);
 
     if (!visible || searchResults.length === 0) return null;
 
+    // Agrupar resultados por producto_id para mostrar lotes
+    const agrupadosPorProducto = searchResults.reduce((acc, item) => {
+        const productoId = item.producto_id || item.id;
+        if (!acc[productoId]) {
+            acc[productoId] = {
+                nombre: item.nombre,
+                sku: item.sku,
+                producto_id: productoId,
+                lotes: []
+            };
+        }
+        acc[productoId].lotes.push(item);
+        return acc;
+    }, {} as Record<string | number, any>);
+
     return createPortal(
         <div
-            className="fixed bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-md shadow-2xl z-[9999] max-h-48 overflow-y-auto"
+            className="absolute bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-md shadow-2xl z-[9999] overflow-y-auto"
             style={{
+                position: 'fixed',
                 top: `${position.top}px`,
                 left: `${position.left}px`,
                 width: `${position.width}px`,
+                maxHeight: 'calc(100vh - ' + position.top + 'px - 20px)', // Dinámico: hasta 20px del final
+                minHeight: '150px',
             }}
         >
-            {searchResults.map((producto) => (
+            {Object.values(agrupadosPorProducto).map((grupo) => (
                 <div
-                    key={producto.id}
-                    onClick={() => {
-                        onSelectProduct(producto);
-                    }}
-                    className="px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-600 border-b dark:border-slate-600 last:border-b-0 transition"
+                    key={grupo.producto_id}
+                    className="border-b dark:border-slate-600 last:border-b-0"
                 >
-                    <div className="font-medium text-sm dark:text-gray-200">
-                        {producto.nombre}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                        <div className="font-semibold">{producto.sku}</div>
-                        {/* ✅ Mostrar ambos stocks */}
-                        <div className="mt-1 space-y-0.5">
-                            <span className="block">
-                                📦 Stock Actual: <span className="font-semibold text-blue-600 dark:text-blue-400">{parseFloat(producto.cantidad_actual || 0).toFixed(2)}</span>
-                            </span>
-                            <span className="block">
-                                ✓ Disponible: <span className="font-semibold text-green-600 dark:text-green-400">{parseFloat(producto.cantidad_disponible || 0).toFixed(2)}</span>
-                            </span>
+                    {/* Encabezado del Producto */}
+                    <div className="px-3 py-2 bg-gray-50 dark:bg-slate-600 sticky top-0">
+                        <div className="font-semibold text-sm dark:text-gray-100">
+                            {grupo.nombre}
                         </div>
-                        {/* ✅ Mostrar lote si existe */}
-                        {producto.lote && (
-                            <div className="mt-1 pt-1 border-t border-gray-300 dark:border-gray-600">
-                                <span className="text-blue-600 dark:text-blue-400 font-medium">
-                                    📋 Lote: {producto.lote}
-                                </span>
+                        <div className="text-xs text-gray-600 dark:text-gray-300">
+                            SKU: {grupo.sku}
+                        </div>
+                    </div>
+
+                    {/* Lotes del Producto */}
+                    <div className="divide-y dark:divide-slate-600">
+                        {grupo.lotes.map((lote: any) => (
+                            <div
+                                key={`${lote.id}-${lote.lote || 'sin-lote'}`}
+                                onClick={() => {
+                                    onSelectProduct(lote);
+                                }}
+                                className="px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-500 transition"
+                            >
+                                <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                                    {lote.lote ? (
+                                        <div className="font-medium text-blue-600 dark:text-blue-400">
+                                            📋 Lote: {lote.lote}
+                                        </div>
+                                    ) : (
+                                        <div className="font-medium text-orange-600 dark:text-orange-400">
+                                            ⚠️ Sin Lote
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <span className="block">
+                                            📦 Stock: <span className="font-semibold text-blue-600 dark:text-blue-400">{parseFloat(lote.cantidad_actual || 0).toFixed(2)}</span>
+                                        </span>
+                                        <span className="block">
+                                            ✓ Disp: <span className="font-semibold text-green-600 dark:text-green-400">{parseFloat(lote.cantidad_disponible || 0).toFixed(2)}</span>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        ))}
                     </div>
                 </div>
             ))}
@@ -266,16 +302,21 @@ export default function AjusteTabla() {
 
                 const data = await response.json();
 
+                // ✅ DEBUG: Mostrar qué llega del backend
+                console.log('🔍 Búsqueda de productos:', {
+                    busqueda: term,
+                    almacen: almacenSeleccionado,
+                    resultados: data.data,
+                    totalResultados: data.data?.length || 0,
+                    respuestaCompleta: data
+                });
+
                 if (data.success) {
                     if (data.data.length === 0) {
                         toast.error('No se encontraron productos');
-                    } else if (data.data.length === 1) {
-                        // Si hay solo 1 resultado, seleccionarlo automáticamente
-                        const producto = data.data[0];
-                        toast.success(`Producto seleccionado: ${producto.nombre}`);
-                        seleccionarProducto(ajusteId, producto);
                     } else {
-                        // Mostrar dropdown si hay múltiples resultados
+                        // ✅ SIEMPRE mostrar dropdown (incluso si hay 1 resultado)
+                        // Esto permite que el usuario vea todos los lotes disponibles
                         setSearchResults((prev) => ({
                             ...prev,
                             [ajusteId]: data.data || [],

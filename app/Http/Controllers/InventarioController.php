@@ -3208,9 +3208,10 @@ class InventarioController extends Controller
                 ]);
             }
 
-            // Obtener productos con stock disponible
+            // ✅ Obtener TODOS los stocks del almacén (sin restricción de cantidad)
+            // Para ajustes de inventario, necesitamos ver todos los lotes/stocks
+            // sin importar si tienen cantidad 0 o no disponible
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
-                ->where('cantidad_disponible', '>', 0)
                 ->with(['producto:id,nombre,sku,codigo_barras', 'producto.codigosBarra'])
                 ->get();
 
