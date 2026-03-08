@@ -409,6 +409,21 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('ventas/{venta}/stock/resumen', [\App\Http\Controllers\VentaController::class, 'obtenerResumenStock'])->name('ventas.stock.resumen');
 
     // ==========================================
+    // DEVOLUCIONES - MÓDULO DE DEVOLUCIONES Y CAMBIOS
+    // ==========================================
+    // Devoluciones: lista y detalle general
+    Route::get('devoluciones', [\App\Http\Controllers\DevolucionController::class, 'index'])
+        ->name('devoluciones.index');
+    Route::get('devoluciones/{devolucion}', [\App\Http\Controllers\DevolucionController::class, 'show'])
+        ->name('devoluciones.show');
+
+    // Devoluciones: crear desde una venta específica (nested resource)
+    Route::get('ventas/{venta}/devoluciones/create', [\App\Http\Controllers\DevolucionController::class, 'create'])
+        ->name('devoluciones.create');
+    Route::post('ventas/{venta}/devoluciones', [\App\Http\Controllers\DevolucionController::class, 'store'])
+        ->name('devoluciones.store');
+
+    // ==========================================
     // PROFORMAS - VISTAS INERTIA (usan ApiProformaController)
     // ==========================================
     // Vistas Inertia que reciben datos desde ApiProformaController

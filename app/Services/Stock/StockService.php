@@ -323,6 +323,7 @@ class StockService
                     'cantidad_posterior' => $stock->cantidad,
                     'tipo'               => MovimientoInventario::TIPO_ENTRADA_DEVOLUCION,
                     'numero_documento'   => $referencia,
+                    'observacion'        => 'Devolución',
                     'fecha'              => now(),
                     'user_id'            => Auth::id(),
                 ]);
@@ -391,6 +392,7 @@ class StockService
                     'cantidad_posterior' => $stock->cantidad,
                     'tipo'               => MovimientoInventario::TIPO_ENTRADA_COMPRA,
                     'numero_documento'   => $referencia,
+                    'observacion'        => 'Compra',
                     'fecha'              => now(),
                     'user_id'            => Auth::id(),
                 ]);

@@ -343,6 +343,14 @@ class Venta extends Model
     }
 
     /**
+     * Devoluciones asociadas a esta venta
+     */
+    public function devoluciones()
+    {
+        return $this->hasMany(Devolucion::class);
+    }
+
+    /**
      * Métodos de Utilidad para Logística
      */
 

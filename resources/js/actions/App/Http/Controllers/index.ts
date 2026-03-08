@@ -57,6 +57,7 @@ import ImpresionComprasController from './ImpresionComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
+import DevolucionController from './DevolucionController'
 import ImpresionProformasController from './ImpresionProformasController'
 import ReservaController from './ReservaController'
 import CajaController from './CajaController'
@@ -143,6 +144,7 @@ ImpresionComprasController,
 DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
+DevolucionController,
 ImpresionProformasController,
 ReservaController,
 CajaController,

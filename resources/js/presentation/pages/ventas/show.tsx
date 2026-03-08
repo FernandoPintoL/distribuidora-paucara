@@ -143,6 +143,16 @@ export default function VentaShow() {
                             {isAnulando ? 'Anulando...' : 'Anular'}
                         </button>
                     )}
+
+                    {/* Botón Crear Devolución */}
+                    {can('devoluciones.create') && esAprobada && (
+                        <Link
+                            href={`/ventas/${venta.id}/devoluciones/create`}
+                            className="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-700 focus:bg-orange-700 active:bg-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150"
+                        >
+                            ↩️ Devolución
+                        </Link>
+                    )}
                 </div>
             </div>
 

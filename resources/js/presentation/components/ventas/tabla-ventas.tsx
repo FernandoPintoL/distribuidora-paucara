@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer, DollarSign, Loader2 } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreHorizontal, FileText, Truck, Store, ChevronDown, ChevronUp, MapPin, Package, Calendar, Printer, DollarSign, Loader2, RotateCcw } from 'lucide-react';
 import { formatCurrency, formatCurrencyWith2Decimals, formatDate } from '@/lib/utils';
 import type { Venta, FiltrosVentas } from '@/domain/entities/ventas';
 import type { Pagination } from '@/domain/entities/shared';
@@ -573,6 +573,17 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
+                                            )}
+
+                                            {/* Devolución - Solo si está APROBADO */}
+                                            {venta.estado_documento?.codigo === 'APROBADO' && (
+                                                <Link
+                                                    href={`/ventas/${venta.id}/devoluciones/create`}
+                                                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 p-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                                                    title="Crear devolución"
+                                                >
+                                                    <RotateCcw className="w-4 h-4" />
+                                                </Link>
                                             )}
 
                                             {/* ✅ NUEVO (2026-02-10): Indicador de reversión de stock para ventas anuladas */}

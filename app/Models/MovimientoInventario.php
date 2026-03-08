@@ -78,6 +78,7 @@ class MovimientoInventario extends Model
     const TIPO_SALIDA_MERMA = 'SALIDA_MERMA';
     const TIPO_SALIDA_VENTA = 'SALIDA_VENTA';
     const TIPO_ENTRADA_COMPRA = 'ENTRADA_COMPRA';
+    const TIPO_ENTRADA_DEVOLUCION = 'ENTRADA_DEVOLUCION'; // ✅ NUEVO: Entrada por devolución de cliente
     const TIPO_TRANSFERENCIA = 'TRANSFERENCIA'; // Para transferencias entre almacenes
     const TIPO_RESERVA_PROFORMA = 'RESERVA_PROFORMA'; // ✅ NUEVO: Reserva de stock por proforma
     const TIPO_LIBERACION_RESERVA = 'LIBERACION_RESERVA'; // ✅ NUEVO: Liberación de reserva

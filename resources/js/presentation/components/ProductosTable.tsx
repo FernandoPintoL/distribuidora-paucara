@@ -104,12 +104,6 @@ export default function ProductosTable({
     onDetallesActualizados, // ✅ NUEVO (2026-02-17): Callback cuando se actualizan detalles
     es_farmacia = false // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
 }: ProductosTableProps) {
-
-    // ✅ DEBUG: Loguear props recibidos
-    console.log('📋 ProductosTable - Props recibidos:', productos);
-    console.log('Detalles recibidos:', detalles);
-    // ✅ DEBUG: Loguear si es farmacia
-    console.log('🏥 ProductosTable - es_farmacia:', es_farmacia);
     const [productSearch, setProductSearch] = useState('');
     const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -145,7 +139,6 @@ export default function ProductosTable({
 
             // ✅ FIJO (2026-02-18): Usar ultimoIndice para expandedCombos (no comboId)
             if (tieneComponentes && !expandedCombos[ultimoIndice]) {
-                console.log(`✅ [ProductosTable] Expandiendo automáticamente combo: ${ultimoDetalle.producto.nombre} (index: ${ultimoIndice}, comboId: ${comboId})`);
                 setExpandedCombos(prev => ({
                     ...prev,
                     [ultimoIndice]: true
@@ -169,7 +162,6 @@ export default function ProductosTable({
         if (tipo === 'venta' && !selectedTipoPrecio[ultimoIndice]) {
             // ✅ CRÍTICO: Primero intentar usar el tipo_precio_id_recomendado que viene del backend
             if (ultimoDetalle.tipo_precio_id_recomendado) {
-                console.log(`✅ [ProductosTable] Inicializando select con tipo_precio_id_recomendado del backend: ${ultimoDetalle.tipo_precio_id_recomendado} (${ultimoDetalle.tipo_precio_nombre_recomendado})`);
                 setSelectedTipoPrecio(prev => ({
                     ...prev,
                     [ultimoIndice]: String(ultimoDetalle.tipo_precio_id_recomendado)
@@ -187,7 +179,6 @@ export default function ProductosTable({
                 ) || preciosVenta[0];
 
                 if (precioVenta) {
-                    console.log(`✅ [ProductosTable] Inicializando select con fallback - Precio Venta: ${precioVenta.nombre} (ID: ${precioVenta.tipo_precio_id})`);
                     setSelectedTipoPrecio(prev => ({
                         ...prev,
                         [ultimoIndice]: String(precioVenta.tipo_precio_id)
@@ -225,7 +216,6 @@ export default function ProductosTable({
                 // ✅ CRÍTICO: Usar INDEX para expandedCombos (es lo que espera ProductosTable)
                 // pero usar comboId para comboItemsMap (para evitar colisiones si hay múltiples detalles con el mismo producto)
                 if (!expandedCombos[index] && deberiaEstarExpandido) {
-                    console.log(`✅ [ProductosTable] Inicializando combo expandido desde backend: ${producto.nombre} (index: ${index}, comboId: ${comboId}, expanded field: ${(detalle as any).expanded})`);
                     newExpandedCombos[index] = true;
                     hasChanges = true;
 
@@ -240,7 +230,6 @@ export default function ProductosTable({
                             }));
 
                         newComboItemsMap[comboId] = inicializados;
-                        console.log(`✅ [ProductosTable] Inicializados combo_items para: ${producto.nombre}`, inicializados);
                     }
                 }
             }
@@ -276,15 +265,6 @@ export default function ProductosTable({
                 detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre &&
                 !manuallySelectedTipoPrecio[index] // No actualizar si fue seleccionado manualmente
             ) {
-                console.log(`🏷️ [ProductosTable - useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
-                    precio_anterior: detalle.precio_unitario,
-                    precio_nuevo: detalleRango.precio_unitario,
-                    subtotal_anterior: detalle.subtotal,
-                    subtotal_nuevo: detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario),
-                    unidad_venta_id_preservada: detalle.unidad_venta_id,
-                    fue_manual: manuallySelectedTipoPrecio[index] ? 'SÍ (IGNORADO)' : 'NO'
-                });
-
                 // ✅ Actualizar precio_unitario y subtotal junto con tipo_precio
                 const nuevoSubtotal = detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario);
 
@@ -306,7 +286,6 @@ export default function ProductosTable({
         );
 
         if (huboCambios && onDetallesActualizados) {
-            console.log('✅ [ProductosTable] Detalles actualizados por cambio de rangos, notificando al padre');
             onDetallesActualizados(detallesActualizados);
         }
     }, [carritoCalculado, detalles, manuallySelectedTipoPrecio, onDetallesActualizados]);
@@ -330,19 +309,6 @@ export default function ProductosTable({
 
     // ✅ NUEVO: Función para agregar producto y limpiar input/sugerencias
     const handleAgregarProductoYLimpiar = (producto: Producto) => {
-        // ✅ NUEVO 2026-03-06: Log para ver estructura exacta del producto antes de agregar
-        console.log('📥 [handleAgregarProductoYLimpiar] Producto a agregar:', JSON.stringify(producto, null, 2));
-        console.log('🔍 [handleAgregarProductoYLimpiar] Campos específicos:', {
-            id: producto.id,
-            nombre: producto.nombre,
-            codigo: producto.codigo,
-            sku: producto.sku,
-            codigo_barras: producto.codigo_barras,
-            marca: producto.marca,
-            unidad: producto.unidad,
-            precio_compra: (producto as any).precio_compra,
-            precio_venta: (producto as any).precio_venta
-        });
         onAddProduct(producto);
         setProductSearch('');
         setProductosDisponibles([]);
@@ -406,23 +372,6 @@ export default function ProductosTable({
 
             const data = await response.json();
 
-            console.log('✅ [ProductosTable] Respuesta API completa:', data.data);
-            // ✅ NUEVO 2026-03-06: Mostrar estructura del primer producto
-            if (data.data && data.data.length > 0) {
-                console.log('📦 [ProductosTable] Estructura del PRIMER PRODUCTO del endpoint:', JSON.stringify(data.data[0], null, 2));
-                console.log('🔍 [ProductosTable] Campos específicos:', {
-                    id: data.data[0].id,
-                    nombre: data.data[0].nombre,
-                    codigo: data.data[0].codigo,
-                    codigo_barras: data.data[0].codigo_barras,
-                    marca: data.data[0].marca,
-                    unidad: data.data[0].unidad,
-                    precio_compra: data.data[0].precio_compra,
-                    precio_venta: data.data[0].precio_venta
-                });
-            }
-            console.log('🏥 [buscarProductos] Contexto de farmacia - es_farmacia:', es_farmacia);
-
             // Transformar respuesta de API a formato Producto
             const productosAPI = data.data.map((p: any) => {
                 // ✅ CORREGIDO: Para compras, asegurar que stock_disponible siempre tiene un valor
@@ -476,7 +425,6 @@ export default function ProductosTable({
                 };
             });
 
-            console.log('✅ Productos transformados:', productosAPI);
 
             // ✅ NUEVO: Filtrar productos válidos para ventas (stock > 0 y precio_venta > 0)
             // IMPORTANTE: Si incluirCombos=true, permitir combos sin stock ni precio_venta (se calcula de los componentes)
@@ -484,15 +432,6 @@ export default function ProductosTable({
                 if (tipo === 'venta') {
                     const esCombo = (p as any).es_combo || false;
                     const tieneComponentes = ((p as any).combo_items?.length || 0) > 0;
-
-                    // ✅ SIMPLIFICADO: Backend determina automáticamente si es combo
-                    console.log(`📦 Filtrando producto ${p.nombre}:`, {
-                        es_combo: esCombo,
-                        stock: p.stock,
-                        precio_venta: p.precio_venta,
-                        tiene_componentes: tieneComponentes,
-                        resultado: esCombo ? tieneComponentes : (p.stock > 0 && p.precio_venta > 0)
-                    });
 
                     // ✅ Si es combo, solo requiere componentes (stock se calcula de ellos)
                     if (esCombo) {
@@ -504,9 +443,6 @@ export default function ProductosTable({
                 }
                 return true; // Para compras mostrar todos
             });
-
-            console.log(`🔍 Productos encontrados: ${productosAPI.length}, Válidos: ${productosValidos.length}`, { productosValidos });
-
             setProductosDisponibles(productosValidos);
 
             // ✅ NUEVO: Si hay exactamente 1 resultado válido, agregarlo automáticamente
@@ -654,23 +590,11 @@ export default function ProductosTable({
             const cantidadAnterior = detalles[index].cantidad;
             const cantidadNueva = typeof value === 'number' ? value : parseInt(value as string, 10);
 
-            console.log(`🔄 [COMBO] Cambio de cantidad detectado:`, {
-                index,
-                esCombo: true,
-                cantidadAnterior,
-                cantidadNueva,
-                productoNombre: (detalles[index].producto as any)?.nombre,
-                totalDetalles: detalles.length,
-            });
-
             if (!isNaN(cantidadNueva) && cantidadAnterior !== cantidadNueva) {
-                console.log(`📊 Cantidad del combo: ${cantidadAnterior} → ${cantidadNueva}`);
-
                 // ✅ Obtener items actuales del mapa (si existen, preservan selecciones del usuario)
                 const comboId = (detalles[index].producto as any)?.id;
                 const itemsActualesDelMapa = comboId ? comboItemsMap[comboId] : null;
                 const comboItems = ((detalles[index].producto as any).combo_items || []) as Array<any>;
-                console.log(`🎁 Componentes del combo encontrados: ${comboItems.length}`, comboItems.map(item => ({ nombre: item.producto_nombre, cantidadOriginal: item.cantidad })));
 
                 // ✅ CRÍTICO: Preservar TANTO el estado "incluido" como las cantidades editadas manualmente
                 // Mapear items originales con sus selecciones guardadas
@@ -692,25 +616,12 @@ export default function ProductosTable({
                         const proporcion = cantidadAnteriorDelItem > 0 ? (cantidadEditadaManualmente / cantidadAnteriorDelItem) : 1;
                         cantidadFinal = cantidadComponenteNueva * proporcion;
                     }
-
-                    console.log(`  ✏️  Actualizando componente: ${item.producto_nombre}`, {
-                        cantidadOriginal: cantidadComponenteOriginal,
-                        cantidadDelCombo: cantidadNueva,
-                        cantidadFinal: cantidadFinal,
-                        cantidadEditadaManualmente: cantidadEditadaManualmente,
-                        incluido: incluido,
-                        preservadoDelMapa: incluidoDelUsuario !== undefined
-                    });
-
                     return {
                         ...item,
                         cantidad: cantidadFinal,
                         incluido: incluido  // ✅ Preservar selección del usuario
                     };
                 });
-
-                console.log(`✅ Actualización de combo completada - componentes actualizados:`,
-                    comboItemsActualizados.map(i => ({ nombre: i.producto_nombre, cantidad: i.cantidad, incluido: i.incluido })));
 
                 // ✅ CRÍTICO: Guardar combo_items en mapa (persisten aunque detalles cambien)
                 // Usar comboId en lugar de index para evitar colisiones entre diferentes combos
@@ -925,13 +836,6 @@ export default function ProductosTable({
                                         {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
                                         {(() => {
                                             const mostrarMedicamentos = es_farmacia && (producto.principio_activo || producto.uso_de_medicacion);
-                                            if (mostrarMedicamentos) {
-                                                console.log(`💊 [Sugerencias] Mostrando medicamento para ${producto.nombre}:`, {
-                                                    es_farmacia,
-                                                    principio_activo: producto.principio_activo,
-                                                    uso_de_medicacion: producto.uso_de_medicacion
-                                                });
-                                            }
                                             return mostrarMedicamentos && (
                                                 <button
                                                     type="button"
@@ -974,9 +878,6 @@ export default function ProductosTable({
                                     Producto
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Stock Disponible
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Cantidad
                                 </th>
                                 {tipo === 'compra' && (
@@ -991,21 +892,11 @@ export default function ProductosTable({
                                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Vencimiento
                                         </th>
-                                        {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Unidad Compra
-                                        </th>
-                                         */}
-                                        {/* ✨ NUEVA COLUMNA: Precio por Unidad (solo si hay fraccionados) */}
-                                        {/* {detalles.some(d => d.es_fraccionado && d.conversiones && d.conversiones.length > 0) && (
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Precio / Unidad
-                                            </th>
-                                        )} */}
                                     </>
                                 )}
                                 {tipo === 'venta' && (
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Precio de Venta
+                                        Precio Unitario
                                     </th>
                                 )}
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -1023,26 +914,6 @@ export default function ProductosTable({
                                 const productoInfo = detalle.producto || productos.find(p => p.id === detalle.producto_id);
                                 const esCombo = productoInfo && (productoInfo as any).es_combo;
 
-                                // ✅ DEBUG: Loguear búsqueda de producto y estructura completa
-                                console.log(`🔍 Detalle #${index}:`, {
-                                    detalleProductoId: detalle.producto_id,
-                                    detalleProductoNombre: detalle.producto?.nombre,
-                                    productoInfo: productoInfo?.nombre || 'NO ENCONTRADO',
-                                    usandoDetalleProducto: !!detalle.producto,
-                                    buscandoEnArray: !detalle.producto
-                                });
-                                // ✅ NUEVO 2026-03-06: Mostrar estructura completa del objeto producto
-                                console.log(`📦 Detalle #${index} - Objeto Producto COMPLETO:`, detalle.producto);
-                                // ✅ NUEVO 2026-03-06: Mostrar productoInfo renderizado
-                                console.log(`📊 Detalle #${index} - productoInfo para renderizar:`, {
-                                    nombre: productoInfo?.nombre,
-                                    codigo: productoInfo?.codigo,
-                                    codigo_barras: productoInfo?.codigo_barras,
-                                    marca: (productoInfo as any)?.marca,
-                                    unidad: (productoInfo as any)?.unidad,
-                                    productoInfoCompleto: JSON.stringify(productoInfo, null, 2)
-                                });
-
                                 // ✅ NUEVO: Calcular diferencia entre precio ingresado y costo registrado (solo para compras)
                                 const precioCosto = detalle.precio_costo || productoInfo?.precio_costo || 0;
                                 const tieneDiferencia = tipo === 'compra' && precioCosto > 0 && Math.abs(detalle.precio_unitario - precioCosto) > 0.01;
@@ -1056,7 +927,7 @@ export default function ProductosTable({
                                             : ''
                                         }`}>
                                         <td className="px-4 py-2 whitespace-nowrap">
-                                            <div className="text-xs font-medium text-gray-900 dark:text-white">
+                                            <div className="text-gray-900 dark:text-white">
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 text-left">
@@ -1078,13 +949,6 @@ export default function ProductosTable({
                                                 {(() => {
                                                     const tieneDataMedicamentos = (productoInfo as any)?.principio_activo || (productoInfo as any)?.uso_de_medicacion;
                                                     const mostrarMedicamentos = es_farmacia && tieneDataMedicamentos;
-                                                    if (mostrarMedicamentos) {
-                                                        console.log(`💊 [Tabla] Mostrando medicamento para ${productoInfo?.nombre}:`, {
-                                                            es_farmacia,
-                                                            principio_activo: (productoInfo as any)?.principio_activo,
-                                                            uso_de_medicacion: (productoInfo as any)?.uso_de_medicacion
-                                                        });
-                                                    }
                                                     return mostrarMedicamentos && (
                                                         <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 space-y-0.5">
                                                             {(productoInfo as any)?.principio_activo && (
@@ -1097,80 +961,72 @@ export default function ProductosTable({
                                                     );
                                                 })()}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-2 whitespace-nowrap">
-                                            {(() => {
-                                                // ✅ CORREGIDO: Leer stock correctamente desde el backend
-                                                // Prioridad: stock_disponible_calc > stock_disponible > stock > 0
-                                                const stockDisponible =
-                                                    (productoInfo as any)?.stock_disponible_calc ??
-                                                    (productoInfo as any)?.stock_disponible ??
-                                                    (productoInfo as any)?.stock ??
-                                                    0;
+                                            <p>
+                                                {(() => {
+                                                    // ✅ CORREGIDO: Leer stock correctamente desde el backend
+                                                    // Prioridad: stock_disponible_calc > stock_disponible > stock > 0
+                                                    const stockDisponible =
+                                                        (productoInfo as any)?.stock_disponible_calc ??
+                                                        (productoInfo as any)?.stock_disponible ??
+                                                        (productoInfo as any)?.stock ??
+                                                        0;
 
-                                                const stockTotal =
-                                                    (productoInfo as any)?.stock_total_calc ??
-                                                    (productoInfo as any)?.stock_total ??
-                                                    0;
+                                                    const stockTotal =
+                                                        (productoInfo as any)?.stock_total_calc ??
+                                                        (productoInfo as any)?.stock_total ??
+                                                        0;
 
-                                                const esComboCampo = (productoInfo as any)?.es_combo;
-                                                const capacidad = (productoInfo as any)?.capacidad;
+                                                    const esComboCampo = (productoInfo as any)?.es_combo;
+                                                    const capacidad = (productoInfo as any)?.capacidad;
 
-                                                // ✅ DEBUG: Log para verificar valores
-                                                console.log(`📦 [ProductosTable] Stock para ${productoInfo?.nombre}:`, {
-                                                    stock_disponible_calc: (productoInfo as any)?.stock_disponible_calc,
-                                                    stock_disponible: (productoInfo as any)?.stock_disponible,
-                                                    stock: (productoInfo as any)?.stock,
-                                                    resultado: stockDisponible
-                                                });
-
-                                                if (esComboCampo) {
-                                                    return (
-                                                        <div className="text-xs space-y-1">
-                                                            {/* Stock disponible/total del combo */}
-                                                            {/* <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-semibold">
+                                                    if (esComboCampo) {
+                                                        return (
+                                                            <div className="text-xs space-y-1">
+                                                                {/* Stock disponible/total del combo */}
+                                                                {/* <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-semibold">
                                                                 📊 {stockDisponible}/{stockTotal}
                                                             </div> */}
-                                                            {/* Capacidad de combos */}
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-semibold ml-1">
-                                                                📦 {stockDisponible ?? 0}
-                                                            </span>
-                                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                                                                {capacidad !== null && capacidad !== undefined ? 'combos' : '—'}
+                                                                {/* Capacidad de combos */}
+                                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 font-semibold ml-1">
+                                                                    📦 {stockDisponible ?? 0}
+                                                                </span>
+                                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                                                    {capacidad !== null && capacidad !== undefined ? 'combos' : '—'}
+                                                                </div>
                                                             </div>
+                                                        );
+                                                    }
+
+                                                    const limiteProductos = (productoInfo as any)?.limite_productos;
+                                                    const limiteVenta = (productoInfo as any)?.limite_venta;
+
+                                                    return (
+                                                        <div>
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold text-[12px] ${stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
+                                                                stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
+                                                                    'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
+                                                                }`}>
+                                                                Disponible: {stockDisponible}
+                                                            </span>
+                                                            {stockTotal > stockDisponible && (
+                                                                <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
+                                                                    Total: {stockTotal}
+                                                                </div>
+                                                            )}
+                                                            {limiteVenta !== null && limiteVenta !== undefined && (
+                                                                <div className="text-[12px]text-orange-600 dark:text-orange-400 mt-1 font-semibold">
+                                                                    Límite Venta: {limiteVenta}
+                                                                </div>
+                                                            )}
+                                                            {limiteProductos !== null && limiteProductos !== undefined && (
+                                                                <div className="text-[12px] text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">
+                                                                    Límite Productos: {limiteProductos}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
-                                                }
-
-                                                const limiteProductos = (productoInfo as any)?.limite_productos;
-                                                const limiteVenta = (productoInfo as any)?.limite_venta;
-
-                                                return (
-                                                    <div className="text-xs">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md font-semibold ${stockDisponible === 0 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200' :
-                                                            stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
-                                                                'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
-                                                            }`}>
-                                                            Disponible: {stockDisponible}
-                                                        </span>
-                                                        {stockTotal > stockDisponible && (
-                                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                                                                Total: {stockTotal}
-                                                            </div>
-                                                        )}
-                                                        {limiteVenta !== null && limiteVenta !== undefined && (
-                                                            <div className="text-[10px] text-orange-600 dark:text-orange-400 mt-1 font-semibold">
-                                                                Límite Venta: {limiteVenta}
-                                                            </div>
-                                                        )}
-                                                        {limiteProductos !== null && limiteProductos !== undefined && (
-                                                            <div className="text-[10px] text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">
-                                                                Límite Productos: {limiteProductos}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
+                                                })()}
+                                            </p>
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             <input
@@ -1191,18 +1047,8 @@ export default function ProductosTable({
                                             />
                                             <div>
                                                 {tipo === 'venta' && (
-                                                    <div className="px-4 py-2 whitespace-nowrap">
+                                                    <div className="whitespace-nowrap">
                                                         {(() => {
-                                                            console.log(`🔍 [ProductosTable] Detalle #${index}:`, {
-                                                                es_fraccionado: detalle.es_fraccionado,
-                                                                unidad_medida_id: detalle.unidad_medida_id,
-                                                                unidad_medida_nombre: detalle.unidad_medida_nombre,
-                                                                unidad_venta_id: detalle.unidad_venta_id,
-                                                                conversiones_count: detalle.conversiones?.length,
-                                                                conversiones: detalle.conversiones,
-                                                                precio_venta: detalle.producto?.precio_venta
-                                                            });
-
                                                             if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
                                                                 // ✅ NUEVO: Determinar el valor inicial - si no hay unidad_venta_id, usar la primera conversión
                                                                 const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
@@ -1219,13 +1065,6 @@ export default function ProductosTable({
                                                                                 unidadSeleccionada,
                                                                                 detalle.conversiones
                                                                             );
-
-                                                                            console.log(`💰 [ProductosTable] Cambio de unidad para detalle #${index}:`, {
-                                                                                unidad_anterior: detalle.unidad_venta_id,
-                                                                                unidad_nueva: unidadSeleccionada,
-                                                                                precio_base: detalle.producto?.precio_venta,
-                                                                                precio_nuevo: nuevoPrecio
-                                                                            });
 
                                                                             if (onUpdateDetailUnidadConPrecio) {
                                                                                 onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
@@ -1248,7 +1087,7 @@ export default function ProductosTable({
                                                                 );
                                                             } else {
                                                                 return (
-                                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                    <div className="text-gray-500 dark:text-gray-400">
                                                                         {detalle.unidad_medida_nombre || 'N/A'}
                                                                     </div>
                                                                 );
@@ -1261,18 +1100,6 @@ export default function ProductosTable({
 
                                         {tipo === 'compra' && (
                                             <>
-
-
-                                                {/* ✅ SIMPLIFICADO: Solo mostrar unidad base, sin selector */}
-                                                {/* <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {detalle.unidad_medida_nombre || 'N/A'}
-                                                    </div>
-                                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {precioCosto > 0 ? formatCurrency(precioCosto) : 'N/A'}
-                                                    </div>
-
-                                                </td> */}
                                                 <td className="px-4 py-2 whitespace-nowrap">
                                                     <input
                                                         type="text"
@@ -1442,8 +1269,9 @@ export default function ProductosTable({
                                                         return !nombre.includes('costo') && !nombre.includes('cost');
                                                     });
 
-                                                    if (preciosVenta.length === 0) {
-                                                        // Si no hay precios de venta, mostrar al menos el tipo actual
+                                                    // ✅ NUEVO: Mostrar select solo si hay más de 1 precio de venta
+                                                    if (preciosVenta.length <= 1) {
+                                                        // Si hay 0 o 1 precio, mostrar al menos el tipo actual
                                                         return detalle.tipo_precio_nombre ? (
                                                             <div className="mt-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400">
                                                                 {detalle.tipo_precio_nombre}
@@ -1517,7 +1345,7 @@ export default function ProductosTable({
                                                 })()}
                                             </td>
                                         )}
-                                        <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white">
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-900 dark:text-white">
                                             {tipo === 'venta'
                                                 ? formatCurrencyWith2Decimals(detalle.subtotal)
                                                 : formatCurrency(detalle.subtotal)}
@@ -1557,7 +1385,7 @@ export default function ProductosTable({
                                                 type="button"
                                                 disabled={readOnly}
                                                 onClick={() => onRemoveDetail(index)}
-                                                className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="text-[12px] p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title="Eliminar producto"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1613,14 +1441,6 @@ export default function ProductosTable({
                                     // ✅ Contar items seleccionados vs totales
                                     const itemsSeleccionados = itemsAMostrar.filter((i: any) => i._isChecked === true);
                                     const totalItems = itemsAMostrar.length;
-
-                                    // ✅ DEBUG: Verificar stock del combo
-                                    console.log(`📦 [ProductosTable] Stock del combo ${(productoInfo as any)?.nombre}:`, {
-                                        stock_disponible: (productoInfo as any)?.stock_disponible,
-                                        stock_total: (productoInfo as any)?.stock_total,
-                                        stock_reservado: (productoInfo as any)?.stock_reservado,
-                                        productoInfo: productoInfo
-                                    });
 
                                     return (
                                         <Fragment key={`combo-${index}`}>
@@ -1691,7 +1511,6 @@ export default function ProductosTable({
                                                                             }));
                                                                         }
                                                                         onComboItemsChange?.(index, nuevosItems);
-                                                                        console.log(`✏️ Combo item ${item.producto_nombre}: ${e.target.checked ? 'HABILITADO' : 'DESHABILITADO'}`);
                                                                     }}
                                                                     className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer accent-green-600 disabled:cursor-not-allowed disabled:opacity-50"
                                                                     title={readOnly ? (item._isChecked ? "Producto seleccionado (solo lectura)" : "Producto no seleccionado (solo lectura)") : (item._isChecked ? "Click para deseleccionar" : "Click para seleccionar")}
@@ -1746,7 +1565,6 @@ export default function ProductosTable({
                                                                     }));
                                                                 }
                                                                 onComboItemsChange?.(index, nuevosItems);
-                                                                console.log(`✏️ Cantidad actualizada para ${item.producto_nombre}: ${nuevaCantidad}`);
                                                             }}
                                                             className="w-16 px-2 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-300 font-medium focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                                                         />

@@ -76,16 +76,12 @@ export default function VentaForm() {
 
     // ✅ DEBUG: Detectar cambios en es_farmacia y logistica_envios
     useEffect(() => {
-        console.log('🏥 [VentaForm] es_farmacia cambió:', es_farmacia);
-        console.log('📦 [VentaForm] logistica_envios cambió:', logistica_envios);
-        console.log(`✅ [VentaForm] Campo logística ${logistica_envios ? 'VISIBLE ✅' : 'OCULTO ❌'}`);
         // Si cambió el valor, recarga la página para obtener datos frescos
         console.warn('⚠️ Si cambiaste es_farmacia o logistica_envios en Empresa, necesitas refrescar los datos');
     }, [es_farmacia, logistica_envios]);
 
     // ✅ NUEVO: Función para refrescar los datos desde el servidor
     const refrescarDatos = () => {
-        console.log('🔄 [VentaForm] Refrescando datos...');
         router.visit(window.location.href, {
             method: 'get',
             replace: true,
@@ -203,9 +199,6 @@ export default function VentaForm() {
         const licoreria = tipos_precio?.find(tp =>
             tp.codigo === 'LICORERIA' || tp.nombre?.toUpperCase() === 'LICORERIA'
         );
-        if (licoreria) {
-            console.log('✅ Tipo de precio LICORERIA obtenido:', licoreria.id);
-        }
         return licoreria?.id || null;
     }, [tipos_precio]);
 
@@ -216,7 +209,6 @@ export default function VentaForm() {
                 const response = await fetch('/ventas/check-caja-abierta');
                 const data = await response.json();
                 setCajaInfo(data);
-                console.log('✅ Estado de caja (Ventas):', data);
             } catch (error) {
                 console.error('❌ Error verificando caja (Ventas):', error);
                 // Si hay error, permitir acceso (mejor UX que bloquear)
@@ -237,7 +229,6 @@ export default function VentaForm() {
                 const data = await response.json();
                 if (data.success && Array.isArray(data.preventistas)) {
                     setPrevenstitas(data.preventistas);
-                    console.log('✅ Preventistas cargados:', data.preventistas);
                 } else {
                     console.warn('⚠️ Respuesta de preventistas inválida:', data);
                     setPrevenstitas([]);
@@ -262,7 +253,6 @@ export default function VentaForm() {
                 const data = await response.json();
                 if (data.success && Array.isArray(data.data)) {
                     setEntregas(data.data);
-                    console.log('✅ Entregas cargadas:', data.data);
                 } else {
                     console.warn('⚠️ Respuesta de entregas inválida:', data);
                     setEntregas([]);
@@ -298,6 +288,9 @@ export default function VentaForm() {
     // Estado para el modal de selección de salida (imprimir, Excel, PDF)
     const [showOutputModal, setShowOutputModal] = useState(false);
     const [ventaCreada, setVentaCreada] = useState<{ id: number; numero: string; fecha: string } | null>(null);
+
+    // ✅ NUEVO: Estado para manejar el cargando al guardar venta
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { data, setData, processing, errors, reset } = useForm({
         numero: venta?.numero || '', // Solo para edición, se genera automáticamente para nuevas ventas
@@ -390,8 +383,6 @@ export default function VentaForm() {
         if (datosGuardados) {
             try {
                 const parsed = JSON.parse(datosGuardados);
-                console.log('📋 Restaurando venta desde localStorage:', parsed);
-
                 // Restaurar datos del formulario
                 if (parsed.data) {
                     Object.keys(parsed.data).forEach((key: string) => {
@@ -476,21 +467,11 @@ export default function VentaForm() {
                         if (result.success && result.data?.direcciones) {
                             const direccionesActivas = result.data.direcciones.filter((d: any) => d.activa !== false);
                             setDireccionesDisponibles(direccionesActivas);
-                            console.log('✅ Direcciones cargadas:', {
-                                cantidad: direccionesActivas.length,
-                                direcciones: direccionesActivas
-                            });
-
                             // ✅ MEJORADO (2026-03-03): Si solo hay una dirección activa, seleccionarla automáticamente
                             // Esto funciona siempre, independientemente de requiere_envio
                             if (direccionesActivas.length === 1 && !data.direccion_cliente_id) {
                                 const unica = direccionesActivas[0];
                                 setData('direccion_cliente_id', unica.id);
-                                console.log('✅ Dirección única seleccionada automáticamente:', {
-                                    id: unica.id,
-                                    observaciones: unica.observaciones,
-                                    direccion: unica.direccion
-                                });
                             }
                         } else {
                             setDireccionesDisponibles([]);
@@ -521,7 +502,6 @@ export default function VentaForm() {
                             'X-Requested-With': 'XMLHttpRequest',
                         }
                     });
-                    console.log('📡 Respuesta al cargar cliente:', response);
                     if (response.ok) {
                         const result = await response.json();
                         if (result.success && result.data) {
@@ -572,24 +552,10 @@ export default function VentaForm() {
         const clienteGeneral = clientesSeguro.find((c: Cliente) => c.codigo_cliente === 'GENERAL');
 
         if (clienteGeneral) {
-            console.log('✅ CLIENTE GENERAL ENCONTRADO Y SELECCIONADO:', {
-                id: clienteGeneral.id,
-                nombre: clienteGeneral.nombre,
-                nit: clienteGeneral.nit,
-                codigo_cliente: clienteGeneral.codigo_cliente,
-                email: clienteGeneral.email,
-                telefono: clienteGeneral.telefono
-            });
-
             setData('cliente_id', clienteGeneral.id);
             setClienteValue(clienteGeneral.id);
             setClienteDisplay(clienteGeneral.nombre + (clienteGeneral.nit ? ` (${clienteGeneral.nit})` : ''));
             setClienteSeleccionado(clienteGeneral);
-
-            console.log('✅ Estados actualizados:');
-            console.log('   - cliente_id:', clienteGeneral.id);
-            console.log('   - clienteValue:', clienteGeneral.id);
-            console.log('   - clienteDisplay:', clienteGeneral.nombre + (clienteGeneral.nit ? ` (${clienteGeneral.nit})` : ''));
         } else {
             console.log('❌ Cliente GENERAL NO ENCONTRADO en la lista de clientes');
             console.log('   Códigos disponibles:', clientesSeguro.map((c: Cliente) => c.codigo_cliente));
@@ -604,12 +570,6 @@ export default function VentaForm() {
         const tiposDisponibles = tipos_pago || [];
         const tipoPagoSeleccionado = tiposDisponibles.find((t: any) => t.id === data.tipo_pago_id);
 
-        console.log(`🔍 useEffect triggerado - tipo_pago_id: ${data.tipo_pago_id}`, {
-            tipoPagoSeleccionado,
-            codigo: tipoPagoSeleccionado?.codigo,
-            politicaActual: data.politica_pago
-        });
-
         if (tipoPagoSeleccionado?.codigo === 'CREDITO') {
             // Si es CREDITO, cambiar política de pago a CREDITO
             setData('politica_pago', 'CREDITO');
@@ -620,62 +580,6 @@ export default function VentaForm() {
             console.log(`💵 Tipo de pago no-CREDITO seleccionado - Política de pago revertida a ANTICIPADO_100`);
         }
     }, [data.tipo_pago_id]);
-
-    // ✅ NUEVO: Actualizar tipo de precio cuando cambia el carrito calculado
-    // ✅ SOLO actualiza tipo_precio_id y tipo_precio_nombre si NO ha sido seleccionado manualmente
-    // ✅ NO cambia el precio unitario, subtotal ni unidad_venta_id
-    // ✅ RESPETA: Las selecciones manuales del usuario no son sobrescritas
-    // ✅ COMENTADO (2026-02-17): Esta lógica ahora está centralizada en ProductosTable.tsx
-    // El componente ProductosTable detecta cambios en carritoCalculado y actualiza los detalles automáticamente
-    // Luego notifica al padre mediante el callback onDetallesActualizados
-    /* useEffect(() => {
-        if (!precioRango.carritoCalculado || detallesWithProducts.length === 0) {
-            return;
-        }
-
-        setDetallesWithProducts(prev =>
-            prev.map((detalle, index) => {
-                const detalleRango = precioRango.carritoCalculado?.detalles.find(
-                    dr => dr.producto_id === detalle.producto_id
-                );
-
-                // ✅ MODIFICADO: Solo actualizar si NO ha sido seleccionado manualmente por el usuario
-                if (
-                    detalleRango &&
-                    detalleRango.tipo_precio_nombre !== detalle.tipo_precio_nombre &&
-                    !manuallySelectedTipoPrecio[index] // No actualizar si fue seleccionado manualmente
-                ) {
-                    console.log(`🏷️ [useEffect] Actualizando tipo de precio para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} → ${detalleRango.tipo_precio_nombre}`, {
-                        precio_anterior: detalle.precio_unitario,
-                        precio_nuevo: detalleRango.precio_unitario,
-                        subtotal_anterior: detalle.subtotal,
-                        subtotal_nuevo: detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario),
-                        unidad_venta_id_preservada: detalle.unidad_venta_id,
-                        fue_manual: manuallySelectedTipoPrecio[index] ? 'SÍ (IGNORADO)' : 'NO'
-                    });
-
-                    // ✅ CORREGIDO (2026-02-17): Actualizar precio_unitario y subtotal junto con tipo_precio
-                    const nuevoSubtotal = detalleRango.cantidad * (detalleRango.precio_unitario || detalle.precio_unitario);
-
-                    return {
-                        ...detalle,
-                        tipo_precio_id: detalleRango.tipo_precio_id,
-                        tipo_precio_nombre: detalleRango.tipo_precio_nombre,
-                        precio_unitario: detalleRango.precio_unitario ?? detalle.precio_unitario, // ✅ NUEVO: Actualizar precio
-                        subtotal: nuevoSubtotal // ✅ NUEVO: Recalcular subtotal con nuevo precio
-                        // ✅ PRESERVADO: NO se modifica unidad_venta_id
-                    };
-                }
-
-                if (manuallySelectedTipoPrecio[index] && detalleRango) {
-                    console.log(`🔒 [useEffect] Tipo de precio manual PRESERVADO para producto ${detalle.producto_id}: ${detalle.tipo_precio_nombre} (Backend propone: ${detalleRango.tipo_precio_nombre})`);
-                }
-
-                return detalle;
-            })
-        );
-    }, [precioRango.carritoCalculado, manuallySelectedTipoPrecio]); */
-
 
     // Función para manejar la creación de cliente
     const handleCreateCliente = (searchQuery: string) => {
@@ -708,7 +612,6 @@ export default function VentaForm() {
         } catch (error) {
             console.error('Error en NotificationService:', error);
             // Fallback: mostrar mensaje básico
-            console.log(`✅ Cliente creado y seleccionado: ${descripcionCliente}`);
         }
 
         // Limpiar la query de búsqueda ya que ahora tenemos el cliente seleccionado
@@ -716,15 +619,6 @@ export default function VentaForm() {
     };
 
     const addProductToDetail = (producto: Producto) => {
-        // ✅ DEBUG: Loguear producto que se agrega
-        /* console.log('➕ Agregando producto a detalle:', {
-            productoCompleto: producto,
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            productoPrecioVenta: producto.precio_venta,
-            productoStock: producto.stock,
-            productoKeys: Object.keys(producto)
-        }); */
 
         // Verificar si el producto ya está en los detalles
         const existingDetail = detallesWithProducts.find(d => d.producto_id === producto.id);
@@ -806,19 +700,6 @@ export default function VentaForm() {
             nombre: p.nombre,
             tipo_precio_id: p.tipo_precio_id
         })) || [];
-
-        console.log(`🏷️ [addProductToDetail] Información de precios para producto ${producto.id}:`, {
-            tipoPrecioIdRecomendado,
-            tipoPrecioNombreRecomendado,
-            preciosDisponibles: preciosConIds
-        });
-
-        console.log(`💰 [addProductToDetail] Precio del tipo_precio ${tipoPrecioIdRecomendado}:`, {
-            tipoPrecioId: tipoPrecioIdRecomendado,
-            precioEncontrado: precioDelTipoPrecio,
-            precioVentaGenerico: producto.precio_venta
-        });
-
         // ✅ NUEVO (2026-02-17): Calcular precio según la unidad de venta inicial
         // Usar el precio específico del tipo_precio_recomendado, no el genérico precio_venta
         const precioBase = precioDelTipoPrecio || producto.precio_venta || 0;
@@ -850,16 +731,6 @@ export default function VentaForm() {
             tipo_precio_id_recomendado: (producto as any).tipo_precio_id_recomendado,
             tipo_precio_nombre_recomendado: (producto as any).tipo_precio_nombre_recomendado
         };
-
-        console.log('📝 [addProductToDetail] Nuevo detalle creado:', {
-            es_fraccionado: newDetail.es_fraccionado,
-            unidad_medida_id: newDetail.unidad_medida_id,
-            conversiones_count: newDetail.conversiones?.length,
-            precio_unitario: newDetail.precio_unitario,
-            tipo_precio_id: newDetail.tipo_precio_id,
-            tipo_precio_nombre: newDetail.tipo_precio_nombre,
-            nota: 'tipo_precio viene del backend - será respetado hasta que el usuario lo cambie manualmente'
-        });
 
         const newDetalles = [...detallesWithProducts, newDetail];
         setDetallesWithProducts(newDetalles);
@@ -1100,6 +971,8 @@ export default function VentaForm() {
     };
 
     const handleConfirmSubmit = async () => {
+        // ✅ NUEVO: Prevenir múltiples clicks estableciendo loading state
+        setIsSubmitting(true);
         setShowPreviewModal(false);
 
         // ✅ NUEVO: Verificar si el tipo de pago seleccionado es CREDITO y ajustar política de pago
@@ -1300,6 +1173,9 @@ export default function VentaForm() {
                 stack: error instanceof Error ? error.stack : undefined
             });
             NotificationService.error('Error al procesar la venta. Intente nuevamente.');
+        } finally {
+            // ✅ NUEVO: Permitir volver a hacer click después de completar la petición
+            setIsSubmitting(false);
         }
     };
 
@@ -1567,46 +1443,6 @@ export default function VentaForm() {
                                         </div>
                                     )}
 
-                                    {/* <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Dirección de Envío {!data.direccion_cliente_id && '*'}
-                                    </label>
-                                    <textarea
-                                        value={data.observaciones || ''}
-                                        onChange={(e) => setData('observaciones', e.target.value)}
-                                        rows={2}
-                                        placeholder="Calle, número, piso, referencias... (se rellenará automáticamente si seleccionas una dirección del cliente)"
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                    />
-                                    {errors.observaciones && <p className="mt-1 text-sm text-red-600">{errors.observaciones}</p>}
-                                </div> */}
-
-                                    {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Persona que Recibe
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Nombre de quien recibe"
-                                            defaultValue={selectedCliente?.nombre || ''}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Teléfono de Contacto
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            placeholder="Teléfono para envío"
-                                            defaultValue={selectedCliente?.telefono || ''}
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                        />
-                                    </div>
-                                </div> */}
-
                                     {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si logistica_envios (prop global) = true */}
                                     {(() => {
                                         const mostrar = logistica_envios;
@@ -1819,17 +1655,18 @@ export default function VentaForm() {
                         </div>
 
                         {/* ✅ NUEVO: Resumen completo de la transacción */}
-                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
-
+                        <div className='mt-6'>
                             {data.descuento > 0 && (
                                 <>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
-                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.subtotal)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
-                                        <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
+                                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
+                                            <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.subtotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
+                                            <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
+                                        </div>
                                     </div>
                                 </>
                             )}
@@ -1892,7 +1729,7 @@ export default function VentaForm() {
                     {(() => {
                         const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);
                         const isCreditoPayment = tipoPagoSeleccionado?.codigo === 'CREDITO';
-                        const buttonDisabled = processing || detallesWithProducts.length === 0 || (!isCreditoPayment && !stockValido);
+                        const buttonDisabled = isSubmitting || detallesWithProducts.length === 0 || (!isCreditoPayment && !stockValido);
 
                         return (
                             <button
@@ -1903,7 +1740,7 @@ export default function VentaForm() {
                                     : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
                                     }`}
                             >
-                                {processing
+                                {isSubmitting
                                     ? 'Guardando...'
                                     : (!stockValido && !isCreditoPayment)
                                         ? 'Stock insuficiente'
@@ -1925,7 +1762,7 @@ export default function VentaForm() {
                 cliente={selectedClienteForModal}
                 moneda={selectedMoneda}
                 estadoDocumento={selectedEstado}
-                processing={processing}
+                processing={isSubmitting}
                 isEditing={isEditing}
                 comboItemsMap={comboItemsMap}
             />

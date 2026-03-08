@@ -42,64 +42,44 @@ class CheckCajaAbierta
 
         $user = Auth::user();
 
-        // 1. Verificar si el usuario es empleado con rol de Cajero
-        $esCajero = $user->empleado && $user->empleado->esCajero();
+        // 1️⃣ Buscar caja abierta de HOY del usuario
+        $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $user->id)
+            ->delDia()  // Hoy
+            ->abiertas()
+            ->latest()
+            ->first();
 
-        // 2. Verificar si es administrador
-        $esAdmin = $user->hasRole(['admin', 'administrador', 'super-admin', 'Super Admin', 'Admin']);
-
-        // Si no es cajero ni administrador, permitir acceso
-        if (! $esCajero && ! $esAdmin) {
-            return $next($request);
-        }
-
-        // 3. Obtener caja abierta actual
-        if ($esCajero) {
-            $cajaAbierta = $user->empleado->cajaAbierta();
-        } else {
-            // Para administradores, obtener caja abierta del día (de cualquier usuario o una genérica del admin)
-            // ✅ MEJORADO: Los administradores pueden crear ventas si hay una caja abierta cualquiera del día
-            // Una apertura está abierta si NO tiene un cierre (usa scope Abiertas)
-
-            // 1️⃣ Buscar caja abierta de HOY
-            $cajaAbierta = \App\Models\AperturaCaja::delDia()
+        // 2️⃣ Si no hay caja de hoy, buscar la más reciente sin cerrar (puede ser de días anteriores)
+        if (!$cajaAbierta) {
+            $cajaAbierta = \App\Models\AperturaCaja::where('user_id', $user->id)
                 ->abiertas()
-                ->with('caja')
-                ->latest()
+                ->latest('fecha')
                 ->first();
 
-            // 2️⃣ Si no hay caja de hoy, buscar la más reciente (posiblemente de ayer)
-            if (!$cajaAbierta) {
-                $cajaAbierta = \App\Models\AperturaCaja::abiertas()
-                    ->with('caja')
-                    ->latest('fecha')
-                    ->first();
+            // 3️⃣ Si es de día anterior, registrar advertencia pero permitir
+            if ($cajaAbierta) {
+                $fechaApertura = $cajaAbierta->fecha->toDateString();
+                $hoy = today()->toDateString();
 
-                // 3️⃣ Si hay caja anterior sin cerrar, registrar advertencia pero permitir
-                if ($cajaAbierta) {
-                    $fechaApertura = $cajaAbierta->fecha;
-                    $hoy = today();
-
-                    if ($fechaApertura < $hoy) {
-                        Log::warning('CheckCajaAbierta: Usando caja de día anterior', [
-                            'user_id' => $user->id,
-                            'apertura_fecha' => $fechaApertura,
-                            'caja_id' => $cajaAbierta->caja_id,
-                        ]);
-                    }
+                if ($fechaApertura < $hoy) {
+                    Log::warning('CheckCajaAbierta: Usuario usando caja abierta de día anterior', [
+                        'user_id' => $user->id,
+                        'fecha_apertura' => $fechaApertura,
+                        'caja_id' => $cajaAbierta->caja_id,
+                    ]);
                 }
             }
         }
 
         if ($cajaAbierta) {
-            // Hay caja abierta, permitir acceso
+            // ✅ Caja abierta encontrada - permitir acceso
             $request->attributes->set('caja_id', $cajaAbierta->caja_id);
             $request->attributes->set('apertura_caja_id', $cajaAbierta->id);
 
             return $next($request);
         }
 
-        // 3. No hay caja abierta - Detectar si es ruta web de ventas o bloqueo duro
+        // ❌ No hay caja abierta - Detectar si es ruta web o bloqueo duro
         $isWebVentasRoute = !$request->expectsJson()
             && str_starts_with($request->path(), 'ventas');
 
