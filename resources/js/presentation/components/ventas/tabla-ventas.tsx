@@ -230,6 +230,19 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
         return filtros?.sort_dir === 'asc' ? '↑' : '↓';
     };
 
+    // ✅ NUEVO: Icono diferencial para tipo de pago
+    const getTipoPagoIcon = (codigo?: string): string => {
+        const iconMap: { [key: string]: string } = {
+            'EFECTIVO': '💵',
+            'TRANSFERENCIA': '🏦',
+            'QR': '📱',
+            'TARJETA': '💳',
+            'CHEQUE': '📄',
+            'DEPOSITO': '🏧',
+        };
+        return iconMap[codigo || ''] || '💳';
+    };
+
     /* const handleDelete = (venta: Venta) => {
         ventasService.destroy(venta.id, {
             onSuccess: () => {
@@ -327,19 +340,9 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                             <th
                                 scope="col"
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
-                                onClick={() => handleSort('estado_pago')}
-                            >
-                                Estado de Pago {getSortIcon('estado_pago')}
-                            </th>
-                            <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
                                 onClick={() => handleSort('requiere_envio')}
                             >
                                 🚚 Tipo Entrega {getSortIcon('requiere_envio')}
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                👤 Preventista
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 🕐 Creada
@@ -358,9 +361,6 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             <p>Folio: #{venta.id}</p>
                                             <p>{venta.numero}</p>
                                         </div>
-                                        {/* <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                            {formatDate(String(venta.fecha))}
-                                        </div> */}
                                         <EstadoVentaBadge
                                             estado={venta.estado_documento?.codigo || 'PENDIENTE'}
                                             tamaño="sm"
@@ -373,7 +373,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                             </span>
                                         </div>
                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                            {venta.proforma?.numero ? (
+                                            {venta.proforma?.numero && (
                                                 <Link
                                                     href={`/proformas/${venta.proforma.id}`}
                                                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
@@ -381,21 +381,15 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 >
                                                     Folio Proforma: {venta.proforma.id}
                                                 </Link>
-                                            ) : (
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
                                             )}
                                         </div>
-                                        {venta.preventista ? (
+                                        {venta.preventista && (
                                             <div className="flex items-center space-x-2">
                                                 Prev.:
                                                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                                                     <strong>{venta.preventista.name}</strong>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <span className="inline-flex px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
-
-                                            </span>
                                         )}
                                     </td>
 
@@ -423,14 +417,11 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 : formatCurrencyWith2Decimals(venta.total, venta.moneda?.codigo)
                                             }
                                         </div>
-                                        {venta.moneda && (
+                                        {/* {venta.moneda && (
                                             <div className="text-sm text-gray-500 dark:text-gray-400">
                                                 {venta.moneda.codigo}
                                             </div>
-                                        )}
-                                    </td>
-
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        )} */}
                                         <div className="space-y-2">
                                             {venta.estado_pago ? (
                                                 <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getEstadoPagoBadgeStyles(venta.estado_pago).bg} ${getEstadoPagoBadgeStyles(venta.estado_pago).text}`}>
@@ -440,16 +431,31 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
                                             )}
                                         </div>
-                                        <p>
-                                            {venta.politica_pago ? (
-                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPoliticaPagoBadgeStyles(venta.politica_pago).bg} ${getPoliticaPagoBadgeStyles(venta.politica_pago).text}`}>
-                                                    {getPoliticaPagoBadgeStyles(venta.politica_pago).label}
-                                                </span>
+                                        <div className="text-sm">
+                                            {venta.tipoPago ? (
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30">
+                                                        <span className="text-lg">{getTipoPagoIcon(venta.tipoPago.codigo)}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-gray-900 dark:text-white">
+                                                            {venta.tipoPago.nombre}
+                                                        </p>
+                                                        {/* {venta.politica_pago && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {venta.politica_pago === 'CONTRA_ENTREGA' && 'Contra Entrega'}
+                                                                {venta.politica_pago === 'ANTICIPADO_100' && 'Anticipado 100%'}
+                                                                {venta.politica_pago === 'MEDIO_MEDIO' && 'Medio Medio'}
+                                                                {venta.politica_pago === 'CREDITO' && 'Crédito'}
+                                                            </p>
+                                                        )} */}
+                                                    </div>
+                                                </div>
                                             ) : (
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
                                             )}
-                                        </p>
-                                        <div className="flex items-center mt-1">
+                                        </div>
+                                        {/* <div className="flex items-center mt-1">
                                             {venta.caja_id ? (
                                                 <span
                                                     className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
@@ -465,7 +471,7 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                     ⚠ Sin Caja
                                                 </span>
                                             )}
-                                        </div>
+                                        </div> */}
                                     </td>
 
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -519,6 +525,15 @@ export default function TablaVentas({ ventas, filtros }: TablaVentasProps) {
                                                 </>
                                             )}
                                         </div>
+                                        {/* <p>
+                                            {venta.politica_pago ? (
+                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPoliticaPagoBadgeStyles(venta.politica_pago).bg} ${getPoliticaPagoBadgeStyles(venta.politica_pago).text}`}>
+                                                    {getPoliticaPagoBadgeStyles(venta.politica_pago).label}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Sin datos</span>
+                                            )}
+                                        </p> */}
                                     </td>
 
                                     {/* ✅ NUEVO: Fecha de Creación */}

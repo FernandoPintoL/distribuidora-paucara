@@ -24,8 +24,10 @@ class VentaResponseDTO extends BaseDTO
         public ?array $estado_documento = null,
         public string $fecha = '',
         public float $subtotal = 0,
+        public float $descuento = 0,  // ✅ NUEVO: Descuento de la venta
         public float $impuesto = 0,
         public float $total = 0,
+        public ?float $monto_pagado = 0,  // ✅ NUEVO: Monto ya pagado
         public ?array $moneda = null,
         public ?array $usuario = null,
         public ?string $observaciones = null,
@@ -83,6 +85,10 @@ class VentaResponseDTO extends BaseDTO
         if (!isset($venta->preventista)) {
             $venta->load('preventista');  // ✅ NUEVO (2026-03-01): Cargar preventista
         }
+        // ✅ NUEVO: Cargar datos completos de productos en detalles
+        if (!isset($venta->detalles[0]->producto->categoria)) {
+            $venta->load('detalles.producto.categoria', 'detalles.producto.marca', 'detalles.producto.unidad', 'detalles.producto.codigosBarra');
+        }
 
         return new self(
             id: $venta->id,
@@ -107,8 +113,10 @@ class VentaResponseDTO extends BaseDTO
             ] : null,
             fecha: $venta->fecha->toDateString(),
             subtotal: (float) $venta->subtotal,
+            descuento: (float) $venta->descuento,  // ✅ NUEVO: Incluir descuento
             impuesto: (float) $venta->impuesto,
             total: (float) $venta->total,
+            monto_pagado: (float) ($venta->monto_pagado ?? 0),  // ✅ NUEVO: Incluir monto pagado
             moneda: $venta->moneda ? [
                 'id' => $venta->moneda->id,
                 'codigo' => $venta->moneda->codigo,
@@ -127,13 +135,39 @@ class VentaResponseDTO extends BaseDTO
                     'id' => $det->producto->id,
                     'nombre' => $det->producto->nombre ?? 'N/A',
                     'codigo' => $det->producto->codigo ?? null,
+                    'sku' => $det->producto->sku ?? null,  // ✅ NUEVO: SKU del producto
                     'descripcion' => $det->producto->descripcion ?? null,
-                    'es_combo' => $det->producto->es_combo ?? false,  // ✅ NUEVO: Para saber si es combo
+                    'es_combo' => $det->producto->es_combo ?? false,
+                    // ✅ NUEVO: Marca
+                    'marca' => $det->producto->marca ? [
+                        'id' => $det->producto->marca->id,
+                        'nombre' => $det->producto->marca->nombre,
+                    ] : null,
+                    // ✅ NUEVO: Unidad de medida
+                    'unidad' => $det->producto->unidad ? [
+                        'id' => $det->producto->unidad->id,
+                        'nombre' => $det->producto->unidad->nombre,
+                        'simbolo' => $det->producto->unidad->simbolo ?? null,
+                    ] : null,
+                    // ✅ NUEVO: Categoría
+                    'categoria' => $det->producto->categoria ? [
+                        'id' => $det->producto->categoria->id,
+                        'nombre' => $det->producto->categoria->nombre,
+                    ] : null,
+                    // ✅ NUEVO: Códigos de barra
+                    'codigos_barra' => $det->producto->codigosBarra ?
+                        $det->producto->codigosBarra->map(fn($cb) => [
+                            'id' => $cb->id,
+                            'codigo' => $cb->codigo,
+                            'es_principal' => $cb->es_principal ?? false,
+                        ])->toArray()
+                        : [],
                 ] : null,
                 'cantidad' => $det->cantidad,
                 'precio_unitario' => (float) $det->precio_unitario,
+                'descuento' => (float) ($det->descuento ?? 0),
                 'subtotal' => (float) $det->subtotal,
-                'combo_items_seleccionados' => $det->combo_items_seleccionados ?? [],  // ✅ NUEVO: Items del combo seleccionados
+                'combo_items_seleccionados' => $det->combo_items_seleccionados ?? [],
             ])->toArray(),
             created_at: $venta->created_at->toIso8601String(),
             updated_at: $venta->updated_at->toIso8601String(),

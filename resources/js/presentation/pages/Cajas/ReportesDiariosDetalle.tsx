@@ -40,6 +40,11 @@ interface TipoOperacion {
   nombre: string;
 }
 
+interface TipoPago {
+  id: number;
+  nombre: string;
+}
+
 interface Movimiento {
   id: number;
   fecha: string;
@@ -56,6 +61,8 @@ interface Movimiento {
   observaciones?: string;
   venta_id?: number;
   pago_id?: number;
+  tipo_pago_id?: number;
+  tipo_pago?: TipoPago;
 }
 
 interface TotalPorTipo {
@@ -89,6 +96,7 @@ interface Props {
   movimientos: Movimiento[];
   totales_por_tipo: TotalPorTipo[];
   tipos_operacion: TipoOperacion[];
+  tipos_pago?: TipoPago[];
 }
 
 export default function ReportesDiariosDetalle({
@@ -96,6 +104,7 @@ export default function ReportesDiariosDetalle({
   movimientos,
   totales_por_tipo,
   tipos_operacion,
+  tipos_pago = [],
 }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Admin', href: '/admin/dashboard' },
@@ -106,6 +115,7 @@ export default function ReportesDiariosDetalle({
 
   // ===== FILTROS =====
   const [tiposSeleccionados, setTiposSeleccionados] = useState<string[]>([]);
+  const [tiposPagoSeleccionados, setTiposPagoSeleccionados] = useState<number[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [montoMin, setMontoMin] = useState<number | null>(null);
   const [montoMax, setMontoMax] = useState<number | null>(null);
@@ -149,6 +159,13 @@ export default function ReportesDiariosDetalle({
         }
       }
 
+      // Filtro por tipo de pago
+      if (tiposPagoSeleccionados.length > 0) {
+        if (!mov.tipo_pago_id || !tiposPagoSeleccionados.includes(mov.tipo_pago_id)) {
+          return false;
+        }
+      }
+
       // Filtro por búsqueda (documento)
       if (busqueda.trim()) {
         const searchLower = busqueda.toLowerCase();
@@ -167,7 +184,7 @@ export default function ReportesDiariosDetalle({
 
       return true;
     });
-  }, [movimientos, tiposSeleccionados, busqueda, montoMin, montoMax]);
+  }, [movimientos, tiposSeleccionados, tiposPagoSeleccionados, busqueda, montoMin, montoMax]);
 
   // ===== TOTALES FILTRADOS =====
   const totalIngresos = movimientosFiltrados
@@ -186,8 +203,15 @@ export default function ReportesDiariosDetalle({
     );
   };
 
+  const toggleTipoPago = (id: number) => {
+    setTiposPagoSeleccionados((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  };
+
   const limpiarFiltros = () => {
     setTiposSeleccionados([]);
+    setTiposPagoSeleccionados([]);
     setBusqueda('');
     setMontoMin(null);
     setMontoMax(null);
@@ -199,6 +223,9 @@ export default function ReportesDiariosDetalle({
 
     if (tiposSeleccionados.length > 0) {
       params.append('tipos', tiposSeleccionados.join(','));
+    }
+    if (tiposPagoSeleccionados.length > 0) {
+      params.append('tipos_pago', tiposPagoSeleccionados.join(','));
     }
     if (busqueda.trim()) {
       params.append('busqueda', busqueda.trim());
@@ -216,7 +243,7 @@ export default function ReportesDiariosDetalle({
     window.location.href = `/cajas/admin/reportes-diarios/${cierre.id}/descargar-filtrado?${params.toString()}`;
   };
 
-  const tieneFiltrantes = tiposSeleccionados.length > 0 || busqueda.trim() || montoMin !== null || montoMax !== null;
+  const tieneFiltrantes = tiposSeleccionados.length > 0 || tiposPagoSeleccionados.length > 0 || busqueda.trim() || montoMin !== null || montoMax !== null;
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -360,7 +387,7 @@ export default function ReportesDiariosDetalle({
                   de {movimientos.length} movimientos
                 </p>
               </div>
-              {(tiposSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
+              {(tiposSeleccionados.length > 0 || tiposPagoSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
                 <Button
                   onClick={limpiarFiltros}
                   size="sm"
@@ -374,7 +401,7 @@ export default function ReportesDiariosDetalle({
             </div>
 
             {/* Tags de Filtros Activos */}
-            {(tiposSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
+            {(tiposSeleccionados.length > 0 || tiposPagoSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
               <div className="mb-6 pb-6 border-b dark:border-slate-700">
                 <div className="flex flex-wrap gap-2">
                   {tiposSeleccionados.map((codigo) => {
@@ -386,6 +413,19 @@ export default function ReportesDiariosDetalle({
                         onClick={() => toggleTipo(codigo)}
                       >
                         {tipo?.nombre}
+                        <X className="ml-2 h-3 w-3" />
+                      </Badge>
+                    );
+                  })}
+                  {tiposPagoSeleccionados.map((id) => {
+                    const tipoPago = tipos_pago.find((t) => t.id === id);
+                    return (
+                      <Badge
+                        key={id}
+                        className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 py-2 px-3 cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
+                        onClick={() => toggleTipoPago(id)}
+                      >
+                        💳 {tipoPago?.nombre}
                         <X className="ml-2 h-3 w-3" />
                       </Badge>
                     );
@@ -466,6 +506,40 @@ export default function ReportesDiariosDetalle({
                 </div>
               </div>
 
+              {/* Filtro por tipo de pago */}
+              {tipos_pago.length > 0 && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-3">
+                    💳 Tipo de Pago
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {tipos_pago.map((tipo) => {
+                      const isSelected = tiposPagoSeleccionados.includes(tipo.id);
+                      return (
+                        <button
+                          key={tipo.id}
+                          onClick={() => toggleTipoPago(tipo.id)}
+                          className={`p-3 rounded-lg border-2 transition text-sm font-medium text-left ${isSelected
+                            ? 'border-purple-500 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                            : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-500'
+                            }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="rounded cursor-pointer"
+                            />
+                            <span>{tipo.nombre}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Filtro por rango de montos */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-3">
@@ -498,7 +572,7 @@ export default function ReportesDiariosDetalle({
           </Card>
 
           {/* Totales Filtrados */}
-          {(tiposSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
+          {(tiposSeleccionados.length > 0 || tiposPagoSeleccionados.length > 0 || busqueda || montoMin !== null || montoMax !== null) && (
             <Card className="p-4 dark:bg-slate-800 border dark:border-slate-700">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -583,6 +657,7 @@ export default function ReportesDiariosDetalle({
                   <TableHead className="dark:text-gray-300 font-semibold">Usuario</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Tipo de Operación</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Documento</TableHead>
+                  <TableHead className="dark:text-gray-300 font-semibold">Tipo de Pago</TableHead>
                   <TableHead className="text-right dark:text-gray-300 font-semibold">Monto</TableHead>
                   <TableHead className="dark:text-gray-300 font-semibold">Observaciones</TableHead>
                   <TableHead className="text-center dark:text-gray-300 font-semibold">Acciones</TableHead>
@@ -619,6 +694,15 @@ export default function ReportesDiariosDetalle({
                       <TableCell className="dark:text-gray-300 text-sm">
                         {mov.numero_documento}
                       </TableCell>
+                      <TableCell className="dark:text-gray-300 text-sm">
+                        {mov.tipo_pago ? (
+                          <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700">
+                            💳 {mov.tipo_pago.nombre}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
                       <TableCell
                         className={`text-right font-semibold ${mov.monto > 0
                           ? 'text-green-600 dark:text-green-400'
@@ -646,7 +730,7 @@ export default function ReportesDiariosDetalle({
                   ))
                 ) : (
                   <TableRow className="dark:border-slate-700">
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500 dark:text-gray-400">
                       No hay movimientos que coincidan con los filtros seleccionados
                     </TableCell>
                   </TableRow>

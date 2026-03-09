@@ -209,11 +209,23 @@ class CierreDiarioGeneralController extends Controller
                 'observaciones' => $mov->observaciones,
                 'venta_id' => $mov->venta_id,
                 'pago_id' => $mov->pago_id,
+                // ✅ NUEVO: Incluir tipo de pago
+                'tipo_pago_id' => $mov->tipo_pago_id,
+                'tipo_pago' => $mov->tipoPago ? [
+                    'id' => $mov->tipoPago->id,
+                    'nombre' => $mov->tipoPago->nombre,
+                ] : null,
             ])->toArray();
 
             // ✅ Obtener tipos de operación disponibles para filtros
             $tiposOperacionDisponibles = \App\Models\TipoOperacionCaja::obtenerTiposClasificados();
             $tiposOperacionFlat = collect($tiposOperacionDisponibles)->flatten(1)->values()->all();
+
+            // ✅ NUEVO: Obtener tipos de pago disponibles
+            $tiposPago = \App\Models\TipoPago::activos()
+                ->orderBy('nombre')
+                ->get(['id', 'nombre'])
+                ->toArray();
 
             // ✅ Logging para debug
             \Log::info('CierreDiarioGeneralController::show', [
@@ -245,6 +257,7 @@ class CierreDiarioGeneralController extends Controller
                 'movimientos' => $movimientosFormateados,
                 'totales_por_tipo' => $totalesPorTipo->toArray(),
                 'tipos_operacion' => $tiposOperacionFlat,
+                'tipos_pago' => $tiposPago,  // ✅ NUEVO: Enviar tipos de pago al frontend
             ]);
         } catch (\Throwable $e) {
             \Log::error('Error en show() de CierreDiarioGeneralController', [
@@ -314,12 +327,13 @@ class CierreDiarioGeneralController extends Controller
                 ->where('user_id', $cierre->user_id)
                 ->where('fecha', '>=', $cierre->apertura->fecha)
                 ->where('fecha', '<=', $cierre->fecha)
-                ->with(['tipoOperacion', 'usuario'])
+                ->with(['tipoOperacion', 'tipoPago', 'usuario'])
                 ->orderBy('id', 'asc')
                 ->get();
 
             // ✅ Aplicar filtros
             $tipos = $request->query('tipos');
+            $tiposPago = $request->query('tipos_pago');  // ✅ NUEVO: Filtro de tipos de pago
             $busqueda = $request->query('busqueda');
             $montoMin = $request->query('monto_min');
             $montoMax = $request->query('monto_max');
@@ -329,6 +343,15 @@ class CierreDiarioGeneralController extends Controller
                 $tiposArray = is_array($tipos) ? $tipos : explode(',', $tipos);
                 $movimientos = $movimientos->filter(function ($mov) use ($tiposArray) {
                     return in_array($mov->tipoOperacion?->codigo, $tiposArray);
+                });
+            }
+
+            // ✅ NUEVO: Filtro por tipos de pago
+            if ($tiposPago) {
+                $tiposPagoArray = is_array($tiposPago) ? $tiposPago : explode(',', $tiposPago);
+                $tiposPagoIds = array_map('intval', $tiposPagoArray);
+                $movimientos = $movimientos->filter(function ($mov) use ($tiposPagoIds) {
+                    return $mov->tipo_pago_id && in_array($mov->tipo_pago_id, $tiposPagoIds);
                 });
             }
 
@@ -376,6 +399,7 @@ class CierreDiarioGeneralController extends Controller
                 'total_neto' => (float) $totalNeto,
                 'filtros_aplicados' => [
                     'tipos' => $tipos ? (is_array($tipos) ? $tipos : explode(',', $tipos)) : [],
+                    'tipos_pago' => $tiposPago ? (is_array($tiposPago) ? $tiposPago : explode(',', $tiposPago)) : [],  // ✅ NUEVO
                     'busqueda' => $busqueda,
                     'monto_min' => $montoMin,
                     'monto_max' => $montoMax,

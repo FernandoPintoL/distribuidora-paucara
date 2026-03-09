@@ -108,6 +108,75 @@ export default function FiltrosVentasComponent({
         ventasService.clearFilters();
     };
 
+    // ✅ NUEVO: Función para obtener etiquetas de filtros activos
+    const obtenerFiltrosActivos = () => {
+        const filtrosActivos: Array<{ etiqueta: string; campo: keyof FiltrosVentas }> = [];
+
+        if (filtros.id) {
+            filtrosActivos.push({ etiqueta: `ID #${filtros.id}`, campo: 'id' });
+        }
+        if (filtros.numero) {
+            filtrosActivos.push({ etiqueta: `Número: ${filtros.numero}`, campo: 'numero' });
+        }
+        if (filtros.id_desde) {
+            filtrosActivos.push({ etiqueta: `ID desde: ${filtros.id_desde}`, campo: 'id_desde' });
+        }
+        if (filtros.id_hasta) {
+            filtrosActivos.push({ etiqueta: `ID hasta: ${filtros.id_hasta}`, campo: 'id_hasta' });
+        }
+        if (filtros.cliente_id) {
+            filtrosActivos.push({ etiqueta: `Cliente: ${filtros.cliente_id}`, campo: 'cliente_id' });
+        }
+        if (filtros.estado_documento_id) {
+            const estado = datosSeguros.estados_documento.find(e => e.id === filtros.estado_documento_id);
+            if (estado) {
+                filtrosActivos.push({ etiqueta: `Estado: ${estado.nombre}`, campo: 'estado_documento_id' });
+            }
+        }
+        if (filtros.tipo_venta) {
+            const tipoVentaLabel = filtros.tipo_venta === 'presencial' ? '🏪 Presencial' : '🚚 Delivery';
+            filtrosActivos.push({ etiqueta: `Tipo: ${tipoVentaLabel}`, campo: 'tipo_venta' });
+        }
+        if (filtros.fecha_desde) {
+            filtrosActivos.push({ etiqueta: `Desde: ${filtros.fecha_desde}`, campo: 'fecha_desde' });
+        }
+        if (filtros.fecha_hasta) {
+            filtrosActivos.push({ etiqueta: `Hasta: ${filtros.fecha_hasta}`, campo: 'fecha_hasta' });
+        }
+        if (filtros.usuario_id) {
+            const usuario = datosSeguros.usuarios.find(u => u.id === filtros.usuario_id);
+            if (usuario) {
+                filtrosActivos.push({ etiqueta: `Usuario: ${usuario.name}`, campo: 'usuario_id' });
+            }
+        }
+        if (filtros.preventista_id) {
+            const preventista = datosSeguros.preventistas.find(p => p.id === filtros.preventista_id);
+            if (preventista) {
+                filtrosActivos.push({ etiqueta: `Preventista: ${preventista.name}`, campo: 'preventista_id' });
+            }
+        }
+        if (filtros.tipo_pago_id) {
+            const tipoPago = datosSeguros.tipos_pago.find(tp => tp.id === filtros.tipo_pago_id);
+            if (tipoPago) {
+                filtrosActivos.push({ etiqueta: `Pago: ${tipoPago.nombre}`, campo: 'tipo_pago_id' });
+            }
+        }
+        if (filtros.monto_min) {
+            filtrosActivos.push({ etiqueta: `Monto mín: ${filtros.monto_min}`, campo: 'monto_min' });
+        }
+        if (filtros.monto_max) {
+            filtrosActivos.push({ etiqueta: `Monto máx: ${filtros.monto_max}`, campo: 'monto_max' });
+        }
+        if (filtros.moneda_id) {
+            const moneda = datosSeguros.monedas.find(m => m.id === filtros.moneda_id);
+            if (moneda) {
+                filtrosActivos.push({ etiqueta: `Moneda: ${moneda.codigo}`, campo: 'moneda_id' });
+            }
+        }
+
+        return filtrosActivos;
+    };
+
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -118,120 +187,113 @@ export default function FiltrosVentasComponent({
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 mb-6">
             {/* Filtros básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
                 {/* ID de venta o Número de venta (búsqueda combinada) */}
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Hash className="h-4 w-4 text-gray-400" />
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        🔍 Búsqueda
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Hash className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="ID o Número"
+                            title="Buscar por ID (58, 100) o Número (VEN20260128-0010)"
+                            value={busquedaCombinada}
+                            onChange={(e) => handleBusquedaCombinada(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleBusquedaCombinada(busquedaCombinada, true);
+                                }
+                            }}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="ID o Número"
-                        title="Buscar por ID (58, 100) o Número (VEN20260128-0010)"
-                        value={busquedaCombinada}
-                        onChange={(e) => handleBusquedaCombinada(e.target.value)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleBusquedaCombinada(busquedaCombinada, true);
-                            }
-                        }}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    />
                 </div>
 
                 {/* Rango de IDs - Desde */}
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Hash className="h-4 w-4 text-gray-400" />
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        #️⃣ ID Desde
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Hash className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="number"
+                            placeholder="ID desde"
+                            title="ID mínimo de la venta"
+                            value={filtros.id_desde || ''}
+                            onChange={(e) => handleFiltroChange('id_desde', e.target.value ? Number(e.target.value) : null)}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                        />
                     </div>
-                    <input
-                        type="number"
-                        placeholder="ID desde"
-                        title="ID mínimo de la venta"
-                        value={filtros.id_desde || ''}
-                        onChange={(e) => handleFiltroChange('id_desde', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    />
                 </div>
 
                 {/* Rango de IDs - Hasta */}
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Hash className="h-4 w-4 text-gray-400" />
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        #️⃣ ID Hasta
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Hash className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="number"
+                            placeholder="ID hasta"
+                            title="ID máximo de la venta"
+                            value={filtros.id_hasta || ''}
+                            onChange={(e) => handleFiltroChange('id_hasta', e.target.value ? Number(e.target.value) : null)}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                        />
                     </div>
-                    <input
-                        type="number"
-                        placeholder="ID hasta"
-                        title="ID máximo de la venta"
-                        value={filtros.id_hasta || ''}
-                        onChange={(e) => handleFiltroChange('id_hasta', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    />
                 </div>
 
 
                 {/* Cliente - Búsqueda por múltiples campos */}
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        👥 Cliente
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Cliente (ID, código, nombre, NIT, teléfono)"
+                            title="Buscar por ID, código cliente, nombre, NIT o teléfono"
+                            value={filtros.cliente_id || ''}
+                            onChange={(e) => handleFiltroChange('cliente_id', e.target.value || null)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    aplicarFiltros();
+                                }
+                            }}
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Cliente (ID, código, nombre, NIT, teléfono)"
-                        title="Buscar por ID, código cliente, nombre, NIT o teléfono"
-                        value={filtros.cliente_id || ''}
-                        onChange={(e) => handleFiltroChange('cliente_id', e.target.value || null)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                aplicarFiltros();
-                            }
-                        }}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    />
                 </div>
 
-                {/* Estado */}
-                <div>
-                    <select
-                        value={filtros.estado_documento_id || ''}
-                        onChange={(e) => handleFiltroChange('estado_documento_id', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    >
-                        <option value="">Todos los estados</option>
-                        {datosSeguros.estados_documento.map((estado) => (
-                            <option key={estado.id} value={estado.id}>
-                                {estado.nombre}
-                            </option>
-                        ))}
-                    </select>
-                </div>
 
-                {/* Tipo de Venta */}
-                <div>
-                    <select
-                        value={filtros.tipo_venta || ''}
-                        onChange={(e) => handleFiltroChange('tipo_venta', e.target.value || null)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    >
-                        <option value="">Todos los tipos</option>
-                        <option value="presencial">🏪 Presencial</option>
-                        <option value="delivery">🚚 Delivery</option>
-                    </select>
-                </div>
+
+
             </div>
 
             {/* ✅ NUEVO: Controles de Ordenamiento */}
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
+            {/* <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
                 <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4" />
                         Ordenar por:
                     </span>
-
-                    {/* Campo de ordenamiento */}
                     <select
                         value={filtros.sort_by || 'id'}
                         onChange={(e) => handleFiltroChange('sort_by', e.target.value || 'id')}
@@ -245,8 +307,6 @@ export default function FiltrosVentasComponent({
                         <option value="total">Total</option>
                         <option value="estado">Estado</option>
                     </select>
-
-                    {/* Orden ascendente/descendente */}
                     <select
                         value={filtros.sort_order || 'desc'}
                         onChange={(e) => handleFiltroChange('sort_order', (e.target.value as 'asc' | 'desc') || 'desc')}
@@ -256,7 +316,7 @@ export default function FiltrosVentasComponent({
                         <option value="asc">↑ Ascendente (más antiguo)</option>
                     </select>
                 </div>
-            </div>
+            </div> */}
 
             {/* Filtros avanzados */}
             {mostrarFiltrosAvanzados && (
@@ -297,41 +357,6 @@ export default function FiltrosVentasComponent({
                             </div>
                         </div>
 
-                        {/* Usuario */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Usuario
-                            </label>
-                            <SearchSelect
-                                placeholder="Seleccionar usuario..."
-                                value={filtros.usuario_id || ''}
-                                options={datosSeguros.usuarios.map((usuario) => ({
-                                    value: usuario.id,
-                                    label: usuario.name
-                                }))}
-                                onChange={(value) => handleFiltroChange('usuario_id', value ? Number(value) : null)}
-                                allowClear={true}
-                                className="w-full"
-                            />
-                        </div>
-
-                        {/* ✅ NUEVO (2026-03-01): Preventista */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                👤 Preventista
-                            </label>
-                            <SearchSelect
-                                placeholder="Seleccionar preventista..."
-                                value={filtros.preventista_id || ''}
-                                options={datosSeguros.preventistas.map((preventista) => ({
-                                    value: preventista.id,
-                                    label: preventista.name
-                                }))}
-                                onChange={(value) => handleFiltroChange('preventista_id', value ? Number(value) : null)}
-                                allowClear={true}
-                                className="w-full"
-                            />
-                        </div>
 
                         {/* Tipo de Pago */}
                         <div className="space-y-2">
@@ -351,7 +376,26 @@ export default function FiltrosVentasComponent({
                                 ))}
                             </select>
                         </div>
-
+                        {/* Estado */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                📋 Estado
+                            </label>
+                            <div>
+                                <select
+                                    value={filtros.estado_documento_id || ''}
+                                    onChange={(e) => handleFiltroChange('estado_documento_id', e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                >
+                                    <option value="">Todos los estados</option>
+                                    {datosSeguros.estados_documento.map((estado) => (
+                                        <option key={estado.id} value={estado.id}>
+                                            {estado.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                         {/* Rango de montos */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -372,7 +416,6 @@ export default function FiltrosVentasComponent({
                                 />
                             </div>
                         </div>
-
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Monto máximo
@@ -392,24 +435,56 @@ export default function FiltrosVentasComponent({
                                 />
                             </div>
                         </div>
-
-                        {/* Moneda */}
+                        {/* Tipo de Venta */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Moneda
+                                🏪 Tipo de Venta
                             </label>
-                            <select
-                                value={filtros.moneda_id || ''}
-                                onChange={(e) => handleFiltroChange('moneda_id', e.target.value ? Number(e.target.value) : null)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                            >
-                                <option value="">Todas las monedas</option>
-                                {datosSeguros.monedas.map((moneda) => (
-                                    <option key={moneda.id} value={moneda.id}>
-                                        {moneda.nombre} ({moneda.codigo})
-                                    </option>
-                                ))}
-                            </select>
+                            <div>
+                                <select
+                                    value={filtros.tipo_venta || ''}
+                                    onChange={(e) => handleFiltroChange('tipo_venta', e.target.value || null)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                >
+                                    <option value="">Todos los tipos</option>
+                                    <option value="presencial">🏪 Presencial</option>
+                                    <option value="delivery">🚚 Delivery</option>
+                                </select>
+                            </div>
+                        </div>
+                        {/* Usuario */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Usuario Creador
+                            </label>
+                            <SearchSelect
+                                placeholder="Seleccionar usuario..."
+                                value={filtros.usuario_id || ''}
+                                options={datosSeguros.usuarios.map((usuario) => ({
+                                    value: usuario.id,
+                                    label: usuario.name
+                                }))}
+                                onChange={(value) => handleFiltroChange('usuario_id', value ? Number(value) : null)}
+                                allowClear={true}
+                                className="w-full"
+                            />
+                        </div>
+                        {/* ✅ NUEVO (2026-03-01): Preventista */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                👤 Preventista
+                            </label>
+                            <SearchSelect
+                                placeholder="Seleccionar preventista..."
+                                value={filtros.preventista_id || ''}
+                                options={datosSeguros.preventistas.map((preventista) => ({
+                                    value: preventista.id,
+                                    label: preventista.name
+                                }))}
+                                onChange={(value) => handleFiltroChange('preventista_id', value ? Number(value) : null)}
+                                allowClear={true}
+                                className="w-full"
+                            />
                         </div>
                     </div>
                 </div>
@@ -419,27 +494,39 @@ export default function FiltrosVentasComponent({
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
                 <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Estados rápidos:
+                        Filtros rápidos:
                     </span>
                     <button
                         type="button"
+                        onClick={() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            handleFiltroChange('fecha_desde', today);
+                            handleFiltroChange('fecha_hasta', today);
+                        }}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.fecha_desde === filtros.fecha_hasta && filtros.fecha_desde
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                            }`}
+                    >
+                        📅 Hoy
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => handleFiltroChange('estado_documento_id', 3)} // ID de APROBADO
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                            filtros.estado_documento_id === 3
-                                ? 'bg-green-600 text-white'
-                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
-                        }`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 3
+                            ? 'bg-green-600 text-white'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                            }`}
                     >
                         ✓ Aprobadas
                     </button>
                     <button
                         type="button"
                         onClick={() => handleFiltroChange('estado_documento_id', 5)} // ID de ANULADO
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                            filtros.estado_documento_id === 5
-                                ? 'bg-red-600 text-white'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
-                        }`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 5
+                            ? 'bg-red-600 text-white'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                            }`}
                     >
                         ✗ Anuladas
                     </button>
@@ -454,6 +541,33 @@ export default function FiltrosVentasComponent({
                     )}
                 </div>
             </div>
+
+            {/* ✅ NUEVO: Mostrar filtros seleccionados activos */}
+            {obtenerFiltrosActivos().length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Filtros activos:
+                        </span>
+                        {obtenerFiltrosActivos().map((filtroActivo) => (
+                            <div
+                                key={filtroActivo.campo}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-sm text-blue-800 dark:text-blue-200"
+                            >
+                                <span>{filtroActivo.etiqueta}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleFiltroChange(filtroActivo.campo, null)}
+                                    className="ml-1 text-blue-600 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 font-semibold"
+                                    title="Remover filtro"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Botones de acción */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">

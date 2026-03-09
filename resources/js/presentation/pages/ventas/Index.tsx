@@ -61,7 +61,7 @@ export default function VentasIndex() {
                 {/* <StockBajoAlerts /> */}
 
                 {/* Header */}
-                <div className="flex items-center justify-between py-4">
+                <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Ventas</h1>
                         <div className="mt-2 space-y-1">
