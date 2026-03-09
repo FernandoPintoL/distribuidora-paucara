@@ -43,6 +43,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('ventas-por-canal', [App\Http\Controllers\DashboardController::class, 'ventasPorCanal'])->name('api.dashboard.ventas-por-canal');
     });
 
+    // API routes para búsqueda de clientes
+    Route::prefix('api/clientes')->group(function () {
+        Route::get('search', [App\Http\Controllers\ClienteController::class, 'search'])->name('api.clientes.search');
+    });
+
     // Incluir rutas de roles
     require __DIR__ . '/roles.php';
 
@@ -422,6 +427,18 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         ->name('devoluciones.create');
     Route::post('ventas/{venta}/devoluciones', [\App\Http\Controllers\DevolucionController::class, 'store'])
         ->name('devoluciones.store');
+
+    // ==========================================
+    // SERVICIOS - MÓDULO DE SERVICIOS (INYECCIONES, CONSULTAS, ETC.)
+    // ==========================================
+    Route::get('servicios', [\App\Http\Controllers\ServicioController::class, 'index'])
+        ->name('servicios.index');
+    Route::get('servicios/create', [\App\Http\Controllers\ServicioController::class, 'create'])
+        ->name('servicios.create');
+    Route::post('servicios', [\App\Http\Controllers\ServicioController::class, 'store'])
+        ->name('servicios.store');
+    Route::get('servicios/{servicio}', [\App\Http\Controllers\ServicioController::class, 'show'])
+        ->name('servicios.show');
 
     // ==========================================
     // PROFORMAS - VISTAS INERTIA (usan ApiProformaController)

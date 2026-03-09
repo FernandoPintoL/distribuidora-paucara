@@ -2932,6 +2932,84 @@ exportarReporteCreditos.head = (options?: RouteQueryOptions): RouteDefinition<'h
     
     exportarReporteCreditos.form = exportarReporteCreditosForm
 /**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+export const search = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: search.url(options),
+    method: 'get',
+})
+
+search.definition = {
+    methods: ["get","head"],
+    url: '/api/clientes/search',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+search.url = (options?: RouteQueryOptions) => {
+    return search.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+search.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: search.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+search.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: search.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+    const searchForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: search.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+        searchForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: search.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ClienteController::search
+ * @see app/Http/Controllers/ClienteController.php:2319
+ * @route '/api/clientes/search'
+ */
+        searchForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: search.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    search.form = searchForm
+/**
 * @see \App\Http\Controllers\ClienteController::create
  * @see app/Http/Controllers/ClienteController.php:228
  * @route '/clientes/create'
@@ -3208,6 +3286,6 @@ edit.head = (args: { cliente: number | { id: number } } | [cliente: number | { i
         })
     
     edit.form = editForm
-const ClienteController = { index, store, buscarApi, miPerfil, showApi, update, destroy, saldoCuentasPorCobrar, historialVentas, obtenerDetallesCreditoApi, obtenerAuditoriaCreditoApi, registrarPagoApi, cambiarCredenciales, obtenerCuentasPendientes, obtenerCuentasVencidas, obtenerHistorialPagos, anularPago, ajustarLimiteCredito, imprimirCredito, previewCredito, imprimirPago, previewPago, listarCreditos, obtenerMiCredito, obtenerResumenCredito, obtenerEstadisticasCreditos, exportarReporteCreditos, create, show, edit }
+const ClienteController = { index, store, buscarApi, miPerfil, showApi, update, destroy, saldoCuentasPorCobrar, historialVentas, obtenerDetallesCreditoApi, obtenerAuditoriaCreditoApi, registrarPagoApi, cambiarCredenciales, obtenerCuentasPendientes, obtenerCuentasVencidas, obtenerHistorialPagos, anularPago, ajustarLimiteCredito, imprimirCredito, previewCredito, imprimirPago, previewPago, listarCreditos, obtenerMiCredito, obtenerResumenCredito, obtenerEstadisticasCreditos, exportarReporteCreditos, search, create, show, edit }
 
 export default ClienteController

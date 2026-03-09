@@ -107,11 +107,11 @@ class CajaController extends Controller
                 }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
                 ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
                 ->get()
-                // ✅ NUEVO: Filtrar movimientos - Excluir CREDITO si no están APROBADOS
+                // ✅ ACTUALIZADO (2026-03-09): Filtrar movimientos - Incluir VENTA APROBADA y ANULADA
                 ->filter(function($mov) {
-                    // Si es VENTA o CREDITO, solo incluir si están APROBADAS
+                    // Si es VENTA o CREDITO, incluir si están APROBADAS o ANULADAS
                     if (in_array($mov->tipoOperacion?->codigo, ['VENTA', 'CREDITO'])) {
-                        return $mov->venta?->estadoDocumento?->codigo === 'APROBADO';
+                        return in_array($mov->venta?->estadoDocumento?->codigo, ['APROBADO', 'ANULADO']);
                     }
                     // Otros tipos (PAGO, GASTOS, etc.) se incluyen siempre
                     return true;
@@ -188,9 +188,13 @@ class CajaController extends Controller
             // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
             $ventasEfectivo = (float) ($datosCalculados['sumatorialVentasEfectivo'] ?? 0);
 
-            // ✅ FÓRMULA CORRECTA: Apertura + VentasEfectivo + PagosCrédito - TotalEgresos
+            // ✅ NUEVO (2026-03-09): Obtener sumatoria de SERVICIO para incluir en totalIngresos
+            $sumatorialServicio = (float) ($datosCalculados['sumatorialServicio'] ?? 0);
+
+            // ✅ FÓRMULA CORRECTA: Apertura + VentasEfectivo + PagosCrédito + Servicios - TotalEgresos
             // Esto excluye las ventas a crédito que no generan efectivo
-            $totalIngresos = $ventasEfectivo + $pagosCredito;  // Solo EFECTIVO/TRANSFERENCIA + Pagos CxC
+            // ✅ ACTUALIZADO (2026-03-09): Incluir Servicios como entrada de efectivo
+            $totalIngresos = $ventasEfectivo + $pagosCredito + $sumatorialServicio;  // EFECTIVO/TRANSFERENCIA + Pagos CxC + Servicios
             // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
             $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
             $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
@@ -227,6 +231,9 @@ class CajaController extends Controller
             // ✅ NUEVO (2026-02-20): Obtener sumatoria de compras del servicio
             $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
 
+            // ✅ NUEVO (2026-03-09): Obtener sumatoria de DEVOLUCION
+            $sumatorialDevoluciones = (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0);
+
             $datosResumen = [
                 'apertura'              => $montoApertura,
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
@@ -244,6 +251,8 @@ class CajaController extends Controller
                 'sumatorialGastos'      => $sumatorialGastos,
                 'sumatorialPagosSueldo' => $sumatorialPagosSueldo,
                 'sumatorialAnticipos'   => $sumatorialAnticipos,
+                'sumatorialDevoluciones'=> $sumatorialDevoluciones, // ✅ NUEVO (2026-03-09): Devoluciones
+                'sumatorialServicio'    => $sumatorialServicio,     // ✅ NUEVO (2026-03-09): Servicios
                 'sumatorialCompras'     => $sumatorialCompras,      // ✅ NUEVO (2026-02-20): Compras a proveedores
                 'sumatorialAnulaciones' => $sumatorialAnulaciones,
             ];
@@ -538,49 +547,35 @@ class CajaController extends Controller
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    // ✅ NUEVA ESTRUCTURA ESTANDARIZADA (igual a props.datosResumen del index)
+                    // ✅ ESTRUCTURA ÚNICA PARA CierreCajaModal (snake_case)
                     // Información básica de la apertura
-                    'apertura'                  => (float) ($aperturaCaja->monto_apertura ?? 0),
-
-                    // Totales de ventas (estructura standard)
-                    'totalVentas'               => (float) ($datos['totalVentasEfectivo'] ?? 0),  // Ventas sin crédito
-                    'ventasAnuladas'            => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
-                    'pagosCredito'              => (float) ($datos['montoPagosCreditos'] ?? 0),
-                    'ventasCreditoTotales'      => (float) ($datos['sumatorialVentasCredito'] ?? 0),
-
-                    // Totales consolidados
-                    'totalSalidas'              => (float) ($datos['totalEgresos'] ?? 0),
-                    'totalIngresos'             => (float) ($datos['totalIngresos'] ?? 0),
-                    'totalEgresos'              => (float) ($datos['totalEgresos'] ?? 0),
-                    'efectivoEsperado'          => $datos['efectivoEsperado'] ?? [],  // ✅ Retornar array completo, no float
-
-                    // Desglose de ventas por tipo de pago
-                    'ventasPorTipoPago'         => $datos['ventasPorTipoPago'] ?? [],
-                    'pagosCreditoPorTipoPago'   => $datos['pagosCreditoPorTipoPago'] ?? [],
-
-                    // Desglose de egresos
-                    'sumatorialGastos'          => (float) ($datos['sumatorialGastos'] ?? 0),
-                    'sumatorialPagosSueldo'     => (float) ($datos['sumatorialPagosSueldo'] ?? 0),
-                    'sumatorialAnticipos'       => (float) ($datos['sumatorialAnticipos'] ?? 0),
-                    'sumatorialCompras'         => (float) ($datos['sumatorialCompras'] ?? 0),
-                    'sumatorialAnulaciones'     => (float) ($datos['sumatorialAnulaciones'] ?? 0),
-
-                    // ✅ COMPATIBILIDAD CON CierreCajaModal: Mantener nombres antiguos
                     'apertura_id'               => $aperturaCaja->id,
                     'caja_nombre'               => $aperturaCaja->caja->nombre,
                     'fecha_apertura'            => $aperturaCaja->fecha,
                     'fecha_cierre'              => $aperturaCaja->cierre?->created_at,
+
+                    // Sumatorias de ventas (estructura usada por CierreCajaModal)
                     'sumatoria_ventas_total'    => (float) ($datos['sumatorialVentas'] ?? 0),
                     'sumatoria_ventas_efectivo' => (float) ($datos['sumatorialVentasEfectivo'] ?? 0),
                     'sumatoria_ventas_credito'  => (float) ($datos['sumatorialVentasCredito'] ?? 0),
                     'sumatoria_ventas_anuladas' => (float) ($datos['sumatorialVentasAnuladas'] ?? 0),
                     'sumatoria_gastos'          => (float) ($datos['sumatorialGastos'] ?? 0),
                     'monto_pagos_creditos'      => (float) ($datos['montoPagosCreditos'] ?? 0),
+
+                    // Totales consolidados
                     'total_ingresos'            => (float) ($datos['totalIngresos'] ?? 0),
                     'total_egresos'             => (float) ($datos['totalEgresos'] ?? 0),
                     'efectivo_esperado'         => $datos['efectivoEsperado'] ?? [],
 
-                    // ✅ Mantener datos adicionales para CierreCajaModal
+                    // ✅ Desglose adicional de egresos (NUEVO 2026-03-09)
+                    'sumatoria_pagos_sueldo'    => (float) ($datos['sumatorialPagosSueldo'] ?? 0),
+                    'sumatoria_anticipos'       => (float) ($datos['sumatorialAnticipos'] ?? 0),
+                    'sumatoria_compras'         => (float) ($datos['sumatorialCompras'] ?? 0),
+                    'sumatoria_devoluciones'    => (float) ($datos['sumatorialDevoluciones'] ?? 0),
+                    'sumatoria_servicio'        => (float) ($datos['sumatorialServicio'] ?? 0),
+                    'sumatoria_anulaciones'     => (float) ($datos['sumatorialAnulaciones'] ?? 0),
+
+                    // ✅ Datos adicionales para CierreCajaModal
                     'movimientos_agrupados'     => collect($datos['movimientosAgrupados'])
                         ->map(function ($items, $tipo) {
                             return [

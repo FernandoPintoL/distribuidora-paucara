@@ -59,6 +59,7 @@ class TipoOperacionCaja extends Model
             'ENTRADA' => [
                 'VENTA',     // Cliente compra
                 'PAGO',      // Cliente paga deuda
+                'SERVICIO',  // Servicio prestado
             ],
             'SALIDA' => [
                 'COMPRA',    // Compra a proveedor
@@ -66,6 +67,7 @@ class TipoOperacionCaja extends Model
                 'PAGO_SUELDO', // Pago a empleados
                 'ANTICIPO',  // Anticipo a empleados
                 'ANULACION', // Devolución/anulación
+                'DEVOLUCION', // Devolución de producto
             ],
             'AJUSTE' => [
                 'AJUSTE',    // Ajuste manual

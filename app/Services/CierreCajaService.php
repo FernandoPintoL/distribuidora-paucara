@@ -130,6 +130,8 @@ class CierreCajaService
             'sumatorialGastos'          => $this->calcularSumaPorCodigo($movimientos, 'GASTOS'),
             'sumatorialPagosSueldo'     => $this->calcularSumaPorCodigo($movimientos, 'PAGO_SUELDO'),
             'sumatorialAnticipos'       => $this->calcularSumaPorCodigo($movimientos, 'ANTICIPO'),
+            'sumatorialDevoluciones'    => $this->calcularSumaPorCodigo($movimientos, 'DEVOLUCION'),
+            'sumatorialServicio'        => $this->calcularSumaPorCodigo($movimientos, 'SERVICIO'),
             'sumatorialAnulaciones'     => (float) $anulaciones,  // Referencial (no afecta totalEfectivo)
             'sumatorialVentasAnuladas'  => $this->calcularVentasAnuladas($aperturaCaja),  // Referencial
             'sumatorialCompras'         => (float) $compras,  // Referencial
@@ -716,11 +718,21 @@ class CierreCajaService
             ->filter(fn($m) => $m->tipoOperacion?->codigo === 'COMPRA')
             ->sum('monto'));
 
-        // ✅ ACTUALIZADO (2026-02-20): Incluye COMPRA en los egresos (dinero real que sale)
-        // EXCLUYE solo ANULACIONES (transacción cancelada que nunca pasó dinero real)
-        $totalEgresos = $gastos + $pagosSueldo + $anticipos + $compras;
+        $devoluciones = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'DEVOLUCION')
+            ->sum('monto'));
 
-        $efectivoEsperado = $montoApertura + $ventasEfectivo + $pagosCreditoTotal - $totalEgresos;
+        // ✅ NUEVO (2026-03-09): Servicios como entrada de efectivo
+        $servicio = abs($this->obtenerMovimientosPorDireccion($movimientos, 'ENTRADA')
+            ->filter(fn($m) => $m->tipoOperacion?->codigo === 'SERVICIO')
+            ->sum('monto'));
+
+        // ✅ ACTUALIZADO (2026-03-09): Incluye COMPRA + DEVOLUCION en los egresos, SERVICIO en los ingresos
+        // EXCLUYE solo ANULACIONES (transacción cancelada que nunca pasó dinero real)
+        $totalEgresos = $gastos + $pagosSueldo + $anticipos + $compras + $devoluciones;
+        $totalIngresos = $ventasEfectivo + $pagosCreditoTotal + $servicio;
+
+        $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
 
         // ✅ NUEVO (2026-03-06): Logs detallados para verificar el cálculo
         Log::info('═══════════════════════════════════════════════════════════');
@@ -730,6 +742,7 @@ class CierreCajaService
         Log::info('  - Monto Apertura: Bs. ' . number_format($montoApertura, 2));
         Log::info('  - Ventas Efectivo (EFECTIVO + TRANSFERENCIA/QR): Bs. ' . number_format($ventasEfectivo, 2));
         Log::info('  - Pagos de Crédito (TODOS los tipos): Bs. ' . number_format($pagosCreditoTotal, 2));
+        Log::info('  - Servicios: Bs. ' . number_format($servicio, 2));  // ✅ NUEVO (2026-03-09)
         Log::info('  - Ventas Anuladas (no incluidas en total): Bs. ' . number_format($ventasAnuladas, 2));
         Log::info('───────────────────────────────────────────────────────────');
         Log::info('💸 SALIDAS:');
@@ -737,11 +750,12 @@ class CierreCajaService
         Log::info('  - Pagos de Sueldo: Bs. ' . number_format($pagosSueldo, 2));
         Log::info('  - Anticipos: Bs. ' . number_format($anticipos, 2));
         Log::info('  - Compras: Bs. ' . number_format($compras, 2));
+        Log::info('  - Devoluciones: Bs. ' . number_format($devoluciones, 2));  // ✅ NUEVO (2026-03-09)
         Log::info('  - Anulaciones (EXCLUIDAS del total): Bs. ' . number_format($anulaciones, 2));
         Log::info('  - Total Egresos: Bs. ' . number_format($totalEgresos, 2));
         Log::info('───────────────────────────────────────────────────────────');
-        Log::info('✅ FÓRMULA: Apertura + VentasEfectivo + PagosCrédito - TotalEgresos');
-        Log::info('✅ CÁLCULO: ' . number_format($montoApertura, 2) . ' + ' . number_format($ventasEfectivo, 2) . ' + ' . number_format($pagosCreditoTotal, 2) . ' - ' . number_format($totalEgresos, 2));
+        Log::info('✅ FÓRMULA: Apertura + (VentasEfectivo + PagosCrédito + Servicios) - (Gastos + PagosSueldo + Anticipos + Compras + Devoluciones)');
+        Log::info('✅ CÁLCULO: ' . number_format($montoApertura, 2) . ' + ' . number_format($totalIngresos, 2) . ' - ' . number_format($totalEgresos, 2));
         Log::info('═══════════════════════════════════════════════════════════');
         Log::info('💵 EFECTIVO ESPERADO EN CAJA: Bs. ' . number_format($efectivoEsperado, 2));
         Log::info('═══════════════════════════════════════════════════════════');
@@ -756,6 +770,8 @@ class CierreCajaService
             'pagos_sueldo' => $pagosSueldo,
             'anticipos' => $anticipos,
             'compras' => $compras,
+            'devoluciones' => $devoluciones,  // ✅ NUEVO (2026-03-09)
+            'servicio' => $servicio,  // ✅ NUEVO (2026-03-09)
             'anulaciones' => $anulaciones,
             'total_egresos' => $totalEgresos,
             // ✅ CORRECTO: monto_esperado = Apertura + Entradas - Salidas
@@ -1021,22 +1037,33 @@ class CierreCajaService
     private function calcularVentasAnuladas(AperturaCaja $aperturaCaja)
     {
         try {
-            $resultado = DB::table('movimientos_caja')
+            // ✅ NUEVO (2026-03-09): Obtener desglose detallado de ventas anuladas
+            $ventasAnuladasDetalle = DB::table('movimientos_caja')
                 ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
                 ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
-                ->where('estados_documento.codigo', self::ESTADO_ANULADO) // ✅ Usa constante
+                ->where('estados_documento.codigo', self::ESTADO_ANULADO)
                 ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
-                ->sum('ventas.total');
+                ->select('ventas.numero', 'ventas.total', 'movimientos_caja.fecha', 'estados_documento.nombre')
+                ->orderBy('ventas.numero')
+                ->get();
 
-            Log::info('📋 [calcularVentasAnuladas]:', [
+            $resultado = (float) $ventasAnuladasDetalle->sum('total');
+
+            Log::info('📋 [calcularVentasAnuladas] - DESGLOSE DETALLADO:', [
                 'apertura_id' => $aperturaCaja->id,
+                'cantidad_ventas_anuladas' => $ventasAnuladasDetalle->count(),
                 'total_anulado' => $resultado,
+                'ventas_anuladas' => $ventasAnuladasDetalle->map(fn($v) => [
+                    'numero' => $v->numero,
+                    'total' => (float) $v->total,
+                    'fecha' => $v->fecha,
+                ])->toArray(),
             ]);
 
-            return (float) $resultado;
+            return $resultado;
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasAnuladas]:', [
                 'apertura_id' => $aperturaCaja->id,

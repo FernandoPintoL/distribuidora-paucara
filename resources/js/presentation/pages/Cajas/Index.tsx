@@ -286,6 +286,8 @@ export default function Index(props: CajasIndexProps) {
                                 ventasAnuladas={props.ventasAnuladas}
                                 ventasCredito={props.ventasCredito}
                                 sumatorialCompras={props.sumatorialCompras}
+                                sumatorialDevoluciones={props.datosResumen?.sumatorialDevoluciones || 0}
+                                sumatorialServicio={props.datosResumen?.sumatorialServicio || 0}
                                 cargandoDatos={false}
                             />
                         </TabsContent>

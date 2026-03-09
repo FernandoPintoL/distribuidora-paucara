@@ -186,22 +186,28 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
     const pagosDeCredito = datosCierre?.monto_pagos_creditos || 0;
     const gastosTotales = datosCierre?.sumatoria_gastos || 0;
 
-    // ✅ CORREGIDO (2026-02-20): Total Ingresos = Ventas Efectivo + Pagos de Crédito (dinero que realmente entra)
-    const ingresos = ventasEnEfectivo + pagosDeCredito + ventasCredito;
+    // ✅ ACTUALIZADO (2026-03-09): Incluir Servicios en los ingresos y Devoluciones en los egresos
+    const serviciosTotales = datosCierre?.sumatoria_servicio || 0;
+    const devolucionesTotales = datosCierre?.sumatoria_devoluciones || 0;
+
+    // ✅ CORREGIDO (2026-02-20): Total Ingresos = Ventas Efectivo + Pagos de Crédito + Servicios (dinero que realmente entra)
+    const ingresos = ventasEnEfectivo + pagosDeCredito + ventasCredito + serviciosTotales;
     const egresos = datosCierre?.total_egresos || 0;
     const apertura = datosCierre?.apertura || cajaAbierta?.monto_apertura || 0;
 
-    // ✅ CORREGIDO (2026-03-03): Total Esperado = Apertura + Ventas Efectivo + Pagos Crédito - Total Egresos
+    // ✅ ACTUALIZADO (2026-03-09): Total Esperado = Apertura + Ventas Efectivo + Pagos Crédito + Servicios - Total Egresos
     // Es la cantidad TOTAL de dinero que debería haber en caja al cierre
-    const totalEsperadoMejorado = apertura + ventasEnEfectivo + pagosDeCredito - egresos;
+    const totalEsperadoMejorado = apertura + ventasEnEfectivo + pagosDeCredito + serviciosTotales - egresos;
 
-    // ✅ DEBUG: Log de cómo se calcula Total Esperado
+    // ✅ DEBUG: Log de cómo se calcula Total Esperado (ACTUALIZADO 2026-03-09)
     console.log('💰 [CierreCajaModal] TOTAL ESPERADO CORRECTO:', {
         apertura: apertura,
         ventasEfectivo: ventasEnEfectivo,
         pagosCredito: pagosDeCredito,
+        servicios: serviciosTotales,
         totalEgresos: egresos,
-        formula: `${apertura} + ${ventasEnEfectivo} + ${pagosDeCredito} - ${egresos}`,
+        devoluciones: devolucionesTotales,
+        formula: `${apertura} + ${ventasEnEfectivo} + ${pagosDeCredito} + ${serviciosTotales} - ${egresos}`,
         total: totalEsperadoMejorado,
     });
 
@@ -357,25 +363,35 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
                                         <span className="text-green-700 dark:text-green-300">⬆️ CxC Efectivo <small>(Pagos Creditos):</small></span>
                                         <span className="font-medium text-green-900 dark:text-green-100">{formatCurrency(pagosDeCredito)}</span>
                                     </div>
+                                    {/* ✅ NUEVO (2026-03-09): Servicios */}
+                                    {serviciosTotales > 0 && (
+                                        <div className="flex justify-between px-3 py-2 bg-teal-50 dark:bg-teal-900/20 rounded border border-teal-200 dark:border-teal-700">
+                                            <span className="text-teal-700 dark:text-teal-300">⬆️ Servicios:</span>
+                                            <span className="font-medium text-teal-900 dark:text-teal-100">{formatCurrency(serviciosTotales)}</span>
+                                        </div>
+                                    )}
                                     {/* SALIDAS - Rojo */}
                                     <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
-                                        <span className="text-red-700 dark:text-red-300">⬇️ Devoluciones Ventas</span>
+                                        <span className="text-red-700 dark:text-red-300">⬇️ Anulaciones de Ventas</span>
                                         <span className="font-medium text-red-900 dark:text-red-100">{formatCurrency(ventasAnuladas)}</span>
                                     </div>
+                                    {/* ✅ NUEVO (2026-03-09): Devoluciones */}
+                                    {devolucionesTotales > 0 && (
+                                        <div className="flex justify-between px-3 py-2 bg-rose-50 dark:bg-rose-900/20 rounded border border-rose-200 dark:border-rose-700">
+                                            <span className="text-rose-700 dark:text-rose-300">⬇️ Devoluciones de Productos:</span>
+                                            <span className="font-medium text-rose-900 dark:text-rose-100">{formatCurrency(devolucionesTotales)}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
-                                        <span className="text-red-700 dark:text-red-300">⬇️ Devoluciones Efectivo</span>
-                                        <span className="font-medium text-red-900 dark:text-red-100">{formatCurrency(ventasAnuladas)}</span>
-                                    </div>
-                                    <div className="flex justify-between px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700">
-                                        <span className="text-red-700 dark:text-red-300">⬇️ Salidas Efectivo:</span>
+                                        <span className="text-red-700 dark:text-red-300">⬇️ Total Egresos:</span>
                                         <span className="font-medium text-red-900 dark:text-red-100">
                                             {formatCurrency(egresos)}
                                         </span>
                                     </div>
 
-                                    <div className="flex justify-between text-lg font-semibold border-t border-gray-300 dark:border-gray-600 pt-2">
-                                        <span className="text-gray-900 dark:text-gray-100">Total Esperado:</span>
-                                        <span className="text-green-600 dark:text-green-400">{formatCurrency(totalEsperadoMejorado)}</span>
+                                    <div className="flex justify-between text-lg font-semibold border-t border-yellow-300 dark:border-yellow-600 pt-2 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded">
+                                        <span className="text-yellow-900 dark:text-yellow-200">💰 Total Esperado:</span>
+                                        <span className="text-yellow-700 dark:text-yellow-300">{formatCurrency(totalEsperadoMejorado)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600 dark:text-gray-400">Ventas Totales:</span>

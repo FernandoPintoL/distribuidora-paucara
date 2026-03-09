@@ -2310,4 +2310,33 @@ class ClienteController extends Controller
         $pdf->setOption('margin_top', $configuracion['margins']['top']);
         $pdf->setOption('margin_bottom', $configuracion['margins']['bottom']);
     }
+
+    /**
+     * Buscar clientes por nombre (API)
+     *
+     * GET /api/clientes/search?q=test
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+
+        $clientes = ClienteModel::where('activo', true)
+            ->where(function ($q) use ($query) {
+                $q->where('nombre', 'ilike', "%{$query}%")
+                    ->orWhere('razon_social', 'ilike', "%{$query}%")
+                    ->orWhere('codigo', 'ilike', "%{$query}%");
+            })
+            ->select('id', 'nombre', 'razon_social', 'codigo')
+            ->limit(20)
+            ->get()
+            ->map(function ($cliente) {
+                return [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre ?? $cliente->razon_social,
+                    'codigo' => $cliente->codigo,
+                ];
+            });
+
+        return response()->json($clientes);
+    }
 }

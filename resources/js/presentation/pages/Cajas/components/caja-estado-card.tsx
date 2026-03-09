@@ -223,7 +223,7 @@ export function CajaEstadoCard({
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Entradas (Ingresos por Ventas)
+                                Entradas (Ingresos)
                             </label>
                             {datosActualizados ? (
                                 <>
@@ -238,6 +238,11 @@ export function CajaEstadoCard({
                                             {(datosActualizados?.pagosCredito || 0) > 0 && (
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     Pagos de Crédito: {formatCurrency(datosActualizados.pagosCredito)}
+                                                </p>
+                                            )}
+                                            {(datosActualizados?.sumatorialServicio || 0) > 0 && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Servicios: {formatCurrency(datosActualizados.sumatorialServicio)}
                                                 </p>
                                             )}
                                             <p className="text-lg font-semibold text-green-600 dark:text-green-400 mt-1 border-t border-gray-300 pt-1">
@@ -314,6 +319,16 @@ export function CajaEstadoCard({
                                             <span className="text-gray-700 dark:text-gray-300">• Anulaciones</span>
                                             <span className="font-semibold text-gray-600 dark:text-gray-400">
                                                 {formatCurrency(datosActualizados.sumatorialAnulaciones)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Devoluciones */}
+                                    {(datosActualizados?.sumatorialDevoluciones ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-orange-50 dark:bg-orange-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Devoluciones</span>
+                                            <span className="font-semibold text-orange-600 dark:text-orange-400">
+                                                {formatCurrency(datosActualizados.sumatorialDevoluciones)}
                                             </span>
                                         </div>
                                     )}
