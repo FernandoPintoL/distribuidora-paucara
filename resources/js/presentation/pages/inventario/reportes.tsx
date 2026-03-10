@@ -277,7 +277,7 @@ export default function Reportes() {
                             Reportes y Análisis
                         </h2>
                         <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                            Dashboard avanzado con métricas en tiempo real y reportes detallados
+                            Dashboards avanzado con métricas en tiempo real y reportes detallados
                         </p>
                     </div>
 
