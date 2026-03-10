@@ -295,6 +295,9 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ✅ NUEVO: PDF de stock disponible para preventistas
     Route::get('/app/stock/pdf', [StockDisponiblePdfController::class, 'generar'])->name('api.app.stock.pdf');
 
+    // ✅ NUEVO: Imagen PNG de stock disponible para preventistas
+    Route::get('/app/stock/imagen', [StockDisponiblePdfController::class, 'imagen'])->name('api.app.stock.imagen');
+
     // ✅ NUEVO: Preventistas para selector en ventas
     Route::get('/preventistas', function () {
         try {

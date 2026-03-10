@@ -23,7 +23,8 @@
         "mike42/escpos-php": "^2.1",
         "milon/barcode": "^12.0",
         "phpoffice/phpspreadsheet": "^5.4",
-        "spatie/laravel-permission": "^6.21"
+        "spatie/laravel-permission": "^6.21",
+        "spatie/pdf-to-image": "^1.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

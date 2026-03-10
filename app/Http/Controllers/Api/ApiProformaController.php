@@ -903,10 +903,9 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha', '>=', $request->fecha_desde);
         }
 
-        // ✅ CORREGIDO: Usar < en lugar de <= para que fecha_hasta sea exclusiva
-        // Esto permite enviar "hoy + 1 día" desde el frontend y capturar solo "hoy"
+        // ✅ CORREGIDO: Usar <= para incluir el día seleccionado (rango inclusivo)
         if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<', $request->fecha_hasta);
+            $query->whereDate('fecha', '<=', $request->fecha_hasta);
         }
 
         // ✅ NUEVO: Filtro por fecha de vencimiento
@@ -924,9 +923,9 @@ class ApiProformaController extends Controller
             $query->whereDate('fecha_entrega_solicitada', '>=', $request->fecha_entrega_solicitada_desde);
         }
 
-        // ✅ CORREGIDO: Usar < en lugar de <= para que fecha_entrega_solicitada_hasta sea exclusiva
+        // ✅ CORREGIDO: Usar <= para incluir el día seleccionado (rango inclusivo)
         if ($request->filled('fecha_entrega_solicitada_hasta')) {
-            $query->whereDate('fecha_entrega_solicitada', '<', $request->fecha_entrega_solicitada_hasta);
+            $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
         }
 
         // ✅ NUEVO 2026-02-21: Búsqueda general con PRIORIDAD en ID y número
