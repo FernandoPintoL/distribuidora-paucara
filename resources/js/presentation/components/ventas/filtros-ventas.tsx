@@ -288,7 +288,7 @@ export default function FiltrosVentasComponent({
             </div>
 
             {/* ✅ NUEVO: Controles de Ordenamiento */}
-            {/* <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
                 <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                         <ArrowUpDown className="h-4 w-4" />
@@ -316,7 +316,7 @@ export default function FiltrosVentasComponent({
                         <option value="asc">↑ Ascendente (más antiguo)</option>
                     </select>
                 </div>
-            </div> */}
+            </div>
 
             {/* Filtros avanzados */}
             {mostrarFiltrosAvanzados && (
