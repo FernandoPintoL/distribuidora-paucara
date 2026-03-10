@@ -44,17 +44,17 @@ class RegisterCajaMovementFromVentaListener
                 'monto_pagado' => $venta->monto_pagado,
             ]);
 
-            // ✅ 1. Obtener caja_id del atributo especial de la venta
-            $cajaId = $venta->getAttribute('_caja_id');
+            // ✅ 1. Obtener caja_id - primero de la venta (ya guardado en BD), luego fallback
+            $cajaId = $venta->caja_id;  // Usar caja_id directo (guardado en creación de venta)
 
             // 📋 LOG: Búsqueda de caja_id
             Log::info('🔍 [RegisterCajaMovementFromVentaListener] Buscando caja_id', [
                 'venta_id' => $venta->id,
                 'venta_numero' => $venta->numero,
-                'caja_id_del_atributo' => $cajaId,
+                'caja_id_de_venta' => $cajaId,
             ]);
 
-            // Si no hay caja_id en el atributo, buscar la caja abierta del usuario
+            // Si no hay caja_id en la venta, buscar la caja abierta del usuario
             // (útil para ventas creadas desde convertir proforma)
             if (!$cajaId) {
                 Log::info('ℹ️ [RegisterCajaMovementFromVentaListener] _caja_id no presente, buscando caja abierta', [

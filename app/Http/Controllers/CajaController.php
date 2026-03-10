@@ -1984,6 +1984,37 @@ class CajaController extends Controller
     }
 
     /**
+     * ✅ NUEVO (2026-03-09): Obtener resumen de movimientos agrupado por tipo de pago
+     *
+     * Devuelve cuánto dinero hay en cada forma de pago (efectivo, QR, transferencia, etc)
+     * Útil para el cuadre de caja y saber dónde está cada peso
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resumenPorTipoPago()
+    {
+        try {
+            $cajaAbiertaService = new \App\Services\CajaAbiertaService();
+            $resumen = $cajaAbiertaService->obtenerResumenMovimientosPorTipoPago();
+
+            return response()->json([
+                'success' => true,
+                'data' => $resumen,
+                'message' => 'Resumen de movimientos por tipo de pago'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ [CajaController::resumenPorTipoPago] Error al obtener resumen', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener resumen: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Convertir logo a base64 para embebimiento en PDF
      *
      * @param string|null $logoUrl URL del logo

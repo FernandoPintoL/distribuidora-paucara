@@ -961,7 +961,7 @@ export default function ProductosTable({
                                                     );
                                                 })()}
                                             </div>
-                                            <p>
+                                            <div>
                                                 {(() => {
                                                     // ✅ CORREGIDO: Leer stock correctamente desde el backend
                                                     // Prioridad: stock_disponible_calc > stock_disponible > stock > 0
@@ -1026,7 +1026,7 @@ export default function ProductosTable({
                                                         </div>
                                                     );
                                                 })()}
-                                            </p>
+                                            </div>
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             <input

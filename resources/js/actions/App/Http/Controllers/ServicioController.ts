@@ -215,7 +215,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-export const show = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -230,7 +230,7 @@ show.definition = {
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-show.url = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { servicio: args }
     }
@@ -263,7 +263,7 @@ show.url = (args: { servicio: number | { id: number } } | [servicio: number | { 
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-show.get = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -272,7 +272,7 @@ show.get = (args: { servicio: number | { id: number } } | [servicio: number | { 
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-show.head = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
@@ -282,7 +282,7 @@ show.head = (args: { servicio: number | { id: number } } | [servicio: number | {
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-    const showForm = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
@@ -292,7 +292,7 @@ show.head = (args: { servicio: number | { id: number } } | [servicio: number | {
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-        showForm.get = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
@@ -301,7 +301,7 @@ show.head = (args: { servicio: number | { id: number } } | [servicio: number | {
  * @see app/Http/Controllers/ServicioController.php:188
  * @route '/servicios/{servicio}'
  */
-        showForm.head = (args: { servicio: number | { id: number } } | [servicio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { servicio: string | number | { id: string | number } } | [servicio: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

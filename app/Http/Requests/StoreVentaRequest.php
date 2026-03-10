@@ -83,6 +83,11 @@ class StoreVentaRequest extends FormRequest
             'detalles.*.combo_items_seleccionados.*.incluido' => 'nullable|boolean',
             // ✅ NUEVO (2026-03-02): Validación para monto_pagado_inicial
             'monto_pagado_inicial' => 'nullable|numeric|min:0',
+
+            // ✅ NUEVO (2026-03-09): Validación para pagos parciales
+            'pagos' => 'nullable|array|min:0',
+            'pagos.*.tipo_pago_id' => 'required_if:pagos,present|exists:tipos_pago,id',
+            'pagos.*.monto' => 'required_if:pagos,present|numeric|min:0.01',
         ];
     }
 
@@ -135,6 +140,14 @@ class StoreVentaRequest extends FormRequest
             // ✅ NUEVO (2026-03-02): Mensajes para monto_pagado_inicial
             'monto_pagado_inicial.numeric'        => 'El monto pagado debe ser un número válido.',
             'monto_pagado_inicial.min'            => 'El monto pagado no puede ser negativo.',
+
+            // ✅ NUEVO (2026-03-09): Mensajes para pagos parciales
+            'pagos.array'                         => 'Los pagos deben ser un arreglo.',
+            'pagos.*.tipo_pago_id.required_if'    => 'El tipo de pago es requerido para cada pago parcial.',
+            'pagos.*.tipo_pago_id.exists'         => 'El tipo de pago seleccionado no existe.',
+            'pagos.*.monto.required_if'           => 'El monto es requerido para cada pago parcial.',
+            'pagos.*.monto.numeric'               => 'El monto debe ser un número válido.',
+            'pagos.*.monto.min'                   => 'El monto debe ser mayor a 0.01.',
         ];
     }
 
@@ -260,6 +273,32 @@ class StoreVentaRequest extends FormRequest
                                 $validator->errors()->add('cliente_id', $error);
                             }
                         }
+                    }
+                }
+            }
+
+            // ✅ NUEVO (2026-03-09): Validar que suma de pagos <= total de venta
+            if (isset($data['pagos']) && is_array($data['pagos'])) {
+                $totalPagos = 0;
+                $pagosValidos = [];
+
+                foreach ($data['pagos'] as $index => $pago) {
+                    // Solo contar pagos que tienen tipo_pago_id y monto válidos
+                    if (!empty($pago['tipo_pago_id']) && isset($pago['monto']) && $pago['monto'] > 0) {
+                        $totalPagos += (float) $pago['monto'];
+                        $pagosValidos[] = $pago;
+                    }
+                }
+
+                // Validar que suma de pagos no exceda el total
+                if ($totalPagos > 0 && isset($data['total'])) {
+                    $total = (float) $data['total'];
+                    if ($totalPagos > $total) {
+                        $validator->errors()->add(
+                            'pagos',
+                            "La suma de pagos (Bs. " . number_format($totalPagos, 2) .
+                            ") no puede exceder el total (Bs. " . number_format($total, 2) . ")"
+                        );
                     }
                 }
             }

@@ -577,6 +577,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->where('caja', '[0-9]+')
             ->name('movimientos.exportar-pdf')
             ->middleware('permission:cajas.transacciones');
+
+        // ✅ NUEVO (2026-03-09): Resumen de movimientos por tipo de pago
+        Route::get('/resumen/por-tipo-pago', [\App\Http\Controllers\CajaController::class, 'resumenPorTipoPago'])
+            ->name('resumen.por-tipo-pago')
+            ->middleware('permission:cajas.transacciones');
     });
 
     // ✅ RUTAS PARA ADMIN: Gestión de cajas de otros usuarios

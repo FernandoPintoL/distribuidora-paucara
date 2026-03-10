@@ -425,7 +425,7 @@ export function ProformasSection({
                         <label className="text-sm font-medium mb-2 block dark:text-gray-300">
                             Fechas de Entrega Solicitada
                         </label>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-4 gap-2 mb-2">
                             {/* Botón para filtrar solo vencidas */}
                             <Button
                                 onClick={() => setSoloVencidas(!soloVencidas)}
@@ -490,6 +490,19 @@ export function ProformasSection({
                                 📆 Mañana
                             </Button>
                         </div>
+
+                        {/* ✅ NUEVO: Botón Destacado "Mostrar TODAS las Proformas" */}
+                        <Button
+                            onClick={() => {
+                                setFiltroEstadoProforma('TODOS');
+                                // Limpiar filtros de fecha para ver absolutamente todo
+                                setFiltroFechaEntregaSolicitadaDesde('');
+                                setFiltroFechaEntregaSolicitadaHasta('');
+                            }}
+                            className="w-full bg-indigo-600 dark:bg-indigo-700 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 font-semibold text-sm"
+                        >
+                            🔓 Mostrar TODAS las Proformas
+                        </Button>
                     </div>
                 </div>
 

@@ -1745,6 +1745,84 @@ exportarPdf.head = (args: { caja: number | { id: number } } | [caja: number | { 
     
     exportarPdf.form = exportarPdfForm
 /**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+export const resumenPorTipoPago = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: resumenPorTipoPago.url(options),
+    method: 'get',
+})
+
+resumenPorTipoPago.definition = {
+    methods: ["get","head"],
+    url: '/cajas/resumen/por-tipo-pago',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+resumenPorTipoPago.url = (options?: RouteQueryOptions) => {
+    return resumenPorTipoPago.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+resumenPorTipoPago.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: resumenPorTipoPago.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+resumenPorTipoPago.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: resumenPorTipoPago.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+    const resumenPorTipoPagoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: resumenPorTipoPago.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+        resumenPorTipoPagoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: resumenPorTipoPago.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\CajaController::resumenPorTipoPago
+ * @see app/Http/Controllers/CajaController.php:1994
+ * @route '/cajas/resumen/por-tipo-pago'
+ */
+        resumenPorTipoPagoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: resumenPorTipoPago.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    resumenPorTipoPago.form = resumenPorTipoPagoForm
+/**
 * @see \App\Http\Controllers\CajaController::dashboard
  * @see app/Http/Controllers/CajaController.php:766
  * @route '/cajas/admin/dashboard'
@@ -2181,6 +2259,6 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     reportes.form = reportesForm
-const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, registrarMovimientoJson, movimientosApertura, imprimirCierre, exportarExcelCierre, obtenerDatosCierre, imprimirMovimientos, imprimirMovimiento, eliminarMovimiento, exportarExcel, exportarPdf, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
+const CajaController = { index, abrirCaja, cerrarCaja, movimientosDia, registrarMovimiento, registrarMovimientoJson, movimientosApertura, imprimirCierre, exportarExcelCierre, obtenerDatosCierre, imprimirMovimientos, imprimirMovimiento, eliminarMovimiento, exportarExcel, exportarPdf, resumenPorTipoPago, dashboard, cierreDiarioGeneral, cierreDiarioGeneralJson, detalle, consolidarCaja, reportes }
 
 export default CajaController

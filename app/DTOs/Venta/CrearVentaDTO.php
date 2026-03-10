@@ -49,6 +49,8 @@ class CrearVentaDTO extends BaseDTO
         public ?int $preventista_id = null,
         // ✅ NUEVO (2026-03-03): Entrega para asignar venta a una entrega existente
         public ?int $entrega_id = null,
+        // ✅ NUEVO (2026-03-09): Pagos parciales - Array de { tipo_pago_id, monto }
+        public array $pagos = [],
     ) {}
 
     /**
@@ -110,7 +112,26 @@ class CrearVentaDTO extends BaseDTO
             preventista_id: $request->has('preventista_id') && $request->input('preventista_id') ? (int) $request->input('preventista_id') : null,
             // ✅ NUEVO (2026-03-03): Mapear entrega_id del frontend (para asignar a entrega existente)
             entrega_id: $request->has('entrega_id') && $request->input('entrega_id') ? (int) $request->input('entrega_id') : null,
+            // ✅ NUEVO (2026-03-09): Mapear pagos parciales del frontend
+            pagos: self::mapearPagos($request->input('pagos', [])),
         );
+    }
+
+    /**
+     * Mapear y filtrar pagos parciales
+     * Solo mantiene pagos válidos (con tipo_pago_id y monto > 0)
+     */
+    private static function mapearPagos(array $pagos): array
+    {
+        return array_values(array_filter(
+            array_map(function ($pago) {
+                return [
+                    'tipo_pago_id' => (int) ($pago['tipo_pago_id'] ?? 0),
+                    'monto' => (float) ($pago['monto'] ?? 0),
+                ];
+            }, $pagos),
+            fn($p) => $p['tipo_pago_id'] > 0 && $p['monto'] > 0
+        ));
     }
 
     /**

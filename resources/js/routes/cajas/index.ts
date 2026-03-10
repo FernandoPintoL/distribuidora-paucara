@@ -3,6 +3,7 @@ import movimientos from './movimientos'
 import gastos from './gastos'
 import cierre from './cierre'
 import movimiento from './movimiento'
+import resumen from './resumen'
 import admin from './admin'
 /**
 * @see \App\Http\Controllers\CajaController::user
@@ -792,6 +793,7 @@ aperturaMovimientos,
 cierre,
 datosCierre,
 movimiento,
+resumen,
 admin,
 }
 

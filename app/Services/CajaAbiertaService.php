@@ -93,4 +93,68 @@ class CajaAbiertaService
 
         return $apertura;
     }
+
+    /**
+     * ✅ NUEVO (2026-03-09): Obtener resumen de movimientos agrupado por tipo de pago
+     *
+     * Útil para el cuadre de caja: saber cuánto hay en efectivo, QR, transferencia, etc
+     *
+     * @return array Formato: [
+     *     'total_general' => 1200.00,
+     *     'por_tipo_pago' => [
+     *         ['tipo_pago_id' => 1, 'nombre' => 'Efectivo', 'total' => 500.00],
+     *         ['tipo_pago_id' => 3, 'nombre' => 'QR Code', 'total' => 700.00],
+     *     ]
+     * ]
+     */
+    public function obtenerResumenMovimientosPorTipoPago(): array
+    {
+        $apertura = $this->obtenerAperturaAbierta();
+
+        if (!$apertura) {
+            return [
+                'total_general' => 0,
+                'por_tipo_pago' => [],
+            ];
+        }
+
+        // Obtener movimientos de la caja abierta, agrupados por tipo_pago_id
+        $movimientos = \App\Models\MovimientoCaja::where('caja_id', $apertura->caja_id)
+            ->whereDate('fecha', today())  // Solo movimientos de hoy
+            ->with('tipoPago')  // Cargar relación con TipoPago
+            ->get()
+            ->groupBy('tipo_pago_id');
+
+        $totalGeneral = 0;
+        $porTipoPago = [];
+
+        foreach ($movimientos as $tipoPagoId => $movs) {
+            $subtotal = $movs->sum('monto');
+            $totalGeneral += $subtotal;
+
+            // Obtener nombre del tipo de pago
+            $tipoPago = $movs->first()?->tipoPago;
+
+            $porTipoPago[] = [
+                'tipo_pago_id' => $tipoPagoId,
+                'nombre' => $tipoPago?->nombre ?? 'Desconocido',
+                'total' => (float) $subtotal,
+                'cantidad_movimientos' => $movs->count(),
+            ];
+        }
+
+        // Ordenar por nombre para consistencia
+        usort($porTipoPago, fn($a, $b) => strcmp($a['nombre'], $b['nombre']));
+
+        Log::debug('💰 CajaAbiertaService: Resumen de movimientos por tipo de pago', [
+            'apertura_id' => $apertura->id,
+            'total_general' => $totalGeneral,
+            'cantidad_tipos_pago' => count($porTipoPago),
+        ]);
+
+        return [
+            'total_general' => (float) $totalGeneral,
+            'por_tipo_pago' => $porTipoPago,
+        ];
+    }
 }
