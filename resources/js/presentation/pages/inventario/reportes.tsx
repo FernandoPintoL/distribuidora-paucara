@@ -208,7 +208,7 @@ export default function Reportes() {
         }));
     };
 
-    const generarReporte = async (formato: 'excel' | 'csv' | '80mm' | '58mm') => {
+    const generarReporte = async (formato: 'excel' | 'csv' | '80mm' | '58mm' | 'a4') => {
         if (!filtros.tipo_reporte) {
             alert('Por favor selecciona un tipo de reporte');
             return;
@@ -216,7 +216,33 @@ export default function Reportes() {
 
         setGenerandoReporte(true);
         try {
-            // Preparar parámetros, solo incluir los que tienen valor
+            // ✅ NUEVO: Manejo especial para formato A4
+            if (formato === 'a4') {
+                // Usar la nueva ruta de reportes de inventario
+                const params = new URLSearchParams();
+                params.append('tipo', filtros.tipo_reporte.replace(/_/g, '-'));
+                if (filtros.almacen_id) params.append('almacen_id', filtros.almacen_id);
+                if (filtros.categoria_id) params.append('categoria_id', filtros.categoria_id);
+
+                const response = await fetch(`/reportes/inventario/export-pdf?${params}`);
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `reporte_inventario_${filtros.tipo_reporte}_A4_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('Error al descargar el reporte A4');
+                }
+                return;
+            }
+
+            // Preparar parámetros para otros formatos
             const params = new URLSearchParams();
             params.append('tipo_reporte', filtros.tipo_reporte);
             params.append('formato', formato);
@@ -512,6 +538,16 @@ export default function Reportes() {
                                             )}
 
                                             <div className="space-y-3">
+                                                {/* ✅ NUEVO: Botón Descarga A4 */}
+                                                <Button
+                                                    onClick={() => generarReporte('a4')}
+                                                    disabled={generandoReporte}
+                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                                >
+                                                    <FileText className="w-4 h-4 mr-2" />
+                                                    {generandoReporte ? 'Generando...' : '📄 Descargar A4 (PDF)'}
+                                                </Button>
+
                                                 <Button
                                                     onClick={() => generarReporte('80mm')}
                                                     disabled={generandoReporte}
@@ -519,7 +555,7 @@ export default function Reportes() {
                                                     variant="destructive"
                                                 >
                                                     <FileText className="w-4 h-4 mr-2" />
-                                                    {generandoReporte ? 'Generando...' : 'Descargar Impresión 80mm'}
+                                                    {generandoReporte ? 'Generando...' : 'Impresión 80mm'}
                                                 </Button>
 
                                                 <Button
@@ -528,7 +564,7 @@ export default function Reportes() {
                                                     className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                                                 >
                                                     <FileText className="w-4 h-4 mr-2" />
-                                                    {generandoReporte ? 'Generando...' : 'Descargar Impresión 58mm'}
+                                                    {generandoReporte ? 'Generando...' : 'Impresión 58mm'}
                                                 </Button>
 
                                                 <Button

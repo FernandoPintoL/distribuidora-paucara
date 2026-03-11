@@ -883,7 +883,9 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             Route::get('vencimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'vencimientos'])->name('vencimientos');
             Route::get('rotacion', [\App\Http\Controllers\ReporteInventarioController::class, 'rotacion'])->name('rotacion');
             Route::get('movimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'movimientos'])->name('movimientos');
+            // ✅ NUEVO: Exportación de reportes
             Route::get('export', [\App\Http\Controllers\ReporteInventarioController::class, 'export'])->name('export');
+            Route::get('export-pdf', [\App\Http\Controllers\ReporteInventarioController::class, 'exportPdf'])->name('export-pdf');
         });
 
         // Reportes de ventas

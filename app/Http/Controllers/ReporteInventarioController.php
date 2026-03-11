@@ -257,33 +257,66 @@ class ReporteInventarioController extends Controller
     /**
      * Exportar reporte a Excel/CSV
      */
+    /**
+     * ✅ NUEVO: Exportar reportes en PDF A4
+     *
+     * GET /reportes/inventario/export-pdf
+     * Parámetros: tipo=stock-actual|vencimientos|rotacion|movimientos
+     */
+    public function exportPdf(Request $request)
+    {
+        $tipo = $request->string('tipo');
+        $filtros = $request->all();
+
+        \Log::info("🔍 exportPdf DEBUG", ['tipo' => $tipo, 'tipo_var' => var_export($tipo, true), 'request_all' => $request->all()]);
+
+        $datos = match ($tipo) {
+            'stock-actual' => $this->obtenerDatosStockActual($filtros),
+            'vencimientos' => $this->obtenerDatosVencimientos($filtros),
+            'rotacion' => $this->obtenerDatosRotacion($filtros),
+            'movimientos' => $this->obtenerDatosMovimientos($filtros),
+            default => throw new \InvalidArgumentException("Tipo de reporte inválido: $tipo"),
+        };
+
+        $html = view("pdf.reportes-inventario.$tipo", [
+            'datos' => $datos,
+            'fecha_generacion' => now()->format('d/m/Y H:i'),
+            'empresa' => config('app.name'),
+            'filtros' => $filtros,
+        ])->render();
+
+        // Usar DomPDF para generar PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+            ->setPaper('A4', 'portrait')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 10)
+            ->setOption('margin-right', 10);
+
+        return $pdf->download("reporte_inventario_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.pdf');
+    }
+
+    /**
+     * ✅ MEJORADO: Exportar a Excel con datos completos
+     */
     public function export(Request $request): JsonResponse
     {
-        $tipo = $request->string('tipo'); // 'stock-actual', 'vencimientos', 'rotacion', 'movimientos'
+        $tipo = $request->string('tipo');
+        $filtros = $request->all();
 
-        // Aquí puedes implementar la exportación usando Laravel Excel o similar
-        // Por ahora retornamos los datos para que puedan ser procesados en el frontend
-
-        switch ($tipo) {
-            case 'stock-actual':
-                $datos = $this->obtenerDatosStockActual($request->all());
-                break;
-            case 'vencimientos':
-                $datos = $this->obtenerDatosVencimientos($request->all());
-                break;
-            case 'rotacion':
-                $datos = $this->obtenerDatosRotacion($request->all());
-                break;
-            case 'movimientos':
-                $datos = $this->obtenerDatosMovimientos($request->all());
-                break;
-            default:
-                return response()->json(['error' => 'Tipo de reporte no válido'], 400);
-        }
+        // Obtener datos completos
+        $datos = match ($tipo) {
+            'stock-actual' => $this->obtenerDatosStockActual($filtros),
+            'vencimientos' => $this->obtenerDatosVencimientos($filtros),
+            'rotacion' => $this->obtenerDatosRotacion($filtros),
+            'movimientos' => $this->obtenerDatosMovimientos($filtros),
+            default => throw new \InvalidArgumentException("Tipo de reporte inválido: $tipo"),
+        };
 
         return response()->json([
-            'data'     => $datos,
+            'data' => $datos,
             'filename' => "reporte_inventario_{$tipo}_" . now()->format('Y-m-d_H-i-s') . '.xlsx',
+            'timestamp' => now()->format('Y-m-d H:i:s'),
         ]);
     }
 
@@ -312,27 +345,148 @@ class ReporteInventarioController extends Controller
             ->toArray();
     }
 
+    /**
+     * ✅ IMPLEMENTADO: Obtener datos de stock actual para exportación
+     */
     private function obtenerDatosStockActual(array $filtros): array
     {
-                   // Implementar obtención de datos para exportación
-        return []; // Placeholder
+        $query = StockProducto::with(['producto.categoria', 'almacen'])
+            ->where('cantidad', '>', 0);
+
+        // Aplicar filtros
+        if (!empty($filtros['almacen_id']) && $filtros['almacen_id'] !== 'all') {
+            $query->where('almacen_id', $filtros['almacen_id']);
+        }
+
+        if (!empty($filtros['categoria_id']) && $filtros['categoria_id'] !== 'all') {
+            $query->whereHas('producto', function ($q) use ($filtros) {
+                $q->where('categoria_id', $filtros['categoria_id']);
+            });
+        }
+
+        $stocks = $query->orderBy('cantidad', 'desc')->get();
+
+        // Mapear datos para la exportación
+        return $stocks->map(function ($stock) {
+            $producto = $stock->producto;
+            $precio_unitario = $producto->precioVenta?->precio ?? 0;
+            $subtotal = $stock->cantidad * $precio_unitario;
+
+            return [
+                'nombre' => $producto->nombre ?? 'N/A',
+                'sku' => $producto->sku ?? '-',
+                'categoria' => $producto->categoria?->nombre ?? 'N/A',
+                'almacen' => $stock->almacen?->nombre ?? 'N/A',
+                'cantidad' => $stock->cantidad,
+                'precio_unitario' => $precio_unitario,
+                'subtotal' => $subtotal,
+            ];
+        })->toArray();
     }
 
+    /**
+     * ✅ IMPLEMENTADO: Obtener datos de vencimientos para exportación
+     */
     private function obtenerDatosVencimientos(array $filtros): array
     {
-                   // Implementar obtención de datos para exportación
-        return []; // Placeholder
+        $query = \App\Models\StockProductoLote::with(['producto', 'almacen'])
+            ->whereNotNull('fecha_vencimiento');
+
+        // Filtrar vencidos si es necesario
+        if (!empty($filtros['solo_vencidos'])) {
+            $query->whereDate('fecha_vencimiento', '<', now());
+        }
+
+        $lotes = $query->orderBy('fecha_vencimiento')->get();
+
+        return $lotes->map(function ($lote) {
+            $fecha_venc = \Carbon\Carbon::parse($lote->fecha_vencimiento);
+            $dias_restantes = $fecha_venc->diffInDays(now(), false);
+            $estado = $dias_restantes < 0 ? 'VENCIDO' : 'PRÓXIMO';
+
+            return [
+                'nombre' => $lote->producto?->nombre ?? 'N/A',
+                'lote' => $lote->numero_lote ?? 'N/A',
+                'fecha_vencimiento' => $fecha_venc->format('d/m/Y'),
+                'cantidad' => $lote->cantidad,
+                'estado' => $estado,
+                'dias_restantes' => abs(intval($dias_restantes)),
+            ];
+        })->toArray();
     }
 
+    /**
+     * ✅ IMPLEMENTADO: Obtener datos de rotación para exportación
+     */
     private function obtenerDatosRotacion(array $filtros): array
     {
-                   // Implementar obtención de datos para exportación
-        return []; // Placeholder
+        $productos = Producto::with('movimientos')
+            ->orderBy('nombre')
+            ->get();
+
+        return $productos->map(function ($producto) {
+            $movimientos = $producto->movimientos;
+            $entrada = $movimientos->where('tipo', 'ENTRADA')->sum('cantidad');
+            $salida = $movimientos->where('tipo', 'SALIDA')->sum('cantidad');
+            $rotacion = $entrada > 0 ? ($salida / $entrada) * 100 : 0;
+
+            // Clasificar por rotación
+            if ($rotacion > 50) {
+                $clasificacion = 'ALTO';
+            } elseif ($rotacion > 20) {
+                $clasificacion = 'MEDIO';
+            } else {
+                $clasificacion = 'BAJO';
+            }
+
+            return [
+                'nombre' => $producto->nombre,
+                'entrada' => $entrada,
+                'salida' => $salida,
+                'rotacion' => round($rotacion, 2),
+                'clasificacion' => $clasificacion,
+                'velocidad' => round($rotacion / 30, 2) . ' %/día', // Velocidad mensual
+            ];
+        })->toArray();
     }
 
+    /**
+     * ✅ IMPLEMENTADO: Obtener datos de movimientos para exportación
+     */
     private function obtenerDatosMovimientos(array $filtros): array
     {
-                   // Implementar obtención de datos para exportación
-        return []; // Placeholder
+        $query = MovimientoInventario::with(['producto', 'almacen', 'usuario'])
+            ->orderBy('fecha', 'desc');
+
+        // Aplicar filtros
+        if (!empty($filtros['tipo']) && $filtros['tipo'] !== 'all') {
+            $query->where('tipo', $filtros['tipo']);
+        }
+
+        if (!empty($filtros['almacen_id']) && $filtros['almacen_id'] !== 'all') {
+            $query->where('almacen_id', $filtros['almacen_id']);
+        }
+
+        if (!empty($filtros['fecha_desde'])) {
+            $query->whereDate('fecha', '>=', $filtros['fecha_desde']);
+        }
+
+        if (!empty($filtros['fecha_hasta'])) {
+            $query->whereDate('fecha', '<=', $filtros['fecha_hasta']);
+        }
+
+        $movimientos = $query->limit(1000)->get();
+
+        return $movimientos->map(function ($mov) {
+            return [
+                'fecha' => \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y H:i'),
+                'nombre' => $mov->producto?->nombre ?? 'N/A',
+                'tipo' => $mov->tipo,
+                'cantidad' => $mov->cantidad,
+                'almacen' => $mov->almacen?->nombre ?? 'N/A',
+                'referencia' => $mov->referencia ?? '-',
+                'usuario' => $mov->usuario?->name ?? '-',
+            ];
+        })->toArray();
     }
 }

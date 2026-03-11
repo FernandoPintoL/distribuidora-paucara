@@ -313,7 +313,7 @@ movimientos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     movimientos.form = movimientosForm
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -328,7 +328,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
 exportMethod.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ exportMethod.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
 exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -346,7 +346,7 @@ exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
 exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -356,7 +356,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
     const exportMethodForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -366,7 +366,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
         exportMethodForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -375,7 +375,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReporteInventarioController::exportMethod
- * @see app/Http/Controllers/ReporteInventarioController.php:260
+ * @see app/Http/Controllers/ReporteInventarioController.php:302
  * @route '/reportes/inventario/export'
  */
         exportMethodForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -389,6 +389,84 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     exportMethod.form = exportMethodForm
-const ReporteInventarioController = { stockActual, vencimientos, rotacion, movimientos, exportMethod, export: exportMethod }
+/**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+export const exportPdf = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportPdf.url(options),
+    method: 'get',
+})
+
+exportPdf.definition = {
+    methods: ["get","head"],
+    url: '/reportes/inventario/export-pdf',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+exportPdf.url = (options?: RouteQueryOptions) => {
+    return exportPdf.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+exportPdf.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: exportPdf.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+exportPdf.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: exportPdf.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+    const exportPdfForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: exportPdf.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+        exportPdfForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportPdf.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteInventarioController::exportPdf
+ * @see app/Http/Controllers/ReporteInventarioController.php:266
+ * @route '/reportes/inventario/export-pdf'
+ */
+        exportPdfForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: exportPdf.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    exportPdf.form = exportPdfForm
+const ReporteInventarioController = { stockActual, vencimientos, rotacion, movimientos, exportMethod, exportPdf, export: exportMethod }
 
 export default ReporteInventarioController

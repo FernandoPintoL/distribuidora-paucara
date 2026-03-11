@@ -24,6 +24,7 @@ import AppLayout from '@/layouts/app-layout';
 import { AlertTriangle, Clock, Package, TrendingDown } from 'lucide-react';
 import type { VencimientosPageProps } from '@/domain/entities/reportes';
 import { formatNumber, formatCurrency, formatDateOnly, getVencimientoStatus } from '@/lib/inventario.utils';
+import { ExportButtons } from './stock-actual/components/ExportButtons';
 
 export default function VencimientosInventario({
     productos,
@@ -41,8 +42,8 @@ export default function VencimientosInventario({
             <Head title="Reporte de Vencimientos de Inventario" />
 
             <div className="space-y-6 p-4">
-                {/* Header */}
-                <div className="flex justify-between items-center">
+                {/* Header con Botones de Descarga */}
+                <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                             Vencimientos de Inventario
@@ -51,6 +52,11 @@ export default function VencimientosInventario({
                             Control de productos vencidos y próximos a vencer
                         </p>
                     </div>
+                    {/* ✅ NUEVO: Botones de descarga */}
+                    <ExportButtons
+                        reportType="vencimientos"
+                        filters={filtros}
+                    />
                 </div>
 
                 {/* Filtros */}

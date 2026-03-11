@@ -24,6 +24,7 @@ import AppLayout from '@/layouts/app-layout';
 import { TrendingUp, TrendingDown, Package, RotateCcw } from 'lucide-react';
 import type { RotacionPageProps } from '@/domain/entities/reportes';
 import { formatNumber, formatDecimal, getRotacionBadge } from '@/lib/inventario.utils';
+import { ExportButtons } from './stock-actual/components/ExportButtons';
 
 export default function RotacionInventario({
     rotacion,
@@ -42,8 +43,8 @@ export default function RotacionInventario({
             <Head title="Reporte de Rotación de Inventario" />
 
             <div className="space-y-6 p-4">
-                {/* Header */}
-                <div className="flex justify-between items-center">
+                {/* Header con Botones de Descarga */}
+                <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
                             Rotación de Inventario
@@ -52,6 +53,11 @@ export default function RotacionInventario({
                             Análisis de movimiento y rotación de productos
                         </p>
                     </div>
+                    {/* ✅ NUEVO: Botones de descarga */}
+                    <ExportButtons
+                        reportType="rotacion"
+                        filters={filtros}
+                    />
                 </div>
 
                 {/* Filtros */}

@@ -5,6 +5,7 @@ import { useMovimientosFilters } from '@/application/hooks/useMovimientosFilters
 import { MovimientosEstadisticasCard } from './movimientos/components/MovimientosEstadisticasCard';
 import { MovimientosFiltrosCard } from './movimientos/components/MovimientosFiltrosCard';
 import { MovimientosTable } from './movimientos/components/MovimientosTable';
+import { ExportButtons } from './stock-actual/components/ExportButtons';
 
 export default function ReporteMovimientos({
     movimientos,
@@ -24,14 +25,19 @@ export default function ReporteMovimientos({
             <Head title="Reporte de Movimientos de Inventario" />
 
             <div className="space-y-6 p-4">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+                {/* Header con Botones de Descarga */}
+                <div className="flex items-start justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Reporte de Movimientos</h1>
                         <p className="text-muted-foreground">
                             Historial detallado de movimientos de inventario
                         </p>
                     </div>
+                    {/* ✅ NUEVO: Botones de descarga */}
+                    <ExportButtons
+                        reportType="movimientos"
+                        filters={formData}
+                    />
                 </div>
 
                 {/* Estadísticas */}
