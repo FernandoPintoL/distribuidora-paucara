@@ -8,7 +8,7 @@ import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
-import { Eye, EyeOff, Search, Edit, Trash2, Plus, Info } from 'lucide-react';
+import { Eye, EyeOff, Search, Edit, Trash2, Plus, Info, LayoutGrid, Grid3x3, Eye as EyeIcon, BarChart3, FileJson, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { ModuloSidebar, BulkOperation } from '@/domain/entities/admin-permisos';
 import type { Id } from '@/domain/entities/shared';
@@ -34,6 +34,7 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
   const [seleccionados, setSeleccionados] = useState<Set<Id>>(new Set());
   const [todosSeleccionados, setTodosSeleccionados] = useState(false);
   const [mostrarBulkMenu, setMostrarBulkMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState<'listado' | 'matriz' | 'preview' | 'analytics' | 'exportar' | 'historial'>('listado');
 
   // Sincronizar modulosList con props.modulos cuando cambien
   useEffect(() => {
@@ -150,9 +151,48 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
     return 'Principal';
   };
 
+  // Definición de tabs
+  const tabs = [
+    { id: 'listado', label: 'Listado', icon: LayoutGrid },
+    { id: 'matriz', label: 'Matriz de Acceso', icon: Grid3x3 },
+    { id: 'preview', label: 'Vista Previa', icon: EyeIcon },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'exportar', label: 'Exportar', icon: FileJson },
+    { id: 'historial', label: 'Historial', icon: History },
+  ] as const;
+
   return (
     <>
-      {/* Filtros y búsqueda */}
+      {/* Tabs Navigation */}
+      <div className="mb-6 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-t-lg">
+        <div className="flex gap-1 px-4 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+        {/* TAB 1: Listado de Módulos */}
+        {activeTab === 'listado' && (
+          <>
+            {/* Filtros y búsqueda */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-6 border border-gray-200 dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Búsqueda */}
@@ -374,44 +414,64 @@ export function ModulosTab({ modulos, cargando, onLoadData }: ModulosTabProps) {
         </div>
       )}
 
-      {/* Sección: Matriz de Acceso Roles × Módulos */}
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Matriz de Acceso: Roles × Módulos</CardTitle>
-            <CardDescription>
-              Visualiza qué roles tienen acceso a cada módulo del sidebar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MatrizAccesoRol />
-          </CardContent>
-        </Card>
+            </>
+        )}
+
+        {/* TAB 2: Matriz de Acceso */}
+        {activeTab === 'matriz' && (
+          <div className="p-6">
+            <Card className="border-0 shadow-none">
+              <CardHeader>
+                <CardTitle>Matriz de Acceso: Roles × Módulos</CardTitle>
+                <CardDescription>
+                  Visualiza qué roles tienen acceso a cada módulo del sidebar
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MatrizAccesoRol />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 3: Vista Previa */}
+        {activeTab === 'preview' && (
+          <div className="p-6">
+            <Card className="border-0 shadow-none">
+              <CardHeader>
+                <CardTitle>Vista Previa del Sidebar</CardTitle>
+                <CardDescription>
+                  Previsualiza cómo se verá el sidebar para un rol específico
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SidebarPreview modulosTotales={modulos.length} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 4: Analytics */}
+        {activeTab === 'analytics' && (
+          <div className="p-6">
+            <ModulosAnalytics modulos={modulosList} />
+          </div>
+        )}
+
+        {/* TAB 5: Exportar */}
+        {activeTab === 'exportar' && (
+          <div className="p-6">
+            <ExportadorConfiguracion modulos={modulosList} />
+          </div>
+        )}
+
+        {/* TAB 6: Historial */}
+        {activeTab === 'historial' && (
+          <div className="p-6">
+            <HistorialCambios />
+          </div>
+        )}
       </div>
-
-      {/* Sección: Vista Previa del Sidebar por Rol */}
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Vista Previa del Sidebar</CardTitle>
-            <CardDescription>
-              Previsualiza cómo se verá el sidebar para un rol específico
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SidebarPreview modulosTotales={modulos.length} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sección: Estadísticas y Analytics */}
-      <ModulosAnalytics modulos={modulosList} />
-
-      {/* Sección: Exportador de Configuración */}
-      <ExportadorConfiguracion modulos={modulosList} />
-
-      {/* Sección: Historial de Cambios */}
-      <HistorialCambios />
 
       {/* Info Box */}
       <Alert className="mt-8 border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-slate-700">
