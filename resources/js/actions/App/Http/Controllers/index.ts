@@ -30,6 +30,7 @@ import AuditoriaCajaController from './AuditoriaCajaController'
 import ConciliacionCajaController from './ConciliacionCajaController'
 import AlertasController from './AlertasController'
 import VentaPublicController from './VentaPublicController'
+import PublicStockController from './PublicStockController'
 import DashboardController from './DashboardController'
 import RoleController from './RoleController'
 import CategoriaController from './CategoriaController'
@@ -118,6 +119,7 @@ AuditoriaCajaController,
 ConciliacionCajaController,
 AlertasController,
 VentaPublicController,
+PublicStockController,
 DashboardController,
 RoleController,
 CategoriaController,

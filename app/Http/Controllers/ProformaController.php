@@ -59,24 +59,8 @@ class ProformaController extends Controller
             // Construir query base
             $query = Proforma::query();
 
-            // Filtrado por rol (se puede sobrescribir con parámetros de filtro)
-            if ($user->hasRole('cliente') || $user->cliente_id) {
-                $clienteId = $user->cliente_id ?? $user->cliente->id ?? null;
-                if (!$clienteId) {
-                    return $this->respondError('Usuario no tiene un cliente asociado', 403);
-                }
-                // Solo aplica si no hay filtro manual de cliente
-                if (!$request->filled('cliente_id')) {
-                    $query->where('cliente_id', $clienteId);
-                }
-            } elseif ($user->hasRole('Preventista')) {
-                // Solo aplica si no hay filtro manual de usuario_creador_id
-                if (!$request->filled('usuario_creador_id')) {
-                    $query->where('usuario_creador_id', $user->id);
-                }
-            } elseif (!$user->hasAnyRole(['Gestor de Logística', 'Admin', 'Cajero', 'Manager', 'Chofer', 'Encargado'])) {
-                return $this->respondError('No tiene permisos para ver proformas', 403);
-            }
+            // ✅ REMOVIDO 2026-03-11: Filtros por rol (Admin debe ver TODAS las proformas)
+            // El acceso está controlado por middleware 'permission:proformas.index'
 
             // Búsqueda general (ID, número, cliente)
             if ($request->filled('search')) {
@@ -165,6 +149,31 @@ class ProformaController extends Controller
                 });
             }
 
+            // ✅ NUEVO: Filtro por fecha de entrega solicitada (rango)
+            if ($request->filled('fecha_entrega_solicitada')) {
+                $query->whereDate('fecha_entrega_solicitada', '=', $request->fecha_entrega_solicitada);
+            }
+
+            // ✅ NUEVO: Filtro por fecha de entrega solicitada desde
+            if ($request->filled('fecha_entrega_solicitada_desde')) {
+                $query->whereDate('fecha_entrega_solicitada', '>=', $request->fecha_entrega_solicitada_desde);
+            }
+
+            // ✅ NUEVO: Filtro por fecha de entrega solicitada hasta
+            if ($request->filled('fecha_entrega_solicitada_hasta')) {
+                $query->whereDate('fecha_entrega_solicitada', '<=', $request->fecha_entrega_solicitada_hasta);
+            }
+
+            // ✅ NUEVO: Filtro por fecha de vencimiento desde
+            if ($request->filled('fecha_vencimiento_desde')) {
+                $query->whereDate('fecha_vencimiento', '>=', $request->fecha_vencimiento_desde);
+            }
+
+            // ✅ NUEVO: Filtro por fecha de vencimiento hasta
+            if ($request->filled('fecha_vencimiento_hasta')) {
+                $query->whereDate('fecha_vencimiento', '<=', $request->fecha_vencimiento_hasta);
+            }
+
             // Eager loading y paginación
             $proformas = $query->with([
                 'cliente',
@@ -193,6 +202,11 @@ class ProformaController extends Controller
                 'solo_convertidas' => $request->input('solo_convertidas'),
                 'fecha_venta_desde' => $request->input('fecha_venta_desde'),
                 'fecha_venta_hasta' => $request->input('fecha_venta_hasta'),
+                'fecha_entrega_solicitada' => $request->input('fecha_entrega_solicitada'),
+                'fecha_entrega_solicitada_desde' => $request->input('fecha_entrega_solicitada_desde'),
+                'fecha_entrega_solicitada_hasta' => $request->input('fecha_entrega_solicitada_hasta'),
+                'fecha_vencimiento_desde' => $request->input('fecha_vencimiento_desde'),
+                'fecha_vencimiento_hasta' => $request->input('fecha_vencimiento_hasta'),
             ];
 
             // ✅ NUEVO 2026-02-21: Traer clientes y usuarios fijos para los filtros

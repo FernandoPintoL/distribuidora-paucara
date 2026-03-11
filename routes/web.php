@@ -30,6 +30,9 @@ Route::prefix('venta')->name('venta.')->group(function () {
     Route::get('download/{token}', [App\Http\Controllers\VentaPublicController::class, 'show'])->name('download');
 });
 
+// 🌐 NUEVA: Página pública de precios y catálogo
+Route::get('/public/precios', [App\Http\Controllers\PublicStockController::class, 'precios'])->name('public.precios');
+
 // ✅ ACTUALIZADO: Agregado middleware 'platform' para validar acceso a plataforma web
 Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');

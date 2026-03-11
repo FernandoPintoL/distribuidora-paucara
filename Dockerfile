@@ -1,8 +1,8 @@
-# Use PHP 8.2 FPM Debian with Supervisor (Debian for wkhtmltoimage support)
-FROM php:8.2-fpm-bookworm
+# Use PHP 8.2 FPM Alpine with Supervisor
+FROM php:8.2-fpm-alpine
 
 # Install system dependencies including supervisor
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     git \
     curl \
     nodejs \
@@ -12,19 +12,10 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zlib-dev \
     postgresql-dev \
-    liboniguruma-dev \
+    oniguruma-dev \
     libpng-dev \
-    libjpeg-turbo-progs \
-    libfreetype6-dev \
-    wkhtmltopdf \
-    wkhtmltoimage \
-    ghostscript \
-    fontconfig \
-    xfonts-75dpi \
-    xfonts-96dpi \
-    xfonts-encodings \
-    xfonts-utils \
-    && rm -rf /var/lib/apt/lists/*
+    libjpeg-turbo-dev \
+    freetype-dev
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
