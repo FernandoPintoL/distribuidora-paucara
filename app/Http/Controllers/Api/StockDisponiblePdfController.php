@@ -167,7 +167,7 @@ class StockDisponiblePdfController
             // 5️⃣ INTENTAR CONVERTIR A PNG (opcional)
             // ==========================================
             // Si wkhtmltoimage está disponible, convertir a PNG
-            // Si no, simplemente retornar PDF con nombre .png
+            // Si no, simplemente retornar PDF
             $tempHtmlPath = storage_path('app/temp/stock-' . uniqid() . '.html');
             $tempImagePath = storage_path('app/temp/stock-' . uniqid() . '.png');
             $pngContent = null;
@@ -193,7 +193,10 @@ class StockDisponiblePdfController
 
                 if ($returnCode === 0 && file_exists($tempImagePath)) {
                     $pngContent = file_get_contents($tempImagePath);
-                    \Log::info('✅ Imagen PNG generada con wkhtmltoimage');
+                    $fileSize = filesize($tempImagePath);
+                    \Log::info('✅ Imagen PNG generada con wkhtmltoimage', [
+                        'size_bytes' => $fileSize,
+                    ]);
 
                     // Limpiar archivos temporales
                     @unlink($tempHtmlPath);
@@ -213,7 +216,7 @@ class StockDisponiblePdfController
                     ->header('Content-Disposition', 'attachment; filename=stock-disponible.png');
             } else {
                 // Fallback: Retornar PDF (compatible con Railway y todos los servidores)
-                \Log::info('📄 Retornando stock como PDF (compatible con todos los servidores)');
+                \Log::info('📄 Retornando stock como PDF (fallback)');
                 return response($pdfContent)
                     ->header('Content-Type', 'application/pdf')
                     ->header('Content-Disposition', 'attachment; filename=stock-disponible.pdf');
