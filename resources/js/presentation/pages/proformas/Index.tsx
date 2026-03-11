@@ -73,6 +73,84 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         return usuariosList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
     }, [proformas.data])
 
+    // ✅ FUNCIONES PARA FECHAS RÁPIDAS
+    const getHoyFormato = () => {
+        const hoy = new Date()
+        return hoy.toISOString().split('T')[0]
+    }
+
+    const getAyerFormato = () => {
+        const ayer = new Date()
+        ayer.setDate(ayer.getDate() - 1)
+        return ayer.toISOString().split('T')[0]
+    }
+
+    const getMananaFormato = () => {
+        const manana = new Date()
+        manana.setDate(manana.getDate() + 1)
+        return manana.toISOString().split('T')[0]
+    }
+
+    // ✅ FUNCIONES PARA FILTROS RÁPIDOS DE FECHA (Created)
+    const filtrarPorAyer = () => {
+        setFechaDesde(getAyerFormato())
+        setFechaHasta(getAyerFormato())
+        setFechaEntregaSolicitada(getAyerFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, getAyerFormato(), getAyerFormato())
+    }
+
+    const filtrarPorHoy = () => {
+        setFechaDesde(getHoyFormato())
+        setFechaHasta(getHoyFormato())
+        setFechaEntregaSolicitada(getHoyFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, getHoyFormato(), getHoyFormato())
+    }
+
+    const filtrarPorManana = () => {
+        setFechaDesde(getMananaFormato())
+        setFechaHasta(getMananaFormato())
+        setFechaEntregaSolicitada(getMananaFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, getMananaFormato(), getMananaFormato())
+    }
+
+    // ✅ FUNCIONES PARA FILTROS RÁPIDOS DE FECHA DE ENTREGA SOLICITADA
+    const filtrarEntregaPorAyer = () => {
+        setFechaEntregaDesde(getAyerFormato())
+        setFechaEntregaHasta(getAyerFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, getAyerFormato(), getAyerFormato())
+    }
+
+    const filtrarEntregaPorHoy = () => {
+        setFechaEntregaDesde(getHoyFormato())
+        setFechaEntregaHasta(getHoyFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, getHoyFormato(), getHoyFormato())
+    }
+
+    const filtrarEntregaPorManana = () => {
+        setFechaEntregaDesde(getMananaFormato())
+        setFechaEntregaHasta(getMananaFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, getMananaFormato(), getMananaFormato())
+    }
+
+    // ✅ FUNCIONES PARA FILTROS RÁPIDOS DE FECHA DE VENCIMIENTO
+    const filtrarVencimientoPorAyer = () => {
+        setFechaVencimientoDesde(getAyerFormato())
+        setFechaVencimientoHasta(getAyerFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, fechaEntregaDesde, fechaEntregaHasta, getAyerFormato(), getAyerFormato())
+    }
+
+    const filtrarVencimientoPorHoy = () => {
+        setFechaVencimientoDesde(getHoyFormato())
+        setFechaVencimientoHasta(getHoyFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, fechaEntregaDesde, fechaEntregaHasta, getHoyFormato(), getHoyFormato())
+    }
+
+    const filtrarVencimientoPorManana = () => {
+        setFechaVencimientoDesde(getMananaFormato())
+        setFechaVencimientoHasta(getMananaFormato())
+        handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, undefined, fechaEntregaDesde, fechaEntregaHasta, getMananaFormato(), getMananaFormato())
+    }
+
     // ✅ NUEVO 2026-02-21: Estados expandidos para filtrado mejorado (inicializar desde URL)
     const [showFilters, setShowFilters] = useState(true)
     const [searchTerm, setSearchTerm] = useState(getQueryParam('search', ''))
@@ -88,6 +166,23 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
     const [soloConvertidas, setSoloConvertidas] = useState<boolean>(getQueryParam('solo_convertidas') === 'true')
     const [fechaVentaDesde, setFechaVentaDesde] = useState<string>(getQueryParam('fecha_venta_desde', ''))
     const [fechaVentaHasta, setFechaVentaHasta] = useState<string>(getQueryParam('fecha_venta_hasta', ''))
+    // ✅ NUEVO: Filtros para fecha de entrega solicitada
+    const [fechaEntregaSolicitada, setFechaEntregaSolicitada] = useState<string>(
+        getQueryParam('fecha_entrega_solicitada', '')
+    )
+    const [fechaEntregaDesde, setFechaEntregaDesde] = useState<string>(
+        getQueryParam('fecha_entrega_solicitada_desde', '')
+    )
+    const [fechaEntregaHasta, setFechaEntregaHasta] = useState<string>(
+        getQueryParam('fecha_entrega_solicitada_hasta', '')
+    )
+    // ✅ NUEVO: Filtros para fecha de vencimiento
+    const [fechaVencimientoDesde, setFechaVencimientoDesde] = useState<string>(
+        getQueryParam('fecha_vencimiento_desde', '')
+    )
+    const [fechaVencimientoHasta, setFechaVencimientoHasta] = useState<string>(
+        getQueryParam('fecha_vencimiento_hasta', '')
+    )
 
     const [isLoading, setIsLoading] = useState(false)
     const [showPrintModal, setShowPrintModal] = useState<boolean>(false)
@@ -148,9 +243,14 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
             filtroVencidas !== 'TODAS' || // ✅ NUEVO: Incluir filtro de vencidas
             soloConvertidas || // ✅ NUEVO: Incluir filtro de convertidas
             fechaVentaDesde !== '' ||
-            fechaVentaHasta !== ''
+            fechaVentaHasta !== '' ||
+            fechaEntregaSolicitada !== '' || // ✅ NUEVO: Incluir filtro de entrega solicitada
+            fechaEntregaDesde !== '' || // ✅ NUEVO: Incluir filtro de entrega desde
+            fechaEntregaHasta !== '' || // ✅ NUEVO: Incluir filtro de entrega hasta
+            fechaVencimientoDesde !== '' || // ✅ NUEVO: Incluir filtro de vencimiento desde
+            fechaVencimientoHasta !== '' // ✅ NUEVO: Incluir filtro de vencimiento hasta
         )
-    }, [searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta])
+    }, [searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, fechaEntregaSolicitada, fechaEntregaDesde, fechaEntregaHasta, fechaVencimientoDesde, fechaVencimientoHasta])
 
     // ✅ ACTUALIZADO 2026-02-21: Limpiar filtros y navegar al servidor
     const limpiarFiltros = () => {
@@ -167,6 +267,13 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         setSoloConvertidas(false)
         setFechaVentaDesde('')
         setFechaVentaHasta('')
+        // ✅ NUEVO: Limpiar fechas de entrega solicitada
+        setFechaEntregaSolicitada('')
+        setFechaEntregaDesde('')
+        setFechaEntregaHasta('')
+        // ✅ NUEVO: Limpiar fechas de vencimiento
+        setFechaVencimientoDesde('')
+        setFechaVencimientoHasta('')
         // Navegar sin parámetros para ver todos los registros
         router.visit('/proformas', { preserveState: true })
     }
@@ -244,7 +351,12 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         filtroVencidasValue?: string,
         soloConvertidosValue?: boolean,
         fechaVentaDesdeValue?: string,
-        fechaVentaHastaValue?: string
+        fechaVentaHastaValue?: string,
+        fechaEntregaSolicitadaValue?: string,
+        fechaEntregaDesdeValue?: string,
+        fechaEntregaHastaValue?: string,
+        fechaVencimientoDesdeValue?: string,
+        fechaVencimientoHastaValue?: string
     ) => {
         // Usar los valores proporcionados o los del estado
         const search = searchValue ?? searchTerm
@@ -259,6 +371,11 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         const convertidos = soloConvertidosValue !== undefined ? soloConvertidosValue : soloConvertidas
         const desdeVenta = fechaVentaDesdeValue ?? fechaVentaDesde
         const hastaVenta = fechaVentaHastaValue ?? fechaVentaHasta
+        const entregaSolicitada = fechaEntregaSolicitadaValue ?? fechaEntregaSolicitada
+        const desdeEntrega = fechaEntregaDesdeValue ?? fechaEntregaDesde
+        const hastaEntrega = fechaEntregaHastaValue ?? fechaEntregaHasta
+        const desdeVencimiento = fechaVencimientoDesdeValue ?? fechaVencimientoDesde
+        const hastaVencimiento = fechaVencimientoHastaValue ?? fechaVencimientoHasta
 
         const params = new URLSearchParams()
         if (search) params.append('search', search)
@@ -274,6 +391,14 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         if (convertidos) params.append('solo_convertidas', 'true')
         if (desdeVenta) params.append('fecha_venta_desde', desdeVenta)
         if (hastaVenta) params.append('fecha_venta_hasta', hastaVenta)
+        // ✅ NUEVO: Agregar filtro de fecha de entrega solicitada
+        if (entregaSolicitada) params.append('fecha_entrega_solicitada', entregaSolicitada)
+        // ✅ NUEVO: Agregar filtros de rango de fecha de entrega solicitada
+        if (desdeEntrega) params.append('fecha_entrega_solicitada_desde', desdeEntrega)
+        if (hastaEntrega) params.append('fecha_entrega_solicitada_hasta', hastaEntrega)
+        // ✅ NUEVO: Agregar filtros de rango de fecha de vencimiento
+        if (desdeVencimiento) params.append('fecha_vencimiento_desde', desdeVencimiento)
+        if (hastaVencimiento) params.append('fecha_vencimiento_hasta', hastaVencimiento)
 
         const queryString = params.toString()
         const url = queryString ? `/proformas?${queryString}` : '/proformas'
@@ -399,6 +524,37 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                         </div>
                     </CardHeader>
 
+                    {/* ✅ NUEVO: Botones rápidos de fecha */}
+                    <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                        <div className="flex flex-wrap gap-2">
+                            <span className="text-xs font-medium text-muted-foreground self-center">Fechas rápidas:</span>
+                            <Button
+                                size="sm"
+                                variant={fechaDesde === getAyerFormato() ? "default" : "outline"}
+                                onClick={filtrarPorAyer}
+                                className="text-xs"
+                            >
+                                📅 Ayer
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={fechaDesde === getHoyFormato() ? "default" : "outline"}
+                                onClick={filtrarPorHoy}
+                                className="text-xs"
+                            >
+                                📅 Hoy
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={fechaDesde === getMananaFormato() ? "default" : "outline"}
+                                onClick={filtrarPorManana}
+                                className="text-xs"
+                            >
+                                📅 Mañana
+                            </Button>
+                        </div>
+                    </div>
+
                     {showFilters && (
                         <CardContent className="space-y-4">
                             {/* Primera fila de filtros */}
@@ -520,6 +676,116 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                                 </div>
                             </div>
 
+                            {/* ✅ NUEVA FILA: Filtros de fecha de entrega solicitada */}
+                            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800 space-y-3">
+                                {/* Botones rápidos */}
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground self-center">📦 Fechas rápidas Entrega:</span>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaEntregaDesde === getAyerFormato() ? "default" : "outline"}
+                                        onClick={filtrarEntregaPorAyer}
+                                        className="text-xs"
+                                    >
+                                        📅 Ayer
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaEntregaDesde === getHoyFormato() ? "default" : "outline"}
+                                        onClick={filtrarEntregaPorHoy}
+                                        className="text-xs"
+                                    >
+                                        📅 Hoy
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaEntregaDesde === getMananaFormato() ? "default" : "outline"}
+                                        onClick={filtrarEntregaPorManana}
+                                        className="text-xs"
+                                    >
+                                        📅 Mañana
+                                    </Button>
+                                </div>
+
+                                {/* Campos de fecha */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground">📦 Entrega Desde</label>
+                                        <Input
+                                            type="date"
+                                            value={fechaEntregaDesde}
+                                            onChange={(e) => setFechaEntregaDesde(e.target.value)}
+                                            className="mt-1"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground">📦 Entrega Hasta</label>
+                                        <Input
+                                            type="date"
+                                            value={fechaEntregaHasta}
+                                            onChange={(e) => setFechaEntregaHasta(e.target.value)}
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ✅ NUEVA FILA: Filtros de fecha de vencimiento */}
+                            <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800 space-y-3">
+                                {/* Botones rápidos */}
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground self-center">📅 Fechas rápidas Vencimiento:</span>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaVencimientoDesde === getAyerFormato() ? "default" : "outline"}
+                                        onClick={filtrarVencimientoPorAyer}
+                                        className="text-xs"
+                                    >
+                                        📅 Ayer
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaVencimientoDesde === getHoyFormato() ? "default" : "outline"}
+                                        onClick={filtrarVencimientoPorHoy}
+                                        className="text-xs"
+                                    >
+                                        📅 Hoy
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={fechaVencimientoDesde === getMananaFormato() ? "default" : "outline"}
+                                        onClick={filtrarVencimientoPorManana}
+                                        className="text-xs"
+                                    >
+                                        📅 Mañana
+                                    </Button>
+                                </div>
+
+                                {/* Campos de fecha */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground">📅 Vencimiento Desde</label>
+                                        <Input
+                                            type="date"
+                                            value={fechaVencimientoDesde}
+                                            onChange={(e) => setFechaVencimientoDesde(e.target.value)}
+                                            className="mt-1"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground">📅 Vencimiento Hasta</label>
+                                        <Input
+                                            type="date"
+                                            value={fechaVencimientoHasta}
+                                            onChange={(e) => setFechaVencimientoHasta(e.target.value)}
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* ✅ NUEVA FILA: Filtros de proformas convertidas a ventas */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                 {/* Checkbox: Solo Convertidas */}
@@ -581,7 +847,7 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                             {/* Tercera fila: Botones de acción */}
                             <div className="flex gap-2">
                                 <Button
-                                    onClick={() => handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta)}
+                                    onClick={() => handleSearch(searchTerm, filtroEstado, filtroCliente, filtroUsuario, fechaDesde, fechaHasta, totalMin, totalMax, filtroVencidas, soloConvertidas, fechaVentaDesde, fechaVentaHasta, fechaEntregaSolicitada, fechaEntregaDesde, fechaEntregaHasta, fechaVencimientoDesde, fechaVencimientoHasta)}
                                     className="flex-1"
                                 >
                                     <Search className="h-4 w-4 mr-2" />
@@ -612,6 +878,8 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                                     <TableHead className="text-right">Total</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead>Usuario</TableHead>
+                                    <TableHead>📦 Entrega Solicitada</TableHead>
+                                    <TableHead>📅 Vencimiento</TableHead>
                                     <TableHead>🛍️ Venta</TableHead>
                                     <TableHead>📅 Creada</TableHead>
                                     <TableHead>✏️ Actualizada</TableHead>
@@ -621,7 +889,7 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                             <TableBody>
                                 {filteredProformas.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                                             {hasActiveFilters
                                                 ? '❌ No se encontraron proformas que coincidan con los filtros'
                                                 : '📭 No hay proformas registradas'
@@ -659,6 +927,24 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                                             </TableCell>
                                             <TableCell>
                                                 {(proforma.usuario_creador as any)?.name || 'Sin asignar'}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                <div className="whitespace-nowrap">
+                                                    {proforma.fecha_entrega_solicitada ? (
+                                                        <div>{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">-</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                                <div className="whitespace-nowrap">
+                                                    {proforma.fecha_vencimiento ? (
+                                                        <div>{new Date(proforma.fecha_vencimiento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">-</span>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 {proforma.venta ? (
