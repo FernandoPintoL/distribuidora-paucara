@@ -107,6 +107,7 @@ export default function UsuarioEdit({
               permisosDirectos={permisosDirectos}
               permisosHeredados={permisosHeredados}
               permisoPorRoles={permisoPorRoles}
+              rolesActuales={rolesActuales}
               todosLosPermisos={todosLosPermisos}
               onPermisosChange={handlePermisosChange}
               themeColor="blue"

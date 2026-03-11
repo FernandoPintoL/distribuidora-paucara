@@ -7,6 +7,7 @@ interface PermisosCheckboxFormProps {
   permisosDirectos?: number[];
   permisosHeredados?: number[];
   permisoPorRoles?: Record<number, string[]>;
+  rolesActuales?: string[];
   todosLosPermisos: PermissionGroup[];
   onPermisosChange: (permisos: number[]) => void;
   themeColor?: 'blue' | 'purple';
@@ -17,6 +18,7 @@ export default function PermisosCheckboxForm({
   permisosDirectos = [],
   permisosHeredados = [],
   permisoPorRoles = {},
+  rolesActuales = [],
   todosLosPermisos,
   onPermisosChange,
   themeColor = 'blue',
@@ -25,25 +27,49 @@ export default function PermisosCheckboxForm({
   const [selectAll, setSelectAll] = useState(permisosActuales.length === getAllPermissionIds().length);
   const [permisos, setPermisos] = useState<number[]>(permisosActuales);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [rolFilter, setRolFilter] = useState<string>('todos');
 
   function getAllPermissionIds() {
     return todosLosPermisos.flatMap(group => group.permissions.map(p => p.id));
   }
 
-  // Filter groups based on search
+  // Filter groups based on search and role filter
   const filteredGroups = useMemo(() => {
-    if (!searchQuery) return todosLosPermisos;
+    let filtered = todosLosPermisos;
 
-    return todosLosPermisos
-      .map(group => ({
+    // Filtrar por rol si está seleccionado
+    if (rolFilter !== 'todos') {
+      if (rolFilter === 'directos') {
+        // Mostrar solo permisos directos
+        filtered = filtered.map(group => ({
+          ...group,
+          permissions: group.permissions.filter(p => permisosDirectos.includes(p.id)),
+        }));
+      } else {
+        // Mostrar permisos del rol seleccionado (heredados y directos)
+        filtered = filtered.map(group => ({
+          ...group,
+          permissions: group.permissions.filter(p => {
+            const rolesDelPermiso = permisoPorRoles[p.id] || [];
+            return rolesDelPermiso.includes(rolFilter) || permisosDirectos.includes(p.id);
+          }),
+        }));
+      }
+    }
+
+    // Filtrar por búsqueda
+    if (searchQuery) {
+      filtered = filtered.map(group => ({
         ...group,
         permissions: group.permissions.filter(
           p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                p.description?.toLowerCase().includes(searchQuery.toLowerCase())
         ),
-      }))
-      .filter(group => group.permissions.length > 0);
-  }, [searchQuery, todosLosPermisos]);
+      }));
+    }
+
+    return filtered.filter(group => group.permissions.length > 0);
+  }, [searchQuery, todosLosPermisos, rolFilter, permisosDirectos, permisoPorRoles]);
 
   function togglePermission(permissionId: number) {
     const newPermisos = permisos.includes(permissionId)
@@ -106,8 +132,8 @@ export default function PermisosCheckboxForm({
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 gap-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="text"
               placeholder="Buscar permisos..."
@@ -115,6 +141,21 @@ export default function PermisosCheckboxForm({
               onChange={e => setSearchQuery(e.target.value)}
               className={`flex-1 rounded-md border border-gray-300 dark:border-slate-600 px-3 py-2 focus:outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 ${focusRingClass}`}
             />
+
+            <select
+              value={rolFilter}
+              onChange={e => setRolFilter(e.target.value)}
+              className={`rounded-md border border-gray-300 dark:border-slate-600 px-3 py-2 focus:outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${focusRingClass}`}
+            >
+              <option value="todos">Todos los permisos</option>
+              <option value="directos">📌 Permisos Directos</option>
+              {rolesActuales.map(rol => (
+                <option key={rol} value={rol}>
+                  🔗 {rol}
+                </option>
+              ))}
+            </select>
+
             <button
               type="button"
               onClick={toggleSelectAll}
