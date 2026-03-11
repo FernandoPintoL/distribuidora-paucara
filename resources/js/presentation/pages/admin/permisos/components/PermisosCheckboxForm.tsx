@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Grid3x3, Table2 } from 'lucide-react';
 import type { Permission, PermissionGroup } from '@/domain/entities/admin-permisos';
 
 interface PermisosCheckboxFormProps {
@@ -23,6 +24,7 @@ export default function PermisosCheckboxForm({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectAll, setSelectAll] = useState(permisosActuales.length === getAllPermissionIds().length);
   const [permisos, setPermisos] = useState<number[]>(permisosActuales);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   function getAllPermissionIds() {
     return todosLosPermisos.flatMap(group => group.permissions.map(p => p.id));
@@ -102,25 +104,57 @@ export default function PermisosCheckboxForm({
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Buscar permisos..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className={`flex-1 rounded-md border border-gray-300 dark:border-slate-600 px-3 py-2 focus:outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 ${focusRingClass}`}
-          />
-          <button
-            type="button"
-            onClick={toggleSelectAll}
-            className={`whitespace-nowrap rounded-md px-4 py-2 font-medium ${
-              selectAll
-                ? buttonColorClass
-                : 'border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
-            }`}
-          >
-            {selectAll ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
-          </button>
+
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 gap-2">
+            <input
+              type="text"
+              placeholder="Buscar permisos..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className={`flex-1 rounded-md border border-gray-300 dark:border-slate-600 px-3 py-2 focus:outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 ${focusRingClass}`}
+            />
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className={`whitespace-nowrap rounded-md px-4 py-2 font-medium text-sm ${
+                selectAll
+                  ? buttonColorClass
+                  : 'border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+              }`}
+            >
+              {selectAll ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
+            </button>
+          </div>
+
+          {/* Vista Toggle */}
+          <div className="flex gap-2 border border-gray-300 dark:border-slate-600 rounded-md p-1 bg-white dark:bg-slate-700">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-gray-100 dark:bg-slate-600 text-gray-900 dark:text-white'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+              title="Vista Grid"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-gray-100 dark:bg-slate-600 text-gray-900 dark:text-white'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+              title="Vista Tabla"
+            >
+              <Table2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -128,7 +162,8 @@ export default function PermisosCheckboxForm({
         <div className="py-8 text-center text-gray-500 dark:text-gray-400">
           No se encontraron permisos que coincidan con tu búsqueda
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
+        // ==================== VISTA GRID ====================
         <div className="space-y-6">
           {filteredGroups.map(group => (
             <div key={group.module} className={`border-l-4 ${borderColorClass} pl-4`}>
@@ -159,7 +194,7 @@ export default function PermisosCheckboxForm({
                           className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-slate-600 dark:bg-slate-700 accent-blue-600 dark:accent-blue-500"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className="text-sm font-medium text-gray-900 dark:text-white">{permission.name}</div>
                             {/* Indicadores */}
                             {esDirecto && (
@@ -192,6 +227,88 @@ export default function PermisosCheckboxForm({
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        // ==================== VISTA TABLA ====================
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50">
+                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 dark:bg-slate-700 accent-blue-600 dark:accent-blue-500 cursor-pointer"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Permiso</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Descripción</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Estado</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Módulo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGroups.flatMap(group =>
+                group.permissions.map(permission => {
+                  const esDirecto = permisosDirectos.includes(permission.id);
+                  const esHeredado = permisosHeredados.includes(permission.id);
+                  const rolesOrigen = permisoPorRoles[permission.id] || [];
+
+                  return (
+                    <tr
+                      key={permission.id}
+                      className={`border-b border-gray-200 dark:border-slate-700 transition-colors hover:bg-gray-50 dark:hover:bg-slate-700/30 ${
+                        esHeredado && !esDirecto
+                          ? 'bg-amber-50 dark:bg-amber-900/10'
+                          : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={permisos.includes(permission.id)}
+                          onChange={() => togglePermission(permission.id)}
+                          className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 dark:bg-slate-700 accent-blue-600 dark:accent-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white">{permission.name}</div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                        {permission.description || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {esDirecto && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                              👤 Directo
+                            </span>
+                          )}
+                          {esHeredado && !esDirecto && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 whitespace-nowrap"
+                              title={`De: ${rolesOrigen.join(', ')}`}
+                            >
+                              🔗 {rolesOrigen.join(', ')}
+                            </span>
+                          )}
+                          {esDirecto && esHeredado && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 whitespace-nowrap">
+                              ✓ Dir + {rolesOrigen.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400 capitalize">
+                        {group.module.replace(/_/g, ' ')}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
