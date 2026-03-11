@@ -35,7 +35,24 @@ class PermissionController extends Controller
     {
         $this->authorize('usuarios.assign-permission');
 
+        // ==========================================
+        // 1️⃣ PERMISOS DIRECTOS vs HEREDADOS
+        // ==========================================
+        $permisosDirectos = $user->getDirectPermissions()->pluck('id')->toArray();
+        $permisosHeredados = $user->getPermissionsViaRoles()->pluck('id')->toArray();
         $permisosActuales = $user->getAllPermissions()->pluck('id')->toArray();
+
+        // Mapeo de permiso_id => array de roles de los que viene
+        $permisoPorRoles = [];
+        foreach ($user->roles as $role) {
+            foreach ($role->permissions as $permission) {
+                if (!isset($permisoPorRoles[$permission->id])) {
+                    $permisoPorRoles[$permission->id] = [];
+                }
+                $permisoPorRoles[$permission->id][] = $role->name;
+            }
+        }
+
         $todosLosPermisos = $this->permissionService->getPermissionsForUI();
         $rolesActuales = $user->roles->pluck('name')->toArray();
 
@@ -51,6 +68,9 @@ class PermissionController extends Controller
         return Inertia::render('admin/permisos/usuario', [
             'usuario' => $user,
             'permisosActuales' => $permisosActuales,
+            'permisosDirectos' => $permisosDirectos,
+            'permisosHeredados' => $permisosHeredados,
+            'permisoPorRoles' => $permisoPorRoles,  // permiso_id => [rol1, rol2, ...]
             'rolesActuales' => $rolesActuales,
             'todosLosPermisos' => $todosLosPermisos,
             'todosLosRoles' => $todosLosRoles,

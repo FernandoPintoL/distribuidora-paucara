@@ -14,12 +14,24 @@ interface Rol {
 interface UsuarioEditProps {
   usuario: AdminUsuario;
   permisosActuales: number[];
+  permisosDirectos: number[];
+  permisosHeredados: number[];
+  permisoPorRoles: Record<number, string[]>;
   rolesActuales: string[];
   todosLosPermisos: PermissionGroup[];
   todosLosRoles: Rol[];
 }
 
-export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, todosLosPermisos, todosLosRoles }: UsuarioEditProps) {
+export default function UsuarioEdit({
+  usuario,
+  permisosActuales,
+  permisosDirectos,
+  permisosHeredados,
+  permisoPorRoles,
+  rolesActuales,
+  todosLosPermisos,
+  todosLosRoles
+}: UsuarioEditProps) {
   const { data, setData, patch, processing } = useForm({
     permisos: permisosActuales,
     roles: rolesActuales,
@@ -92,6 +104,9 @@ export default function UsuarioEdit({ usuario, permisosActuales, rolesActuales, 
           <form onSubmit={handleSubmit}>
             <PermisosCheckboxForm
               permisosActuales={permisosActuales}
+              permisosDirectos={permisosDirectos}
+              permisosHeredados={permisosHeredados}
+              permisoPorRoles={permisoPorRoles}
               todosLosPermisos={todosLosPermisos}
               onPermisosChange={handlePermisosChange}
               themeColor="blue"

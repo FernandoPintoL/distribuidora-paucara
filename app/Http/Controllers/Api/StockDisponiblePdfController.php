@@ -1,10 +1,10 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Models\StockProducto;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Intervention\Image\Facades\Image;
 
 /**
@@ -66,10 +66,10 @@ class StockDisponiblePdfController
             // 3️⃣ PREPARAR DATOS para la vista
             // ==========================================
             $data = [
-                'filas'               => $filas,
-                'total_productos'     => count($filas),
-                'fecha_generacion'    => now()->format('d/m/Y H:i'),
-                'empresa'             => config('app.name', 'Distribuidora Paucara'),
+                'filas'            => $filas,
+                'total_productos'  => count($filas),
+                'fecha_generacion' => now()->format('d/m/Y H:i'),
+                'empresa'          => config('app.name', 'Distribuidora Paucara'),
             ];
 
             // ==========================================
@@ -145,10 +145,10 @@ class StockDisponiblePdfController
             // 3️⃣ PREPARAR DATOS para la vista
             // ==========================================
             $data = [
-                'filas'               => $filas,
-                'total_productos'     => count($filas),
-                'fecha_generacion'    => now()->format('d/m/Y H:i'),
-                'empresa'             => config('app.name', 'Distribuidora Paucara'),
+                'filas'            => $filas,
+                'total_productos'  => count($filas),
+                'fecha_generacion' => now()->format('d/m/Y H:i'),
+                'empresa'          => config('app.name', 'Distribuidora Paucara'),
             ];
 
             // ==========================================
@@ -168,13 +168,13 @@ class StockDisponiblePdfController
             // ==========================================
             // Si wkhtmltoimage está disponible, convertir a PNG
             // Si no, simplemente retornar PDF
-            $tempHtmlPath = storage_path('app/temp/stock-' . uniqid() . '.html');
+            $tempHtmlPath  = storage_path('app/temp/stock-' . uniqid() . '.html');
             $tempImagePath = storage_path('app/temp/stock-' . uniqid() . '.png');
-            $pngContent = null;
+            $pngContent    = null;
 
             try {
                 // Crear carpeta temp si no existe
-                if (!is_dir(dirname($tempHtmlPath))) {
+                if (! is_dir(dirname($tempHtmlPath))) {
                     mkdir(dirname($tempHtmlPath), 0755, true);
                 }
 
@@ -193,8 +193,8 @@ class StockDisponiblePdfController
 
                 if ($returnCode === 0 && file_exists($tempImagePath)) {
                     $pngContent = file_get_contents($tempImagePath);
-                    $fileSize = filesize($tempImagePath);
-                    \Log::info('✅ Imagen PNG generada con wkhtmltoimage', [
+                    $fileSize   = filesize($tempImagePath);
+                    Log::info('✅ Imagen PNG generada con wkhtmltoimage', [
                         'size_bytes' => $fileSize,
                     ]);
 
@@ -203,7 +203,7 @@ class StockDisponiblePdfController
                     @unlink($tempImagePath);
                 }
             } catch (\Exception $e) {
-                \Log::debug('ℹ️ wkhtmltoimage no disponible, usando PDF');
+                Log::debug('ℹ️ wkhtmltoimage no disponible, usando PDF');
             }
 
             // ==========================================
@@ -216,14 +216,14 @@ class StockDisponiblePdfController
                     ->header('Content-Disposition', 'attachment; filename=stock-disponible.png');
             } else {
                 // Fallback: Retornar PDF (compatible con Railway y todos los servidores)
-                \Log::info('📄 Retornando stock como PDF (fallback)');
+                Log::info('📄 Retornando stock como PDF (fallback)');
                 return response($pdfContent)
                     ->header('Content-Type', 'application/pdf')
                     ->header('Content-Disposition', 'attachment; filename=stock-disponible.pdf');
             }
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error generando imagen stock disponible', [
+            Log::error('Error generando imagen stock disponible', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
