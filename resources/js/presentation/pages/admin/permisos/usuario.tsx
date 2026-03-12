@@ -1,8 +1,9 @@
 import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import PermisosCheckboxForm from './components/PermisosCheckboxForm';
 import { NotificationService } from '@/infrastructure/services/notification.service';
-import { getRoleColor } from '@/lib/admin-permisos.utils';
+import { Grid3x3, Table2 } from 'lucide-react';
 import type { AdminUsuario, PermissionGroup } from '@/domain/entities/admin-permisos';
 
 interface Rol {
@@ -32,6 +33,7 @@ export default function UsuarioEdit({
   todosLosPermisos,
   todosLosRoles
 }: UsuarioEditProps) {
+  const [rolesViewMode, setRolesViewMode] = useState<'grid' | 'table'>('table');
   const { data, setData, patch, processing } = useForm({
     permisos: permisosActuales,
     roles: rolesActuales,
@@ -78,25 +80,96 @@ export default function UsuarioEdit({
           </div>
 
           {/* Roles Editor */}
-          <div className="mb-6 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
-            <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Gestionar Roles</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todosLosRoles.map(rol => (
-                <label key={rol.name} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition">
-                  <input
-                    type="checkbox"
-                    checked={data.roles.includes(rol.name)}
-                    onChange={() => handleRolesChange(rol.name)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-white">{rol.name}</p>
-                    {rol.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{rol.description}</p>
-                    )}
-                  </div>
-                </label>
-              ))}
+          <div className="mb-6 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gestionar Roles</h3>
+
+              {/* Vista Toggle */}
+              <div className="flex gap-2 border border-gray-300 dark:border-slate-600 rounded-md p-1 bg-white dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setRolesViewMode('grid')}
+                  className={`p-2 rounded transition-colors ${
+                    rolesViewMode === 'grid'
+                      ? 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                  title="Vista Grid"
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRolesViewMode('table')}
+                  className={`p-2 rounded transition-colors ${
+                    rolesViewMode === 'table'
+                      ? 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                  title="Vista Tabla"
+                >
+                  <Table2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {rolesViewMode === 'grid' ? (
+                // ==================== VISTA GRID ====================
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {todosLosRoles.map(rol => (
+                    <label key={rol.name} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={data.roles.includes(rol.name)}
+                        onChange={() => handleRolesChange(rol.name)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-white">{rol.name}</p>
+                        {rol.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{rol.description}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                // ==================== VISTA TABLA ====================
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+                        <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white w-12">
+                          ☑
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Rol</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">Descripción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {todosLosRoles.map(rol => (
+                        <tr key={rol.name} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={data.roles.includes(rol.name)}
+                              onChange={() => handleRolesChange(rol.name)}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-gray-900 dark:text-white">{rol.name}</span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                            {rol.description || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
 
