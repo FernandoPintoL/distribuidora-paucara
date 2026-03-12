@@ -77,8 +77,87 @@ precios.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
     
     precios.form = preciosForm
+/**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+export const preciosStock = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: preciosStock.url(options),
+    method: 'get',
+})
+
+preciosStock.definition = {
+    methods: ["get","head"],
+    url: '/public/precios-stock',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+preciosStock.url = (options?: RouteQueryOptions) => {
+    return preciosStock.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+preciosStock.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: preciosStock.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+preciosStock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: preciosStock.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+    const preciosStockForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: preciosStock.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+        preciosStockForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preciosStock.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PublicStockController::preciosStock
+ * @see app/Http/Controllers/PublicStockController.php:107
+ * @route '/public/precios-stock'
+ */
+        preciosStockForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: preciosStock.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    preciosStock.form = preciosStockForm
 const publicMethod = {
     precios,
+preciosStock,
 }
 
 export default publicMethod

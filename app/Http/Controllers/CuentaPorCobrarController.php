@@ -24,8 +24,8 @@ class CuentaPorCobrarController extends Controller
 
     public function index(Request $request)
     {
-        // ✅ CORREGIDO: Cargar cliente directamente + cliente de venta para mostrar ambos tipos
-        $query = CuentaPorCobrar::with(['cliente', 'venta.cliente', 'pagos.tipoPago'])
+        // ✅ CORREGIDO: Cargar cliente directamente + cliente de venta + usuario creador para mostrar ambos tipos
+        $query = CuentaPorCobrar::with(['cliente', 'venta.cliente', 'pagos.tipoPago', 'usuario'])
             ->when($request->estado, function ($q) use ($request) {
                 $q->where('estado', $request->estado);
             })
@@ -39,19 +39,22 @@ class CuentaPorCobrarController extends Controller
 
                 $q->where(function ($subQ) use ($searchTerm, $isNumeric, $request) {
                     $subQ
-                        // Buscar por ID de la cuenta
-                        ->where('id', $searchTerm)
-                        // Buscar por ID de venta (si es numérico)
+                        // 1️⃣ PRIORIDAD 1: Buscar por ID de la cuenta (exacto, sin LIKE)
                         ->when($isNumeric, function ($sq) use ($request) {
-                            $sq->orWhere('venta_id', $request->q);
+                            $sq->orWhere('id', (int)$request->q);
                         })
-                        // Buscar por referencia_documento
+                        // 2️⃣ PRIORIDAD 2: Buscar por ID de venta (si es numérico)
+                        ->when($isNumeric, function ($sq) use ($request) {
+                            $sq->orWhere('venta_id', (int)$request->q);
+                        })
+                        // 3️⃣ PRIORIDAD 3: Buscar por referencia_documento
                         ->orWhere('referencia_documento', 'LIKE', $searchTerm)
-                        // Buscar por número de venta
-                        ->orWhereHas('venta', function ($ventaQ) use ($searchTerm) {
-                            $ventaQ->where('numero', 'LIKE', $searchTerm);
+                        // 4️⃣ PRIORIDAD 4: Buscar por usuario creador
+                        ->orWhereHas('usuario', function ($userQ) use ($searchTerm) {
+                            $userQ->where('name', 'LIKE', $searchTerm)
+                                ->orWhere('email', 'LIKE', $searchTerm);
                         })
-                        // Buscar por nombre del cliente
+                        // 5️⃣ PRIORIDAD 5: Buscar por datos del cliente (nombre, código)
                         ->orWhereHas('cliente', function ($clienteQ) use ($searchTerm) {
                             $clienteQ->where('nombre', 'LIKE', $searchTerm)
                                 ->orWhere('codigo_cliente', 'LIKE', $searchTerm);

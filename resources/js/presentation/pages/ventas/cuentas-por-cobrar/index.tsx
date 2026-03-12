@@ -111,6 +111,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     // Inicializar hooks con valores por defecto seguros
     const filtrosDefault: FiltrosCuentasPorCobrar = {};
     const [filtros, setFiltros] = useState<FiltrosCuentasPorCobrar>(cuentasPorCobrar?.filtros || filtrosDefault);
+    const [searchInput, setSearchInput] = useState<string>(cuentasPorCobrar?.filtros?.q || '');
     const [modalDetalle, setModalDetalle] = useState<{ isOpen: boolean; cuenta?: CuentaPorCobrar }>({ isOpen: false });
 
     // Estados para el modal de pago
@@ -181,6 +182,16 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
             preserveState: true,
             preserveScroll: true,
         });
+    };
+
+    const handleBusqueda = () => {
+        handleFiltroChange('q', searchInput);
+    };
+
+    const handleBusquedaEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleBusqueda();
+        }
     };
 
     const limpiarFiltros = () => {
@@ -635,14 +646,24 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
-                                <Input
-                                    value={filtros.q || ''}
-                                    onChange={(e) => handleFiltroChange('q', e.target.value)}
-                                    placeholder="ID cuenta, ID venta, referencia, número, cliente..."
-                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={searchInput}
+                                        onChange={(e) => setSearchInput(e.target.value)}
+                                        onKeyPress={handleBusquedaEnter}
+                                        placeholder="ID cuenta, ID venta, referencia, número, cliente, usuario..."
+                                        className="dark:bg-gray-800 dark:border-gray-600 dark:text-white flex-1"
+                                    />
+                                    <Button
+                                        onClick={handleBusqueda}
+                                        size="sm"
+                                        className="whitespace-nowrap"
+                                    >
+                                        🔍 Buscar
+                                    </Button>
+                                </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    ID cuenta, ID venta, referencia documento, número de venta o nombre cliente
+                                    Presiona <kbd className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">Enter</kbd> o toca el botón para buscar
                                 </p>
                             </div>
                             <div className="space-y-2">
