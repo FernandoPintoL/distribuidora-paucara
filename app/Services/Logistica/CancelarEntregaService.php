@@ -18,7 +18,7 @@ class CancelarEntregaService extends BaseLogisticaService
      */
     public function cancelarEntrega(
         int $entregaId,
-        string $motivo,
+        ?string $motivo = null,
         bool $reabrirVentas = false,
         ?int $usuarioId = null,
     ): Entrega {
@@ -124,11 +124,12 @@ class CancelarEntregaService extends BaseLogisticaService
             // ═════════════════════════════════════════════════════════════
             // PASO 6: REGISTRAR EN HISTORIAL DE CAMBIOS DE ESTADO
             // ═════════════════════════════════════════════════════════════
+            $razonCancelacion = $motivo ? "Entrega cancelada. Motivo: {$motivo}" : "Entrega cancelada";
             $this->registrarCambioEstado(
                 $entrega,
                 $estadoAnterior,
                 'CANCELADA',
-                "Entrega cancelada. Motivo: {$motivo}"
+                $razonCancelacion
             );
 
             Log::info('✅ Cambio de estado registrado en historial');

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
 import { Button } from '@/presentation/components/ui/button';
 import { Textarea } from '@/presentation/components/ui/textarea';
-import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Label } from '@/presentation/components/ui/label';
 import { toast } from 'react-toastify';
 import { router } from '@inertiajs/react';
@@ -20,7 +19,7 @@ interface CancelarEntregaModalProps {
 
 export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntregaModalProps) {
     const [motivo, setMotivo] = useState('');
-    const [reabrirVentas, setReabrirVentas] = useState(true);
+    const [reabrirVentas, setReabrirVentas] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -34,19 +33,6 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
     };
 
     const handleSubmit = async () => {
-        // Validar motivo
-        if (!motivo.trim()) {
-            setError('El motivo de cancelación es requerido');
-            toast.error('Por favor ingresa el motivo de cancelación');
-            return;
-        }
-
-        if (motivo.trim().length < 10) {
-            setError('El motivo debe tener al menos 10 caracteres');
-            toast.error('El motivo debe tener al menos 10 caracteres');
-            return;
-        }
-
         setIsSubmitting(true);
         setError(null);
 
@@ -58,7 +44,7 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
-                    motivo: motivo.trim(),
+                    motivo: motivo.trim() || null,
                     reabrir_ventas: reabrirVentas,
                 }),
             });
@@ -66,7 +52,20 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || data.message || 'Error al cancelar la entrega');
+                // Construir mensaje de error detallado
+                let errorMessage = data.message || 'Error al cancelar la entrega';
+
+                // Si hay errores de validación específicos, mostrarlos
+                if (data.errors && typeof data.errors === 'object') {
+                    const errorMessages = Object.values(data.errors)
+                        .flat()
+                        .filter((msg): msg is string => typeof msg === 'string');
+                    if (errorMessages.length > 0) {
+                        errorMessage = errorMessages.join('\n');
+                    }
+                }
+
+                throw new Error(errorMessage);
             }
 
             toast.success('✅ Entrega cancelada exitosamente');
@@ -114,7 +113,7 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
                     {/* Motivo */}
                     <div>
                         <Label htmlFor="motivo" className="text-sm font-medium mb-2 block">
-                            Motivo de cancelación *
+                            Motivo de cancelación (opcional)
                         </Label>
                         <Textarea
                             id="motivo"
@@ -134,21 +133,6 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
                         )}
                     </div>
 
-                    {/* Opción de reabrir ventas */}
-                    <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <Checkbox
-                            id="reabrir_ventas"
-                            checked={reabrirVentas}
-                            onCheckedChange={(checked) => setReabrirVentas(checked as boolean)}
-                            disabled={isSubmitting}
-                        />
-                        <Label htmlFor="reabrir_ventas" className="cursor-pointer text-sm">
-                            <span className="font-medium">Reabrir ventas para reasignación</span>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Si marcas esta opción, las ventas volverán a estado PENDIENTE_ENVIO y podrán asignarse a otra entrega.
-                            </p>
-                        </Label>
-                    </div>
                 </div>
 
                 <DialogFooter>
@@ -164,7 +148,7 @@ export function CancelarEntregaModal({ isOpen, onClose, entrega }: CancelarEntre
                         type="button"
                         variant="destructive"
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !motivo.trim()}
+                        disabled={isSubmitting}
                     >
                         {isSubmitting ? 'Cancelando...' : 'Cancelar Entrega'}
                     </Button>

@@ -2416,7 +2416,7 @@ class EntregaController extends Controller
             // VALIDAR ENTRADA
             // ═══════════════════════════════════════════════════════════
             $validated = $request->validate([
-                'motivo'         => 'required|string|max:500',
+                'motivo'         => 'nullable|string|max:500',
                 'reabrir_ventas' => 'nullable|boolean',
             ]);
 

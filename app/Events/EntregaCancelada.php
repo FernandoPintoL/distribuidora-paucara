@@ -16,12 +16,12 @@ class EntregaCancelada implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public Entrega $entrega;
-    public string $motivo;
+    public ?string $motivo;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Entrega $entrega, string $motivo = '')
+    public function __construct(Entrega $entrega, ?string $motivo = null)
     {
         $this->entrega = $entrega;
         $this->motivo = $motivo;
