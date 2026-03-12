@@ -1,8 +1,8 @@
-# Use PHP 8.2 FPM Alpine with Supervisor
-FROM php:8.2-fpm-alpine
+# Use PHP 8.2 FPM Debian-based (needed for wkhtmltopdf)
+FROM php:8.2-fpm
 
 # Install system dependencies including supervisor
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     nodejs \
@@ -10,16 +10,21 @@ RUN apk add --no-cache \
     nginx \
     supervisor \
     libzip-dev \
-    zlib-dev \
-    postgresql-dev \
-    oniguruma-dev \
+    zlib1g-dev \
+    libpq-dev \
+    libonig-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    wkhtmltopdf
+    libjpeg-dev \
+    libfreetype6-dev \
+    wkhtmltopdf \
+    fontconfig \
+    libfontconfig1 \
+    xfonts-encodings \
+    xfonts-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+RUN docker-php-ext-configure gd --with-freetype=/usr --with-jpeg=/usr && \
     docker-php-ext-install zip pdo_mysql mbstring pdo_pgsql gd
 
 # Configure PHP settings for production
