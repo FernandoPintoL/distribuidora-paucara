@@ -22,6 +22,11 @@ class StockDisponiblePdfController
      * Generar y descargar PDF con listado de stock disponible
      *
      * GET /api/app/stock/pdf
+     * GET /api/app/stock/pdf?incluir_stock=1
+     *
+     * Query parameters:
+     * - incluir_stock: boolean (0|1) - Mostrar columna de stock en el PDF
+     *
      * Requiere: auth:sanctum,web + platform
      *
      * Lógica:
@@ -32,9 +37,14 @@ class StockDisponiblePdfController
      *
      * @return Response PDF como descarga binaria
      */
-    public function generar()
+    public function generar(\Illuminate\Http\Request $request)
     {
         try {
+            // ==========================================
+            // 0️⃣ OBTENER PARÁMETROS
+            // ==========================================
+            $incluirStock = (bool) $request->query('incluir_stock', false);
+
             // ==========================================
             // 1️⃣ CONSULTA: Stock disponible agrupado
             // ==========================================
@@ -66,10 +76,11 @@ class StockDisponiblePdfController
             // 3️⃣ PREPARAR DATOS para la vista
             // ==========================================
             $data = [
-                'filas'            => $filas,
-                'total_productos'  => count($filas),
-                'fecha_generacion' => now()->format('d/m/Y H:i'),
-                'empresa'          => config('app.name', 'Distribuidora Paucara'),
+                'filas'             => $filas,
+                'total_productos'   => count($filas),
+                'fecha_generacion'  => now()->format('d/m/Y H:i'),
+                'empresa'           => config('app.name', 'Distribuidora Paucara'),
+                'incluir_stock'     => $incluirStock,
             ];
 
             // ==========================================
@@ -104,6 +115,11 @@ class StockDisponiblePdfController
      * ✅ NUEVO: Generar y descargar imagen PNG con listado de stock disponible
      *
      * GET /api/app/stock/imagen
+     * GET /api/app/stock/imagen?incluir_stock=1
+     *
+     * Query parameters:
+     * - incluir_stock: boolean (0|1) - Mostrar columna de stock en la imagen
+     *
      * Requiere: auth:sanctum,web + platform
      *
      * Utiliza DomPDF para generar PDF y luego lo convierte a PNG con Imagick
@@ -111,9 +127,14 @@ class StockDisponiblePdfController
      *
      * @return Response PNG como descarga binaria
      */
-    public function imagen()
+    public function imagen(\Illuminate\Http\Request $request)
     {
         try {
+            // ==========================================
+            // 0️⃣ OBTENER PARÁMETROS
+            // ==========================================
+            $incluirStock = (bool) $request->query('incluir_stock', false);
+
             // ==========================================
             // 1️⃣ CONSULTA: Stock disponible agrupado
             // ==========================================
@@ -145,10 +166,11 @@ class StockDisponiblePdfController
             // 3️⃣ PREPARAR DATOS para la vista
             // ==========================================
             $data = [
-                'filas'            => $filas,
-                'total_productos'  => count($filas),
-                'fecha_generacion' => now()->format('d/m/Y H:i'),
-                'empresa'          => config('app.name', 'Distribuidora Paucara'),
+                'filas'             => $filas,
+                'total_productos'   => count($filas),
+                'fecha_generacion'  => now()->format('d/m/Y H:i'),
+                'empresa'           => config('app.name', 'Distribuidora Paucara'),
+                'incluir_stock'     => $incluirStock,
             ];
 
             // ==========================================

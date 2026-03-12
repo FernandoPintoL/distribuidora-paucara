@@ -121,6 +121,10 @@
         .stock-disponible {
             font-weight: bold;
             color: #2980b9;
+            background-color: #f0f8ff;
+            padding: 5px 8px;
+            border-radius: 3px;
+            text-align: center;
         }
 
         .precio-null {
@@ -190,11 +194,14 @@
             <thead>
                 <tr>
                     <th style="width: 5%;">N°</th>
-                    <th style="width: 30%;">Nombre del Producto</th>
+                    <th style="width: @if($incluir_stock ?? false) 25% @else 30% @endif;">Nombre del Producto</th>
                     <th style="width: 10%;">SKU</th>
-                    <th style="width: 13%; text-align: right;">Precio Venta</th>
-                    <th style="width: 13%; text-align: right;">Precio Descuento</th>
-                    <th style="width: 13%; text-align: right;">Precio Especial</th>
+                    <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Venta</th>
+                    <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Descuento</th>
+                    <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Especial</th>
+                    @if($incluir_stock ?? false)
+                    <th style="width: 12%; text-align: center;">📦 Stock</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -227,6 +234,11 @@
                         <span class="precio-null">-</span>
                         @endif
                     </td>
+                    @if($incluir_stock ?? false)
+                    <td class="stock-disponible">
+                        {{ number_format($fila['stock_disponible'], 2) }}
+                    </td>
+                    @endif
                 </tr>
                 @php
                 $numero++;

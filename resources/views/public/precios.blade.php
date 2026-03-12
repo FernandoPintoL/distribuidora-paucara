@@ -217,25 +217,32 @@
 
         .stock {
             text-align: center;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 700;
             font-size: 0.95em;
+            display: inline-block;
+            min-width: 120px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 2px solid;
         }
 
         .stock.available {
             background: #d4edda;
             color: #155724;
+            border-color: #28a745;
         }
 
         .stock.limited {
             background: #fff3cd;
             color: #856404;
+            border-color: #ffc107;
         }
 
         .stock.unavailable {
             background: #f8d7da;
             color: #721c24;
+            border-color: #dc3545;
         }
 
         footer {
@@ -413,7 +420,9 @@
                         <th style="width: 15%;">Precio Venta</th>
                         <th style="width: 15%;">Descuento</th>
                         <th style="width: 15%;">Especial</th>
-                        {{-- <th style="width: 15%; text-align: center;">Stock</th> --}}
+                        @if($mostrar_stock ?? false)
+                        <th style="width: 15%; text-align: center;">📦 Stock</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody id="cuerpoTabla">
@@ -477,6 +486,24 @@
                             </div>
                             @endif
                         </td>
+                        @if($mostrar_stock ?? false)
+                        <td style="text-align: center;">
+                            @php
+                                $stock = $producto['stock_disponible'];
+                                if ($stock > 50) {
+                                    $clase = 'stock available';
+                                    $texto = "✓ {$stock} unidades";
+                                } elseif ($stock > 10) {
+                                    $clase = 'stock limited';
+                                    $texto = "⚠ {$stock} unidades";
+                                } else {
+                                    $clase = 'stock unavailable';
+                                    $texto = "✗ {$stock} unidades";
+                                }
+                            @endphp
+                            <span class="{{ $clase }}">{{ $texto }}</span>
+                        </td>
+                        @endif
                     </tr>
                     @endforeach
                 </tbody>
