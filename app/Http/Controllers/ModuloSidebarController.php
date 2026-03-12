@@ -2,9 +2,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ModuloSidebar;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Permission;
 
 class ModuloSidebarController extends Controller
 {
@@ -126,10 +128,55 @@ class ModuloSidebarController extends Controller
                 ->get(['id', 'titulo', 'ruta', 'activo', 'orden', 'icono']);
         }
 
+        // ==========================================
+        // 🔐 Obtener usuarios con acceso a esta ruta
+        // ==========================================
+        // La ruta requiere 'admin.config', así que obtener usuarios con ese permiso
+        $permiso = Permission::where('name', 'admin.config')->first();
+
+        $usuariosConAcceso = [];
+        if ($permiso) {
+            // Usuarios directos con el permiso
+            $usuariosDirectos = $permiso->users()->with('roles')->get();
+
+            // Usuarios que heredan el permiso por roles
+            $usuariosConRoles = User::whereHas('roles', function ($query) use ($permiso) {
+                $query->whereHas('permissions', function ($subQuery) use ($permiso) {
+                    $subQuery->where('permissions.id', $permiso->id);
+                });
+            })->with('roles')->get();
+
+            // Combinar y eliminar duplicados
+            $usuariosMerged = $usuariosDirectos->merge($usuariosConRoles)->unique('id');
+
+            $usuariosConAcceso = $usuariosMerged->map(function ($user) {
+                $rolesConPermiso = $user->roles()
+                    ->whereHas('permissions', function ($query) {
+                        $query->where('name', 'admin.config');
+                    })
+                    ->pluck('name')
+                    ->toArray();
+
+                $tieneDirecto = $user->hasDirectPermission('admin.config');
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'directo' => $tieneDirecto,
+                    'roles' => $rolesConPermiso,
+                    'tipoAcceso' => $tieneDirecto && !empty($rolesConPermiso) ? 'Directo + Roles' : ($tieneDirecto ? 'Directo' : 'Heredado'),
+                ];
+            })->values();
+        }
+
         return Inertia::render('admin/permisos/modulos/edit', [
-            'modulo'       => $moduloSidebar,
-            'modulosPadre' => $modulosPadre,
-            'submodulos'   => $submodulos,
+            'modulo'              => $moduloSidebar,
+            'modulosPadre'        => $modulosPadre,
+            'submodulos'          => $submodulos,
+            'usuariosConAcceso'   => $usuariosConAcceso,
+            'totalUsuariosAcceso' => count($usuariosConAcceso),
+            'permisoRequerido'    => 'admin.config',
         ]);
     }
 

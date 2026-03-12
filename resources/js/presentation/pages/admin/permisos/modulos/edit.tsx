@@ -8,12 +8,24 @@ import toast from 'react-hot-toast'
 import { type BreadcrumbItem } from '@/types'
 import { type ModuloSidebar, type ModuloFormData } from '@/domain/entities/admin-permisos'
 import { modulosService } from '@/infrastructure/services/modulos.service'
-import { Folders, ChevronRight } from 'lucide-react'
+import { Folders, ChevronRight, Users, Lock, UserCheck } from 'lucide-react'
+
+interface UsuarioAcceso {
+    id: number
+    name: string
+    email: string
+    directo: boolean
+    roles: string[]
+    tipoAcceso: string
+}
 
 interface PageProps {
     modulo: ModuloSidebar
     modulosPadre: ModuloSidebar[]
     submodulos?: ModuloSidebar[]
+    usuariosConAcceso?: UsuarioAcceso[]
+    totalUsuariosAcceso?: number
+    permisoRequerido?: string
     [key: string]: unknown
 }
 
@@ -28,7 +40,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ]
 
-export default function Edit({ modulo, modulosPadre, submodulos = [] }: PageProps) {
+export default function Edit({
+    modulo,
+    modulosPadre,
+    submodulos = [],
+    usuariosConAcceso = [],
+    totalUsuariosAcceso = 0,
+    permisoRequerido = 'admin.config',
+}: PageProps) {
     const { data, setData, put, processing, errors } = useForm<ModuloFormData>({
         titulo: modulo.titulo,
         ruta: modulo.ruta,
@@ -148,6 +167,77 @@ export default function Edit({ modulo, modulosPadre, submodulos = [] }: PageProp
                                         <p className="text-muted-foreground">Última actualización</p>
                                         <p className="font-medium">
                                             {new Date(modulo.updated_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Usuarios con Acceso */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                    <Users className="h-4 w-4" />
+                                    Acceso a esta ruta
+                                </CardTitle>
+                                <CardDescription>
+                                    Permiso requerido: <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded text-xs">{permisoRequerido}</code>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {usuariosConAcceso.length > 0 ? (
+                                    <>
+                                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                                            <p className="text-xs font-semibold text-blue-900 dark:text-blue-300">
+                                                👥 {totalUsuariosAcceso} usuario{totalUsuariosAcceso !== 1 ? 's' : ''} con acceso
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                                            {usuariosConAcceso.map((usuario) => (
+                                                <div
+                                                    key={usuario.id}
+                                                    className="p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                                                >
+                                                    <div className="flex items-start gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                                                    {usuario.name}
+                                                                </p>
+                                                                {usuario.directo && (
+                                                                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                                                                        <Lock className="h-2.5 w-2.5 mr-1" />
+                                                                        Directo
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                                {usuario.email}
+                                                            </p>
+                                                            {usuario.roles.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                                    {usuario.roles.map((rol) => (
+                                                                        <Badge
+                                                                            key={rol}
+                                                                            variant="secondary"
+                                                                            className="text-xs"
+                                                                        >
+                                                                            🔗 {rol}
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                                        <p className="text-xs text-yellow-900 dark:text-yellow-300">
+                                            ⚠️ No hay usuarios con acceso a esta ruta
                                         </p>
                                     </div>
                                 )}
