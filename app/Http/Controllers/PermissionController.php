@@ -56,12 +56,13 @@ class PermissionController extends Controller
         $todosLosPermisos = $this->permissionService->getPermissionsForUI();
         $rolesActuales = $user->roles->pluck('name')->toArray();
 
-        // ✅ NUEVO: Obtener todos los roles disponibles
+        // ✅ NUEVO: Obtener todos los roles disponibles con cantidad de permisos
         $todosLosRoles = Role::all()->map(function ($role) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,
                 'description' => $role->description ?? '',
+                'permissions_count' => $role->permissions()->count(),
             ];
         });
 
