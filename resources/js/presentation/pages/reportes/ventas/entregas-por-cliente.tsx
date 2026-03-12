@@ -29,9 +29,9 @@ interface EntregasPorClienteProps {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reportes', href: '#' },
-    { label: 'Entregas por Cliente', href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reportes', href: '#' },
+    { title: 'Entregas por Cliente', href: '#' },
 ];
 
 const getMedalColor = (posicion: number): string => {

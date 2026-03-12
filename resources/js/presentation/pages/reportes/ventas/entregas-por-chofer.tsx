@@ -39,9 +39,9 @@ interface EntregasPorChoferProps {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reportes', href: '#' },
-    { label: 'Entregas por Chofer', href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reportes', href: '#' },
+    { title: 'Entregas por Chofer', href: '#' },
 ];
 
 const getProgressColor = (porcentaje: number): string => {

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { type BreadcrumbItem } from '@/types'
 import { type ModuloSidebar, type ModuloFormData } from '@/domain/entities/admin-permisos'
 import { modulosService } from '@/infrastructure/services/modulos.service'
-import { Folders, ChevronRight, Users, Lock, UserCheck } from 'lucide-react'
+import { Folders, ChevronRight, Users, Lock } from 'lucide-react'
 
 interface UsuarioAcceso {
     id: number
@@ -32,7 +32,7 @@ interface PageProps {
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Centro de Permisos',
-        href: '/admin/permisos',
+        href: '/permisos',
     },
     {
         title: 'Editar Módulo',

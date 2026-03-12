@@ -20,7 +20,7 @@ interface PageProps {
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Centro de Permisos',
-        href: '/admin/permisos',
+        href: '/permisos',
     },
     {
         title: 'Crear Módulo',

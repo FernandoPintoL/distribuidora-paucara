@@ -29,9 +29,9 @@ interface RankingClientesProps {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reportes', href: '#' },
-    { label: 'Ranking de Clientes', href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reportes', href: '#' },
+    { title: 'Ranking de Clientes', href: '#' },
 ];
 
 const getMedalColor = (posicion: number): string => {

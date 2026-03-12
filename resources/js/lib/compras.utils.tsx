@@ -13,7 +13,10 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
  * @param amount Monto a formatear
  * @returns Monto formateado como BOB
  */
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount?: number | null): string => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+        return 'Bs. 0.00';
+    }
     return new Intl.NumberFormat('es-BO', {
         style: 'currency',
         currency: 'BOB',
@@ -45,7 +48,8 @@ export const formatDate = (dateString: string): string => {
  * @param value Valor numérico del porcentaje
  * @returns Porcentaje formateado con signo (ej: +5.2% o -3.1%)
  */
-export const formatPercentage = (value: number): string => {
+export const formatPercentage = (value?: number | null): string => {
+    if (value === undefined || value === null) return '+0.0%';
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
 };
 

@@ -18,6 +18,7 @@ interface StockTableProps {
 }
 
 export function StockTable({ stock }: StockTableProps) {
+  console.log('🔍 StockTable - Datos recibidos del backend:', stock);
   return (
     <Card>
       <CardHeader>
@@ -28,12 +29,15 @@ export function StockTable({ stock }: StockTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Producto</TableHead>
                 <TableHead>Código</TableHead>
-                <TableHead>Categoría</TableHead>
+                {/* <TableHead>Categoría</TableHead> */}
                 <TableHead>Almacén</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
-                <TableHead className="text-right">Min/Max</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Disponible</TableHead>
+                <TableHead className="text-right">Reservada</TableHead>
+                {/* <TableHead className="text-right">Min/Max</TableHead> */}
                 <TableHead>Estado</TableHead>
               </TableRow>
             </TableHeader>
@@ -43,7 +47,8 @@ export function StockTable({ stock }: StockTableProps) {
                 const Icon = stockInfo.icon;
 
                 return (
-                  <TableRow key={`${item.producto.id}-${item.almacen.id}`}>
+                  <TableRow key={item.id}>
+                    <TableCell>{item.id}</TableCell>
                     <TableCell className="font-medium">
                       <Link
                         href={`/productos/${item.producto.id}/edit`}
@@ -52,15 +57,21 @@ export function StockTable({ stock }: StockTableProps) {
                         {item.producto.nombre}
                       </Link>
                     </TableCell>
-                    <TableCell>{item.producto.codigo}</TableCell>
-                    <TableCell>{item.producto.categoria?.nombre || 'Sin categoría'}</TableCell>
+                    <TableCell className="font-mono text-sm">{item.producto.sku}</TableCell>
+                    {/* <TableCell>{item.producto.categoria?.nombre || 'Sin categoría'}</TableCell> */}
                     <TableCell>{item.almacen.nombre}</TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono font-semibold">
                       {formatNumber(item.cantidad)}
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {item.producto.stock_minimo} / {item.producto.stock_maximo}
+                    <TableCell className="text-right font-mono text-green-600 dark:text-green-400">
+                      {formatNumber(item.cantidad_disponible)}
                     </TableCell>
+                    <TableCell className="text-right font-mono text-amber-600 dark:text-amber-400">
+                      {formatNumber(item.cantidad_reservada)}
+                    </TableCell>
+                    {/* <TableCell className="text-right text-sm text-muted-foreground">
+                      {item.producto.stock_minimo} / {item.producto.stock_maximo}
+                    </TableCell> */}
                     <TableCell>
                       <Badge variant={stockInfo.color as "default" | "secondary" | "destructive" | "outline"} className="gap-1">
                         <Icon className="h-3 w-3" />

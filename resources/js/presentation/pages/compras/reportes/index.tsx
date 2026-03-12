@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/components/ui/tabs';
-import { Download, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 // Domain types
 import type { ReportesComprasPageProps, FormatoExportacion } from '@/domain/entities/compras-reportes';
@@ -68,14 +68,14 @@ export default function ReportesCompras({
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button
+                        {/* <Button
                             variant="outline"
                             onClick={() => exportarReporte('excel' as FormatoExportacion)}
                             disabled={cargando}
                         >
                             <Download className="w-4 h-4 mr-2" />
                             Excel
-                        </Button>
+                        </Button> */}
                         <Button
                             variant="outline"
                             onClick={() => exportarReporte('pdf' as FormatoExportacion)}

@@ -94,7 +94,7 @@ export const useReportesCompras = (
      * Exporta el reporte en el formato especificado
      */
     const exportarReporte = useCallback(
-        (formato: FormatoExportacion) => {
+        async (formato: FormatoExportacion) => {
             // Validar rango de fechas
             if (
                 filtroLocal.fecha_inicio &&
@@ -109,27 +109,43 @@ export const useReportesCompras = (
             setError(null);
 
             try {
-                const queryString = construirUrlFiltros({
-                    ...filtroLocal,
-                    formato,
-                });
+                const queryString = construirUrlFiltros(filtroLocal);
 
-                const url = `/compras/reportes/exportar?${queryString}`;
+                // Determinar ruta según formato
+                const endpoint = formato === 'pdf'
+                    ? `/compras/reportes/export-pdf?${queryString}`
+                    : `/compras/reportes/export?${queryString}`;
 
-                // Abre en nueva pestaña usando Inertia
-                router.visit(url, {
-                    method: 'get',
-                    onFinish: () => {
-                        setCargando(false);
-                    },
-                    onError: () => {
-                        setCargando(false);
-                        setError('Error al exportar el reporte');
-                    },
-                });
+                // Usar fetch en lugar de Inertia router para descargas
+                const response = await fetch(endpoint);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+
+                // Determinar nombre y tipo de archivo
+                const timestamp = new Date().toISOString().split('T')[0];
+                if (formato === 'pdf') {
+                    link.download = `reporte-compras-${timestamp}.pdf`;
+                } else {
+                    link.download = `reporte-compras-${timestamp}.xlsx`;
+                }
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                setCargando(false);
             } catch (err) {
                 setCargando(false);
-                setError('Error procesando la exportación');
+                setError('Error al exportar el reporte');
+                console.error('Error en exportación:', err);
             }
         },
         [filtroLocal]

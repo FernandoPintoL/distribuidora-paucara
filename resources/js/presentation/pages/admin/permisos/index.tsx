@@ -9,11 +9,9 @@ import { UsuariosTab } from './components/UsuariosTab';
 import { RolesTab } from './components/RolesTab';
 import { HistorialTab } from './components/HistorialTab';
 import { PermisosTab } from './components/PermisosTab';
-import { TemplatesTab } from './components/TemplatesTab';
-import { CompareTab } from './components/CompareTab';
 import { ModulosTab } from './components/ModulosTab';
 
-type TabType = 'usuarios' | 'roles' | 'historial' | 'permisos' | 'plantillas' | 'comparar' | 'modulos';
+type TabType = 'usuarios' | 'roles' | 'historial' | 'permisos' | 'modulos';
 
 interface EstadisticasHistorial {
   total_cambios: number;
@@ -220,35 +218,6 @@ export default function PermisosIndex() {
               >
                 Módulos
               </button>
-              <button
-                onClick={() => handleTabChange('plantillas')}
-                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'plantillas'
-                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-              >
-                Plantillas
-              </button>
-              <button
-                onClick={() => handleTabChange('comparar')}
-                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'comparar'
-                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-              >
-                Comparar Roles
-              </button>
-              <button
-                onClick={() => handleTabChange('historial')}
-                className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'historial'
-                  ? 'text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-slate-700'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-              >
-                Historial y Auditoría
-              </button>
-
-
             </div>
           </div>
 
@@ -285,14 +254,6 @@ export default function PermisosIndex() {
             </>
           )}
 
-          {activeTab === 'plantillas' && (
-            <TemplatesTab todosLosPermisos={todosLosPermisos} />
-          )}
-
-          {activeTab === 'comparar' && (
-            <CompareTab roles={roles} cargando={cargando} onLoadData={cargarRoles} />
-          )}
-
           {activeTab === 'historial' && (
             <HistorialTab
               historial={historial}
@@ -318,47 +279,6 @@ export default function PermisosIndex() {
               onLoadData={cargarModulosSidebar}
             />
           )}
-
-          {/* Info Box */}
-          {/* <div className="mt-8 bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
-            <div className="flex gap-4">
-              <div className="text-2xl">ℹ️</div>
-              <div>
-                <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Características del panel:</h3>
-                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-4">
-                  <li>
-                    <strong>Usuarios:</strong> Asigna permisos a usuarios específicos
-                  </li>
-                  <li>
-                    <strong>Roles:</strong> Gestiona permisos por roles
-                  </li>
-                  <li>
-                    <strong>Plantillas:</strong> Crea y reutiliza plantillas de permisos predefinidas
-                  </li>
-                  <li>
-                    <strong>Comparar Roles:</strong> Compara permisos entre dos roles para identificar diferencias
-                  </li>
-                  <li>
-                    <strong>Permisos:</strong> CRUD completo de permisos (crear, editar, eliminar)
-                  </li>
-                  <li>
-                    <strong>Módulos:</strong> Gestiona los módulos del sidebar y su visibilidad
-                  </li>
-                  <li>
-                    <strong>Bulk Edit:</strong> Selecciona múltiples elementos y modifica sus
-                    permisos en una sola acción
-                  </li>
-                  <li>
-                    <strong>Historial:</strong> Visualiza todos los cambios de permisos con
-                    quién los hizo y cuándo
-                  </li>
-                  <li>
-                    <strong>Estadísticas:</strong> Monitorea la actividad de cambios por período
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
     </AppLayout>

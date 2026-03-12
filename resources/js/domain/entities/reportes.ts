@@ -250,10 +250,12 @@ export interface RotacionPageProps {
 export interface StockItem {
   id: number;
   cantidad: number;
+  cantidad_disponible: number;
+  cantidad_reservada: number;
   producto: {
     id: number;
     nombre: string;
-    codigo: string;
+    sku: string;
     stock_minimo: number;
     stock_maximo: number;
     categoria?: {

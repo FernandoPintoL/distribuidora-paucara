@@ -53,7 +53,12 @@ class ReporteInventarioController extends Controller
             });
         }
 
-        $stock = $query->orderBy('cantidad', 'desc')->paginate(50)->withQueryString();
+        $stock = $query
+            ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
+            ->select('stock_productos.*')
+            ->orderBy('productos.nombre', 'asc')
+            ->paginate(50)
+            ->withQueryString();
 
         // Estadísticas generales
         $estadisticas = [
@@ -265,7 +270,7 @@ class ReporteInventarioController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        $tipo = $request->string('tipo');
+        $tipo = (string) $request->string('tipo');
         $filtros = $request->all();
 
         \Log::info("🔍 exportPdf DEBUG", ['tipo' => $tipo, 'tipo_var' => var_export($tipo, true), 'request_all' => $request->all()]);
@@ -301,7 +306,7 @@ class ReporteInventarioController extends Controller
      */
     public function export(Request $request): JsonResponse
     {
-        $tipo = $request->string('tipo');
+        $tipo = (string) $request->string('tipo');
         $filtros = $request->all();
 
         // Obtener datos completos

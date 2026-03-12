@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import SearchSelect from '@/presentation/components/ui/search-select'; // ✅ NUEVO
-import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer, Calendar, AlertCircle, CheckCircle2, Clock, XCircle, CheckCheck } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
@@ -70,6 +70,8 @@ interface FiltrosCuentasPorCobrar {
     fecha_vencimiento_desde?: string;
     fecha_vencimiento_hasta?: string;
     solo_vencidas?: boolean;
+    per_page?: string | number;
+    page?: number;
 }
 
 interface TipoPago {
@@ -147,6 +149,14 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     const [cuentaEditarFecha, setCuentaEditarFecha] = useState<CuentaPorCobrar | null>(null);
     const [nuevaFechaVencimiento, setNuevaFechaVencimiento] = useState('');
     const [editandoFecha, setEditandoFecha] = useState(false);
+
+    // ✅ Array de estados disponibles para filtrado (VENCIDO se calcula por fechas, no es un estado real)
+    const estadosDisponibles = [
+        { valor: 'PENDIENTE', etiqueta: 'Pendiente' },
+        { valor: 'PAGADO', etiqueta: 'Pagado' },
+        { valor: 'PARCIAL', etiqueta: 'Parcial' },
+        { valor: 'ANULADO', etiqueta: 'Anulado' },
+    ];
 
     // Validación defensiva para evitar errores si cuentasPorCobrar es undefined
     if (!cuentasPorCobrar || !cuentasPorCobrar.filtros) {
@@ -297,14 +307,116 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         }
     };
 
-    const getEstadoBadge = (estado: string) => {
-        const colores = {
-            'PENDIENTE': 'default',
-            'PAGADO': 'secondary',
-            'VENCIDO': 'destructive',
-            'PARCIAL': 'outline'
+    // ✅ MEJORADO: Función para obtener color y icono del estado de la cuenta
+    const getEstadoBadgeInfo = (estado: string) => {
+        // Normalizar a mayúscula para comparación
+        const estadoNormalizado = (estado || '').toUpperCase().trim();
+
+        const estadoMap = {
+            'PENDIENTE': {
+                variant: 'default' as const,
+                bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+                textColor: 'text-blue-800 dark:text-blue-200',
+                borderColor: 'border-blue-300 dark:border-blue-700',
+                icon: Clock,
+                label: 'Pendiente'
+            },
+            'PAGADO': {
+                variant: 'default' as const,
+                bgColor: 'bg-green-100 dark:bg-green-900/30',
+                textColor: 'text-green-800 dark:text-green-200',
+                borderColor: 'border-green-300 dark:border-green-700',
+                icon: CheckCircle2,
+                label: 'Pagado'
+            },
+            'PARCIAL': {
+                variant: 'default' as const,
+                bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+                textColor: 'text-amber-800 dark:text-amber-200',
+                borderColor: 'border-amber-300 dark:border-amber-700',
+                icon: Clock,
+                label: 'Parcial'
+            },
+            'ANULADO': {
+                variant: 'destructive' as const,
+                bgColor: 'bg-red-100 dark:bg-red-900/30',
+                textColor: 'text-red-800 dark:text-red-200',
+                borderColor: 'border-red-300 dark:border-red-700',
+                icon: XCircle,
+                label: 'Anulado'
+            }
         };
-        return colores[estado as keyof typeof colores] || 'default';
+        return estadoMap[estadoNormalizado as keyof typeof estadoMap] || estadoMap['PENDIENTE'];
+    };
+
+    // ✅ Componente para renderizar Badge con icono mejorado
+    const EstadoBadgeComponent = ({ estado }: { estado: string }) => {
+        const info = getEstadoBadgeInfo(estado);
+        const IconComponent = info.icon;
+        // Mostrar el estado en mayúscula
+        const estadoDisplay = (estado || '').toUpperCase();
+
+        return (
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+                <IconComponent className="w-4 h-4" />
+                <span>{estadoDisplay}</span>
+            </span>
+        );
+    };
+
+    // ✅ MEJORADO: Función para obtener color y icono de urgencia según días vencido
+    const getUrgenciaInfo = (diasVencido: number) => {
+        if (diasVencido > 30) {
+            return {
+                variant: 'destructive' as const,
+                bgColor: 'bg-red-100 dark:bg-red-900/30',
+                textColor: 'text-red-800 dark:text-red-200',
+                borderColor: 'border-red-300 dark:border-red-700',
+                icon: AlertTriangle,
+                label: `${diasVencido} días vencido`
+            };
+        }
+        if (diasVencido > 15) {
+            return {
+                variant: 'default' as const,
+                bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+                textColor: 'text-amber-800 dark:text-amber-200',
+                borderColor: 'border-amber-300 dark:border-amber-700',
+                icon: AlertCircle,
+                label: `${diasVencido} días`
+            };
+        }
+        if (diasVencido > 0) {
+            return {
+                variant: 'default' as const,
+                bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+                textColor: 'text-yellow-800 dark:text-yellow-200',
+                borderColor: 'border-yellow-300 dark:border-yellow-700',
+                icon: Clock,
+                label: `${diasVencido} días`
+            };
+        }
+        return {
+            variant: 'default' as const,
+            bgColor: 'bg-green-100 dark:bg-green-900/30',
+            textColor: 'text-green-800 dark:text-green-200',
+            borderColor: 'border-green-300 dark:border-green-700',
+            icon: CheckCircle2,
+            label: 'Al día'
+        };
+    };
+
+    // ✅ Componente para renderizar Badge de urgencia
+    const UrgenciaBadgeComponent = ({ diasVencido }: { diasVencido: number }) => {
+        const info = getUrgenciaInfo(diasVencido);
+        const IconComponent = info.icon;
+
+        return (
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+                <IconComponent className="w-4 h-4" />
+                <span>{info.label}</span>
+            </span>
+        );
     };
 
     const getUrgenciaBadge = (diasVencido: number) => {
@@ -314,24 +426,79 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         return 'outline';
     };
 
-    // ✅ NUEVO: Función para mostrar el estado del pago
-    const getEstadoPagoBadge = (estado?: string) => {
-        if (!estado) return 'default';
-        const colores = {
-            'CONFIRMADO': 'secondary',
-            'PENDIENTE': 'default',
-            'ANULADO': 'destructive',
-            'RECHAZADO': 'destructive',
-            'PROCESANDO': 'outline'
+    // ✅ MEJORADO: Función para mostrar el estado del pago con iconos
+    const getEstadoPagoBadgeInfo = (estado?: string) => {
+        if (!estado) return null;
+
+        const estadoMap = {
+            'CONFIRMADO': {
+                bgColor: 'bg-green-100 dark:bg-green-900/30',
+                textColor: 'text-green-800 dark:text-green-200',
+                borderColor: 'border-green-300 dark:border-green-700',
+                icon: CheckCheck,
+                label: 'Confirmado'
+            },
+            'PENDIENTE': {
+                bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+                textColor: 'text-blue-800 dark:text-blue-200',
+                borderColor: 'border-blue-300 dark:border-blue-700',
+                icon: Clock,
+                label: 'Pendiente'
+            },
+            'ANULADO': {
+                bgColor: 'bg-red-100 dark:bg-red-900/30',
+                textColor: 'text-red-800 dark:text-red-200',
+                borderColor: 'border-red-300 dark:border-red-700',
+                icon: XCircle,
+                label: 'Anulado'
+            },
+            'RECHAZADO': {
+                bgColor: 'bg-red-100 dark:bg-red-900/30',
+                textColor: 'text-red-800 dark:text-red-200',
+                borderColor: 'border-red-300 dark:border-red-700',
+                icon: XCircle,
+                label: 'Rechazado'
+            },
+            'PROCESANDO': {
+                bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+                textColor: 'text-amber-800 dark:text-amber-200',
+                borderColor: 'border-amber-300 dark:border-amber-700',
+                icon: Clock,
+                label: 'Procesando'
+            }
         };
-        return colores[estado as keyof typeof colores] || 'default';
+        return estadoMap[estado as keyof typeof estadoMap] || null;
+    };
+
+    // ✅ Componente para renderizar Badge de pago con icono
+    const EstadoPagoBadgeComponent = ({ estado }: { estado?: string }) => {
+        if (!estado) return null;
+        const info = getEstadoPagoBadgeInfo(estado);
+        if (!info) return <Badge variant="outline">{estado}</Badge>;
+
+        const IconComponent = info.icon;
+
+        return (
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+                <IconComponent className="w-4 h-4" />
+                <span>{estado}</span>
+            </span>
+        );
     };
 
     // ✅ NUEVO: Función para obtener color de fila según días vencido
     const getRowColorClass = (diasVencido: number, estado: string) => {
-        // Si está pagado, color normal
-        if (estado === 'PAGADO') {
+        // Normalizar estado a mayúscula
+        const estadoNormalizado = (estado || '').toUpperCase().trim();
+
+        // Si está pagado, color verde
+        if (estadoNormalizado === 'PAGADO') {
             return 'bg-green-50 dark:bg-green-950/10 border-l-4 border-l-green-500 hover:bg-green-100 dark:hover:bg-green-950/20';
+        }
+
+        // Si está anulado, color gris
+        if (estadoNormalizado === 'ANULADO') {
+            return 'bg-gray-50 dark:bg-gray-950/20 border-l-4 border-l-gray-400 hover:bg-gray-100 dark:hover:bg-gray-950/30';
         }
 
         // Si está vencido por más de 30 días - CRÍTICO
@@ -479,18 +646,38 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                 </p>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
-                                <select
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
-                                    value={filtros.estado || ''}
-                                    onChange={(e) => handleFiltroChange('estado', e.target.value)}
-                                >
-                                    <option value="">Todos los estados</option>
-                                    <option value="PENDIENTE">Pendiente</option>
-                                    <option value="PAGADO">Pagado</option>
-                                    <option value="VENCIDO">Vencido</option>
-                                    <option value="PARCIAL">Parcial</option>
-                                </select>
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Estado</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {/* Opción: Todos */}
+                                    <button
+                                        onClick={() => handleFiltroChange('estado', '')}
+                                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                                            !filtros.estado
+                                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white ring-2 ring-gray-400'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        Todos
+                                    </button>
+
+                                    {/* Opciones de estados */}
+                                    {estadosDisponibles.map((estado) => {
+                                        const info = getEstadoBadgeInfo(estado.valor);
+                                        return (
+                                            <button
+                                                key={estado.valor}
+                                                onClick={() => handleFiltroChange('estado', estado.valor)}
+                                                className={`px-3 py-2 rounded-lg font-medium text-sm transition-all border-2 ${
+                                                    filtros.estado === estado.valor
+                                                        ? `${info.bgColor} ${info.textColor} ${info.borderColor} ring-2 ring-offset-1 dark:ring-offset-0`
+                                                        : `${info.bgColor} ${info.textColor} ${info.borderColor} hover:opacity-80`
+                                                }`}
+                                            >
+                                                {estado.etiqueta}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
@@ -649,14 +836,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                     {formatDate(cuenta.fecha_vencimiento)}
                                                 </p>
                                                 <p>
-                                                    <Badge variant={getEstadoBadge(cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                                        {cuenta.estado}
-                                                    </Badge>
+                                                    <EstadoBadgeComponent estado={cuenta.estado} />
                                                 </p>
                                                 <p>
-                                                    <Badge variant={getUrgenciaBadge(cuenta.dias_vencido) as "default" | "secondary" | "destructive" | "outline"}>
-                                                        {cuenta.dias_vencido > 0 ? `${cuenta.dias_vencido} días` : 'Al día'}
-                                                    </Badge>
+                                                    <UrgenciaBadgeComponent diasVencido={cuenta.dias_vencido} />
                                                 </p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -737,12 +920,8 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                                                 {formatCurrency(pago.monto)}
                                                                             </p>
-                                                                            {/* ✅ NUEVO: Mostrar estado del pago */}
-                                                                            {pago.estado && (
-                                                                                <Badge variant={getEstadoPagoBadge(pago.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                                                                    {pago.estado}
-                                                                                </Badge>
-                                                                            )}
+                                                                            {/* ✅ MEJORADO: Mostrar estado del pago con icono */}
+                                                                            <EstadoPagoBadgeComponent estado={pago.estado} />
                                                                         </div>
                                                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                                                             {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre || 'Sin tipo'}
@@ -796,6 +975,158 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No se encontraron cuentas con los filtros aplicados.</p>
                         </div>
                     )}
+
+                    {/* ✅ NUEVO: Componente de Paginación */}
+                    {cuentasPorCobrar.cuentas_por_cobrar.data.length > 0 && (
+                        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+                            {/* Info de Paginación */}
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                Mostrando{' '}
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {(cuentasPorCobrar.cuentas_por_cobrar.current_page - 1) *
+                                        cuentasPorCobrar.cuentas_por_cobrar.per_page +
+                                        1}
+                                </span>
+                                {' '}a{' '}
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {Math.min(
+                                        cuentasPorCobrar.cuentas_por_cobrar.current_page *
+                                            cuentasPorCobrar.cuentas_por_cobrar.per_page,
+                                        cuentasPorCobrar.cuentas_por_cobrar.total
+                                    )}
+                                </span>
+                                {' '}de{' '}
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {cuentasPorCobrar.cuentas_por_cobrar.total}
+                                </span>
+                                {' '}cuentas
+                            </div>
+
+                            {/* Selector de Registros por Página */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm text-gray-600 dark:text-gray-400">Por página:</label>
+                                <select
+                                    value={filtros.per_page || cuentasPorCobrar.cuentas_por_cobrar.per_page}
+                                    onChange={(e) => handleFiltroChange('per_page', e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white text-sm"
+                                >
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                </select>
+                            </div>
+
+                            {/* Botones de Paginación */}
+                            <div className="flex items-center gap-1">
+                                {/* Primera Página */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={cuentasPorCobrar.cuentas_por_cobrar.current_page === 1}
+                                    onClick={() => router.get('/ventas/cuentas-por-cobrar',
+                                        { ...filtros, page: 1 },
+                                        { preserveScroll: true })}
+                                >
+                                    {'<<'}
+                                </Button>
+
+                                {/* Anterior */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={cuentasPorCobrar.cuentas_por_cobrar.current_page === 1}
+                                    onClick={() => router.get('/ventas/cuentas-por-cobrar',
+                                        { ...filtros, page: cuentasPorCobrar.cuentas_por_cobrar.current_page - 1 },
+                                        { preserveScroll: true })}
+                                >
+                                    {'<'}
+                                </Button>
+
+                                {/* Números de Página */}
+                                <div className="flex items-center gap-1">
+                                    {Array.from(
+                                        {
+                                            length: Math.min(
+                                                5,
+                                                cuentasPorCobrar.cuentas_por_cobrar.last_page
+                                            ),
+                                        },
+                                        (_, i) => {
+                                            const currentPage =
+                                                cuentasPorCobrar.cuentas_por_cobrar.current_page;
+                                            const lastPage =
+                                                cuentasPorCobrar.cuentas_por_cobrar.last_page;
+                                            let pageNum;
+
+                                            if (lastPage <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= lastPage - 2) {
+                                                pageNum = lastPage - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+
+                                            return pageNum;
+                                        }
+                                    ).map((pageNum) => (
+                                        <Button
+                                            key={pageNum}
+                                            variant={
+                                                pageNum ===
+                                                cuentasPorCobrar.cuentas_por_cobrar
+                                                    .current_page
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
+                                            size="sm"
+                                            onClick={() =>
+                                                router.get(
+                                                    '/ventas/cuentas-por-cobrar',
+                                                    { ...filtros, page: pageNum },
+                                                    { preserveScroll: true }
+                                                )
+                                            }
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {/* Siguiente */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        cuentasPorCobrar.cuentas_por_cobrar.current_page ===
+                                        cuentasPorCobrar.cuentas_por_cobrar.last_page
+                                    }
+                                    onClick={() => router.get('/ventas/cuentas-por-cobrar',
+                                        { ...filtros, page: cuentasPorCobrar.cuentas_por_cobrar.current_page + 1 },
+                                        { preserveScroll: true })}
+                                >
+                                    {'>'}
+                                </Button>
+
+                                {/* Última Página */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        cuentasPorCobrar.cuentas_por_cobrar.current_page ===
+                                        cuentasPorCobrar.cuentas_por_cobrar.last_page
+                                    }
+                                    onClick={() => router.get('/ventas/cuentas-por-cobrar',
+                                        { ...filtros, page: cuentasPorCobrar.cuentas_por_cobrar.last_page },
+                                        { preserveScroll: true })}
+                                >
+                                    {'>>'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Modal de Detalle */}
@@ -843,9 +1174,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
-                                        <Badge variant={getEstadoBadge(modalDetalle.cuenta.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                            {modalDetalle.cuenta.estado}
-                                        </Badge>
+                                        <EstadoBadgeComponent estado={modalDetalle.cuenta.estado} />
                                     </div>
                                 </div>
 
@@ -869,12 +1198,8 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                                 {formatCurrency(pago.monto)}
                                                             </p>
-                                                            {/* ✅ NUEVO: Mostrar estado del pago */}
-                                                            {pago.estado && (
-                                                                <Badge variant={getEstadoPagoBadge(pago.estado) as "default" | "secondary" | "destructive" | "outline"}>
-                                                                    {pago.estado}
-                                                                </Badge>
-                                                            )}
+                                                            {/* ✅ MEJORADO: Mostrar estado del pago con icono */}
+                                                            <EstadoPagoBadgeComponent estado={pago.estado} />
                                                         </div>
                                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                                             {formatDate(pago.fecha_pago)} - {pago.tipo_pago?.nombre}

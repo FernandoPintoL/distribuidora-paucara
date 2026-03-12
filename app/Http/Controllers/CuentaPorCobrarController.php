@@ -71,7 +71,9 @@ class CuentaPorCobrarController extends Controller
         $sortOrder = $request->get('order', 'desc');
         $query->orderBy($sortField, $sortOrder);
 
-        $cuentas = $query->paginate(15)->withQueryString();
+        // ✅ ACTUALIZADO: Permitir cambiar per_page vía parámetro (50 por defecto)
+        $perPage = min((int)$request->get('per_page', 50), 500); // Máximo 500 para evitar sobrecarga
+        $cuentas = $query->paginate($perPage)->withQueryString();
 
         // Estadísticas
         $estadisticas = [
