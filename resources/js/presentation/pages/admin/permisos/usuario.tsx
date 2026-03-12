@@ -3,7 +3,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import PermisosCheckboxForm from './components/PermisosCheckboxForm';
 import { NotificationService } from '@/infrastructure/services/notification.service';
-import { Grid3x3, Table2 } from 'lucide-react';
+import { Grid3x3, Table2, Shield, Lock } from 'lucide-react';
 import type { AdminUsuario, PermissionGroup } from '@/domain/entities/admin-permisos';
 
 interface Rol {
@@ -33,6 +33,7 @@ export default function UsuarioEdit({
   todosLosPermisos,
   todosLosRoles
 }: UsuarioEditProps) {
+  const [activeTab, setActiveTab] = useState<'roles' | 'permisos'>('roles');
   const [rolesViewMode, setRolesViewMode] = useState<'grid' | 'table'>('table');
   const { data, setData, patch, processing } = useForm({
     permisos: permisosActuales,
@@ -79,13 +80,45 @@ export default function UsuarioEdit({
             </p>
           </div>
 
-          {/* Roles Editor */}
-          <div className="mb-6 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gestionar Roles</h3>
+          {/* Tabs Navigation */}
+          <div className="mb-6 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-t-lg">
+            <div className="flex gap-1 px-4">
+              <button
+                onClick={() => setActiveTab('roles')}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'roles'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
+              >
+                <Shield className="h-4 w-4" />
+                Roles
+              </button>
+              <button
+                onClick={() => setActiveTab('permisos')}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'permisos'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+                }`}
+              >
+                <Lock className="h-4 w-4" />
+                Permisos
+              </button>
+            </div>
+          </div>
 
-              {/* Vista Toggle */}
-              <div className="flex gap-2 border border-gray-300 dark:border-slate-600 rounded-md p-1 bg-white dark:bg-slate-800">
+          {/* Tabs Content */}
+          <div className="bg-white dark:bg-slate-800 rounded-b-lg border border-gray-200 dark:border-slate-700 border-t-0">
+            {/* TAB 1: Roles */}
+            {activeTab === 'roles' && (
+              <div className="p-6">
+                {/* Roles Editor Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gestionar Roles</h3>
+
+                  {/* Vista Toggle */}
+                  <div className="flex gap-2 border border-gray-300 dark:border-slate-600 rounded-md p-1 bg-white dark:bg-slate-800">
                 <button
                   type="button"
                   onClick={() => setRolesViewMode('grid')}
@@ -110,10 +143,10 @@ export default function UsuarioEdit({
                 >
                   <Table2 className="h-4 w-4" />
                 </button>
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            <div className="p-6">
+                <div>
               {rolesViewMode === 'grid' ? (
                 // ==================== VISTA GRID ====================
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -170,11 +203,14 @@ export default function UsuarioEdit({
                   </table>
                 </div>
               )}
-            </div>
-          </div>
+                </div>
+              </div>
+            )}
 
-          {/* Permissions Editor */}
-          <form onSubmit={handleSubmit}>
+            {/* TAB 2: Permisos */}
+            {activeTab === 'permisos' && (
+              <div className="p-6">
+                {/* Permissions Editor */}
             <PermisosCheckboxForm
               permisosActuales={permisosActuales}
               permisosDirectos={permisosDirectos}
@@ -186,24 +222,26 @@ export default function UsuarioEdit({
               themeColor="blue"
             />
 
-            {/* Action Buttons */}
-            <div className="mt-6 flex gap-3">
-              <button
-                type="submit"
-                disabled={processing}
-                className="rounded-md bg-blue-600 dark:bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors"
-              >
-                {processing ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.visit('/permisos')}
-                className="rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+                {/* Action Buttons */}
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    className="rounded-md bg-blue-600 dark:bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                  >
+                    {processing ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.visit('/permisos')}
+                    className="rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>
