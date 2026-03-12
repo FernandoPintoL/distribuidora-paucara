@@ -2,17 +2,7 @@ import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast } from 'react-toastify';
 import logisticaService from '@/infrastructure/services/logistica.service';
-
-interface ProformaAppExterna {
-    id: number;
-    numero: string;
-    cliente_nombre: string;
-    total: number;
-    estado: string;
-    fecha_entrega_solicitada?: string;
-    hora_entrega_solicitada?: string;
-    direccion_entrega_solicitada_id?: number;
-}
+import type { ProformaAppExterna } from '@/domain/entities/logistica';
 
 export function useProformaModals() {
     const [mostrarModalRechazo, setMostrarModalRechazo] = useState(false);

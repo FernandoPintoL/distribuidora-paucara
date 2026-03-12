@@ -66,7 +66,7 @@ export default function FiltrosVentasComponent({
     const handleBusquedaCombinada = (valor: string, aplicarAhora: boolean = false) => {
         setBusquedaCombinada(valor);
 
-        let nuevosFiltros = { ...filtros };
+        const nuevosFiltros = { ...filtros };
 
         if (!valor) {
             nuevosFiltros.id = null;

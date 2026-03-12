@@ -330,7 +330,7 @@ export const productosCSVService = {
    */
   getCsrfToken(): string {
     // Intento 1: Meta tag estándar
-    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (token) {
       console.debug('✅ CSRF token obtenido desde meta tag');
       return token;

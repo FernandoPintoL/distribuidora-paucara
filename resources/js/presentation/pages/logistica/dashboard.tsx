@@ -5,13 +5,9 @@ import AppLayout from '@/layouts/app-layout';
 // Hooks
 import { useProformaFilters } from '@/application/hooks/use-proforma-filters';
 import { useProformaModals } from '@/application/hooks/use-proforma-modals';
-import { useProformaStats } from '@/application/hooks/use-proforma-stats';
-import { useLogisticaStats } from '@/application/hooks/use-logistica-stats';
-import { useDashboardWebSocket } from '@/application/hooks/use-dashboard-websocket';
 import { useProformaNotifications } from '@/application/hooks/use-proforma-notifications';
 
 // Componentes
-import { DashboardStats } from './components/DashboardStats';
 import { ProformasSection } from './components/ProformasSection';
 import { ProformaRechazoModal } from './components/modals/ProformaRechazoModal';
 
@@ -43,9 +39,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
     // Hooks de filtros
     const proformaFilters = useProformaFilters(proformasRecientes);
 
-    // Hook de WebSocket para dashboard en tiempo real
-    const { metricas: dashboardMetricas, lastUpdate: dashboardLastUpdate, isRefreshing: dashboardIsRefreshing, refresh: refreshDashboard } = useDashboardWebSocket(estadisticas);
-
     // Hook para notificaciones de proformas en tiempo real
     const { requestNotificationPermission } = useProformaNotifications();
 
@@ -54,38 +47,7 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         requestNotificationPermission();
     }, [requestNotificationPermission]);
 
-    // ✅ MEJORADO: Detectar si hay filtros activos
-    const tieneFilterosActivos = !!(
-        proformaFilters.searchProforma ||
-        proformaFilters.filtroEstadoProforma !== 'TODOS' ||
-        proformaFilters.soloVencidas ||
-        proformaFilters.filtroLocalidad ||
-        proformaFilters.filtroTipoEntrega ||
-        proformaFilters.filtroPoliticaPago ||
-        proformaFilters.filtroEstadoLogistica ||
-        proformaFilters.filtroCoordinacionCompletada ||
-        proformaFilters.filtroUsuarioAprobador ||
-        proformaFilters.filtroFechaVencimientoDesde ||
-        proformaFilters.filtroFechaVencimientoHasta ||
-        proformaFilters.filtroFechaEntregaSolicitadaDesde ||
-        proformaFilters.filtroFechaEntregaSolicitadaHasta ||
-        proformaFilters.filtroHoraEntregaSolicitadaDesde ||
-        proformaFilters.filtroHoraEntregaSolicitadaHasta
-    );
-
-    // Hooks de estadísticas
-    const {
-        stats: logisticaStats,
-        loading: loadingLogisticaStats,
-        lastUpdate: logisticaLastUpdate,
-        refresh: refreshLogisticaStats,
-    } = useLogisticaStats({
-        // ✅ ACTUALIZADO 2026-03-06: DESACTIVAR polling completamente
-        autoRefresh: false,
-        refreshInterval: 30,
-    });
-
-    const {
+    /* const {
         stats: proformaStats,
         loading: loadingProformaStats,
         error: proformaError,
@@ -93,16 +55,14 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
         // ✅ ACTUALIZADO 2026-03-06: DESACTIVAR polling completamente
         autoRefresh: false,
         refreshInterval: 30,
-    });
+    }); */
 
     // Debug: Log datos recibidos
     useEffect(() => {
         console.log('=== LOGISTICA DASHBOARD DEBUG ===');
         console.log('Stats from Inertia (estadisticas):', stats);
-        console.log('Proforma Stats from API:', proformaStats);
-        console.log('Proforma Loading:', loadingProformaStats);
         console.log('================================');
-    }, [stats, proformaStats, loadingProformaStats, proformaError, logisticaStats]);
+    }, [stats]);
 
     // Hook de modal de rechazo
     const {
@@ -136,7 +96,6 @@ export default function LogisticaDashboard({ estadisticas, proformasRecientes, l
     // cuando no se proporcionan parámetros de fecha_entrega_solicitada
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        const hasParams = urlParams.toString() !== '';
 
         console.log('🔍 [Dashboard] Cargado. Backend aplicará filtro por defecto (ayer-hoy) si no hay parámetros');
         console.log('   URL params:', urlParams.toString() || 'NINGUNO');

@@ -6,7 +6,6 @@ import { Input } from '@/presentation/components/ui/input';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/components/ui/collapsible';
 import { Eye, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Clock, CheckCircle, XCircle, FileCheck, AlertCircle, Filter, Search, X, ChevronDown, Printer, Pencil } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
 import type { ProformaAppExterna } from '@/domain/entities/logistica';
 import { useEstadosProformas } from '@/application/hooks';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
@@ -102,11 +101,17 @@ export function ProformasSection({
     onVerProforma,
     onEditarProforma,
     onRechazarProforma,
-    getEstadoBadge,
     estaVencida,
 }: ProformasSectionProps) {
-    // console.log('🚀 ~ file: ProformasSection.tsx:48 ~ ProformasSection ~ proformas:', proformas);
-    const [expandedProformaId, setExpandedProformaId] = useState<number | null>(null);
+    // ✅ DEBUG: Mostrar datos que llegan del backend
+    if (proformas && proformas.length > 0) {
+        console.log('📊 PROFORMAS RECIBIDAS DEL BACKEND:', {
+            cantidad: proformas.length,
+            primerProforma: proformas[0],
+            paginacion: paginationInfo,
+        });
+    }
+
     const [sortField, setSortField] = useState<SortField>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
     const [dateFrom, setDateFrom] = useState<string>('');
@@ -159,6 +164,66 @@ export function ProformasSection({
 
     const activeFiltersCount = countActiveFilters();
 
+    // ✅ NUEVO: Función para obtener color de fondo de fila según estado
+    const getRowBackgroundByEstado = (estado: string): string => {
+        const estadoNormalizado = (estado || '').toUpperCase().trim();
+
+        const colores: Record<string, string> = {
+            'CONVERTIDA': 'bg-green-50 dark:bg-green-950/20 border-l-4 border-l-green-500 hover:bg-green-100 dark:hover:bg-green-950/30',
+            'PENDIENTE': 'bg-yellow-50 dark:bg-yellow-950/20 border-l-4 border-l-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-950/30',
+            'RECHAZADA': 'bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-500 hover:bg-red-100 dark:hover:bg-red-950/30',
+            'EN_REVISION': 'bg-blue-50 dark:bg-blue-950/20 border-l-4 border-l-blue-500 hover:bg-blue-100 dark:hover:bg-blue-950/30',
+            'APROBADA': 'bg-purple-50 dark:bg-purple-950/20 border-l-4 border-l-purple-500 hover:bg-purple-100 dark:hover:bg-purple-950/30',
+            'DRAFT': 'bg-gray-50 dark:bg-gray-950/20 border-l-4 border-l-gray-500 hover:bg-gray-100 dark:hover:bg-gray-950/30',
+        };
+
+        return colores[estadoNormalizado] || 'bg-white dark:bg-gray-900 border-l-4 border-l-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800';
+    };
+
+    // ✅ NUEVO: Función para obtener estilos del badge de estado con colores específicos
+    const getEstadoBadgeStyle = (estado: string) => {
+        const estadoNormalizado = (estado || '').toUpperCase().trim();
+
+        const estilos: Record<string, { bg: string; text: string; border: string }> = {
+            'CONVERTIDA': {
+                bg: 'bg-green-500 dark:bg-green-600',
+                text: 'text-white',
+                border: 'border-green-600 dark:border-green-700'
+            },
+            'PENDIENTE': {
+                bg: 'bg-yellow-500 dark:bg-yellow-600',
+                text: 'text-white',
+                border: 'border-yellow-600 dark:border-yellow-700'
+            },
+            'RECHAZADA': {
+                bg: 'bg-red-500 dark:bg-red-600',
+                text: 'text-white',
+                border: 'border-red-600 dark:border-red-700'
+            },
+            'EN_REVISION': {
+                bg: 'bg-blue-500 dark:bg-blue-600',
+                text: 'text-white',
+                border: 'border-blue-600 dark:border-blue-700'
+            },
+            'APROBADA': {
+                bg: 'bg-purple-500 dark:bg-purple-600',
+                text: 'text-white',
+                border: 'border-purple-600 dark:border-purple-700'
+            },
+            'DRAFT': {
+                bg: 'bg-gray-500 dark:bg-gray-600',
+                text: 'text-white',
+                border: 'border-gray-600 dark:border-gray-700'
+            },
+        };
+
+        return estilos[estadoNormalizado] || {
+            bg: 'bg-gray-500 dark:bg-gray-600',
+            text: 'text-white',
+            border: 'border-gray-600 dark:border-gray-700'
+        };
+    };
+
     // Función para manejar el click en headers para ordenar
     const handleSort = (field: SortField) => {
         if (sortField === field && sortDirection === 'asc') {
@@ -177,13 +242,13 @@ export function ProformasSection({
         // Primero aplicar filtros
         let filtered = proformas.filter((proforma) => {
             // Filtro de fecha de creación
-            if (dateFrom) {
+            if (dateFrom && proforma.fecha) {
                 const proformaDate = new Date(proforma.fecha);
                 const filterDate = new Date(dateFrom);
                 if (proformaDate < filterDate) return false;
             }
 
-            if (dateTo) {
+            if (dateTo && proforma.fecha) {
                 const proformaDate = new Date(proforma.fecha);
                 const filterDate = new Date(dateTo);
                 filterDate.setHours(23, 59, 59, 999); // Incluir todo el día
@@ -246,49 +311,6 @@ export function ProformasSection({
 
         return filtered;
     }, [proformas, sortField, sortDirection, dateFrom, dateTo, amountFrom, amountTo]);
-
-    // Función para obtener badge con iconos (Fase 3: Mejorada con datos del API)
-    const getEstadoIcon = (estado: string) => {
-        // Fallback a iconos hardcodeados si el API no está disponible
-        switch (estado) {
-            case 'BORRADOR':
-                return <Pencil className="w-4 h-4" />;
-            case 'PENDIENTE':
-                return <Clock className="w-4 h-4" />;
-            case 'APROBADA':
-                return <CheckCircle className="w-4 h-4" />;
-            case 'RECHAZADA':
-                return <XCircle className="w-4 h-4" />;
-            case 'CONVERTIDA':
-                return <FileCheck className="w-4 h-4" />;
-            case 'VENCIDA':
-                return <AlertCircle className="w-4 h-4" />;
-            case 'TODOS':
-                return <Filter className="w-4 h-4" />;
-            default:
-                return null;
-        }
-    };
-
-    // Función para obtener estilos del badge según estado
-    const getEstadoBadgeStyles = (estado: string) => {
-        switch (estado) {
-            case 'BORRADOR':
-                return 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700';
-            case 'PENDIENTE':
-                return 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700';
-            case 'APROBADA':
-                return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700';
-            case 'RECHAZADA':
-                return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700';
-            case 'CONVERTIDA':
-                return 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700';
-            case 'VENCIDA':
-                return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600';
-            default:
-                return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
-        }
-    };
 
     // Función para obtener estilos de los botones de filtro
     const getFilterButtonStyles = (estado: string, isActive: boolean) => {
@@ -441,14 +463,20 @@ export function ProformasSection({
                             {/* Ayer */}
                             <Button
                                 onClick={() => {
-                                    const yesterday = new Date();
-                                    yesterday.setDate(yesterday.getDate() - 1);
-                                    const fechaStr = yesterday.toISOString().split('T')[0];
+                                    // ✅ CORREGIDO: Usar fecha local, no UTC
+                                    const d = new Date();
+                                    d.setDate(d.getDate() - 1);
+                                    const fechaStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                     setFiltroFechaEntregaSolicitadaDesde(fechaStr);
                                     setFiltroFechaEntregaSolicitadaHasta(fechaStr);
                                 }}
-                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
-                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date(new Date().setDate(new Date().getDate() - 1)).toDateString()
+                                className={`transition-all text-sm ${(() => {
+                                    // ✅ CORREGIDO: Comparar fechas sin problemas de zona horaria
+                                    const d = new Date();
+                                    d.setDate(d.getDate() - 1);
+                                    const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                    return filtroFechaEntregaSolicitadaDesde === yesterday && filtroFechaEntregaSolicitadaHasta === yesterday;
+                                })()
                                     ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800'
                                     : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                                     }`}
@@ -459,12 +487,18 @@ export function ProformasSection({
                             {/* Hoy */}
                             <Button
                                 onClick={() => {
-                                    const today = new Date().toISOString().split('T')[0];
+                                    // ✅ CORREGIDO: Usar fecha local, no UTC
+                                    const d = new Date();
+                                    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                     setFiltroFechaEntregaSolicitadaDesde(today);
                                     setFiltroFechaEntregaSolicitadaHasta(today);
                                 }}
-                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
-                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date().toDateString()
+                                className={`transition-all text-sm ${(() => {
+                                    // ✅ CORREGIDO: Comparar fechas sin problemas de zona horaria
+                                    const d = new Date();
+                                    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                    return filtroFechaEntregaSolicitadaDesde === today && filtroFechaEntregaSolicitadaHasta === today;
+                                })()
                                     ? 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-800'
                                     : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
                                     }`}
@@ -475,35 +509,155 @@ export function ProformasSection({
                             {/* Mañana */}
                             <Button
                                 onClick={() => {
-                                    const tomorrow = new Date();
-                                    tomorrow.setDate(tomorrow.getDate() + 1);
-                                    const fechaStr = tomorrow.toISOString().split('T')[0];
+                                    // ✅ CORREGIDO: Usar fecha local, no UTC
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + 1);
+                                    const fechaStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                     setFiltroFechaEntregaSolicitadaDesde(fechaStr);
                                     setFiltroFechaEntregaSolicitadaHasta(fechaStr);
                                 }}
-                                className={`transition-all text-sm ${filtroFechaEntregaSolicitadaDesde === filtroFechaEntregaSolicitadaHasta &&
-                                    new Date(filtroFechaEntregaSolicitadaDesde).toDateString() === new Date(new Date().setDate(new Date().getDate() + 1)).toDateString()
+                                className={`transition-all text-sm ${(() => {
+                                    // ✅ CORREGIDO: Comparar fechas sin problemas de zona horaria
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + 1);
+                                    const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                    return filtroFechaEntregaSolicitadaDesde === tomorrow && filtroFechaEntregaSolicitadaHasta === tomorrow;
+                                })()
                                     ? 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800'
                                     : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-900/50'
                                     }`}
                             >
                                 📆 Mañana
                             </Button>
-                        </div>
+                            {/* ✅ NUEVO: Botón Destacado "Mostrar TODAS las Proformas" */}
+                            <Button
+                                onClick={() => {
+                                    setFiltroEstadoProforma('TODOS');
+                                    // Limpiar filtros de fecha para ver absolutamente todo
+                                    setFiltroFechaEntregaSolicitadaDesde('');
+                                    setFiltroFechaEntregaSolicitadaHasta('');
+                                }}
+                                className="bg-indigo-600 dark:bg-indigo-700 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 font-semibold text-sm transition-all"
+                            >
+                                🔓 Mostrar TODAS
+                            </Button>
 
-                        {/* ✅ NUEVO: Botón Destacado "Mostrar TODAS las Proformas" */}
-                        <Button
-                            onClick={() => {
-                                setFiltroEstadoProforma('TODOS');
-                                // Limpiar filtros de fecha para ver absolutamente todo
-                                setFiltroFechaEntregaSolicitadaDesde('');
-                                setFiltroFechaEntregaSolicitadaHasta('');
-                            }}
-                            className="w-full bg-indigo-600 dark:bg-indigo-700 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 font-semibold text-sm"
-                        >
-                            🔓 Mostrar TODAS las Proformas
-                        </Button>
+                            {/* ✅ Turno Mañana Button */}
+                            <Button
+                                onClick={() => {
+                                    const isChecked = filtroHoraEntregaSolicitadaDesde?.startsWith('08:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('09:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('10:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('11:') ||
+                                                    filtroHoraEntregaSolicitadaDesde === '12:00';
+                                    if (isChecked) {
+                                        setFiltroHoraEntregaSolicitadaDesde('');
+                                        setFiltroHoraEntregaSolicitadaHasta('');
+                                    } else {
+                                        setFiltroHoraEntregaSolicitadaDesde('08:00');
+                                        setFiltroHoraEntregaSolicitadaHasta('12:00');
+                                    }
+                                }}
+                                className={`transition-all text-sm ${(() => {
+                                    const isChecked = filtroHoraEntregaSolicitadaDesde?.startsWith('08:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('09:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('10:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('11:') ||
+                                                    filtroHoraEntregaSolicitadaDesde === '12:00';
+                                    return isChecked
+                                        ? 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800'
+                                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50';
+                                })()}`}
+                            >
+                                🌅 Mañana
+                            </Button>
+
+                            {/* ✅ Turno Tarde Button */}
+                            <Button
+                                onClick={() => {
+                                    const isChecked = filtroHoraEntregaSolicitadaDesde?.startsWith('14:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('15:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('16:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('17:') ||
+                                                    filtroHoraEntregaSolicitadaDesde === '18:00';
+                                    if (isChecked) {
+                                        setFiltroHoraEntregaSolicitadaDesde('');
+                                        setFiltroHoraEntregaSolicitadaHasta('');
+                                    } else {
+                                        setFiltroHoraEntregaSolicitadaDesde('14:00');
+                                        setFiltroHoraEntregaSolicitadaHasta('18:00');
+                                    }
+                                }}
+                                className={`transition-all text-sm ${(() => {
+                                    const isChecked = filtroHoraEntregaSolicitadaDesde?.startsWith('14:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('15:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('16:') ||
+                                                    filtroHoraEntregaSolicitadaDesde?.startsWith('17:') ||
+                                                    filtroHoraEntregaSolicitadaDesde === '18:00';
+                                    return isChecked
+                                        ? 'bg-orange-600 dark:bg-orange-700 text-white hover:bg-orange-700 dark:hover:bg-orange-800'
+                                        : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50';
+                                })()}`}
+                            >
+                                ☀️ Tarde
+                            </Button>
+                        </div>
                     </div>
+
+                    {/* ✅ Horas Específicas - Turno Mañana (condicional) */}
+                    {(filtroHoraEntregaSolicitadaDesde?.startsWith('08:') || filtroHoraEntregaSolicitadaDesde?.startsWith('09:') || filtroHoraEntregaSolicitadaDesde?.startsWith('10:') || filtroHoraEntregaSolicitadaDesde?.startsWith('11:') || filtroHoraEntregaSolicitadaDesde === '12:00') && (
+                        <div className="mt-3 p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700">
+                            <label className="text-xs font-medium block mb-2 text-blue-900 dark:text-blue-300">Turno Mañana - Selecciona hora específica:</label>
+                            <div className="grid grid-cols-5 gap-2">
+                                {['08:00', '09:00', '10:00', '11:00', '12:00'].map((hora) => (
+                                    <button
+                                        key={hora}
+                                        onClick={() => {
+                                            setFiltroHoraEntregaSolicitadaDesde(hora);
+                                            setFiltroHoraEntregaSolicitadaHasta(hora);
+                                        }}
+                                        className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600'
+                                            }`}
+                                    >
+                                        {hora.split(':')[0]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ✅ Horas Específicas - Turno Tarde (condicional) */}
+                    {(filtroHoraEntregaSolicitadaDesde?.startsWith('14:') || filtroHoraEntregaSolicitadaDesde?.startsWith('15:') || filtroHoraEntregaSolicitadaDesde?.startsWith('16:') || filtroHoraEntregaSolicitadaDesde?.startsWith('17:') || filtroHoraEntregaSolicitadaDesde === '18:00') && (
+                        <div className="mt-3 p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700">
+                            <label className="text-xs font-medium block mb-2 text-orange-900 dark:text-orange-300">Turno Tarde - Selecciona hora específica:</label>
+                            <div className="grid grid-cols-5 gap-2">
+                                {['14:00', '15:00', '16:00', '17:00', '18:00'].map((hora) => (
+                                    <button
+                                        key={hora}
+                                        onClick={() => {
+                                            setFiltroHoraEntregaSolicitadaDesde(hora);
+                                            setFiltroHoraEntregaSolicitadaHasta(hora);
+                                        }}
+                                        className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
+                                            ? 'bg-orange-600 text-white shadow-md'
+                                            : 'bg-white dark:bg-slate-700 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-slate-600'
+                                            }`}
+                                    >
+                                        {hora.split(':')[0]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mostrar rango seleccionado */}
+                    {(filtroHoraEntregaSolicitadaDesde || filtroHoraEntregaSolicitadaHasta) && (
+                        <div className="mt-2 p-2 text-sm rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">
+                            ✓ Turno activo: {filtroHoraEntregaSolicitadaDesde}
+                        </div>
+                    )}
                 </div>
 
                 {/* SECCIÓN 2: Filtros Activos (Chips) */}
@@ -834,113 +988,6 @@ export function ProformasSection({
                             </div>
                         </div>
 
-                        {/* ✅ MEJORADO: Turno de Entrega Solicitada (Horarios de Agencia) */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block dark:text-gray-300">🕐 Horario de Entrega Solicitada</label>
-                            <div className="space-y-3">
-                                {/* Turno Mañana */}
-                                <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
-                                    <input
-                                        type="checkbox"
-                                        id="turno_manana"
-                                        checked={filtroHoraEntregaSolicitadaDesde?.startsWith('08:') || filtroHoraEntregaSolicitadaDesde?.startsWith('09:') || filtroHoraEntregaSolicitadaDesde?.startsWith('10:') || filtroHoraEntregaSolicitadaDesde?.startsWith('11:') || filtroHoraEntregaSolicitadaDesde === '12:00'}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setFiltroHoraEntregaSolicitadaDesde('08:00');
-                                                setFiltroHoraEntregaSolicitadaHasta('12:00');
-                                            } else {
-                                                setFiltroHoraEntregaSolicitadaDesde('');
-                                                setFiltroHoraEntregaSolicitadaHasta('');
-                                            }
-                                        }}
-                                        className="cursor-pointer w-4 h-4"
-                                    />
-                                    <label htmlFor="turno_manana" className="cursor-pointer flex-1">
-                                        <span className="font-semibold text-blue-900 dark:text-blue-200">🌅 Mañana</span>
-                                        <span className="text-sm text-blue-700 dark:text-blue-300"> 08:00 - 12:00</span>
-                                    </label>
-                                </div>
-
-                                {/* Horas específicas para Mañana */}
-                                {(filtroHoraEntregaSolicitadaDesde?.startsWith('08:') || filtroHoraEntregaSolicitadaDesde?.startsWith('09:') || filtroHoraEntregaSolicitadaDesde?.startsWith('10:') || filtroHoraEntregaSolicitadaDesde?.startsWith('11:') || filtroHoraEntregaSolicitadaDesde === '12:00') && (
-                                    <div className="ml-6 p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700">
-                                        <label className="text-xs font-medium block mb-2 text-blue-900 dark:text-blue-300">Selecciona hora específica:</label>
-                                        <div className="grid grid-cols-5 gap-2">
-                                            {['08:00', '09:00', '10:00', '11:00', '12:00'].map((hora) => (
-                                                <button
-                                                    key={hora}
-                                                    onClick={() => {
-                                                        setFiltroHoraEntregaSolicitadaDesde(hora);
-                                                        setFiltroHoraEntregaSolicitadaHasta(hora);
-                                                    }}
-                                                    className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
-                                                        ? 'bg-blue-600 text-white shadow-md'
-                                                        : 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600'
-                                                        }`}
-                                                >
-                                                    {hora.split(':')[0]}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Turno Tarde */}
-                                <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20">
-                                    <input
-                                        type="checkbox"
-                                        id="turno_tarde"
-                                        checked={filtroHoraEntregaSolicitadaDesde?.startsWith('14:') || filtroHoraEntregaSolicitadaDesde?.startsWith('15:') || filtroHoraEntregaSolicitadaDesde?.startsWith('16:') || filtroHoraEntregaSolicitadaDesde?.startsWith('17:') || filtroHoraEntregaSolicitadaDesde === '18:00'}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setFiltroHoraEntregaSolicitadaDesde('14:00');
-                                                setFiltroHoraEntregaSolicitadaHasta('18:00');
-                                            } else {
-                                                setFiltroHoraEntregaSolicitadaDesde('');
-                                                setFiltroHoraEntregaSolicitadaHasta('');
-                                            }
-                                        }}
-                                        className="cursor-pointer w-4 h-4"
-                                    />
-                                    <label htmlFor="turno_tarde" className="cursor-pointer flex-1">
-                                        <span className="font-semibold text-orange-900 dark:text-orange-200">☀️ Tarde</span>
-                                        <span className="text-sm text-orange-700 dark:text-orange-300"> 14:00 - 18:00</span>
-                                    </label>
-                                </div>
-
-                                {/* Horas específicas para Tarde */}
-                                {(filtroHoraEntregaSolicitadaDesde?.startsWith('14:') || filtroHoraEntregaSolicitadaDesde?.startsWith('15:') || filtroHoraEntregaSolicitadaDesde?.startsWith('16:') || filtroHoraEntregaSolicitadaDesde?.startsWith('17:') || filtroHoraEntregaSolicitadaDesde === '18:00') && (
-                                    <div className="ml-6 p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700">
-                                        <label className="text-xs font-medium block mb-2 text-orange-900 dark:text-orange-300">Selecciona hora específica:</label>
-                                        <div className="grid grid-cols-5 gap-2">
-                                            {['14:00', '15:00', '16:00', '17:00', '18:00'].map((hora) => (
-                                                <button
-                                                    key={hora}
-                                                    onClick={() => {
-                                                        setFiltroHoraEntregaSolicitadaDesde(hora);
-                                                        setFiltroHoraEntregaSolicitadaHasta(hora);
-                                                    }}
-                                                    className={`py-2 px-1 rounded text-sm font-medium transition-all ${filtroHoraEntregaSolicitadaDesde === hora
-                                                        ? 'bg-orange-600 text-white shadow-md'
-                                                        : 'bg-white dark:bg-slate-700 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-slate-600'
-                                                        }`}
-                                                >
-                                                    {hora.split(':')[0]}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Mostrar rango seleccionado */}
-                                {(filtroHoraEntregaSolicitadaDesde || filtroHoraEntregaSolicitadaHasta) && (
-                                    <div className="mt-2 p-2 text-sm rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">
-                                        ✓ Filtro activo: {filtroHoraEntregaSolicitadaDesde}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
                         {/* Separador */}
                         <div className="border-t dark:border-slate-700 pt-4" />
 
@@ -992,75 +1039,112 @@ export function ProformasSection({
                                         )}
                                     </div>
                                 </th>
-                                {/* ✅ NUEVO: Columna Venta (cuando proforma convertida) */}
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">💬 Venta</th>
+                                
+                                {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Creada</th>
+                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">🚚 Entrega Solicitada</th>
                                 {/* ✅ NUEVO: Columna Fecha Vencimiento */}
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Vencimiento</th>
-                                {/* ✅ NUEVO: Columna Fecha Entrega Solicitada */}
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">🚚 Entrega Solicitada</th>
-
-                                <th className="px-4 py-2 text-left font-medium dark:text-gray-300">📅 Creada</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">✏️ Actualizada</th>
                                 <th className="px-4 py-2 text-left font-medium dark:text-gray-300">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sortedProformas.map((proforma) => (
-                                <tr key={proforma.id} className="border-t dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <tr key={proforma.id} className={`border-t dark:border-slate-700 transition-colors duration-200 ${getRowBackgroundByEstado(proforma.estado)}`}>
                                     {/* ✅ PRIMERA COLUMNA: ESTADO DESTACADO CON COLOR DEL BACKEND */}
-                                    <td className="px-4 py-2 dark:text-gray-300">
+                                    <td className="px-2 py-2 dark:text-gray-300">
                                         <div className="space-y-2">
-                                            <div
-                                                className="inline-flex gap-2 items-center px-3 py-2 rounded-lg font-semibold text-sm text-white"
-                                                style={{
-                                                    backgroundColor: proforma.estado_logistica?.color || '#6B7280'
-                                                }}
-                                            >
-                                                <span>{proforma.estado_logistica?.icono || '📋'}</span>
-                                                <span>{proforma.estado_logistica?.nombre || proforma.estado}</span>
+                                            {(() => {
+                                                const estadoStyle = getEstadoBadgeStyle(proforma.estado);
+                                                return (
+                                                    <div
+                                                        className={`inline-flex gap-2 items-center px-2 rounded-lg font-semibold text-sm border-2 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 ${estadoStyle.bg} ${estadoStyle.text} ${estadoStyle.border}`}
+                                                    >
+                                                        <span className="text-lg">{String(proforma.estado_logistica?.icono || '📋')}</span>
+                                                        <span>{String(proforma.estado_logistica?.nombre || proforma.estado)}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                            <div className="bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-xs space-y-1">
+                                                <p className="text-gray-700 dark:text-gray-300 font-semibold">
+                                                    🏷️ Folio Prof.: <span className="font-mono text-blue-600 dark:text-blue-400">{proforma.id}</span>
+                                                </p>
+                                                {/* <p className="text-gray-600 dark:text-gray-400 font-mono">
+                                                    📄 {String(proforma.numero)}
+                                                </p> */}
                                             </div>
-                                            <div className="text-xs font-mono text-gray-600 dark:text-gray-400">
-                                                <p>Folio: {proforma.id}</p>
-                                                {proforma.numero}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-2 dark:text-gray-300 space-y-2">
-                                        <div>Cliente: <strong>{proforma.cliente_nombre}</strong></div>
-                                        <div className="flex flex-col gap-1 text-green-600 dark:text-green-400">
-                                            <span className="font-medium text-sm text-green">Creador: <strong>{proforma.usuario_creador_nombre}</strong></span>
-                                            <Badge variant="outline" className="w-fit text-xs bg-transparent dark:bg-slate-700 dark:text-gray-300">
-                                                {proforma.usuario_creador_rol || 'Sin rol'}
-                                            </Badge>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-2 text-right dark:text-gray-300">
-                                        Bs {proforma.total.toLocaleString('es-BO', { maximumFractionDigits: 2 })}
-                                    </td>
-                                    {/* ✅ COLUMNA: VENTA CONVERTIDA */}
-                                    <td className="px-4 py-2 dark:text-gray-300">
-                                        {proforma.venta_numero ? (
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-lg">🛍️</span>
-                                                    <div>
-                                                        <div className="font-semibold text-sm text-green-700 dark:text-green-400">
-                                                            {proforma.venta_numero}
-                                                        </div>
-                                                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                            ID: {proforma.venta_id}
+
+                                            {proforma.venta_numero && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-lg">🛍️</span>
+                                                        <div>
+                                                            {/* <div className="font-semibold text-sm text-green-700 dark:text-green-400">
+                                                                {String(proforma.venta_numero)}
+                                                            </div> */}
+                                                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                                                                Folio Venta: {String(proforma.venta_id)}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs text-gray-400 dark:text-gray-500 italic">
-                                                Sin convertir
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-2 dark:text-gray-300 space-y-2">
+                                        <div>Cliente: <strong>{String(proforma.cliente_nombre)}</strong></div>
+                                        <div className="flex flex-col gap-1 text-green-600 dark:text-green-400">
+                                            <Badge
+                                                variant="outline"
+                                                className={`w-fit text-xs ${
+                                                    proforma.usuario_creador_es_preventista
+                                                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                                                        : 'bg-transparent dark:bg-slate-700 dark:text-gray-300'
+                                                }`}
+                                            >
+                                                {proforma.usuario_creador_es_preventista
+                                                    ? '👤 Prev.'
+                                                    : '👥 Otro'}
+                                                <strong> : {String(proforma.usuario_creador_nombre)}</strong>
+                                            </Badge>
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-2 text-right dark:text-gray-300">
+                                        Bs {proforma.total.toLocaleString('es-BO', { maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            {proforma.created_at ? (
+                                                <>
+                                                    <div>{new Date(proforma.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    <div className="text-xs">{new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                </>
+                                            ) : (
+                                                <span className="text-gray-400">N/A</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    {/* ✅ NUEVO: Columna Fecha & Hora Entrega Solicitada */}
+                                    <td className="px-2 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                        <div className="whitespace-nowrap">
+                                            {proforma.fecha_entrega_solicitada ? (
+                                                <>
+                                                    <div>{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    {proforma.hora_entrega_solicitada && (
+                                                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                                            🕐 {String(proforma.hora_entrega_solicitada)}
+                                                            {proforma.hora_entrega_solicitada_fin && <span> - {String(proforma.hora_entrega_solicitada_fin)}</span>}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                                            )}
+                                        </div>
                                     </td>
                                     {/* ✅ NUEVO: Columna Fecha Vencimiento */}
-                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                    <td className="px-2 py-2 text-xs text-muted-foreground dark:text-gray-400">
                                         <div className="whitespace-nowrap">
                                             {proforma.fecha_vencimiento ? (
                                                 <>
@@ -1072,41 +1156,19 @@ export function ProformasSection({
                                             )}
                                         </div>
                                     </td>
-                                    {/* ✅ NUEVO: Columna Fecha & Hora Entrega Solicitada */}
-                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
+                                    <td className="px-2 py-2 text-xs text-muted-foreground dark:text-gray-400">
                                         <div className="whitespace-nowrap">
-                                            {proforma.fecha_entrega_solicitada ? (
+                                            {proforma.updated_at ? (
                                                 <>
-                                                    <div>{new Date(proforma.fecha_entrega_solicitada).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                                                    {proforma.hora_entrega_solicitada && (
-                                                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                                                            🕐 {proforma.hora_entrega_solicitada}
-                                                            {proforma.hora_entrega_solicitada_fin && <span> - {proforma.hora_entrega_solicitada_fin}</span>}
-                                                        </div>
-                                                    )}
+                                                    <div>{new Date(proforma.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                                    <div className="text-xs">{new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
                                                 </>
                                             ) : (
-                                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                <span className="text-gray-400">N/A</span>
                                             )}
                                         </div>
                                     </td>
-                                    {/* <td className="px-4 py-2 text-xs dark:text-gray-300">
-                                        {formatDate(proforma.fecha)}
-                                        {estaVencida(proforma) && <div className="text-red-600 dark:text-red-400 text-xs font-semibold">VENCIDA</div>}
-                                    </td> */}
-                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
-                                        <div className="whitespace-nowrap">
-                                            <div>{new Date(proforma.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                                            <div className="text-xs">{new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">
-                                        <div className="whitespace-nowrap">
-                                            <div>{new Date(proforma.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                                            <div className="text-xs">{new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-2">
+                                    <td className="px-2 py-2">
                                         <div className="flex gap-2">
                                             <Button
                                                 size="sm"

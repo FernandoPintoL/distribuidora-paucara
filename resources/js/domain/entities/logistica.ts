@@ -45,12 +45,22 @@ export interface ProformaAppExterna extends BaseEntity {
     fecha: string;
     fecha_vencimiento?: string;
     usuario_creador_nombre: string;
-    usuario_creador_rol?: string;  // ✅ NUEVO: Rol del usuario creador
+    usuario_creador_rol?: string;  // ✅ DEPRECATED: Usar usuario_creador_roles
+    usuario_creador_roles?: string[];  // ✅ NUEVO: Array de todos los roles del usuario creador
+    usuario_creador_es_preventista?: boolean;  // ✅ NUEVO: Booleano si es preventista
     canal_origen?: 'APP_EXTERNA' | 'WEB' | 'PRESENCIAL';
+
+    // ✅ Timestamps y metadatos
+    created_at?: string;            // Fecha de creación de la proforma
+    updated_at?: string;            // Fecha de última actualización
+
+    // ✅ Información de venta asociada
+    venta_numero?: string;          // Número de venta vinculada
 
     // Solicitud de entrega del cliente
     fecha_entrega_solicitada?: string;
     hora_entrega_solicitada?: string;
+    hora_entrega_solicitada_fin?: string;  // ✅ NUEVO: Hora final de entrega solicitada
     direccion_entrega_solicitada_id?: Id;
     direccionSolicitada?: Direccion; // Relación a dirección solicitada
 
@@ -59,6 +69,16 @@ export interface ProformaAppExterna extends BaseEntity {
     hora_entrega_confirmada?: string;
     direccion_entrega_confirmada_id?: Id;
     direccionConfirmada?: Direccion; // Relación a dirección confirmada
+
+    // ✅ Estado logístico detallado (desde tabla estados_logistica)
+    estado_logistica_id?: Id;       // FK a estados_logistica
+    estado_logistica?: {            // Objeto completo con metadata
+        id: Id;
+        codigo: string;
+        nombre: string;
+        color?: string;
+        icono?: string;             // ✅ Emoji o ícono para visualización
+    };
 
     // Auditoría
     coordinacion_completada?: boolean;

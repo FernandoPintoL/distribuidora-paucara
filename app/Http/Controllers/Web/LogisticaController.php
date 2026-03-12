@@ -224,21 +224,33 @@ class LogisticaController extends Controller
                     'estado'                          => $proforma->estado,
                     'canal_origen'                    => $proforma->canal_origen,
                     'usuario_creador_nombre'          => $proforma->usuarioCreador->name ?? 'Sistema',
-                    // ✅ NUEVO: Rol del usuario creador
-                    'usuario_creador_rol'             => $proforma->usuarioCreador && $proforma->usuarioCreador->roles->isNotEmpty()
-                        ? $proforma->usuarioCreador->roles->first()->name
-                        : 'Sin rol',
+                    // ✅ ACTUALIZADO: Devolver TODOS los roles (no solo el primero)
+                    'usuario_creador_roles'           => $proforma->usuarioCreador && $proforma->usuarioCreador->roles->isNotEmpty()
+                        ? $proforma->usuarioCreador->roles->pluck('name')->toArray()
+                        : [],
+                    // ✅ NUEVO: Booleano indicando si es preventista (case-insensitive)
+                    'usuario_creador_es_preventista'  => $proforma->usuarioCreador && $proforma->usuarioCreador->roles->isNotEmpty()
+                        ? $proforma->usuarioCreador->roles->pluck('name')->map(fn($rol) => strtolower($rol))->contains('preventista')
+                        : false,
                     'usuario_aprobador_nombre'        => $proforma->usuarioAprobador->name ?? 'N/A',
                     'fecha_vencimiento'               => $proforma->fecha_vencimiento,
                     // ✅ Nuevos campos de filtro
                     'tipo_entrega'                    => $proforma->tipo_entrega ?? 'N/A',
                     'politica_pago'                   => $proforma->politica_pago ?? 'N/A',
-                    'estado_logistica'                => $proforma->estadoLogistica->nombre ?? 'N/A',
+                    // ✅ ACTUALIZADO: Devolver objeto completo estado_logistica con icono, nombre, código, color
+                    'estado_logistica'                => $proforma->estadoLogistica ? [
+                        'id'     => $proforma->estadoLogistica->id,
+                        'codigo' => $proforma->estadoLogistica->codigo,
+                        'nombre' => $proforma->estadoLogistica->nombre,
+                        'color'  => $proforma->estadoLogistica->color,
+                        'icono'  => $proforma->estadoLogistica->icono,
+                    ] : null,
                     'estado_logistica_id'             => $proforma->estado_proforma_id,
                     'coordinacion_completada'         => (bool) $proforma->coordinacion_completada,
                     // Datos de solicitud
                     'fecha_entrega_solicitada'        => $proforma->fecha_entrega_solicitada,
                     'hora_entrega_solicitada'         => $proforma->hora_entrega_solicitada,
+                    'hora_entrega_solicitada_fin'     => $proforma->hora_entrega_solicitada_fin,
                     'direccion_entrega_solicitada_id' => $proforma->direccion_entrega_solicitada_id,
                     'direccionSolicitada'             => $proforma->direccionSolicitada ? [
                         'id'         => $proforma->direccionSolicitada->id,

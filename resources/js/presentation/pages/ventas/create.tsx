@@ -691,7 +691,7 @@ export default function VentaForm() {
 
         // ✅ NUEVO (2026-02-17): Obtener el precio específico del tipo_precio_recomendado ANTES de usarlo
         // En lugar de usar precio_venta genérico, buscar el precio específico del tipo_precio_id
-        let precioDelTipoPrecio = (producto as any).precios?.find(
+        const precioDelTipoPrecio = (producto as any).precios?.find(
             (p: any) => p.tipo_precio_id === tipoPrecioIdRecomendado
         )?.precio;
 

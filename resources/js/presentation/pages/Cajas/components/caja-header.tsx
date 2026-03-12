@@ -39,7 +39,7 @@ export function CajaHeader({ cajaAbiertaHoy, esVistaAdmin = false, usuarioDestin
     });
 
     // ✅ NUEVO: Detectar si caja es de un día anterior
-    let titulo = esVistaAdmin ? `👤 Caja de ${usuarioDestino?.name || 'Usuario'}` : '💰 Mi Caja';
+    const titulo = esVistaAdmin ? `👤 Caja de ${usuarioDestino?.name || 'Usuario'}` : '💰 Mi Caja';
     let subtítulo = esVistaAdmin ? usuarioDestino?.email || '' : 'Mi caja personal';
     let badge = null;
 
