@@ -4280,11 +4280,43 @@ class ApiProformaController extends Controller
                 }
             }
 
+            // ✅ GUARDAR estado anterior ANTES de actualizar
+            $estadoAnterior = $proforma->estado;
+
             // ✅ NUEVO: Actualizar estado si se envía estado_inicial
             if ($request->has('estado_inicial') && $request->input('estado_inicial') !== null) {
                 $nuevoEstado = $request->input('estado_inicial');
                 $estadoId    = Proforma::obtenerIdEstado($nuevoEstado, 'proforma');
                 if ($estadoId && $proforma->estado !== $nuevoEstado) {
+                    // ✅ VALIDACIÓN: Si cambia de BORRADOR → PENDIENTE, validar stock
+                    if ($proforma->estado === 'BORRADOR' && $nuevoEstado === 'PENDIENTE') {
+                        $almacenId = auth()->user()?->empresa?->almacen_id ?? 2;
+
+                        // Expandir combos para validación
+                        $stockService = new \App\Services\Stock\StockService();
+                        $detallesParaValidacion = $stockService->expandirCombos($detallesGuardados);
+
+                        // Validar stock disponible
+                        $validacion = $stockService->validarDisponible(
+                            $detallesParaValidacion,
+                            $almacenId
+                        );
+
+                        if (! $validacion->esValida()) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => '❌ No hay stock suficiente para cambiar a PENDIENTE',
+                                'errors' => $validacion->detalles,
+                                'errores' => $validacion->errores,
+                            ], 422);
+                        }
+
+                        Log::info("✅ Stock validado para cambio BORRADOR → PENDIENTE", [
+                            'proforma_id' => $proforma->id,
+                            'numero' => $proforma->numero,
+                        ]);
+                    }
+
                     $updateData['estado_proforma_id'] = $estadoId;
 
                     // Log del cambio de estado
@@ -4294,10 +4326,41 @@ class ApiProformaController extends Controller
 
             $proforma->update($updateData);
 
+            // ✅ RECARGAR relaciones después del update para que el accesor ->estado funcione correctamente
+            $proforma->load('estadoLogistica');
+
             // ✅ NUEVO: Ajustar reservaciones solo si la proforma está en PENDIENTE o estado con reservas
             // No ajustar si está en BORRADOR (sin reservas)
             if ($proforma->estado !== 'BORRADOR') {
-                $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);
+                // ✅ Si cambió de BORRADOR → PENDIENTE, CREAR reservas (no existen)
+                // Si ya estaba en PENDIENTE, AJUSTAR las existentes
+                if ($estadoAnterior === 'BORRADOR' && $proforma->estado === 'PENDIENTE') {
+                    // 🎯 CREAR nuevas reservas (no existían en BORRADOR)
+                    Log::info('🔄 Creando reservas por cambio BORRADOR → PENDIENTE', [
+                        'proforma_id' => $proforma->id,
+                        'numero' => $proforma->numero,
+                    ]);
+
+                    try {
+                        if (! $proforma->reservarStock()) {
+                            throw new \Exception('No se pudo reservar stock');
+                        }
+
+                        Log::info('✅ Reservas creadas exitosamente', [
+                            'proforma_id' => $proforma->id,
+                            'numero' => $proforma->numero,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('❌ Error al crear reservas', [
+                            'proforma_id' => $proforma->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
+                } else {
+                    // ✅ AJUSTAR reservas existentes (se modificaron los detalles)
+                    $this->ajustarReservacionesAlActualizarDetalles($proforma, $detallesGuardados);
+                }
             }
 
             // Recargar relaciones

@@ -163,21 +163,25 @@ class ProformaService
             }
         }
 
-        // 3. Validar stock ANTES de transacción
+        // 3. Validar stock ANTES de transacción (SOLO si NO es BORRADOR)
         // 🔧 Usar almacén del usuario autenticado (consistencia con convertirAVenta)
         $almacenId  = auth()->user()?->empresa?->almacen_id ?? 2;
 
-        // ✅ COMBO: Expandir combos a sus componentes ANTES de validar (OPCIÓN 2 - stock de componentes solo)
-        // $dto->detalles se preserva sin cambios para DetalleProforma
-        $detallesParaValidacion = $this->stockService->expandirCombos($dto->detalles);
+        // ✅ BORRADOR: No validar stock ya que es solo para verificar totales
+        // ✅ PENDIENTE: Validar stock para asegurar disponibilidad
+        if ($dto->estado_inicial !== 'BORRADOR') {
+            // ✅ COMBO: Expandir combos a sus componentes ANTES de validar (OPCIÓN 2 - stock de componentes solo)
+            // $dto->detalles se preserva sin cambios para DetalleProforma
+            $detallesParaValidacion = $this->stockService->expandirCombos($dto->detalles);
 
-        $validacion = $this->stockService->validarDisponible(
-            $detallesParaValidacion,
-            $almacenId
-        );
+            $validacion = $this->stockService->validarDisponible(
+                $detallesParaValidacion,
+                $almacenId
+            );
 
-        if (! $validacion->esValida()) {
-            throw StockInsuficientException::create($validacion->detalles);
+            if (! $validacion->esValida()) {
+                throw StockInsuficientException::create($validacion->detalles);
+            }
         }
 
         // 3. Crear dentro de transacción
