@@ -55,6 +55,8 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
     const [estadoLogisticaURL, setEstadoLogisticaURL] = useQueryParam('estado_logistica_id', '');
     const [fechaDesdeURL, setFechaDesdeURL] = useQueryParam('fecha_desde', '');
     const [fechaHastaURL, setFechaHastaURL] = useQueryParam('fecha_hasta', '');
+    const [tipoFechaURL, setTipoFechaURL] = useQueryParam('tipo_fecha', 'fecha_entrega_comprometida'); // ✅ NUEVO
+    const [turnoURL, setTurnoURL] = useQueryParam('turno', ''); // ✅ NUEVO
     const [mostrarTodasLasFechas, setMostrarTodasLasFechas] = useState(false); // ✅ NUEVO: Estado local para mostrar todas las fechas (default: solo hoy)
 
     // Estado de filtros
@@ -68,6 +70,8 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         estado_logistica_id: estadoLogisticaURL,
         fecha_desde: fechaDesdeURL,
         fecha_hasta: fechaHastaURL,
+        tipo_fecha: tipoFechaURL as 'created_at' | 'fecha_entrega_comprometida', // ✅ NUEVO
+        turno: turnoURL as 'manana' | 'tarde' | '', // ✅ NUEVO
     });
 
     // Estados para selección y modal
@@ -97,7 +101,9 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         else if (key === 'estado_logistica_id') setEstadoLogisticaURL(value);
         else if (key === 'fecha_desde') setFechaDesdeURL(value);
         else if (key === 'fecha_hasta') setFechaHastaURL(value);
-    }, [setEstadoURL, setBusquedaEntregaURL, setBusquedaVentasURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
+        else if (key === 'tipo_fecha') setTipoFechaURL(value); // ✅ NUEVO
+        else if (key === 'turno') setTurnoURL(value); // ✅ NUEVO
+    }, [setEstadoURL, setBusquedaEntregaURL, setBusquedaVentasURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL, setTipoFechaURL, setTurnoURL]);
 
     // Handler para APLICAR filtros (manual - ENTER o botón Buscar)
     // ✅ Acepta los valores de filtros como parámetros para evitar issues de timing con state asíncrono
@@ -112,6 +118,8 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         const estadoLogisticaFinal = filtrosDirectos?.estado_logistica_id !== undefined ? filtrosDirectos.estado_logistica_id : estadoLogisticaURL;
         const fechaDesdeFinal = filtrosDirectos?.fecha_desde !== undefined ? filtrosDirectos.fecha_desde : fechaDesdeURL;
         const fechaHastaFinal = filtrosDirectos?.fecha_hasta !== undefined ? filtrosDirectos.fecha_hasta : fechaHastaURL;
+        const tipoFechaFinal = filtrosDirectos?.tipo_fecha !== undefined ? filtrosDirectos.tipo_fecha : tipoFechaURL; // ✅ NUEVO
+        const turnoFinal = filtrosDirectos?.turno !== undefined ? filtrosDirectos.turno : turnoURL; // ✅ NUEVO
 
         // Construir URL con parámetros
         const params = new URLSearchParams();
@@ -124,11 +132,13 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         if (estadoLogisticaFinal) params.append('estado_logistica_id', estadoLogisticaFinal);
         if (fechaDesdeFinal) params.append('fecha_desde', fechaDesdeFinal);
         if (fechaHastaFinal) params.append('fecha_hasta', fechaHastaFinal);
+        if (tipoFechaFinal && tipoFechaFinal !== 'fecha_entrega_comprometida') params.append('tipo_fecha', tipoFechaFinal); // ✅ NUEVO
+        if (turnoFinal) params.append('turno', turnoFinal); // ✅ NUEVO
 
         // Navegar con nuevos filtros
         const url = `/logistica/entregas${params.toString() ? '?' + params.toString() : ''}`;
         window.location.href = url; // Recarga simple
-    }, [estadoURL, busquedaEntregaURL, busquedaVentasURL, choferURL, vehiculoURL, localidadURL, estadoLogisticaURL, fechaDesdeURL, fechaHastaURL]);
+    }, [estadoURL, busquedaEntregaURL, busquedaVentasURL, choferURL, vehiculoURL, localidadURL, estadoLogisticaURL, fechaDesdeURL, fechaHastaURL, tipoFechaURL, turnoURL]);
 
     // Handler para resetear todos los filtros
     const handleResetFiltros = useCallback(() => {
@@ -142,6 +152,8 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
             estado_logistica_id: '',
             fecha_desde: '',
             fecha_hasta: '',
+            tipo_fecha: 'fecha_entrega_comprometida', // ✅ NUEVO
+            turno: '', // ✅ NUEVO
         });
         setEstadoURL('TODOS');
         setBusquedaEntregaURL('');
@@ -152,11 +164,13 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setEstadoLogisticaURL('');
         setFechaDesdeURL('');
         setFechaHastaURL('');
+        setTipoFechaURL('fecha_entrega_comprometida'); // ✅ NUEVO
+        setTurnoURL(''); // ✅ NUEVO
         setMostrarTodasLasFechas(false);
 
         // Recargar página sin filtros
         window.location.href = '/logistica/entregas';
-    }, [setEstadoURL, setBusquedaEntregaURL, setBusquedaVentasURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL]);
+    }, [setEstadoURL, setBusquedaEntregaURL, setBusquedaVentasURL, setChoferURL, setVehiculoURL, setLocalidadURL, setEstadoLogisticaURL, setFechaDesdeURL, setFechaHastaURL, setTipoFechaURL, setTurnoURL]);
 
     // Handler para abrir modal de cancelación
     const handleAbrirCancelarModal = useCallback((entrega: Entrega) => {

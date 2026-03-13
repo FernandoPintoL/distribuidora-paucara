@@ -389,6 +389,15 @@ export interface VentaConDetalles {
 
     // Información adicional
     cantidad_items?: number;                // Total de items en la venta
+
+    // ✅ NUEVO: Estado logístico
+    estado_logistico?: {
+        id?: Id;
+        codigo?: string;
+        nombre?: string;
+        icono?: string;
+        color?: string;
+    };
 }
 
 export interface VehiculoCompleto extends VehiculoEntrega {

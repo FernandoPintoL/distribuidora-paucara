@@ -19,6 +19,8 @@ export interface FiltrosEntregas {
     estado_logistica_id?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
+    tipo_fecha?: 'created_at' | 'fecha_entrega_comprometida'; // ✅ NUEVO
+    turno?: 'manana' | 'tarde' | ''; // ✅ NUEVO
 }
 
 interface Props {
@@ -84,6 +86,8 @@ export function EntregasFilters({
             },
             filtros.fecha_desde && { label: 'Desde', value: filtros.fecha_desde },
             filtros.fecha_hasta && { label: 'Hasta', value: filtros.fecha_hasta },
+            filtros.tipo_fecha && filtros.tipo_fecha !== 'fecha_entrega_comprometida' && { label: 'Tipo Fecha', value: filtros.tipo_fecha === 'created_at' ? 'Creación' : 'Comprometida' }, // ✅ NUEVO
+            filtros.turno && { label: 'Turno', value: filtros.turno === 'manana' ? 'Mañana' : 'Tarde' }, // ✅ NUEVO
         ].filter(Boolean);
     }, [filtros, choferes, vehiculos, localidades, estadosLogisticos]);
 
@@ -322,6 +326,83 @@ export function EntregasFilters({
                         />
                     </div>
 
+                    {/* ✅ NUEVO: Selector de tipo de fecha */}
+                    <div className="p-4 bg-muted/50 rounded-lg border animate-in fade-in duration-200">
+                        <label className="text-sm font-medium mb-3 block">Tipo de Fecha</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="tipo_fecha"
+                                    value="fecha_entrega_comprometida"
+                                    checked={filtros.tipo_fecha !== 'created_at'}
+                                    onChange={() => onFilterChange('tipo_fecha', 'fecha_entrega_comprometida')}
+                                    disabled={isLoading}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm">📅 Fecha Comprometida</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="tipo_fecha"
+                                    value="created_at"
+                                    checked={filtros.tipo_fecha === 'created_at'}
+                                    onChange={() => onFilterChange('tipo_fecha', 'created_at')}
+                                    disabled={isLoading}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm">📝 Creación</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* ✅ NUEVO: Botones rápidos de fecha (Ayer, Hoy, Mañana) */}
+                    <div className="p-4 bg-muted/50 rounded-lg border animate-in fade-in duration-200">
+                        <label className="text-sm font-medium mb-3 block">Fechas Rápidas</label>
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant={filtros.fecha_desde === new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0] ? 'default' : 'outline'}
+                                onClick={() => {
+                                    const ayer = new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0];
+                                    onFilterChange('fecha_desde', ayer);
+                                    onFilterChange('fecha_hasta', ayer);
+                                    onApply?.({ ...filtros, fecha_desde: ayer, fecha_hasta: ayer });
+                                }}
+                                disabled={isLoading}
+                            >
+                                ← Ayer
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={filtros.fecha_desde === new Date().toISOString().split('T')[0] ? 'default' : 'outline'}
+                                onClick={() => {
+                                    const hoy = new Date().toISOString().split('T')[0];
+                                    onFilterChange('fecha_desde', hoy);
+                                    onFilterChange('fecha_hasta', hoy);
+                                    onApply?.({ ...filtros, fecha_desde: hoy, fecha_hasta: hoy });
+                                }}
+                                disabled={isLoading}
+                            >
+                                Hoy
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={filtros.fecha_desde === new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0] ? 'default' : 'outline'}
+                                onClick={() => {
+                                    const manana = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
+                                    onFilterChange('fecha_desde', manana);
+                                    onFilterChange('fecha_hasta', manana);
+                                    onApply?.({ ...filtros, fecha_desde: manana, fecha_hasta: manana });
+                                }}
+                                disabled={isLoading}
+                            >
+                                Mañana →
+                            </Button>
+                        </div>
+                    </div>
+
                     {/* Filtros de fechas */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-muted/50 rounded-lg border animate-in fade-in duration-200">
                         {/* Filtro por Fecha Desde */}
@@ -359,6 +440,39 @@ export function EntregasFilters({
                         </div>
                     </div>
 
+                    {/* ✅ NUEVO: Selector de turno (Mañana / Tarde) */}
+                    <div className="p-4 bg-muted/50 rounded-lg border animate-in fade-in duration-200">
+                        <label className="text-sm font-medium mb-3 block">Turno</label>
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant={filtros.turno === 'manana' ? 'default' : 'outline'}
+                                onClick={() => {
+                                    const nuevoTurno = filtros.turno === 'manana' ? '' : 'manana';
+                                    onFilterChange('turno', nuevoTurno);
+                                    onApply?.({ ...filtros, turno: nuevoTurno });
+                                }}
+                                disabled={isLoading}
+                                className="flex-1"
+                            >
+                                ☀ Mañana (08:00-12:00)
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={filtros.turno === 'tarde' ? 'default' : 'outline'}
+                                onClick={() => {
+                                    const nuevoTurno = filtros.turno === 'tarde' ? '' : 'tarde';
+                                    onFilterChange('turno', nuevoTurno);
+                                    onApply?.({ ...filtros, turno: nuevoTurno });
+                                }}
+                                disabled={isLoading}
+                                className="flex-1"
+                            >
+                                🌇 Tarde (14:00-18:00)
+                            </Button>
+                        </div>
+                    </div>
+
                     {/* Botón Aplicar Filtros */}
                     {onApply && (
                         <Button
@@ -393,6 +507,8 @@ export function EntregasFilters({
                                     'Estado Logístico': 'estado_logistica_id',
                                     'Desde': 'fecha_desde',
                                     'Hasta': 'fecha_hasta',
+                                    'Tipo Fecha': 'tipo_fecha', // ✅ NUEVO
+                                    'Turno': 'turno', // ✅ NUEVO
                                 };
                                 handleRemoveFiltro(keyMap[filtro.label]);
                             }}

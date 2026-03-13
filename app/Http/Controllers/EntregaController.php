@@ -83,6 +83,8 @@ class EntregaController extends Controller
             'estado'              => $request->input('estado'),
             'fecha_desde'         => $request->input('fecha_desde'),
             'fecha_hasta'         => $request->input('fecha_hasta'),
+            'tipo_fecha'          => $request->input('tipo_fecha', 'fecha_entrega_comprometida'), // ✅ NUEVO: created_at | fecha_entrega_comprometida
+            'turno'               => $request->input('turno', ''), // ✅ NUEVO: manana | tarde
             'chofer_id'           => $request->input('chofer_id'),
             'vehiculo_id'         => $request->input('vehiculo_id'),
             'localidad_id'        => $request->input('localidad_id'),
@@ -96,6 +98,8 @@ class EntregaController extends Controller
         \Log::info('📋 [EntregaController::index] Parámetros recibidos:', [
             'fecha_desde' => $filtros['fecha_desde'],
             'fecha_hasta' => $filtros['fecha_hasta'],
+            'tipo_fecha' => $filtros['tipo_fecha'], // ✅ NUEVO
+            'turno' => $filtros['turno'], // ✅ NUEVO
             'estado' => $filtros['estado'],
             'todos_filtros' => $filtros,
             'fecha_hoy' => today()->toDateString(),
@@ -105,18 +109,54 @@ class EntregaController extends Controller
             ->with(['ventas.cliente', 'vehiculo', 'chofer', 'entregador', 'localidad'])
             // ✅ CORRECCIÓN: Si hay rango de fechas O búsqueda específica, no filtrar por "hoy"
             ->when(
-                !$filtros['fecha_desde'] && !$filtros['fecha_hasta'] && !$filtros['search_entrega'] && !$filtros['search_ventas'],
+                !$filtros['fecha_desde'] && !$filtros['fecha_hasta'] && !$filtros['search_entrega'] && !$filtros['search_ventas'] && !$filtros['turno'],
                 fn($q) => $q->whereDate('created_at', today()),  // Default: solo entregas creadas HOY (solo si NO hay búsqueda)
-                fn($q) => $q  // Si hay fechas o búsqueda, continuar sin filtro de created_at
+                fn($q) => $q  // Si hay fechas, turno o búsqueda, continuar sin filtro de created_at
             )
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
-            ->when($filtros['fecha_desde'], function ($q, $fecha) {
-                \Log::info('📅 Filtrando por fecha_desde: ' . $fecha . ' (>= este valor)');
-                return $q->whereDate('fecha_programada', '>=', $fecha);
+            // ✅ NUEVO: Filtrado por tipo_fecha (created_at o fecha_entrega_comprometida)
+            ->when($filtros['fecha_desde'] || $filtros['fecha_hasta'], function ($q) use ($filtros) {
+                $tipoFecha = $filtros['tipo_fecha'] ?? 'fecha_entrega_comprometida';
+                $fechaDesde = $filtros['fecha_desde'];
+                $fechaHasta = $filtros['fecha_hasta'];
+
+                if ($tipoFecha === 'created_at') {
+                    // Filtrar por created_at (fecha de creación de la entrega)
+                    \Log::info('📅 Filtrando por created_at:');
+                    if ($fechaDesde) {
+                        \Log::info('  - desde: ' . $fechaDesde);
+                        $q->whereDate('created_at', '>=', $fechaDesde);
+                    }
+                    if ($fechaHasta) {
+                        \Log::info('  - hasta: ' . $fechaHasta);
+                        $q->whereDate('created_at', '<=', $fechaHasta);
+                    }
+                } else {
+                    // Filtrar por fecha_entrega_comprometida (en ventas)
+                    \Log::info('📅 Filtrando por fecha_entrega_comprometida en ventas:');
+                    $q->whereHas('ventas', function ($ventaQuery) use ($fechaDesde, $fechaHasta) {
+                        if ($fechaDesde) {
+                            \Log::info('  - desde: ' . $fechaDesde);
+                            $ventaQuery->whereDate('fecha_entrega_comprometida', '>=', $fechaDesde);
+                        }
+                        if ($fechaHasta) {
+                            \Log::info('  - hasta: ' . $fechaHasta);
+                            $ventaQuery->whereDate('fecha_entrega_comprometida', '<=', $fechaHasta);
+                        }
+                    });
+                }
+                return $q;
             })
-            ->when($filtros['fecha_hasta'], function ($q, $fecha) {
-                \Log::info('📅 Filtrando por fecha_hasta: ' . $fecha . ' (<= este valor)');
-                return $q->whereDate('fecha_programada', '<=', $fecha);
+            // ✅ NUEVO: Filtrado por turno (manana: 08:00-12:00 | tarde: 14:00-18:00)
+            ->when($filtros['turno'], function ($q, $turno) {
+                \Log::info('⏰ Filtrando por turno: ' . $turno);
+                $horaInicio = $turno === 'manana' ? '08:00:00' : '14:00:00';
+                $horaFin    = $turno === 'manana' ? '12:00:00' : '18:00:00';
+
+                $q->whereHas('ventas', fn($ventaQuery) =>
+                    $ventaQuery->whereTime('hora_entrega_comprometida', '>=', $horaInicio)
+                              ->whereTime('hora_entrega_comprometida', '<=', $horaFin)
+                );
             })
             ->when($filtros['chofer_id'], fn($q, $choferId) => $q->where('chofer_id', $choferId))
             ->when($filtros['vehiculo_id'], fn($q, $vehiculoId) => $q->where('vehiculo_id', $vehiculoId))
@@ -285,6 +325,7 @@ class EntregaController extends Controller
                 'detalles.producto',
                 'estadoDocumento',
                 'direccionCliente', // Dirección específica de la venta (prioridad)
+                'estadoLogistica', // ✅ CORREGIDO: nombre correcto de la relación // ✅ NUEVO: Cargar estado logístico
             ])
             ->whereNull('entrega_id')       // ✅ Phase 3: No tiene entrega principal asignada
             ->where('requiere_envio', true) // ✅ Solo ventas que requieren envío
@@ -334,6 +375,7 @@ class EntregaController extends Controller
                 'detalles.producto',
                 'estadoDocumento',
                 'direccionCliente',
+                'estadoLogistica', // ✅ CORREGIDO: nombre correcto de la relación // ✅ NUEVO: Cargar estado logístico
             ])->find($ventaPreseleccionada);
 
             if ($ventaPreseleccionadaObj) {
@@ -426,6 +468,13 @@ class EntregaController extends Controller
                     'ventana_entrega_fin'        => $venta->ventana_entrega_fin?->format('H:i'),
                     // Datos para batch UI
                     'cantidad_items'             => $venta->detalles?->count() ?? 0,
+                    'estado_logistico'           => [ // ✅ NUEVO: Estado logístico
+                        'id'     => $venta->estadoLogistica?->id,
+                        'codigo' => $venta->estadoLogistica?->codigo,
+                        'nombre' => $venta->estadoLogistica?->nombre ?? 'Sin estado',
+                        'icono'  => $venta->estadoLogistica?->icono,
+                        'color'  => $venta->estadoLogistica?->color,
+                    ],
                     'detalles'                   => $venta->detalles?->toArray() ?? [],
                 ];
             });
@@ -735,12 +784,15 @@ class EntregaController extends Controller
     /**
      * Buscar ventas por criterios (para búsqueda en BD)
      *
-     * GET /api/entregas/ventas/search?q=...&fecha_desde=...&fecha_hasta=...
+     * GET /api/entregas/ventas/search?q=...&fecha_desde=...&fecha_hasta=...&tipo_fecha=...&turno=...&hora=...
      *
      * Parámetros:
      * - q: término de búsqueda (venta, cliente, localidad)
      * - fecha_desde: filtrar desde fecha
      * - fecha_hasta: filtrar hasta fecha
+     * - tipo_fecha: created_at | fecha_entrega_comprometida (default: fecha_entrega_comprometida)
+     * - turno: manana | tarde (filtra por rango de horas)
+     * - hora: HH:00 (filtra por hora exacta, ej: "09:00", "14:00")
      * - page: número de página (default: 1)
      *
      * ✅ NUEVO: Búsqueda en la base de datos, no client-side
@@ -750,6 +802,9 @@ class EntregaController extends Controller
         $searchTerm = $request->input('q', '');
         $fechaDesde = $request->input('fecha_desde');
         $fechaHasta = $request->input('fecha_hasta');
+        $tipoFecha = $request->input('tipo_fecha', 'fecha_entrega_comprometida'); // ✅ NUEVO
+        $turno = $request->input('turno', ''); // ✅ NUEVO
+        $hora = $request->input('hora', ''); // ✅ NUEVO: Hora específica (ej: "09:00")
         $page = $request->input('page', 1);
         $perPage = 25;
 
@@ -758,8 +813,13 @@ class EntregaController extends Controller
             'q' => $searchTerm,
             'fecha_desde' => $fechaDesde,
             'fecha_hasta' => $fechaHasta,
+            'tipo_fecha' => $tipoFecha, // ✅ NUEVO
+            'turno' => $turno, // ✅ NUEVO
+            'hora' => $hora, // ✅ NUEVO
             'page' => $page,
         ]);
+
+        \Log::info('✅ [searchVentas] Filtro de estado logístico activo: Pendiente Retiro (7) o Pendiente Envío (8)');
 
         $query = \App\Models\Venta::query()
             ->with([
@@ -768,12 +828,15 @@ class EntregaController extends Controller
                 'detalles.producto',
                 'estadoDocumento',
                 'direccionCliente',
+                'estadoLogistica', // ✅ CORREGIDO: nombre correcto de la relación // ✅ NUEVO: Cargar estado logístico
             ])
             ->whereNull('entrega_id')
             ->where('requiere_envio', true)
             ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS
             ->whereNotNull('cliente_id')
-            ->whereHas('detalles');
+            ->whereHas('detalles')
+            // ✅ NUEVO: Filtrar solo ventas con estado logístico "Pendiente de Retiro" (7) o "Pendiente de Envío" (8)
+            ->whereIn('estado_logistico_id', [7, 8]);
 
         // Aplicar búsqueda si existe término
         if ($searchTerm) {
@@ -802,12 +865,48 @@ class EntregaController extends Controller
             });
         }
 
-        // Aplicar filtros de fecha
-        if ($fechaDesde) {
-            $query->whereDate('fecha', '>=', $fechaDesde);
+        // ✅ NUEVO: Aplicar filtros de fecha según tipo_fecha
+        if ($fechaDesde || $fechaHasta) {
+            if ($tipoFecha === 'created_at') {
+                // Filtrar por created_at (fecha de creación de la venta)
+                \Log::info('📅 [searchVentas] Filtrando por created_at:');
+                if ($fechaDesde) {
+                    \Log::info('  - desde: ' . $fechaDesde);
+                    $query->whereDate('created_at', '>=', $fechaDesde);
+                }
+                if ($fechaHasta) {
+                    \Log::info('  - hasta: ' . $fechaHasta);
+                    $query->whereDate('created_at', '<=', $fechaHasta);
+                }
+            } else {
+                // Filtrar por fecha_entrega_comprometida (default)
+                \Log::info('📅 [searchVentas] Filtrando por fecha_entrega_comprometida:');
+                if ($fechaDesde) {
+                    \Log::info('  - desde: ' . $fechaDesde);
+                    $query->whereDate('fecha_entrega_comprometida', '>=', $fechaDesde);
+                }
+                if ($fechaHasta) {
+                    \Log::info('  - hasta: ' . $fechaHasta);
+                    $query->whereDate('fecha_entrega_comprometida', '<=', $fechaHasta);
+                }
+            }
         }
-        if ($fechaHasta) {
-            $query->whereDate('fecha', '<=', $fechaHasta);
+
+        // ✅ NUEVO: Filtro por hora específica O turno (basado en hora_entrega_comprometida)
+        if ($hora) {
+            // Si se especifica hora exacta, filtrar por esa hora
+            \Log::info('⏰ [searchVentas] Filtrando por hora exacta: ' . $hora);
+            $horaFormato = $hora . ':00'; // Convertir "10:00" a "10:00:00"
+            // ✅ FIX: Usar CAST para PostgreSQL (TIME field comparison)
+            $query->whereRaw('CAST(hora_entrega_comprometida AS text) LIKE ?', [$hora . '%']);
+        } elseif ($turno) {
+            // Si no hay hora exacta, filtrar por turno (rango de horas)
+            \Log::info('⏰ [searchVentas] Filtrando por turno: ' . $turno);
+            $horaInicio = $turno === 'manana' ? '08:00:00' : '14:00:00';
+            $horaFin    = $turno === 'manana' ? '12:00:00' : '18:00:00';
+
+            $query->whereRaw('hora_entrega_comprometida >= ?::time', [$horaInicio])
+                  ->whereRaw('hora_entrega_comprometida <= ?::time', [$horaFin]);
         }
 
         // Paginar resultados
@@ -884,6 +983,14 @@ class EntregaController extends Controller
                 'ventana_entrega_ini'            => $venta->ventana_entrega_ini?->format('H:i'),
                 'ventana_entrega_fin'            => $venta->ventana_entrega_fin?->format('H:i'),
                 'cantidad_items'                 => $venta->detalles?->count() ?? 0,
+                'created_at'                     => $venta->created_at?->format('Y-m-d H:i'), // ✅ NUEVO: Fecha de creación
+                'estado_logistico'               => [ // ✅ NUEVO: Estado logístico
+                    'id'     => $venta->estadoLogistica?->id,
+                    'codigo' => $venta->estadoLogistica?->codigo,
+                    'nombre' => $venta->estadoLogistica?->nombre ?? 'Sin estado',
+                    'icono'  => $venta->estadoLogistica?->icono,
+                    'color'  => $venta->estadoLogistica?->color,
+                ],
                 'detalles'                       => $venta->detalles?->toArray() ?? [],
             ];
         });

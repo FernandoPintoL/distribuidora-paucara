@@ -7,6 +7,14 @@ import { CheckCircle2, Package, Search, MapPin, Calendar, ChevronDown, ChevronUp
 import type { VentaConDetalles } from '@/domain/entities/entregas';
 import type { Id } from '@/domain/entities/shared';
 
+// ✅ NUEVO: Función helper para parsear fechas sin problemas de timezone
+const parsearFecha = (fechaStr: string) => {
+    if (!fechaStr) return null;
+    // Parsear formato YYYY-MM-DD de forma segura
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    return new Date(year, month - 1, day); // Date constructor con componentes locales
+};
+
 interface BatchVentaSelectorProps {
     ventas: VentaConDetalles[];
     selectedIds: Id[];
@@ -32,6 +40,9 @@ export default function BatchVentaSelector({
     const [searchTerm, setSearchTerm] = useState('');
     const [fechaDesde, setFechaDesde] = useState('');
     const [fechaHasta, setFechaHasta] = useState('');
+    const [tipoFecha, setTipoFecha] = useState<'created_at' | 'fecha_entrega_comprometida'>('fecha_entrega_comprometida'); // ✅ NUEVO
+    const [turno, setTurno] = useState<'manana' | 'tarde' | ''>(''); // ✅ NUEVO
+    const [hora, setHora] = useState<string>(''); // ✅ NUEVO: Hora específica (ej: "09:00")
     const [expandedLocalidades, setExpandedLocalidades] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
     const [isSearching, setIsSearching] = useState(false);
@@ -44,8 +55,8 @@ export default function BatchVentaSelector({
 
     // Función para aplicar búsqueda en BD
     const handleSearch = useCallback(async () => {
-        if (!searchInputValue && !fechaDesde && !fechaHasta) {
-            return;
+        if (!searchInputValue && !fechaDesde && !fechaHasta && !turno && !hora) {
+            return; // ✅ NUEVO: Incluido hora en validación
         }
 
         setIsSearching(true);
@@ -56,12 +67,18 @@ export default function BatchVentaSelector({
             if (searchInputValue) params.append('q', searchInputValue);
             if (fechaDesde) params.append('fecha_desde', fechaDesde);
             if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+            if (tipoFecha && tipoFecha !== 'fecha_entrega_comprometida') params.append('tipo_fecha', tipoFecha); // ✅ NUEVO
+            if (hora) params.append('hora', hora); // ✅ NUEVO: Hora específica
+            else if (turno) params.append('turno', turno); // ✅ NUEVO: Turno (si no hay hora específica)
             params.append('page', '1');
 
             console.log('🔍 [BatchVentaSelector] Iniciando búsqueda:', {
                 q: searchInputValue,
                 fecha_desde: fechaDesde,
                 fecha_hasta: fechaHasta,
+                tipo_fecha: tipoFecha, // ✅ NUEVO
+                turno: turno, // ✅ NUEVO
+                hora: hora, // ✅ NUEVO
             });
 
             const response = await fetch(`/logistica/entregas/ventas/search?${params.toString()}`);
@@ -100,17 +117,48 @@ export default function BatchVentaSelector({
         } finally {
             setIsSearching(false);
         }
-    }, [searchInputValue, fechaDesde, fechaHasta]);
+    }, [searchInputValue, fechaDesde, fechaHasta, tipoFecha, turno, hora]); // ✅ NUEVO: Agregados tipoFecha, turno y hora
 
-    // Función para limpiar búsqueda
-    const handleClearSearch = useCallback(() => {
+    // Función para limpiar filtros y cargar ventas de hoy
+    const handleClearSearch = useCallback(async () => {
+        // Reset de todos los filtros
         setSearchInputValue('');
         setSearchTerm('');
-        setSearchResults([]);
-        setHasSearched(false);
+        setTurno('');
+        setHora('');
+        setTipoFecha('fecha_entrega_comprometida');
         setSearchError(null);
         setCurrentPage(1);
-    }, []);
+
+        // ✅ NUEVO: Establecer fecha_desde y fecha_hasta a HOY
+        const hoy = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        setFechaDesde(hoy);
+        setFechaHasta(hoy);
+
+        // ✅ Buscar ventas de hoy
+        setIsSearching(true);
+        try {
+            const params = new URLSearchParams();
+            params.append('fecha_desde', hoy);
+            params.append('fecha_hasta', hoy);
+            params.append('tipo_fecha', 'fecha_entrega_comprometida');
+            params.append('page', '1');
+
+            const response = await fetch(`/logistica/entregas/ventas/search?${params.toString()}`);
+            if (response.ok) {
+                const data = await response.json();
+                setSearchResults(data.data);
+                setTotalPages(data.pagination.last_page);
+                setHasSearched(true);
+                console.log('🧹 [BatchVentaSelector] Filtros limpiados, cargadas ventas de hoy');
+                console.log('✅ [BatchVentaSelector] Selección mantenida:', selectedIds);
+            }
+        } catch (error) {
+            console.error('Error al cargar ventas de hoy:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    }, [selectedIds]);
 
     // Manejar Enter en el input
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -121,9 +169,9 @@ export default function BatchVentaSelector({
 
     // ✅ NUEVO: Combinar ventas iniciales + resultados de búsqueda (para que estén disponibles en el hook)
     const filteredVentas = useMemo(() => {
-        // Si hay búsqueda activa, mostrar resultados de búsqueda EN BD
-        if (hasSearched && searchResults.length > 0) {
-            return searchResults;
+        // Si hay búsqueda activa, mostrar resultados de búsqueda (incluso si son 0)
+        if (hasSearched) {
+            return searchResults;  // ✅ FIX: Mostrar resultados aunque estén vacíos
         }
         // Sino, usar datos iniciales cargados
         return ventas;
@@ -294,9 +342,45 @@ export default function BatchVentaSelector({
                             </button>
                         </div>
                     )}
+
+                    {/* ✅ NUEVO: Chips de Filtros Activos */}
+                    {(searchInputValue || fechaDesde || fechaHasta || turno || hora) && (
+                        <div className="flex flex-wrap gap-2">
+                            {searchInputValue && (
+                                <Badge variant="secondary" className="text-xs">
+                                    🔎 Búsqueda: {searchInputValue}
+                                </Badge>
+                            )}
+                            {(fechaDesde || fechaHasta) && (
+                                <Badge variant="secondary" className="text-xs">
+                                    {tipoFecha === 'created_at' ? '📝 Tipo Fecha: Creación' : '📅 Tipo Fecha: Entrega Comprometida'}
+                                </Badge>
+                            )}
+                            {fechaDesde && (
+                                <Badge variant="secondary" className="text-xs">
+                                    📅 Desde: {fechaDesde}
+                                </Badge>
+                            )}
+                            {fechaHasta && (
+                                <Badge variant="secondary" className="text-xs">
+                                    📅 Hasta: {fechaHasta}
+                                </Badge>
+                            )}
+                            {turno && (
+                                <Badge variant="secondary" className="text-xs">
+                                    {turno === 'manana' ? '☀ Mañana (08:00-12:00)' : '🌇 Tarde (14:00-18:00)'}
+                                </Badge>
+                            )}
+                            {hora && (
+                                <Badge variant="secondary" className="text-xs">
+                                    🕐 Hora: {hora}
+                                </Badge>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Filtros de Fecha - Collapsible */}
+                {/* ✅ NUEVO: Filtros de Fecha Avanzados - Collapsible */}
                 <button
                     onClick={() => setIsDateFilterExpanded(!isDateFilterExpanded)}
                     className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
@@ -308,9 +392,9 @@ export default function BatchVentaSelector({
                     <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            Filtrar por Fecha de Venta
+                            Filtros de Fecha y Turno
                         </span>
-                        {(fechaDesde || fechaHasta) && (
+                        {(fechaDesde || fechaHasta || turno) && (
                             <Badge variant="secondary" className="text-xs">
                                 ✓ Activo
                             </Badge>
@@ -323,9 +407,83 @@ export default function BatchVentaSelector({
                     )}
                 </button>
 
-                {/* Contenido del filtro de fechas - Solo visible si está expandido */}
+                {/* ✅ NUEVO: Contenido de filtros avanzados */}
                 {isDateFilterExpanded && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
+                        {/* Selector de tipo de fecha */}
+                        <div>
+                            <label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block font-medium">
+                                Tipo de Fecha
+                            </label>
+                            <div className="flex gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input
+                                        type="radio"
+                                        name="tipo_fecha"
+                                        value="fecha_entrega_comprometida"
+                                        checked={tipoFecha !== 'created_at'}
+                                        onChange={() => setTipoFecha('fecha_entrega_comprometida')}
+                                        className="w-4 h-4"
+                                    />
+                                    <span className="text-slate-700 dark:text-slate-300">📅 Fecha de Entrega Comprometida</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input
+                                        type="radio"
+                                        name="tipo_fecha"
+                                        value="created_at"
+                                        checked={tipoFecha === 'created_at'}
+                                        onChange={() => setTipoFecha('created_at')}
+                                        className="w-4 h-4"
+                                    />
+                                    <span className="text-slate-700 dark:text-slate-300">📝 Fecha de Creación</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Botones rápidos de fecha */}
+                        <div>
+                            <label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block font-medium">
+                                Fechas Rápidas
+                            </label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        const ayer = new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0];
+                                        setFechaDesde(ayer);
+                                        setFechaHasta(ayer);
+                                        handleSearch();
+                                    }}
+                                    className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                                >
+                                    ← Ayer
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const hoy = new Date().toISOString().split('T')[0];
+                                        setFechaDesde(hoy);
+                                        setFechaHasta(hoy);
+                                        handleSearch();
+                                    }}
+                                    className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                                >
+                                    Hoy
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const manana = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
+                                        setFechaDesde(manana);
+                                        setFechaHasta(manana);
+                                        handleSearch();
+                                    }}
+                                    className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                                >
+                                    Mañana →
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Inputs de fecha manual */}
                         <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">
@@ -350,19 +508,112 @@ export default function BatchVentaSelector({
                                 />
                             </div>
                         </div>
-                        {(fechaDesde || fechaHasta) && (
+
+                        {/* ✅ NUEVO: Selector de turno con horas individuales */}
+                        <div className="space-y-3">
+                            {/* Turno Mañana */}
+                            <div>
+                                <label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block font-medium">
+                                    ☀ Mañana (08:00-12:00)
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {[8, 9, 10, 11].map((h) => {
+                                        const horaStr = String(h).padStart(2, '0') + ':00';
+                                        const isSelected = hora === horaStr;
+                                        return (
+                                            <button
+                                                key={horaStr}
+                                                onClick={() => {
+                                                    const nuevaHora = isSelected ? '' : horaStr;
+                                                    setHora(nuevaHora);
+                                                    setTurno('');
+                                                    if (nuevaHora || fechaDesde || fechaHasta || searchInputValue) {
+                                                        // Trigger search with new hora
+                                                        setTimeout(() => handleSearch(), 0);
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 text-xs rounded font-medium transition-colors ${
+                                                    isSelected
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                                }`}
+                                            >
+                                                {horaStr}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Turno Tarde */}
+                            <div>
+                                <label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block font-medium">
+                                    🌇 Tarde (14:00-18:00)
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {[14, 15, 16, 17].map((h) => {
+                                        const horaStr = String(h).padStart(2, '0') + ':00';
+                                        const isSelected = hora === horaStr;
+                                        return (
+                                            <button
+                                                key={horaStr}
+                                                onClick={() => {
+                                                    const nuevaHora = isSelected ? '' : horaStr;
+                                                    setHora(nuevaHora);
+                                                    setTurno('');
+                                                    if (nuevaHora || fechaDesde || fechaHasta || searchInputValue) {
+                                                        // Trigger search with new hora
+                                                        setTimeout(() => handleSearch(), 0);
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 text-xs rounded font-medium transition-colors ${
+                                                    isSelected
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                                }`}
+                                            >
+                                                {horaStr}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Limpiar filtros */}
+                        {(fechaDesde || fechaHasta || turno || hora) && (
                             <button
-                                onClick={() => {
-                                    setFechaDesde('');
-                                    setFechaHasta('');
-                                }}
+                                onClick={handleClearSearch}  // ✅ FIX: Llamar a handleClearSearch en lugar de setStates inline
                                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                             >
-                                ✕ Limpiar filtros de fechas
+                                ✕ Limpiar todos los filtros
                             </button>
                         )}
                     </div>
                 )}
+
+                {/* ✅ NUEVO: Botón Buscar General (aplica todos los filtros) */}
+                <button
+                    onClick={handleSearch}
+                    disabled={isSearching || (!searchInputValue && !fechaDesde && !fechaHasta && !turno && !hora)}
+                    className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                        isSearching || (!searchInputValue && !fechaDesde && !fechaHasta && !turno && !hora)
+                            ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white'
+                    }`}
+                >
+                    {isSearching ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Buscando...
+                        </>
+                    ) : (
+                        <>
+                            <Search className="h-4 w-4" />
+                            Buscar Ventas
+                        </>
+                    )}
+                </button>
 
                 {/* Botones de acción */}
                 <div className="flex gap-2">
@@ -376,7 +627,7 @@ export default function BatchVentaSelector({
                         onClick={onClearSelection}
                         className="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                     >
-                        Limpiar
+                        Limpiar Formulario de Entrega
                     </button>
                 </div>
             </div>
@@ -504,9 +755,24 @@ export default function BatchVentaSelector({
                                                                         {isAsignada && isSelected && <Badge variant="secondary" className="text-xs whitespace-nowrap">✓ Asignada</Badge>}
                                                                     </div>
                                                                 </div>
-                                                                <Badge variant="secondary" className="text-xs w-fit break-words">
-                                                                    {venta.cliente.nombre}
-                                                                </Badge>
+                                                                <div className="flex gap-2 items-center flex-wrap">
+                                                                    <Badge variant="secondary" className="text-xs break-words">
+                                                                        {venta.cliente.nombre}
+                                                                    </Badge>
+                                                                    {/* ✅ NUEVO: Mostrar estado logístico */}
+                                                                    {venta.estado_logistico && (
+                                                                        <Badge
+                                                                            className="text-xs whitespace-nowrap"
+                                                                            style={{
+                                                                                backgroundColor: venta.estado_logistico.color || '#6B7280',
+                                                                                color: '#FFFFFF'
+                                                                            }}
+                                                                        >
+                                                                            {venta.estado_logistico.icono && `${venta.estado_logistico.icono} `}
+                                                                            {venta.estado_logistico.nombre}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                             </div>
 
                                                             <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -516,18 +782,36 @@ export default function BatchVentaSelector({
                                                                         {venta.cantidad_items} artículos • {venta.peso_estimado} kg
                                                                     </span>
                                                                 </div>
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex flex-col gap-1">
-                                                                        {/* <span className="text-xs text-gray-700 dark:text-gray-300">
-                                                                            📅 Venta: {venta.fecha_venta}
-                                                                        </span> */}
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="flex flex-col gap-1 text-xs">
+                                                                        {/* ✅ MEJORADO: Mostrar fecha de creación formateada */}
                                                                         {venta.created_at && (
-                                                                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                                                                                🕐 Creada: {venta.created_at}
+                                                                            <span className="text-gray-600 dark:text-gray-400">
+                                                                                📝 Creada: {
+                                                                                    (() => {
+                                                                                        // Parsear fecha y hora de created_at (formato: YYYY-MM-DD HH:ii)
+                                                                                        const [fechaParte, horaParte] = venta.created_at.split(' ');
+                                                                                        const fecha = parsearFecha(fechaParte);
+                                                                                        return fecha ? `${fecha.toLocaleDateString('es-BO', {
+                                                                                            day: 'numeric',
+                                                                                            month: 'short',
+                                                                                            year: '2-digit'
+                                                                                        })} • ${horaParte}` : venta.created_at;
+                                                                                    })()
+                                                                                }
                                                                             </span>
                                                                         )}
+                                                                        {/* {venta.fecha_venta && (
+                                                                            <span className="text-gray-600 dark:text-gray-400">
+                                                                                📅 Venta: {new Date(venta.fecha_venta).toLocaleDateString('es-BO', {
+                                                                                    day: 'numeric',
+                                                                                    month: 'short',
+                                                                                    year: '2-digit'
+                                                                                })}
+                                                                            </span>
+                                                                        )} */}
                                                                     </div>
-                                                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                                                    <span className="font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                                                                         Bs {venta.subtotal.toLocaleString('es-BO', {
                                                                             minimumFractionDigits: 2,
                                                                             maximumFractionDigits: 2,
@@ -536,12 +820,17 @@ export default function BatchVentaSelector({
                                                                 </div>
                                                                 {venta.fecha_entrega_comprometida && (
                                                                     <div className="text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
-                                                                        📅 Entrega comprometida: {new Date(venta.fecha_entrega_comprometida).toLocaleDateString('es-BO', {
+                                                                        ⏰ Entrega comprometida: {parsearFecha(venta.fecha_entrega_comprometida)?.toLocaleDateString('es-BO', {
                                                                             weekday: 'short',
                                                                             day: 'numeric',
                                                                             month: 'short',
                                                                             year: 'numeric'
                                                                         })}
+                                                                        {venta.hora_entrega_comprometida && (
+                                                                            <span className="text-blue-600 dark:text-blue-400">
+                                                                                @ {venta.hora_entrega_comprometida}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>
