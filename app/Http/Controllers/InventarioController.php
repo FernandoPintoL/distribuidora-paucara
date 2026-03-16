@@ -1551,7 +1551,7 @@ class InventarioController extends Controller
                             422
                         );
                     }
-                    $stockProductos = [$stockProductoPrincipal];
+                    $stockProductos = collect([$stockProductoPrincipal]);
                 } else {
                     // Si NO se especifica lote, buscar TODOS los lotes del producto en el almacén (FIFO)
                     $stockProductos = StockProducto::where('producto_id', $productoData['producto_id'])
@@ -3182,6 +3182,63 @@ class InventarioController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener stock filtrado: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener lotes disponibles para un producto en un almacén específico
+     * GET /api/inventario/lotes?producto_id=X&almacen_id=Y
+     */
+    public function apiLotes(Request $request): JsonResponse
+    {
+        try {
+            $productoId = (int) $request->integer('producto_id', 0);
+            $almacenId = (int) $request->integer('almacen_id', 0);
+
+            if (!$productoId || !$almacenId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Los parámetros producto_id y almacen_id son requeridos',
+                ], 400);
+            }
+
+            // Obtener lotes del producto en el almacén especificado
+            $lotes = StockProducto::query()
+                ->where('producto_id', $productoId)
+                ->where('almacen_id', $almacenId)
+                ->where('cantidad', '>', 0)
+                ->withoutTrashed()
+                ->select('id', 'lote', 'fecha_vencimiento', 'cantidad', 'cantidad_disponible')
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->orderBy('lote', 'asc')
+                ->get();
+
+            $lotesFormateados = $lotes->map(function ($stock) {
+                return [
+                    'id' => $stock->id,
+                    'numero' => $stock->lote ?? 'Sin lote',
+                    'fecha_vencimiento' => $stock->fecha_vencimiento ? $stock->fecha_vencimiento->toDateString() : null,
+                    'cantidad' => $stock->cantidad,
+                    'cantidad_disponible' => $stock->cantidad_disponible,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $lotesFormateados,
+                'total' => count($lotesFormateados),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en apiLotes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener lotes: ' . $e->getMessage(),
             ], 500);
         }
     }

@@ -31,6 +31,13 @@ interface PageProps extends InertiaPageProps {
     almacenes: Almacen[];
 }
 
+interface Lote {
+    id: number;
+    numero: string;
+    fecha_vencimiento?: string;
+    cantidad_disponible: number;
+}
+
 interface ProductoMermaForm {
     producto_id: number;
     nombre: string;
@@ -39,6 +46,10 @@ interface ProductoMermaForm {
     cantidad: number;
     costo_unitario?: number;
     observaciones?: string;
+    stock_producto_id?: number;
+    lote_numero?: string;
+    lote_cantidad_disponible?: number;
+    lotes?: Lote[];
     producto?: any; // Referenced in the component
 }
 
@@ -127,8 +138,8 @@ const RegistrarMermaPage: React.FC = () => {
                 // Si hay un solo resultado, agregarlo automáticamente
                 if (productosFormatados.length === 1) {
                     const producto = productosFormatados[0];
-                    console.log('🎯 [MERMAS] Un solo resultado encontrado, agregando automáticamente...');
-                    agregarProducto(producto);
+                    console.log('🎯 [MERMAS] Un solo resultado encontrado, cargando lotes...');
+                    obtenerYAgregarProducto(producto);
                 } else {
                     setProductosDisponibles(productosFormatados);
                 }
@@ -144,7 +155,34 @@ const RegistrarMermaPage: React.FC = () => {
         }
     }, [formData.almacen_id]);
 
-    const agregarProducto = (producto: any) => {
+    const obtenerLotesProducto = async (productoId: number): Promise<Lote[]> => {
+        try {
+            const response = await fetch(`/api/inventario/lotes?producto_id=${productoId}&almacen_id=${formData.almacen_id}`);
+            const data = await response.json();
+
+            console.log('📥 [MERMAS] Lotes obtenidos:', data);
+
+            if (data.success && Array.isArray(data.data)) {
+                return data.data.map((lote: any) => ({
+                    id: lote.id,
+                    numero: lote.numero,
+                    fecha_vencimiento: lote.fecha_vencimiento,
+                    cantidad_disponible: lote.cantidad || 0
+                }));
+            }
+            return [];
+        } catch (error) {
+            console.error('❌ [MERMAS] Error al obtener lotes:', error);
+            return [];
+        }
+    };
+
+    const obtenerYAgregarProducto = async (producto: any) => {
+        const lotes = await obtenerLotesProducto(producto.id);
+        agregarProducto(producto, lotes);
+    };
+
+    const agregarProducto = (producto: any, lotes: Lote[] = []) => {
         const productoExistente = productos.find(p => p.producto_id === producto.id);
         if (productoExistente) {
             NotificationService.error('Este producto ya está agregado');
@@ -153,8 +191,11 @@ const RegistrarMermaPage: React.FC = () => {
 
         console.log('✅ [MERMAS] Agregando producto:', {
             producto: producto.nombre,
-            stock_actual: producto.stock_actual
+            stock_actual: producto.stock_actual,
+            lotes: lotes.length
         });
+
+        const loteInicial = lotes.length > 0 ? lotes[0] : undefined;
 
         setProductos(prev => [...prev, {
             producto_id: producto.id,
@@ -163,7 +204,11 @@ const RegistrarMermaPage: React.FC = () => {
             stock_actual: producto.stock_actual,
             cantidad: 1,
             costo_unitario: producto.precio_venta || 0,
-            observaciones: ''
+            observaciones: '',
+            stock_producto_id: loteInicial?.id,
+            lote_numero: loteInicial?.numero,
+            lote_cantidad_disponible: loteInicial?.cantidad_disponible,
+            lotes: lotes
         }]);
 
         setBusquedaProducto('');
@@ -206,6 +251,11 @@ const RegistrarMermaPage: React.FC = () => {
                 NotificationService.error(`La cantidad del producto ${producto.nombre} debe ser mayor a 0`);
                 return false;
             }
+
+            if (producto.lotes && producto.lotes.length > 0 && !producto.stock_producto_id) {
+                NotificationService.error(`Debe seleccionar un lote para el producto ${producto.nombre}`);
+                return false;
+            }
         }
 
         return true;
@@ -226,6 +276,7 @@ const RegistrarMermaPage: React.FC = () => {
                     ...formData,
                     productos: productos.map((item) => ({
                         producto_id: item.producto_id,
+                        stock_producto_id: item.stock_producto_id,
                         cantidad: item.cantidad,
                         costo_unitario: item.costo_unitario,
                         observaciones: item.observaciones
@@ -470,7 +521,7 @@ const RegistrarMermaPage: React.FC = () => {
                                             {productosDisponibles.map((producto) => (
                                                 <button
                                                     key={producto.id}
-                                                    onClick={() => agregarProducto(producto)}
+                                                    onClick={() => obtenerYAgregarProducto(producto)}
                                                     className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                                                 >
                                                     <div className="font-medium text-gray-900 dark:text-gray-100">
@@ -527,9 +578,51 @@ const RegistrarMermaPage: React.FC = () => {
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                                     Código: {producto.codigo}
                                                 </p>
+                                                {producto.lote_numero && (
+                                                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                                        Lote: {producto.lote_numero}
+                                                    </p>
+                                                )}
+                                                <div className="mt-2 flex gap-3 text-sm">
+                                                    <span className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
+                                                        📦 Stock Total: {producto.stock_actual}
+                                                    </span>
+                                                    {producto.stock_producto_id && producto.lote_cantidad_disponible !== undefined && (
+                                                        <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
+                                                            🎯 Disponible en lote: {producto.lote_cantidad_disponible}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center gap-3">
+                                                {producto.lotes && producto.lotes.length > 0 && (
+                                                    <div>
+                                                        <Label className="text-xs">Lote *</Label>
+                                                        <select
+                                                            value={producto.stock_producto_id || ''}
+                                                            onChange={(e) => {
+                                                                const stockProductoId = parseInt(e.target.value);
+                                                                const lote = producto.lotes.find((l: Lote) => l.id === stockProductoId);
+                                                                if (lote) {
+                                                                    actualizarProducto(index, 'stock_producto_id', stockProductoId);
+                                                                    actualizarProducto(index, 'lote_numero', lote.numero);
+                                                                    actualizarProducto(index, 'lote_cantidad_disponible', lote.cantidad_disponible);
+                                                                }
+                                                            }}
+                                                            className="flex h-9 rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:border-gray-700"
+                                                        >
+                                                            <option value="">Seleccionar lote</option>
+                                                            {producto.lotes.map((lote: Lote) => (
+                                                                <option key={lote.id} value={lote.id}>
+                                                                    {lote.numero}
+                                                                    {lote.fecha_vencimiento && ` (Vence: ${new Date(lote.fecha_vencimiento).toLocaleDateString('es-BO')})`}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+
                                                 <div>
                                                     <Label className="text-xs">Cantidad *</Label>
                                                     <div className="flex items-center gap-2">
