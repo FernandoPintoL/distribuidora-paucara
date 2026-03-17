@@ -120,6 +120,21 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
         { key: 'email', label: 'Email', type: 'text' },
         { key: 'localidad.nombre', label: 'Localidad', type: 'text' },
         {
+            key: 'categorias',
+            label: 'Categoría',
+            type: 'text',
+            render: (value: unknown, row: any) => {
+                const categorias = (value as Array<any>) || [];
+                if (categorias.length === 0) {
+                    return createElement('span', { className: 'text-gray-400 text-sm' }, '-');
+                }
+
+                // Mostrar la primera categoría (o todas si hay pocas)
+                const categoriasText = categorias.map((cat: any) => cat.nombre).join(', ');
+                return createElement('span', { className: 'text-sm font-medium text-blue-600 dark:text-blue-400' }, categoriasText);
+            }
+        },
+        {
             key: 'puede_tener_credito',
             label: 'Crédito',
             type: 'boolean',
@@ -441,6 +456,17 @@ export const clientesConfig: ModuleConfig<Cliente, ClienteFormData> = {
             colSpan: 2,
             section: 'Direcciones',
             description: 'Selecciona la localidad donde reside el cliente',
+        },
+        {
+            key: 'categorias_ids',
+            label: 'Categoría de Cliente',
+            type: 'select',
+            placeholder: 'Seleccione una categoría',
+            extraDataKey: 'categorias',
+            options: [], // Se cargarán desde extraData
+            colSpan: 1,
+            section: 'Información Personal',
+            description: 'Clasificación del cliente (mayorista, minorista, etc.)',
         },
         // ✅ NUEVO: Botón para abrir modal de registro de dirección personal
         {

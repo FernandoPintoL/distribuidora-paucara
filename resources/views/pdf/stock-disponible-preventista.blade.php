@@ -13,7 +13,7 @@
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 16px;
             color: #333;
             line-height: 1.3;
         }
@@ -31,14 +31,14 @@
         }
 
         .header h1 {
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 3px;
             color: #003366;
             font-weight: bold;
         }
 
         .header p {
-            font-size: 9px;
+            font-size: 12px;
             color: #666;
             margin: 1px 0;
         }
@@ -46,7 +46,7 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            font-size: 9px;
+            font-size: 16px;
             color: #666;
             margin-top: 2px;
         }
@@ -67,7 +67,7 @@
             padding: 6px;
             text-align: left;
             border: 1px solid #999;
-            font-size: 9px;
+            font-size: 16px;
         }
 
         th.text-right {
@@ -78,7 +78,7 @@
         td {
             padding: 5px 6px;
             border: 1px solid #ddd;
-            font-size: 9px;
+            font-size: 16px;
         }
 
         td.text-right {
@@ -102,7 +102,7 @@
         .sku {
             color: #666;
             font-family: monospace;
-            font-size: 8px;
+            font-size: 16px;
         }
 
         .precio-venta {
@@ -137,7 +137,7 @@
             padding-top: 8px;
             border-top: 1px solid #ddd;
             text-align: center;
-            font-size: 8px;
+            font-size: 14px;
             color: #999;
         }
 
@@ -148,7 +148,7 @@
             border-radius: 3px;
             text-align: right;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 14px;
             border-left: 4px solid #003366;
         }
 
@@ -156,7 +156,7 @@
             text-align: center;
             padding: 30px;
             color: #999;
-            font-size: 11px;
+            font-size: 14px;
         }
 
         .page-break {
@@ -180,7 +180,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>📦 LISTADO DE STOCK DISPONIBLE</h1>
+            <h1>LISTADO DE STOCK DISPONIBLE</h1>
             <p>{{ $empresa }}</p>
             <div class="info-row">
                 <span>Generado: {{ $fecha_generacion }}</span>
@@ -195,12 +195,12 @@
                 <tr>
                     <th style="width: 5%;">N°</th>
                     <th style="width: @if($incluir_stock ?? false) 25% @else 30% @endif;">Nombre del Producto</th>
-                    <th style="width: 10%;">SKU</th>
+                    {{-- <th style="width: 10%;">SKU</th> --}}
                     <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Venta</th>
                     <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Descuento</th>
                     <th style="width: @if($incluir_stock ?? false) 11% @else 13% @endif; text-align: right;">Precio Especial</th>
                     @if($incluir_stock ?? false)
-                    <th style="width: 12%; text-align: center;">📦 Stock</th>
+                    <th style="width: 12%; text-align: center;">Stock</th>
                     @endif
                 </tr>
             </thead>
@@ -212,7 +212,7 @@
                 <tr>
                     <td>{{ $numero }}</td>
                     <td class="nombre">{{ $fila['nombre'] }}</td>
-                    <td class="sku">{{ $fila['sku'] }}</td>
+                    {{-- <td class="sku">{{ $fila['sku'] }}</td> --}}
                     <td class="text-right precio-venta">
                         @if($fila['precio_venta'])
                         Bs {{ number_format($fila['precio_venta'], 2) }}

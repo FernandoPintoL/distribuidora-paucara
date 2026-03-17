@@ -7,9 +7,25 @@ use App\Models\CategoriaCliente;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CategoriaClienteController extends Controller
 {
+    /**
+     * Mostrar página de gestión de categorías (Web)
+     */
+    public function index(): Response
+    {
+        $categorias = CategoriaCliente::withCount('clientes')
+            ->orderBy('nombre')
+            ->get();
+
+        return Inertia::render('admin/categorias-cliente', [
+            'categorias' => $categorias,
+        ]);
+    }
+
     /**
      * Lista categorías de cliente (API)
      */

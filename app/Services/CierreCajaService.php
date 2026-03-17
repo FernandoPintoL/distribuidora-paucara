@@ -485,15 +485,17 @@ class CierreCajaService
     }
 
     /**
-     * Obtener solo movimientos de venta APROBADAS
+     * Obtener solo movimientos de venta APROBADAS (incluye VENTA y CREDITO)
      * ✅ Usa estados_documento.codigo para validación segura
+     * ✅ CORREGIDO (2026-03-17): Incluye ambos tipos de operación VENTA y CREDITO
+     *    Esto asegura que el rango de ventas incluya ventas a crédito
      */
     private function obtenerMovimientosVenta(AperturaCaja $aperturaCaja)
     {
-        $tipoOperacionVentaId = TipoOperacionCaja::where('codigo', 'VENTA')->first()?->id;
+        $tiposOperacionIds = TipoOperacionCaja::whereIn('codigo', ['VENTA', 'CREDITO'])->pluck('id')->toArray();
 
-        if (!$tipoOperacionVentaId) {
-            Log::warning('⚠️ Tipo operación VENTA no encontrado en BD', [
+        if (empty($tiposOperacionIds)) {
+            Log::warning('⚠️ Tipos de operación VENTA o CREDITO no encontrados en BD', [
                 'apertura_id' => $aperturaCaja->id,
             ]);
             return collect();
@@ -501,7 +503,7 @@ class CierreCajaService
 
         return MovimientoCaja::where('caja_id', $aperturaCaja->caja_id)
             ->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin])
-            ->where('tipo_operacion_id', $tipoOperacionVentaId)
+            ->whereIn('tipo_operacion_id', $tiposOperacionIds)
             ->with(['tipoPago', 'venta.estadoDocumento'])
             ->get()
             ->filter(fn($m) => $this->esVentaAprobada($m)); // ✅ Usa validación por código

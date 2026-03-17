@@ -2,6 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 import creditos from './creditos'
 import reportesProductosDanados from './reportes-productos-danados'
 import bannersPublicitarios from './banners-publicitarios'
+import categoriasCliente from './categorias-cliente'
 /**
  * @see routes/web.php:186
  * @route '/admin/image-backup'
@@ -156,6 +157,7 @@ const admin = {
 imageBackup,
 reportesProductosDanados,
 bannersPublicitarios,
+categoriasCliente,
 dashboard,
 }
 

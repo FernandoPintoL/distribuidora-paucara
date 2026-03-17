@@ -15,6 +15,7 @@ const initialClienteData: ClienteFormData = {
   ci_anverso: null,
   ci_reverso: null,
   localidad_id: null,
+  categorias_ids: [],
   activo: true,
   limite_credito: null,
   puede_tener_credito: false,
@@ -28,8 +29,20 @@ const initialClienteData: ClienteFormData = {
   password_confirmation: null,
 };
 
-export default function ClientesForm({ cliente, localidades }: ClientesFormPageProps) {
+export default function ClientesForm({ cliente, localidades, categorias }: ClientesFormPageProps) {
   const isEditing = !!cliente;
+
+  // 🔍 DEBUG: Mostrar datos recibidos del backend
+  console.log('📋 CLIENTES FORM - Props recibidos del backend:', {
+    cliente_id: cliente?.id,
+    cliente_nombre: cliente?.nombre,
+    cliente_categorias_ids: cliente?.categorias_ids,
+    cliente_categorias: cliente?.categorias,
+    localidades_count: localidades?.length,
+    categorias_count: categorias?.length,
+    isEditing,
+    full_props: { cliente, localidades, categorias }
+  });
 
   return (
     <AppLayout breadcrumbs={[
@@ -42,10 +55,14 @@ export default function ClientesForm({ cliente, localidades }: ClientesFormPageP
         config={clientesConfig}
         service={clientesService}
         initialData={initialClienteData}
-        extraData={{ localidades }}
+        extraData={{ localidades, categorias }}
         loadOptions={async (fieldKey: string) => {
           if (fieldKey === 'localidad_id') {
             return await clientesService.loadLocalidadOptions();
+          }
+          if (fieldKey === 'categorias_ids') {
+            // Las categorías se pasan via extraData desde el backend
+            return [];
           }
           return [];
         }}

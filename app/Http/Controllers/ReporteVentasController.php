@@ -225,6 +225,7 @@ class ReporteVentasController extends Controller
         try {
             $user = auth()->user();
             $limite = $request->integer('limite', 20);
+            $categoriaClienteId = $request->integer('categoria_cliente_id', null);
 
             // ✅ NUEVO (2026-03-03): Validar fechas - default mes actual (día 1 al hoy)
             $fechaDesde = $request->filled('fecha_desde')
@@ -237,6 +238,9 @@ class ReporteVentasController extends Controller
             // Estados
             $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
             $estadoAnuladoId = EstadoDocumento::where('codigo', 'ANULADO')->value('id');
+
+            // Obtener categorías de clientes para el selector
+            $categoriasClientes = \App\Models\CategoriaCliente::orderBy('nombre')->get();
 
             // Query 1: TOP ventas aprobadas por cliente
             $topAprobadas = DB::table('ventas')
@@ -251,7 +255,15 @@ class ReporteVentasController extends Controller
                 ->where('ventas.estado_documento_id', $estadoAprobadoId)
                 ->where('clientes.codigo_cliente', '!=', 'GENERAL')
                 ->whereDate('ventas.created_at', '>=', $fechaDesde)
-                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta);
+
+            // Filtrar por categoría de cliente si se especifica
+            if ($categoriaClienteId) {
+                $topAprobadas->join('categoria_cliente', 'clientes.id', '=', 'categoria_cliente.cliente_id')
+                    ->where('categoria_cliente.categoria_cliente_id', $categoriaClienteId);
+            }
+
+            $topAprobadas = $topAprobadas
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
                 ->orderByDesc('total_ventas')
                 ->limit($limite)
@@ -279,7 +291,15 @@ class ReporteVentasController extends Controller
                 ->where('ventas.estado_documento_id', $estadoAnuladoId)
                 ->where('clientes.codigo_cliente', '!=', 'GENERAL')
                 ->whereDate('ventas.created_at', '>=', $fechaDesde)
-                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta);
+
+            // Filtrar por categoría de cliente si se especifica
+            if ($categoriaClienteId) {
+                $topAnuladas->join('categoria_cliente', 'clientes.id', '=', 'categoria_cliente.cliente_id')
+                    ->where('categoria_cliente.categoria_cliente_id', $categoriaClienteId);
+            }
+
+            $topAnuladas = $topAnuladas
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
                 ->orderByDesc('total_ventas')
                 ->limit($limite)
@@ -312,7 +332,15 @@ class ReporteVentasController extends Controller
                 ->where('clientes.codigo_cliente', '!=', 'GENERAL')
                 ->whereDate('ventas.created_at', '>=', $fechaDesde)
                 ->whereDate('ventas.created_at', '<=', $fechaHasta)
-                ->whereNotNull('ventas.proforma_id')
+                ->whereNotNull('ventas.proforma_id');
+
+            // Filtrar por categoría de cliente si se especifica
+            if ($categoriaClienteId) {
+                $topProductos->join('categoria_cliente', 'clientes.id', '=', 'categoria_cliente.cliente_id')
+                    ->where('categoria_cliente.categoria_cliente_id', $categoriaClienteId);
+            }
+
+            $topProductos = $topProductos
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
                 ->orderByDesc('total_productos')
                 ->limit($limite)
@@ -346,7 +374,15 @@ class ReporteVentasController extends Controller
                 ->where('clientes.codigo_cliente', '!=', 'GENERAL')
                 ->whereDate('ventas.created_at', '>=', $fechaDesde)
                 ->whereDate('ventas.created_at', '<=', $fechaHasta)
-                ->whereNotNull('ventas.proforma_id')
+                ->whereNotNull('ventas.proforma_id');
+
+            // Filtrar por categoría de cliente si se especifica
+            if ($categoriaClienteId) {
+                $menosProductos->join('categoria_cliente', 'clientes.id', '=', 'categoria_cliente.cliente_id')
+                    ->where('categoria_cliente.categoria_cliente_id', $categoriaClienteId);
+            }
+
+            $menosProductos = $menosProductos
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.codigo_cliente')
                 ->orderBy('total_productos')
                 ->limit($limite)
@@ -366,6 +402,7 @@ class ReporteVentasController extends Controller
                 'fecha_desde' => $request->input('fecha_desde'),
                 'fecha_hasta' => $request->input('fecha_hasta'),
                 'limite' => $limite,
+                'categoria_cliente_id' => $categoriaClienteId,
             ];
 
             return Inertia::render('reportes/ventas/ranking-clientes', [
@@ -376,6 +413,7 @@ class ReporteVentasController extends Controller
                 'filtros' => $filtros,
                 'fecha_desde' => $fechaDesde->format('Y-m-d'),
                 'fecha_hasta' => $fechaHasta->format('Y-m-d'),
+                'categoriasClientes' => $categoriasClientes,
             ]);
 
         } catch (\Exception $e) {
@@ -383,12 +421,19 @@ class ReporteVentasController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
+            // Obtener categorías incluso en caso de error
+            $categoriasClientes = \App\Models\CategoriaCliente::orderBy('nombre')->get();
+
             return Inertia::render('reportes/ventas/ranking-clientes', [
                 'topAprobadas' => [],
                 'topAnuladas' => [],
                 'topProductos' => [],
                 'menosProductos' => [],
                 'filtros' => [],
+                'categoriasClientes' => $categoriasClientes,
+                'fecha_desde' => now()->startOfMonth()->format('Y-m-d'),
+                'fecha_hasta' => now()->format('Y-m-d'),
                 'error' => 'Error al generar reporte: ' . $e->getMessage(),
             ]);
         }

@@ -157,6 +157,29 @@ export class ClientesService extends ExtendableService<Cliente, ClienteFormData>
       (preparedData as any).__allowNullFields.push('limite_credito');
     }
 
+    // ✅ NUEVO: Convertir categorias_ids a array si viene como valor único
+    // El select envía un valor único, pero el backend espera un array
+    if ((preparedData as any).categorias_ids !== undefined && (preparedData as any).categorias_ids !== null) {
+      const categoriasValue = (preparedData as any).categorias_ids;
+
+      if (!Array.isArray(categoriasValue)) {
+        // Si es un número o string, convertir a array
+        if (categoriasValue === '' || categoriasValue === 0) {
+          (preparedData as any).categorias_ids = [];
+        } else {
+          (preparedData as any).categorias_ids = [Number(categoriasValue)];
+        }
+      }
+
+      console.log('🔄 categorias_ids transformado:', {
+        original: categoriasValue,
+        transformed: (preparedData as any).categorias_ids
+      });
+    } else {
+      // Si no viene categorias_ids, enviar array vacío
+      (preparedData as any).categorias_ids = [];
+    }
+
     // Normalizar ventanas de entrega: asegurar que las horas estén en formato HH:MM
     if (Array.isArray(preparedData.ventanas_entrega)) {
       preparedData.ventanas_entrega = preparedData.ventanas_entrega.map((ventana) => {

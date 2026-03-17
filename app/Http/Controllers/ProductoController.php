@@ -1103,23 +1103,35 @@ class ProductoController extends Controller
             Log::info('🔍 [indexApi] BÚSQUEDA', ['searchTerm' => $searchTerm]);
         }
 
-        // ⚠️ TEMPORAL: Solo búsqueda, sin filtros de stock/precio
-        // Esto es para testear si el ILIKE funciona
+        // ✅ FILTROS HABILITADOS (2026-03-17):
+        // 1. Stock > 0 en el almacén
+        // 2. Precio de venta activo > 0
+        // 3. Productos activos
         $query = $query
             ->when($categoriaId, fn($q) => $q->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($q) => $q->where('marca_id', $marcaId))
-            ->when($proveedorId, fn($q) => $q->where('proveedor_id', $proveedorId));
-            // COMENTADO TEMPORALMENTE PARA TESTEAR:
-            // ->whereHas('stock', function ($stockQuery) use ($almacenId) {
-            //     $stockQuery->where('almacen_id', $almacenId)
-            //         ->where('cantidad_disponible', '>', 0);
-            // })
-            // ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
-            //     $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
-            //         ->where('activo', true)
-            //         ->where('precio', '>', 0);
-            // })
-            // ->where('activo', $activo);
+            ->when($proveedorId, fn($q) => $q->where('proveedor_id', $proveedorId))
+            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
+                $stockQuery->where('almacen_id', $almacenId)
+                    ->where('cantidad_disponible', '>', 0);
+            })
+            ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
+                $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
+                    ->where('activo', true)
+                    ->where('precio', '>', 0);
+            })
+            ->where('activo', $activo);
+
+        // 🔍 DEBUG: Contar productos después de filtros
+        Log::info('📊 [indexApi] DESPUÉS DE FILTROS', [
+            'categoria_id' => $categoriaId ?? 'sin filtro',
+            'marca_id' => $marcaId ?? 'sin filtro',
+            'proveedor_id' => $proveedorId ?? 'sin filtro',
+            'almacen_id' => $almacenId,
+            'tipo_precio_id' => $tipoPrecioVentaId,
+            'activo' => $activo,
+            'productos_encontrados' => $query->count(),
+        ]);
 
         // ✅ Obtener cliente_id del request si viene en parámetros
         $clienteId = $request->input('cliente_id');

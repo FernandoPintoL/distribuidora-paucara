@@ -30,6 +30,7 @@ export interface Cliente extends BaseEntity {
     puede_tener_credito?: boolean;
     credito_utilizado?: number | null;  // ✅ NUEVO: Crédito ya consumido
     saldo_credito?: number | null;      // ✅ NUEVO: Crédito disponible (límite - utilizado)
+    categorias?: Array<{ id: Id; nombre: string; clave: string }>;  // ✅ Categorías del cliente
     localidad?: {
         id: Id;
         nombre: string;
@@ -74,6 +75,7 @@ export interface ClienteFormData extends BaseFormData {
     activo?: boolean;
     limite_credito?: number | null;
     puede_tener_credito?: boolean;
+    categorias_ids?: Id[];  // ✅ Categorías del cliente (array de IDs)
     // Direcciones anidadas del cliente
     direcciones?: Array<{
         id?: Id;
@@ -96,4 +98,5 @@ export interface ClienteFormData extends BaseFormData {
 export interface ClientesFormPageProps {
     cliente?: Cliente | null;
     localidades?: Array<{ id: number; nombre: string; codigo: string }>;
+    categorias?: Array<{ id: number; nombre: string; clave: string }>;
 }

@@ -7,6 +7,7 @@ use App\Http\Requests\ChangeClienteCredentialsRequest;
 use App\Http\Requests\StoreClienteRequest;
 use App\Http\Requests\UpdateClienteRequest;
 use App\Http\Traits\ApiInertiaUnifiedResponse;
+use App\Models\CategoriaCliente;
 use App\Models\Cliente as ClienteModel;
 use App\Models\Localidad;
 use App\Models\User;
@@ -193,7 +194,7 @@ class ClienteController extends Controller
             if ($this->isApiRequest()) {
                 $clientes->getCollection()->load('localidad', 'categorias', 'direcciones', 'user', 'ventanasEntrega', 'cuentasPorCobrar');
             } else {
-                $clientes->getCollection()->load('localidad', 'cuentasPorCobrar');
+                $clientes->getCollection()->load('localidad', 'categorias', 'cuentasPorCobrar');
             }
 
             // Agregar URLs de fotos de perfil para el listado
@@ -211,6 +212,17 @@ class ClienteController extends Controller
                         ->orderBy('nombre')
                         ->get(['id', 'nombre', 'codigo']),
                 ];
+
+                // 🔍 DEBUG: Mostrar datos enviados al frontend
+                Log::info('📋 CLIENTES INDEX - Datos enviados al frontend:', [
+                    'total_clientes' => $clientes->total(),
+                    'per_page' => $clientes->perPage(),
+                    'current_page' => $clientes->currentPage(),
+                    'clientes_count' => count($clientes->items()),
+                    'localidades_count' => count($additionalData['localidades']),
+                    'primer_cliente' => $clientes->items()[0] ?? null,
+                    'primer_cliente_categorias' => isset($clientes->items()[0]) ? $clientes->items()[0]->categorias : null,
+                ]);
             }
 
             return $this->paginatedResponse(
@@ -236,6 +248,9 @@ class ClienteController extends Controller
                 'localidades' => Localidad::where('activo', true)
                     ->orderBy('nombre')
                     ->get(['id', 'nombre', 'codigo']),
+                'categorias'  => CategoriaCliente::where('activo', true)
+                    ->orderBy('nombre')
+                    ->get(['id', 'nombre', 'clave']),
             ];
 
             return $this->dataResponse('clientes/form', $data);
@@ -296,12 +311,33 @@ class ClienteController extends Controller
             // ✅ Autorizar: Solo roles que pueden editar este cliente
             $this->authorize('update', $cliente);
 
-            return $this->dataResponse('clientes/form', [
-                'cliente'     => $cliente->load(['localidad', 'direcciones', 'ventanasEntrega', 'user']),
-                'localidades' => Localidad::where('activo', true)
-                    ->orderBy('nombre')
-                    ->get(['id', 'nombre', 'codigo']),
+            $clienteData = $cliente->load(['localidad', 'direcciones', 'ventanasEntrega', 'user', 'categorias']);
+            $localidadesData = Localidad::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'codigo']);
+            $categoriasData = CategoriaCliente::where('activo', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre', 'clave']);
+
+            $responseData = [
+                'cliente'     => $clienteData,
+                'localidades' => $localidadesData,
+                'categorias'  => $categoriasData,
+            ];
+
+            // 🔍 DEBUG: Mostrar todo lo que se envía al frontend
+            Log::info('📋 CLIENTE EDIT - Datos enviados al frontend:', [
+                'cliente_id' => $cliente->id,
+                'cliente_nombre' => $cliente->nombre,
+                'cliente_keys' => array_keys($clienteData->toArray()),
+                'cliente_categorias_ids' => $clienteData->categorias_ids,
+                'cliente_categorias_count' => count($clienteData->categorias),
+                'localidades_count' => $localidadesData->count(),
+                'categorias_count' => $categoriasData->count(),
+                'full_response' => json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
             ]);
+
+            return $this->dataResponse('clientes/form', $responseData);
 
         } catch (\Exception $e) {
             return $this->handleException($e, 'cargar formulario de edición');
@@ -328,17 +364,62 @@ class ClienteController extends Controller
                         'email' => $request->email,
                     ];
 
+                    // 🔍 DEBUG: Verificar si password viene en la request
+                    $passwordProveniente = $request->input('password');
+                    $passwordLlenado = $request->filled('password');
+
+                    Log::info('🔐 VERIFICACIÓN DE PASSWORD EN REQUEST', [
+                        'cliente_id' => $cliente->id,
+                        'user_id' => $cliente->user->id,
+                        'password_value' => $passwordProveniente ? '***[presente]***' : 'null',
+                        'password_filled' => $passwordLlenado,
+                        'has_password_key' => $request->has('password'),
+                    ]);
+
                     // NUEVO: Cambiar password si se proporciona
                     if ($request->filled('password')) {
-                        $userUpdates['password'] = Hash::make($request->password);
-                        Log::info('✅ Contraseña de usuario actualizada', [
+                        $hashedPassword = Hash::make($request->password);
+                        $userUpdates['password'] = $hashedPassword;
+
+                        Log::info('✅ PASSWORD SERÁ ACTUALIZADO', [
                             'cliente_id' => $cliente->id,
                             'user_id'    => $cliente->user->id,
+                            'password_original_length' => strlen($request->password),
+                            'password_hash_preview' => substr($hashedPassword, 0, 20) . '...',
+                        ]);
+                    } else {
+                        Log::info('⚠️ PASSWORD NO SERÁ ACTUALIZADO', [
+                            'cliente_id' => $cliente->id,
+                            'user_id' => $cliente->user->id,
+                            'razon' => 'request->filled("password") retornó false',
                         ]);
                     }
 
+                    // 🔍 DEBUG: Mostrar datos antes de actualizar
+                    Log::info('🔄 ANTES DE ACTUALIZAR USUARIO', [
+                        'cliente_id' => $cliente->id,
+                        'user_id' => $cliente->user->id,
+                        'password_hash_anterior' => $cliente->user->password ? substr($cliente->user->password, 0, 20) . '...' : 'null',
+                        'updates' => [
+                            'name' => $userUpdates['name'],
+                            'email' => $userUpdates['email'],
+                            'password' => isset($userUpdates['password']) ? '[SERÁ ACTUALIZADO]' : '[NO CAMBIA]',
+                        ],
+                    ]);
+
                     $cliente->user->update($userUpdates);
-                    $user = $cliente->user;
+                    $user = $cliente->user->fresh(); // Recargar del DB para obtener datos actualizados
+
+                    // 🔍 DEBUG: Mostrar datos después de actualizar - IMPORTANTE: Verificar password
+                    Log::info('🔄 DESPUÉS DE ACTUALIZAR USUARIO', [
+                        'cliente_id' => $cliente->id,
+                        'user_id' => $cliente->user->id,
+                        'user_name' => $user->name,
+                        'user_email' => $user->email,
+                        'password_hash_nuevo' => $user->password ? substr($user->password, 0, 20) . '...' : 'null',
+                        'password_cambio_detectado' => isset($userUpdates['password']) ? '✅ SÍ' : '❌ NO',
+                        'user_actualizado_completo' => $user->toArray(),
+                    ]);
                 } else {
                     // Crear nuevo usuario usando teléfono como usernick y password
                     if ($request->telefono) {
@@ -1545,11 +1626,27 @@ class ClienteController extends Controller
      */
     private function syncCategorias(ClienteModel $cliente, ?array $categoriasIds): void
     {
+        // 🔍 DEBUG: Mostrar datos antes de sincronizar
+        Log::info('🔄 ANTES DE SINCRONIZAR CATEGORÍAS', [
+            'cliente_id' => $cliente->id,
+            'categorias_actuales' => $cliente->categorias()->pluck('categorias_cliente.id')->toArray(),
+            'categorias_ids_nuevas' => $categoriasIds,
+        ]);
+
         if ($categoriasIds === null) {
+            Log::info('⚠️ categoriasIds es null, no se sincroniza', ['cliente_id' => $cliente->id]);
             return;
         }
 
-        $cliente->categorias()->sync($categoriasIds);
+        $resultado = $cliente->categorias()->sync($categoriasIds);
+
+        // 🔍 DEBUG: Mostrar resultado de sync
+        Log::info('🔄 DESPUÉS DE SINCRONIZAR CATEGORÍAS', [
+            'cliente_id' => $cliente->id,
+            'sync_resultado' => $resultado,
+            'categorias_ahora' => $cliente->categorias()->pluck('categorias_cliente.id')->toArray(),
+            'categorias_con_datos' => $cliente->categorias()->get()->toArray(),
+        ]);
     }
 
     /**

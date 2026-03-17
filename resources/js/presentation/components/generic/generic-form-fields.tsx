@@ -29,6 +29,14 @@ export default function GenericFormFields<F extends BaseFormData>({
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, Array<{ value: string | number; label: string }>>>({});
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
 
+  // 🔍 DEBUG: Mostrar extraData cuando se renderiza
+  console.log('🔍 GenericFormFields - extraData recibida:', {
+    has_localidades: !!extraData?.localidades,
+    has_categorias: !!extraData?.categorias,
+    localidades: extraData?.localidades,
+    categorias: extraData?.categorias,
+  });
+
   // Cargar opciones dinámicas cuando sea necesario
   useEffect(() => {
     const loadDynamicOptions = async () => {
@@ -421,7 +429,6 @@ export default function GenericFormFields<F extends BaseFormData>({
 
     return (
       <div
-        key={String(field.key)}
         className={`${!isFullWidth ? colSpanClass : 'w-full'} space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}
       >
         {(!field.render && field.type !== 'boolean') && (
@@ -500,14 +507,22 @@ export default function GenericFormFields<F extends BaseFormData>({
             {/* Campos normales en grid */}
             {normalFields.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {normalFields.map((field) => renderFieldBlock(field, false))}
+                {normalFields.map((field) => (
+                  <div key={String(field.key)}>
+                    {renderFieldBlock(field, false)}
+                  </div>
+                ))}
               </div>
             )}
 
             {/* Campos de ancho completo */}
             {fullWidthFields.length > 0 && (
               <div className="space-y-6">
-                {fullWidthFields.map((field) => renderFieldBlock(field, true))}
+                {fullWidthFields.map((field) => (
+                  <div key={String(field.key)}>
+                    {renderFieldBlock(field, true)}
+                  </div>
+                ))}
               </div>
             )}
           </div>

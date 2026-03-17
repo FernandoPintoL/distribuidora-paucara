@@ -29,6 +29,14 @@ export default function GenericFormContainer<T extends BaseEntity, F extends Bas
   console.log('===== GENERIC FORM CONTAINER DEBUG =====');
   console.log('entity recibida:', entity);
   console.log('initialData recibida:', initialData);
+  console.log('extraData recibida:', {
+    has_localidades: !!extraData?.localidades,
+    localidades_count: Array.isArray(extraData?.localidades) ? extraData.localidades.length : 0,
+    has_categorias: !!extraData?.categorias,
+    categorias_count: Array.isArray(extraData?.categorias) ? extraData.categorias.length : 0,
+    localidades: extraData?.localidades,
+    categorias: extraData?.categorias,
+  });
 
   // 🆕 Aplicar valores por defecto solo en modo creación (cuando no hay entity)
   const dataWithDefaults = !entity

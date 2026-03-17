@@ -198,6 +198,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::post('/actualizar-orden', [\App\Http\Controllers\BannerPublicitarioAdminController::class, 'actualizarOrden'])->name('admin.banners-publicitarios.actualizar-orden');
     });
 
+    // ✅ Categorías de Cliente
+    Route::get('admin/categorias-cliente', [\App\Http\Controllers\CategoriaClienteController::class, 'index'])
+        ->middleware('permission:admin')
+        ->name('admin.categorias-cliente.index');
+
     // Rutas para gestión de módulos del sidebar
     Route::get('modulos-sidebar', [\App\Http\Controllers\ModuloSidebarController::class, 'index'])->name('modulos-sidebar.index');
     Route::get('modulos-sidebar/create', [\App\Http\Controllers\ModuloSidebarController::class, 'create'])->middleware('permission:admin.config')->name('modulos-sidebar.create');

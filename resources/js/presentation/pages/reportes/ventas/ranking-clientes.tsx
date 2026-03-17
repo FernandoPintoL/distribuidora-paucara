@@ -13,6 +13,11 @@ interface ClienteRanking {
     monto_total: number;
 }
 
+interface CategoriaCliente {
+    id: number;
+    nombre: string;
+}
+
 interface RankingClientesProps {
     topAprobadas: ClienteRanking[];
     topAnuladas: ClienteRanking[];
@@ -22,9 +27,11 @@ interface RankingClientesProps {
         fecha_desde?: string;
         fecha_hasta?: string;
         limite?: number;
+        categoria_cliente_id?: number;
     };
     fecha_desde: string;
     fecha_hasta: string;
+    categoriasClientes: CategoriaCliente[];
     error?: string;
 }
 
@@ -62,19 +69,27 @@ export default function RankingClientes({
     filtros,
     fecha_desde,
     fecha_hasta,
+    categoriasClientes = [],
     error,
 }: RankingClientesProps) {
     const [activeTab, setActiveTab] = useState<'aprobadas' | 'anuladas' | 'productos' | 'menos'>('productos');
     const [fechaDesde, setFechaDesde] = useState(filtros.fecha_desde || fecha_desde);
     const [fechaHasta, setFechaHasta] = useState(filtros.fecha_hasta || fecha_hasta);
     const [limite, setLimite] = useState(filtros.limite?.toString() || '20');
+    const [categoriaClienteId, setCategoriaClienteId] = useState(filtros.categoria_cliente_id?.toString() || '');
 
     const handleFiltrar = () => {
-        router.get('/reportes/ventas/ranking-clientes', {
+        const params: any = {
             fecha_desde: fechaDesde,
             fecha_hasta: fechaHasta,
             limite: parseInt(limite),
-        });
+        };
+
+        if (categoriaClienteId) {
+            params.categoria_cliente_id = parseInt(categoriaClienteId);
+        }
+
+        router.get('/reportes/ventas/ranking-clientes', params);
     };
 
     const renderTabla = (data: ClienteRanking[], tipo: 'aprobadas' | 'anuladas' | 'productos' | 'menos') => {
@@ -180,7 +195,7 @@ export default function RankingClientes({
                     {/* Panel de Filtros */}
                     <div className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
                         <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Filtros</h3>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Desde</label>
                                 <input
@@ -198,6 +213,21 @@ export default function RankingClientes({
                                     onChange={(e) => setFechaHasta(e.target.value)}
                                     className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría Cliente</label>
+                                <select
+                                    value={categoriaClienteId}
+                                    onChange={(e) => setCategoriaClienteId(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                                >
+                                    <option value="">Todas las categorías</option>
+                                    {categoriasClientes && Array.isArray(categoriasClientes) && categoriasClientes.map((categoria) => (
+                                        <option key={categoria.id} value={categoria.id}>
+                                            {categoria.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Límite</label>

@@ -37,7 +37,7 @@ class Cliente extends Model
         'fecha_actualizacion',      // ← NUEVO
     ];
 
-    protected $appends = ['credito_utilizado'];
+    protected $appends = ['credito_utilizado', 'categorias_ids'];
 
     protected function casts(): array
     {
@@ -356,5 +356,13 @@ class Cliente extends Model
     public function getCreditoUtilizadoAttribute(): float
     {
         return $this->calcularCreditoUtilizado();
+    }
+
+    /**
+     * ✅ Acceso a IDs de categorías para formularios
+     */
+    public function getCategoriasIdsAttribute(): array
+    {
+        return $this->categorias()->pluck('categorias_cliente.id')->toArray();
     }
 }
