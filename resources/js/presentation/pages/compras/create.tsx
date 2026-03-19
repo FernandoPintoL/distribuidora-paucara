@@ -747,12 +747,19 @@ export default function CompraForm() {
     // ✅ NUEVO 2026-03-19: Recalcular subtotal basado en detalles para evitar inconsistencias
     const detallesTransformados = detallesValidos.map(detalle => {
       // ✅ NUEVO 2026-03-19: NO redondear - BD almacena hasta 10 decimales (decimal:18,10)
+      const cantidad = parseInt(String(detalle.cantidad));
+      const precioUnitario = parseFloat(String(detalle.precio_unitario));
+      const descuento = parseFloat(String(detalle.descuento || 0));
+
+      // ✅ RECALCULAR SUBTOTAL: cantidad × precio - descuento
+      const subtotalCalculado = (cantidad * precioUnitario) - descuento;
+
       const detalleTransformado: any = {
         producto_id: parseInt(String(detalle.producto_id)),
-        cantidad: parseInt(String(detalle.cantidad)),
-        precio_unitario: parseFloat(String(detalle.precio_unitario)),
-        descuento: parseFloat(String(detalle.descuento || 0)),
-        subtotal: parseFloat(String(detalle.subtotal)),
+        cantidad: cantidad,
+        precio_unitario: precioUnitario,
+        descuento: descuento,
+        subtotal: subtotalCalculado,
         lote: detalle.lote || '',
         fecha_vencimiento: detalle.fecha_vencimiento || null,
       };
@@ -974,7 +981,16 @@ export default function CompraForm() {
     ]}>
       <Head title={title} />
 
-      <form onSubmit={submit} className="space-y-6 p-6">
+      <form
+        onSubmit={submit}
+        onKeyDown={(e) => {
+          // ✅ Prevenir envío del formulario con Enter en inputs
+          if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-6 p-6"
+      >
         {/* Campo hidden para moneda_id */}
         <input type="hidden" name="moneda_id" value={data.moneda_id} />
 

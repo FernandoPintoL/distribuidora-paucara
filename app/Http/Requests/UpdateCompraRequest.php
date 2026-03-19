@@ -182,14 +182,9 @@ class UpdateCompraRequest extends FormRequest
             $descuento      = $detalle['descuento'] ?? 0;
             $subtotal       = $detalle['subtotal'] ?? 0;
 
-            $subtotalCalculado = ($cantidad * $precioUnitario) - $descuento;
-
-            // ✅ TOLERANCIA: 0.05 para errores de redondeo en cálculos decimales
-            if (abs($subtotalCalculado - $subtotal) > 0.05) {
-                $validator->errors()->add("detalles.{$index}.subtotal",
-                    "El subtotal del detalle #{$index} ({$subtotal}) no coincide con el cálculo ({$subtotalCalculado})."
-                );
-            }
+            // ✅ REMOVIDO 2026-03-19: Validación de coherencia de subtotal removida
+            // El frontend recalcula automáticamente el subtotal (cantidad × precio - descuento)
+            // por lo que ya no es necesario validar en el backend
 
             if ($descuento > ($cantidad * $precioUnitario)) {
                 $validator->errors()->add("detalles.{$index}.descuento",
