@@ -77,6 +77,17 @@ const normalizeDateForInput = (date: string | null | undefined): string => {
   return date.slice(0, 10);
 };
 
+// ✅ HELPER FUNCTION 2026-03-19: Formatear números sin ceros innecesarios
+// 14.1000 → "14.1", 15.202 → "15.202", 10 → "10"
+const formatearNumero = (valor: number | string | null | undefined): string | number => {
+  if (valor === null || valor === undefined) return '';
+  const str = String(valor);
+  // Si no tiene punto, devolverlo tal cual
+  if (!str.includes('.')) return str;
+  // Remover ceros finales y el punto si es necesario
+  return str.replace(/\.?0+$/, '');
+};
+
 interface PageProps extends InertiaPageProps {
   compra?: Compra;
   proveedores: Proveedor[];
@@ -733,11 +744,38 @@ export default function CompraForm() {
 
     // ✅ FIX CRÍTICA 2026-03-19: Transformar datos MANUALMENTE y usar router.put() directamente
     // (useForm().put() con transform no funciona en esta versión de Inertia.js)
+    // ✅ NUEVO 2026-03-19: Recalcular subtotal basado en detalles para evitar inconsistencias
+    const detallesTransformados = detallesValidos.map(detalle => {
+      // ✅ NUEVO 2026-03-19: NO redondear - BD almacena hasta 10 decimales (decimal:18,10)
+      const detalleTransformado: any = {
+        producto_id: parseInt(String(detalle.producto_id)),
+        cantidad: parseInt(String(detalle.cantidad)),
+        precio_unitario: parseFloat(String(detalle.precio_unitario)),
+        descuento: parseFloat(String(detalle.descuento || 0)),
+        subtotal: parseFloat(String(detalle.subtotal)),
+        lote: detalle.lote || '',
+        fecha_vencimiento: detalle.fecha_vencimiento || null,
+      };
+
+      // ✅ Solo incluir id si existe (para detalles existentes)
+      if (detalle.id) {
+        detalleTransformado.id = detalle.id;
+      }
+
+      return detalleTransformado;
+    });
+
+    // Recalcular subtotal desde los detalles
+    const subtotalCalculado = detallesTransformados.reduce(
+      (sum, det) => sum + parseFloat(String(det.subtotal)),
+      0
+    );
+
     const transformedData: any = {
       numero: data.numero || undefined,
       fecha: data.fecha,
       numero_factura: data.numero_factura || '',
-      subtotal: parseFloat(String(data.subtotal)),
+      subtotal: subtotalCalculado,
       descuento: parseFloat(String(data.descuento || 0)),
       impuesto: parseFloat(String(data.impuesto || 0)),
       total: parseFloat(String(data.total)),
@@ -748,25 +786,7 @@ export default function CompraForm() {
       moneda_id: parseInt(String(data.moneda_id)),
       tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
       almacen_id: data.almacen_id ? parseInt(String(data.almacen_id)) : null,
-      // ✅ FIX 2026-03-19: NO incluir id si es undefined (evita "Undefined array key")
-      detalles: detallesValidos.map(detalle => {
-        const detalleTransformado: any = {
-          producto_id: parseInt(String(detalle.producto_id)),
-          cantidad: parseInt(String(detalle.cantidad)),
-          precio_unitario: parseFloat(String(detalle.precio_unitario)),
-          descuento: parseFloat(String(detalle.descuento || 0)),
-          subtotal: parseFloat(String(detalle.subtotal)),
-          lote: detalle.lote || '',
-          fecha_vencimiento: detalle.fecha_vencimiento || null,
-        };
-
-        // ✅ Solo incluir id si existe (para detalles existentes)
-        if (detalle.id) {
-          detalleTransformado.id = detalle.id;
-        }
-
-        return detalleTransformado;
-      }),
+      detalles: detallesTransformados,
     };
 
     console.log('🟡 CompraForm::submit() - Datos transformados', {
@@ -1256,7 +1276,7 @@ export default function CompraForm() {
             <div className="w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="font-mono">{formatCurrency(data.subtotal, selectedMoneda?.simbolo)}</span>
+                <span className="font-mono">{formatCurrency(parseFloat(String(formatearNumero(data.subtotal))), selectedMoneda?.simbolo)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Descuento:</span>
@@ -1265,7 +1285,7 @@ export default function CompraForm() {
                     type="text"
                     inputMode="decimal" // ✅ Mostrar teclado decimal en móvil
                     className="w-20 px-2 py-1 text-right text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    value={data.descuento}
+                    value={formatearNumero(data.descuento)}
                     onChange={e => {
                       // ✅ Solo permitir números decimales positivos
                       const valor = e.target.value;
@@ -1277,7 +1297,7 @@ export default function CompraForm() {
                       }
                     }}
                   />
-                  <span className="font-mono">{formatCurrency(data.descuento, selectedMoneda?.simbolo)}</span>
+                  <span className="font-mono">{formatCurrency(parseFloat(String(formatearNumero(data.descuento))), selectedMoneda?.simbolo)}</span>
                 </div>
               </div>
               {/* <div className="flex justify-between text-sm">
@@ -1297,7 +1317,7 @@ export default function CompraForm() {
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total:</span>
-                  <span className="font-mono text-lg">{formatCurrency(data.total, selectedMoneda?.simbolo)}</span>
+                  <span className="font-mono text-lg">{formatCurrency(parseFloat(String(formatearNumero(data.total))), selectedMoneda?.simbolo)}</span>
                 </div>
               </div>
             </div>

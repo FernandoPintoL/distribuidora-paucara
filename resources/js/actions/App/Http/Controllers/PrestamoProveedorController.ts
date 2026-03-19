@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-export const show = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -152,7 +152,7 @@ show.definition = {
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-show.url = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+show.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { prestamo: args }
     }
@@ -185,7 +185,7 @@ show.url = (args: { prestamo: string | number | { id: string | number } } | [pre
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-show.get = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -194,7 +194,7 @@ show.get = (args: { prestamo: string | number | { id: string | number } } | [pre
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-show.head = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
@@ -204,7 +204,7 @@ show.head = (args: { prestamo: string | number | { id: string | number } } | [pr
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-    const showForm = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
@@ -214,7 +214,7 @@ show.head = (args: { prestamo: string | number | { id: string | number } } | [pr
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-        showForm.get = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
@@ -223,7 +223,7 @@ show.head = (args: { prestamo: string | number | { id: string | number } } | [pr
  * @see app/Http/Controllers/PrestamoProveedorController.php:95
  * @route '/api/prestamos-proveedor/{prestamo}'
  */
-        showForm.head = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -239,7 +239,7 @@ show.head = (args: { prestamo: string | number | { id: string | number } } | [pr
  * @see app/Http/Controllers/PrestamoProveedorController.php:116
  * @route '/api/prestamos-proveedor/{prestamo}/devolver'
  */
-export const registrarDevolucion = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const registrarDevolucion = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: registrarDevolucion.url(args, options),
     method: 'post',
 })
@@ -254,7 +254,7 @@ registrarDevolucion.definition = {
  * @see app/Http/Controllers/PrestamoProveedorController.php:116
  * @route '/api/prestamos-proveedor/{prestamo}/devolver'
  */
-registrarDevolucion.url = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+registrarDevolucion.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { prestamo: args }
     }
@@ -287,7 +287,7 @@ registrarDevolucion.url = (args: { prestamo: string | number | { id: string | nu
  * @see app/Http/Controllers/PrestamoProveedorController.php:116
  * @route '/api/prestamos-proveedor/{prestamo}/devolver'
  */
-registrarDevolucion.post = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+registrarDevolucion.post = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: registrarDevolucion.url(args, options),
     method: 'post',
 })
@@ -297,7 +297,7 @@ registrarDevolucion.post = (args: { prestamo: string | number | { id: string | n
  * @see app/Http/Controllers/PrestamoProveedorController.php:116
  * @route '/api/prestamos-proveedor/{prestamo}/devolver'
  */
-    const registrarDevolucionForm = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const registrarDevolucionForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: registrarDevolucion.url(args, options),
         method: 'post',
     })
@@ -307,7 +307,7 @@ registrarDevolucion.post = (args: { prestamo: string | number | { id: string | n
  * @see app/Http/Controllers/PrestamoProveedorController.php:116
  * @route '/api/prestamos-proveedor/{prestamo}/devolver'
  */
-        registrarDevolucionForm.post = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        registrarDevolucionForm.post = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: registrarDevolucion.url(args, options),
             method: 'post',
         })

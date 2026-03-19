@@ -135,7 +135,8 @@ class UpdateCompraRequest extends FormRequest
         $subtotalCalculado = array_reduce($detalles, fn($sum, $det) => $sum + ($det['subtotal'] ?? 0), 0);
         $subtotalDeclarado = $this->input('subtotal', 0);
 
-        if (abs($subtotalCalculado - $subtotalDeclarado) > 0.01) {
+        // ✅ TOLERANCIA: 0.0001 (BD almacena hasta 10 decimales: decimal:18,10)
+        if (abs($subtotalCalculado - $subtotalDeclarado) > 0.0001) {
             $validator->errors()->add('subtotal',
                 "El subtotal ({$subtotalDeclarado}) no coincide con la suma de los detalles ({$subtotalCalculado})."
             );
@@ -151,7 +152,8 @@ class UpdateCompraRequest extends FormRequest
 
         $totalCalculado = $subtotal - $descuento + $impuesto;
 
-        if (abs($totalCalculado - $total) > 0.01) {
+        // ✅ TOLERANCIA: 0.05 para errores de redondeo en cálculos decimales
+        if (abs($totalCalculado - $total) > 0.05) {
             $validator->errors()->add('total',
                 "El total ({$total}) no coincide con el cálculo (subtotal: {$subtotal} - descuento: {$descuento} + impuesto: {$impuesto} = {$totalCalculado})."
             );
@@ -182,7 +184,8 @@ class UpdateCompraRequest extends FormRequest
 
             $subtotalCalculado = ($cantidad * $precioUnitario) - $descuento;
 
-            if (abs($subtotalCalculado - $subtotal) > 0.01) {
+            // ✅ TOLERANCIA: 0.05 para errores de redondeo en cálculos decimales
+            if (abs($subtotalCalculado - $subtotal) > 0.05) {
                 $validator->errors()->add("detalles.{$index}.subtotal",
                     "El subtotal del detalle #{$index} ({$subtotal}) no coincide con el cálculo ({$subtotalCalculado})."
                 );

@@ -215,7 +215,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-export const imprimir = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const imprimir = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -230,7 +230,7 @@ imprimir.definition = {
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-imprimir.url = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
+imprimir.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { prestamo: args }
     }
@@ -263,7 +263,7 @@ imprimir.url = (args: { prestamo: string | number | { id: string | number } } | 
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-imprimir.get = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+imprimir.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -272,7 +272,7 @@ imprimir.get = (args: { prestamo: string | number | { id: string | number } } | 
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-imprimir.head = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: imprimir.url(args, options),
     method: 'head',
 })
@@ -282,7 +282,7 @@ imprimir.head = (args: { prestamo: string | number | { id: string | number } } |
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-    const imprimirForm = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const imprimirForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: imprimir.url(args, options),
         method: 'get',
     })
@@ -292,7 +292,7 @@ imprimir.head = (args: { prestamo: string | number | { id: string | number } } |
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-        imprimirForm.get = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, options),
             method: 'get',
         })
@@ -301,7 +301,7 @@ imprimir.head = (args: { prestamo: string | number | { id: string | number } } |
  * @see app/Http/Controllers/PrestamoClienteController.php:264
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
-        imprimirForm.head = (args: { prestamo: string | number | { id: string | number } } | [prestamo: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

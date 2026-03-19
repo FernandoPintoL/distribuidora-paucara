@@ -24,9 +24,9 @@ class DetalleCompra extends Model
     {
         return [
             'cantidad' => 'decimal:6',
-            'precio_unitario' => 'decimal:2',
-            'descuento' => 'decimal:2',
-            'subtotal' => 'decimal:2',
+            'precio_unitario' => 'decimal:10',
+            'descuento' => 'decimal:10',
+            'subtotal' => 'decimal:10',
             'fecha_vencimiento' => 'date',
         ];
     }
@@ -45,5 +45,38 @@ class DetalleCompra extends Model
     public function unidadMedida()
     {
         return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
+    }
+
+    /**
+     * ✅ NUEVO 2026-03-19: Accessores para remover ceros innecesarios
+     * Guarda: 14.10 → Devuelve: "14.1"
+     * Guarda: 15.202 → Devuelve: "15.202"
+     */
+    protected function cantidad(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn($value) => $value !== null ? rtrim(rtrim((string)$value, '0'), '.') : $value,
+        );
+    }
+
+    protected function precioUnitario(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn($value) => $value !== null ? rtrim(rtrim((string)$value, '0'), '.') : $value,
+        );
+    }
+
+    protected function descuento(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn($value) => $value !== null ? rtrim(rtrim((string)$value, '0'), '.') : $value,
+        );
+    }
+
+    protected function subtotal(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn($value) => $value !== null ? rtrim(rtrim((string)$value, '0'), '.') : $value,
+        );
     }
 }
