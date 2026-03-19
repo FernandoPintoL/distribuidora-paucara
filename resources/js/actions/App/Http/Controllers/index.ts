@@ -29,6 +29,11 @@ import ImageBackupController from './ImageBackupController'
 import AuditoriaCajaController from './AuditoriaCajaController'
 import ConciliacionCajaController from './ConciliacionCajaController'
 import AlertasController from './AlertasController'
+import PrestableController from './PrestableController'
+import PrestableStockController from './PrestableStockController'
+import PrestamoClienteController from './PrestamoClienteController'
+import PrestamoProveedorController from './PrestamoProveedorController'
+import ReportesController from './ReportesController'
 import VentaPublicController from './VentaPublicController'
 import PublicStockController from './PublicStockController'
 import DashboardController from './DashboardController'
@@ -71,6 +76,7 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import ReservaStockController from './ReservaStockController'
 import Inventario from './Inventario'
+import PrestamosInertiaController from './PrestamosInertiaController'
 import Web from './Web'
 import VendedorController from './VendedorController'
 import ChoferController from './ChoferController'
@@ -118,6 +124,11 @@ ImageBackupController,
 AuditoriaCajaController,
 ConciliacionCajaController,
 AlertasController,
+PrestableController,
+PrestableStockController,
+PrestamoClienteController,
+PrestamoProveedorController,
+ReportesController,
 VentaPublicController,
 PublicStockController,
 DashboardController,
@@ -160,6 +171,7 @@ TipoAjusteInventarioController,
 InventarioInicialController,
 ReservaStockController,
 Inventario,
+PrestamosInertiaController,
 Web,
 VendedorController,
 ChoferController,

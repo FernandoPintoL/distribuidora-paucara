@@ -33,7 +33,7 @@ export default function Password() {
 
                     <Form
                         method="PUT"
-                        action="/password"
+                        action="/settings/password"
                         options={{
                             preserveScroll: true,
                         }}

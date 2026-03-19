@@ -184,10 +184,13 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                     Folio: {compra.id} | {compra.numero}
                                     <div className="font-medium">
-                                        {new Date(compra.fecha).toLocaleDateString('es-ES', {
+                                        {new Date(compra.created_at).toLocaleString('es-ES', {
                                             year: 'numeric',
                                             month: 'short',
-                                            day: 'numeric'
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit'
                                         })}
                                     </div>
                                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getEstadoColor(compra.estado_documento)}`}>
@@ -263,8 +266,8 @@ export default function TablaCompras({ compras, sortBy = 'created_at', sortDir =
                                             </button>
                                         )}
 
-                                        {/* Botón Editar - Solo si está BORRADOR */}
-                                        {can('compras.update') && compra.estado_documento?.codigo === 'BORRADOR' && (
+                                        {/* Botón Editar - disponible si el usuario puede actualizar compras */}
+                                        {can('compras.update') && (
                                             <Link
                                                 href={`/compras/${compra.id}/edit`}
                                                 className="inline-flex items-center p-2 text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors"

@@ -7,6 +7,15 @@ import { tienePreferenciaDiferencia } from '@/domain/types/cascada-precios.types
 import { preciosService } from '@/application/services/precios.service'; // ✅ USAR SERVICIO EXISTENTE
 import type { Producto } from '@/domain/entities/ventas';
 
+// ✅ HELPER FUNCTION 2026-03-19: Convertir fechas ISO a formato yyyy-MM-dd para inputs type="date"
+const normalizeDateForInput = (date: string | null | undefined): string => {
+  if (!date) return '';
+  // Si ya está en formato yyyy-MM-dd, devolverlo tal cual
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  // Si es ISO completo o similar, tomar solo los primeros 10 caracteres
+  return date.slice(0, 10);
+};
+
 // Tipos para el componente - más genéricos para compatibilidad
 export interface DetalleProducto {
     id?: number | string;
@@ -931,10 +940,13 @@ export default function ProductosTable({
                                                 {productoInfo?.nombre || 'Producto no encontrado'}
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 text-left">
-                                                {productoInfo?.codigo && (
+                                                {productoInfo?.sku && (
+                                                    <div>SKU: {productoInfo.sku}</div>
+                                                )}
+                                                {productoInfo?.codigo && productoInfo.codigo !== productoInfo.sku && (
                                                     <div>Código: {productoInfo.codigo}</div>
                                                 )}
-                                                {productoInfo?.codigo_barras && (
+                                                {productoInfo?.codigo_barras && productoInfo.codigo_barras !== productoInfo.sku && (
                                                     <div>Código Barras: {productoInfo.codigo_barras}</div>
                                                 )}
                                                 {/* ✅ NUEVO: Mostrar Marca y Unidad en línea compacta */}
@@ -1205,7 +1217,8 @@ export default function ProductosTable({
                                                     <input
                                                         type="date"
                                                         disabled={readOnly}
-                                                        value={detalle.fecha_vencimiento || ''}
+                                                        // ✅ FIX 2026-03-19: Normalizar fecha ISO a formato yyyy-MM-dd
+                                                        value={normalizeDateForInput(detalle.fecha_vencimiento)}
                                                         onChange={(e) => {
                                                             handleUpdateDetail(index, 'fecha_vencimiento', e.target.value);
                                                         }}

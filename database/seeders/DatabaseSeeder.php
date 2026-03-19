@@ -113,5 +113,9 @@ class DatabaseSeeder extends Seeder
 
         // Precalentar caché de códigos de barra (después de que los datos estén listos)
         $this->call(CodigosBarraCachePrecalentarSeeder::class);
+
+        // ✅ NUEVO: Seeders para módulo de Préstamos de Canastillas y Embases
+        $this->call(PrestableSeeder::class);
+        $this->call(PrestableStockSeeder::class);
     }
 }

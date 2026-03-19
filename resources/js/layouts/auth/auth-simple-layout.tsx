@@ -26,7 +26,7 @@ export default function AuthSimpleLayout({ children, title, description }: Props
                     {/* Logo y encabezado */}
                     <div className="flex flex-col items-center gap-4">
                         <Link href={home()} className="group flex flex-col items-center gap-2 font-medium transition-transform duration-300 hover:scale-105">
-                            <div className="relative mb-1 flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 p-3 shadow-lg shadow-red-500/25 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-red-500/40">
+                            <div className="relative mb-1 flex h-16 w-16 items-center justify-center rounded-sm border border-red-500/80 bg-background/90 p-1 transition-all duration-300">
                                 <img src={logoSvg} alt={logoAlt} className="h-full w-auto object-contain" />
                                 {/* Efecto de brillo */}
                                 <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

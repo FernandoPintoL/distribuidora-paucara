@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
@@ -68,6 +68,15 @@ interface Almacen {
   activo: boolean;
 }
 
+// ✅ HELPER FUNCTION 2026-03-19: Convertir fechas ISO a formato yyyy-MM-dd para inputs type="date"
+const normalizeDateForInput = (date: string | null | undefined): string => {
+  if (!date) return '';
+  // Si ya está en formato yyyy-MM-dd, devolverlo tal cual
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  // Si es ISO completo o similar, tomar solo los primeros 10 caracteres
+  return date.slice(0, 10);
+};
+
 interface PageProps extends InertiaPageProps {
   compra?: Compra;
   proveedores: Proveedor[];
@@ -126,14 +135,15 @@ export default function CompraForm() {
     estadoDocumento: props.compra?.estadoDocumento,
     estadoDocumentoId: props.compra?.estado_documento_id,
   });
-  // BORRADOR: Editable todo | APROBADO: Solo observaciones | FACTURADO+: Solo lectura
-  const editableBorrador = !estadoActual || estadoActual === 'BORRADOR'; // Crear o editar en BORRADOR
-  const editableAprobado = estadoActual === 'APROBADO'; // En APROBADO solo observaciones
+  // ✅ FIX 2026-03-19: BORRADOR y APROBADO son editables | FACTURADO+: Solo lectura
+  const editableBorrador = !estadoActual || estadoActual === 'BORRADOR' || estadoActual === 'APROBADO'; // BORRADOR y APROBADO pueden editar todo
+  const editableAprobado = false; // Ya no se usa para deshabilitar campos
   const soloLectura = ['FACTURADO', 'CANCELADO', 'ANULADO'].includes(estadoActual || '');
 
   const { data, setData, post, put, processing, errors } = useForm<CompraFormData>({
     numero: props.compra?.numero || undefined, // Solo para edición
-    fecha: props.compra?.fecha ?? new Date().toISOString().slice(0, 10),
+    // ✅ FIX 2026-03-19: Normalizar fecha principal a formato yyyy-MM-dd
+    fecha: props.compra?.fecha ? normalizeDateForInput(props.compra.fecha) : new Date().toISOString().slice(0, 10),
     numero_factura: props.compra?.numero_factura ?? '',
     subtotal: props.compra?.subtotal ?? 0,
     descuento: props.compra?.descuento ?? 0,
@@ -160,7 +170,8 @@ export default function CompraForm() {
       descuento: 0,
       subtotal: d.subtotal,
       lote: d.lote ?? '',
-      fecha_vencimiento: d.fecha_vencimiento ?? '',
+      // ✅ FIX 2026-03-19: Normalizar fecha ISO a formato yyyy-MM-dd para inputs type="date"
+      fecha_vencimiento: normalizeDateForInput(d.fecha_vencimiento),
       // ✅ NUEVO 2026-03-06: Incluir información del producto para que ProductosTable lo reconozca
       producto: d.producto ? {
         id: d.producto.id,
@@ -170,9 +181,12 @@ export default function CompraForm() {
         precio_venta: d.producto.precio_venta,
         precio_compra: d.producto.precio_compra,
         // ✅ NUEVO 2026-03-06: Agregar SKU, marca y unidad (como objetos si existen)
-        sku: d.producto.codigo ?? undefined,
+        sku: d.producto.sku ?? undefined,
         marca: d.producto.marca, // ← Mantener como objeto {id, nombre}
         unidad: d.producto.unidad, // ← Mantener como objeto {id, codigo, nombre}
+        // ✅ NUEVO 2026-03-19: Incluir stock disponible desde backend
+        stock_total: d.producto.stock_total ?? 0,
+        stock_disponible: d.producto.stock_disponible ?? 0,
       } : undefined,
     })) ?? [],
   });
@@ -482,7 +496,7 @@ export default function CompraForm() {
     [props.almacenes]
   );
 
-  // ✅ MEMOIZED: Convertir estados a opciones para SearchSelect
+  // ✅ MEMOIZED: Convertir estados a opciones para SearchSelect (FIX 2026-03-19: No permitir aprobación duplicada)
   const estadoOptions: SelectOption[] = useMemo(() => {
     const getEstadosPermitidos = () => {
       if (!isEditing) {
@@ -495,38 +509,25 @@ export default function CompraForm() {
       const estadoActual = props.compra?.estadoDocumento?.nombre;
       console.log('🔍 getEstadosPermitidos - estadoActual:', estadoActual, 'all estados:', props.estados);
 
-      // Filtrar estados según el flujo de negocio
-      switch (estadoActual) {
-        case 'Borrador':
-          return props.estados?.filter(estado =>
-            ['Borrador', 'Aprobado', 'Pendiente'].includes(estado.nombre)
-          ) ?? [];
-        case 'Pendiente':
-          return props.estados?.filter(estado =>
-            ['Pendiente', 'Aprobado', 'Anulado'].includes(estado.nombre)
-          ) ?? [];
-        case 'Aprobado':
-          return props.estados?.filter(estado =>
-            ['Aprobado', 'Facturado', 'Anulado'].includes(estado.nombre)
-          ) ?? [];
-        case 'Facturado':
-          return props.estados?.filter(estado =>
-            ['Facturado', 'Cancelado', 'Anulado'].includes(estado.nombre)
-          ) ?? [];
-        default:
-          // Estados finales (Anulado, Cancelado) no permiten cambios
-          console.log('🔍 getEstadosPermitidos - Usando DEFAULT case, estadoActual:', estadoActual);
-          const result = props.estados?.filter(estado => estado.nombre === estadoActual) ?? [];
-          console.log('🔍 resultado del default:', result);
-          return result;
-      }
+      // ✅ NUEVO 2026-03-19: Mapeo de transiciones de estado permitidas
+      const transicionesPermitidas: Record<string, string[]> = {
+        'Borrador': ['Borrador', 'Aprobado', 'Pendiente', 'Anulado'],
+        'Pendiente': ['Pendiente', 'Aprobado', 'Anulado'],
+        'Aprobado': ['Facturado', 'Anulado'], // ✅ NO permitir seleccionar 'Aprobado' de nuevo
+        'Facturado': ['Cancelado', 'Anulado'],
+        'Cancelado': [], // Solo lectura
+        'Anulado': [], // Solo lectura
+      };
+
+      const estadosValidos = transicionesPermitidas[estadoActual] ?? [estadoActual];
+      return props.estados?.filter(estado => estadosValidos.includes(estado.nombre)) ?? [];
     };
 
     const opciones = getEstadosPermitidos().map(estado => ({
       value: estado.id,
       label: estado.nombre,
     }));
-    console.log('📦 estadoOptions final:', opciones);
+    console.log('📦 estadoOptions final (sin duplicados):', opciones);
     return opciones;
   }, [isEditing, props.compra?.estadoDocumento?.nombre, props.estados]);
 
@@ -577,12 +578,17 @@ export default function CompraForm() {
   };
 
   // Detectar si los campos del header han cambiado
+  // ✅ FIX 2026-03-19: Normalizar comparación de fechas
   const hasHeaderChanges = (): boolean => {
     if (!isEditing || !props.compra) return false;
 
+    // ✅ Normalizar fecha para comparación (yyyy-MM-dd)
+    const dataFechaNormalizada = normalizeDateForInput(data.fecha);
+    const compraFechaNormalizada = normalizeDateForInput(props.compra.fecha);
+
     return (
       data.numero !== String(props.compra.numero) ||
-      data.fecha !== props.compra.fecha ||
+      dataFechaNormalizada !== compraFechaNormalizada ||
       data.numero_factura !== (props.compra.numero_factura || '') ||
       parseFloat(String(data.subtotal)) !== parseFloat(String(props.compra.subtotal)) ||
       parseFloat(String(data.descuento || 0)) !== parseFloat(String(props.compra.descuento || 0)) ||
@@ -598,6 +604,7 @@ export default function CompraForm() {
   };
 
   // Detectar si los detalles han cambiado
+  // ✅ FIX 2026-03-19: Comparar por ID, no por índice
   const hasDetallesChanges = (): boolean => {
     if (!isEditing || !props.compra || !props.compra.detalles) return false;
 
@@ -606,13 +613,32 @@ export default function CompraForm() {
 
     // Comparar cantidad de detalles
     if (originalDetalles.length !== currentDetalles.length) {
+      console.log('🔍 hasDetallesChanges - Cantidad diferente', {
+        original: originalDetalles.length,
+        current: currentDetalles.length,
+      });
       return true;
     }
 
-    // Comparar cada detalle línea por línea
-    for (let i = 0; i < originalDetalles.length; i++) {
-      const original = originalDetalles[i];
-      const current = currentDetalles[i];
+    // ✅ Comparar cada detalle por ID (no por índice)
+    const originalMap = new Map(originalDetalles.map(d => [d.id, d]));
+    const currentMap = new Map(currentDetalles.map(d => [d.id, d]));
+
+    // Verificar si hay detalles nuevos (sin ID) o detalles eliminados
+    const hasNewDetalles = currentDetalles.some(d => !d.id);
+    const deletedIds = Array.from(originalMap.keys()).filter(id => !currentMap.has(id));
+
+    if (hasNewDetalles || deletedIds.length > 0) {
+      console.log('🔍 hasDetallesChanges - Detalles nuevos o eliminados', {
+        hasNewDetalles,
+        deletedIds,
+      });
+      return true;
+    }
+
+    // Comparar cambios en detalles existentes
+    for (const [id, original] of originalMap) {
+      const current = currentMap.get(id);
 
       if (!current ||
         parseInt(String(current.producto_id)) !== original.producto_id ||
@@ -620,10 +646,16 @@ export default function CompraForm() {
         parseFloat(String(current.precio_unitario)) !== parseFloat(String(original.precio_unitario)) ||
         parseFloat(String(current.descuento || 0)) !== parseFloat(String(original.descuento || 0))
       ) {
+        console.log('🔍 hasDetallesChanges - Detalle modificado', {
+          id,
+          original: original,
+          current: current,
+        });
         return true;
       }
     }
 
+    console.log('🔍 hasDetallesChanges - Sin cambios detectados');
     return false;
   };
 
@@ -699,6 +731,51 @@ export default function CompraForm() {
     // Mostrar modal de loading
     let loadingToast: string;
 
+    // ✅ FIX CRÍTICA 2026-03-19: Transformar datos MANUALMENTE y usar router.put() directamente
+    // (useForm().put() con transform no funciona en esta versión de Inertia.js)
+    const transformedData: any = {
+      numero: data.numero || undefined,
+      fecha: data.fecha,
+      numero_factura: data.numero_factura || '',
+      subtotal: parseFloat(String(data.subtotal)),
+      descuento: parseFloat(String(data.descuento || 0)),
+      impuesto: parseFloat(String(data.impuesto || 0)),
+      total: parseFloat(String(data.total)),
+      observaciones: data.observaciones || '',
+      proveedor_id: parseInt(String(data.proveedor_id)),
+      usuario_id: parseInt(String(data.usuario_id)),
+      estado_documento_id: parseInt(String(data.estado_documento_id)),
+      moneda_id: parseInt(String(data.moneda_id)),
+      tipo_pago_id: data.tipo_pago_id ? parseInt(String(data.tipo_pago_id)) : null,
+      almacen_id: data.almacen_id ? parseInt(String(data.almacen_id)) : null,
+      // ✅ FIX 2026-03-19: NO incluir id si es undefined (evita "Undefined array key")
+      detalles: detallesValidos.map(detalle => {
+        const detalleTransformado: any = {
+          producto_id: parseInt(String(detalle.producto_id)),
+          cantidad: parseInt(String(detalle.cantidad)),
+          precio_unitario: parseFloat(String(detalle.precio_unitario)),
+          descuento: parseFloat(String(detalle.descuento || 0)),
+          subtotal: parseFloat(String(detalle.subtotal)),
+          lote: detalle.lote || '',
+          fecha_vencimiento: detalle.fecha_vencimiento || null,
+        };
+
+        // ✅ Solo incluir id si existe (para detalles existentes)
+        if (detalle.id) {
+          detalleTransformado.id = detalle.id;
+        }
+
+        return detalleTransformado;
+      }),
+    };
+
+    console.log('🟡 CompraForm::submit() - Datos transformados', {
+      endpoint: isEditing ? `/compras/${props.compra?.id}` : '/compras',
+      detalles_count: transformedData.detalles.length,
+      data_keys: Object.keys(transformedData),
+      detalles_enviados: JSON.stringify(transformedData.detalles, null, 2),
+    });
+
     const options = {
       onStart: () => {
         console.log('🚀 CompraForm::submit() - onStart: Iniciando envío');
@@ -746,7 +823,16 @@ export default function CompraForm() {
         }
       },
       // Transformar datos antes de enviar
+      // ✅ FIX 2026-03-19: Recalcular esEscenarioEstadoOnly dentro del transform para evitar closure stale
       transform: (data: CompraFormData) => {
+        // Recalcular si es escenario estado-only (dentro del transform)
+        const esEscenarioEstadoOnly_local = isEditing && props.compra &&
+          data.estado_documento_id !== String(props.compra.estado_documento_id) &&
+          !hasHeaderChanges() &&
+          !hasDetallesChanges();
+
+        console.log('🟡 transform() ejecutándose - esEscenarioEstadoOnly_local:', esEscenarioEstadoOnly_local);
+
         const transformedData: any = {
           numero: data.numero || undefined,
           fecha: data.fecha,
@@ -764,9 +850,11 @@ export default function CompraForm() {
           almacen_id: data.almacen_id ? parseInt(String(data.almacen_id)) : null,
         };
 
-        // Escenario 1: Usuario modifica detalles/header → Enviar detalles
+        // Escenario 1: Usuario modifica detalles/header → SIEMPRE enviar detalles
         // Escenario 2: Solo cambio de estado → NO enviar detalles
-        if (!esEscenarioEstadoOnly) {
+        // ✅ FIX: SIEMPRE enviar detalles en modo edición (no solo en escenario-only)
+        if (isEditing) {
+          // En modo edición, SIEMPRE incluir detalles
           transformedData.detalles = detallesValidos.map(detalle => ({
             id: detalle.id || undefined,
             producto_id: parseInt(String(detalle.producto_id)),
@@ -777,9 +865,29 @@ export default function CompraForm() {
             lote: detalle.lote || '',
             fecha_vencimiento: detalle.fecha_vencimiento || null,
           }));
+
+          console.log('🟢 transform() - Enviando detalles en modo edición', {
+            detalles_count: transformedData.detalles.length,
+            esEscenarioEstadoOnly: esEscenarioEstadoOnly_local,
+          });
         } else {
-          console.log('⚠️  CompraForm::submit() - Escenario estado-only: NO enviando detalles');
+          console.log('🟢 transform() - Modo creación, enviando detalles');
+          transformedData.detalles = detallesValidos.map(detalle => ({
+            id: detalle.id || undefined,
+            producto_id: parseInt(String(detalle.producto_id)),
+            cantidad: parseInt(String(detalle.cantidad)),
+            precio_unitario: parseFloat(String(detalle.precio_unitario)),
+            descuento: parseFloat(String(detalle.descuento || 0)),
+            subtotal: parseFloat(String(detalle.subtotal)),
+            lote: detalle.lote || '',
+            fecha_vencimiento: detalle.fecha_vencimiento || null,
+          }));
         }
+
+        console.log('🟡 transform() - transformedData final:', {
+          keys: Object.keys(transformedData),
+          detalles_enviados: transformedData.detalles?.length || 0,
+        });
 
         return transformedData;
       },
@@ -792,11 +900,46 @@ export default function CompraForm() {
     });
 
     if (isEditing && props.compra) {
-      console.log(`📤 CompraForm::submit() - Enviando PUT a /compras/${props.compra.id}`);
-      put(`/compras/${props.compra.id}`, options);
+      console.log(`📤 CompraForm::submit() - Enviando PUT a /compras/${props.compra.id} con detalles`);
+      router.put(`/compras/${props.compra.id}`, transformedData, {
+        onSuccess: () => {
+          console.log('✅ CompraForm::submit() - onSuccess: Solicitud exitosa');
+          if (loadingToast) {
+            NotificationService.dismiss(loadingToast);
+          }
+          localStorage.removeItem('compra-create-draft');
+          console.log('✅ Borrador de compra eliminado del localStorage');
+          NotificationService.success('Compra actualizada exitosamente');
+        },
+        onError: (errors: Record<string, string | string[]>) => {
+          console.error('❌ CompraForm::submit() - onError: Error en respuesta', errors);
+          if (loadingToast) {
+            NotificationService.dismiss(loadingToast);
+          }
+          const errorMsg = typeof errors.error === 'string' ? errors.error : 'Error al actualizar la compra';
+          NotificationService.error(errorMsg);
+        },
+      });
     } else {
-      console.log('📤 CompraForm::submit() - Enviando POST a /compras');
-      post('/compras', options);
+      console.log('📤 CompraForm::submit() - Enviando POST a /compras con detalles');
+      router.post('/compras', transformedData, {
+        onSuccess: () => {
+          console.log('✅ CompraForm::submit() - onSuccess: Solicitud exitosa');
+          if (loadingToast) {
+            NotificationService.dismiss(loadingToast);
+          }
+          localStorage.removeItem('compra-create-draft');
+          NotificationService.success('Compra creada exitosamente');
+        },
+        onError: (errors: Record<string, string | string[]>) => {
+          console.error('❌ CompraForm::submit() - onError: Error en respuesta', errors);
+          if (loadingToast) {
+            NotificationService.dismiss(loadingToast);
+          }
+          const errorMsg = typeof errors.error === 'string' ? errors.error : 'Error al crear la compra';
+          NotificationService.error(errorMsg);
+        },
+      });
     }
 
     console.log('⏳ CompraForm::submit() - Solicitud enviada, esperando respuesta...');
@@ -864,9 +1007,9 @@ export default function CompraForm() {
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {estadoActual === 'Borrador' && 'Compra en desarrollo. Puede editar todos los campos.'}
-                    {estadoActual === 'Pendiente' && 'Esperando aprobación. Puede cambiar a Aprobado.'}
-                    {estadoActual === 'Aprobado' && 'Compra aprobada. Stock registrado. Solo puede editar observaciones.'}
-                    {estadoActual === 'Facturado' && 'Compra facturada. Solo lectura.'}
+                    {estadoActual === 'Pendiente' && 'Esperando aprobación. Puede cambiar a Aprobado o Anular.'}
+                    {estadoActual === 'Aprobado' && '✅ Compra aprobada. Stock registrado. Puede editar todos los campos. Puede cambiar a Facturado o Anular.'}
+                    {estadoActual === 'Facturado' && 'Compra facturada. Solo lectura. Puede cambiar a Cancelado o Anular.'}
                     {estadoActual === 'Cancelado' && 'Compra cancelada. Solo lectura.'}
                     {estadoActual === 'Anulado' && 'Compra anulada. Solo lectura.'}
                   </p>
@@ -909,7 +1052,7 @@ export default function CompraForm() {
               <input
                 id="fecha"
                 type="date"
-                disabled={soloLectura || editableAprobado}
+                disabled={soloLectura}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
                 value={data.fecha}
                 onChange={e => setData('fecha', e.target.value)}
@@ -936,7 +1079,7 @@ export default function CompraForm() {
                 placeholder="Escribir nombre del proveedor..."
                 emptyText="No se encontraron proveedores"
                 error={errors.proveedor_id}
-                disabled={soloLectura || editableAprobado}
+                disabled={soloLectura}
                 required={true}
                 allowScanner={false}
                 showCreateButton={true}
@@ -961,7 +1104,7 @@ export default function CompraForm() {
               <SearchSelect
                 id="tipo_pago_id"
                 label="Tipo de Pago"
-                disabled={soloLectura || editableAprobado}
+                disabled={soloLectura}
                 value={data.tipo_pago_id}
                 options={tipoPagoOptions}
                 onChange={(value: any) => setData('tipo_pago_id', value || '')}
@@ -993,7 +1136,7 @@ export default function CompraForm() {
                 id="almacen_id"
                 label="Almacén"
                 required
-                disabled={soloLectura || editableAprobado}
+                disabled={soloLectura}
                 value={data.almacen_id}
                 options={almacenOptions}
                 onChange={(value: any) => setData('almacen_id', value || '')}
@@ -1048,7 +1191,8 @@ export default function CompraForm() {
               precio_compra: p.precio_compra as number | undefined
             }))}
             detalles={data.detalles}
-            readOnly={soloLectura || editableAprobado}
+            // ✅ FIX 2026-03-19: Solo lectura en FACTURADO+, editable en BORRADOR y APROBADO
+            readOnly={soloLectura}
             onAddProduct={(producto) => {
               // Adaptar la función para agregar producto
               const precioCompra = Number(producto.precio_compra) || 0; // ✅ Cast a number

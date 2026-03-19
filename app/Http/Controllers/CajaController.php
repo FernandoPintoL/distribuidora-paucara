@@ -499,13 +499,18 @@ class CajaController extends Controller
                 'cerrada_por'    => $usuarioAutenticado->id,
             ]);
 
-            // ✅ MEJORADO: Retornar JSON (sin redireccionar) para permitir abrir OutputSelectionModal
+            // ✅ NUEVO (2026-03-17): Cerrar sesión después de cerrar caja
+            Auth::logout();
+
+            // ✅ MEJORADO: Retornar JSON con flag para redirigir al frontend
             return response()->json([
                 'success' => true,
-                'message' => 'Caja cerrada exitosamente. Pendiente de verificación. Diferencia: ' . number_format($diferencia, 2) . ' Bs.',
+                'message' => 'Caja cerrada exitosamente. Sesión cerrada. Redirigiendo al login...',
                 'cierre_id' => $cierre->id,
                 'apertura_id' => $apertura->id,
                 'diferencia' => $diferencia,
+                'logout' => true,  // ✅ Flag para frontend que sepa redirigir
+                'redirect_url' => route('login'),
             ], 200);
 
         } catch (\Exception $e) {

@@ -96,9 +96,49 @@ class ImpresionService
             'tipoDocumento' => $tipoDocumento,
             'formato' => $formato,
             'tipo_documento_class' => is_object($documento) ? get_class($documento) : gettype($documento),
+            'tiene_vista_farmacia' => isset($opciones['vista_farmacia']),
         ]);
 
         try {
+            // ✅ NUEVO: Si se especifica una vista de farmacia, usarla directamente
+            if (!empty($opciones['vista_farmacia'])) {
+                \Log::info('📝 [ImpresionService::generarPDF] Usando vista de farmacia personalizada', [
+                    'tipoDocumento' => $tipoDocumento,
+                    'vista_farmacia' => $opciones['vista_farmacia'],
+                ]);
+
+                $empresa = $this->empresa ?? Empresa::principalFresh();
+                $logoPrincipalBase64 = $this->logoToBase64($empresa->logo_principal);
+                $logoFooterBase64 = $this->logoToBase64($empresa->logo_footer);
+
+                $datosAdjuntos = is_array($documento) ? $documento : [];
+                $nombreFuente = $opciones['fuente'] ?? 'consolas';
+                $fuente = $this->obtenerFuente($nombreFuente);
+
+                $datos = array_merge([
+                    $tipoDocumento => $documento,
+                    'documento' => $documento,
+                    'empresa' => $empresa,
+                    'fecha_impresion' => now(),
+                    'usuario' => auth()->user() ?? 'Sistema',
+                    'opciones' => $opciones,
+                    'logo_principal_base64' => $logoPrincipalBase64,
+                    'logo_footer_base64' => $logoFooterBase64,
+                    'fuente_config' => $fuente,
+                    'fuentes_disponibles' => $this->obtenerFuentesDisponibles(),
+                ], $datosAdjuntos);
+
+                $pdf = PDF::loadView($opciones['vista_farmacia'], $datos);
+                $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4');
+
+                \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (vista farmacia)', [
+                    'tipoDocumento' => $tipoDocumento,
+                    'formato' => $formato,
+                ]);
+
+                return $pdf;
+            }
+
             // Obtener plantilla adecuada
             \Log::info('📝 [ImpresionService::generarPDF] Buscando plantilla', [
                 'tipoDocumento' => $tipoDocumento,
@@ -243,7 +283,13 @@ class ImpresionService
             'venta' => [
                 'A4' => 'impresion.ventas.hoja-completa',
                 'TICKET_80' => 'impresion.ventas.ticket-80',
+                // ✅ NUEVO: Vista específica para farmacias (usar imprimirVentaFarmacia() o pasar opciones['vista_farmacia'])
+                'TICKET_80_FARMACIA' => 'impresion.ventas.ticket-80-farmacia',
                 'TICKET_58' => 'impresion.ventas.ticket-58',
+            ],
+            'prestamo_cliente' => [
+                'A4' => 'impresion.prestamos_clientes.hoja-completa',
+                'TICKET_80' => 'impresion.prestamos_clientes.ticket-80',
             ],
             'compra' => [
                 'A4' => 'impresion.compras.hoja-completa',
@@ -482,6 +528,39 @@ class ImpresionService
             'direccionCliente',   // ✅ NUEVO: Cargar dirección registrada en la venta
             'accessToken',
         ]);
+
+        return $this->generarPDF('venta', $venta, $formato, $opciones);
+    }
+
+    /**
+     * Imprimir Venta/Factura para Farmacias
+     *
+     * @param \App\Models\Venta $venta
+     * @param string|null $formato
+     * @param array $opciones
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function imprimirVentaFarmacia($venta, ?string $formato = 'A4', array $opciones = [])
+    {
+        // Cargar relaciones necesarias (igual que imprimirVenta)
+        $venta->load([
+            'cliente.localidad',
+            'detalles.producto.stock.almacen',
+            'usuario',
+            'tipoPago',
+            'tipoDocumento',
+            'moneda',
+            'estadoDocumento',
+            'movimientoCaja.caja',
+            'proforma.usuarioCreador',
+            'direccionCliente',
+            'accessToken',
+        ]);
+
+        // ✅ NUEVO: Usar vista específica para farmacia si el formato es TICKET_80
+        if ($formato === 'TICKET_80') {
+            $opciones['vista_farmacia'] = 'impresion.ventas.ticket-80-farmacia';
+        }
 
         return $this->generarPDF('venta', $venta, $formato, $opciones);
     }

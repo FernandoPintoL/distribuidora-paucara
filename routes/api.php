@@ -46,6 +46,11 @@ use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ComboController;
 use App\Http\Controllers\ConciliacionCajaController;
+use App\Http\Controllers\PrestableController;
+use App\Http\Controllers\PrestableStockController;
+use App\Http\Controllers\PrestamoClienteController;
+use App\Http\Controllers\PrestamoProveedorController;
+use App\Http\Controllers\ReportesController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -77,6 +82,14 @@ Route::get('/tipos-pago', function () {
     return response()->json([
         'success' => true,
         'data' => \App\Models\TipoPago::where('activo', true)->get()
+    ]);
+});
+
+// ✅ NUEVO: Endpoint para cargar almacenes (para gestión de stock)
+Route::get('/almacenes', function () {
+    return response()->json([
+        'success' => true,
+        'data' => \App\Models\Almacen::where('activo', true)->get()
     ]);
 });
 
@@ -474,6 +487,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::group(['prefix' => 'ventas'], function () {
         // 🖨️ Rutas de impresión - ANTES que apiResource
         Route::get('para-impresion', [VentaController::class, 'ventasParaImpresion']);
+        Route::get('search', [VentaController::class, 'search'])->name('api.ventas.search');
         Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
         Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
 
@@ -1310,6 +1324,62 @@ Route::middleware(['auth:sanctum'])->prefix('reportes')->group(function () {
 Route::middleware(['auth:sanctum,web'])->group(function () {
     Route::get('/alertas/cuentas-vencidas', [AlertasController::class, 'cuentasVencidas'])
         ->name('api.alertas.cuentas-vencidas');
+});
+
+// ==========================================
+// 🧺 PRESTAMOS - CANASTILLAS Y EMBASES
+// ==========================================
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Prestables (Canastillas/Embases)
+    Route::prefix('prestables')->group(function () {
+        Route::get('/', [PrestableController::class, 'index']);
+        Route::post('/', [PrestableController::class, 'store']);
+        Route::get('/{prestable}', [PrestableController::class, 'show']);
+        Route::put('/{prestable}', [PrestableController::class, 'update']);
+        Route::delete('/{prestable}', [PrestableController::class, 'destroy']);
+        Route::get('/{prestable}/stock', [PrestableController::class, 'obtenerStock']);
+        Route::post('/{prestable}/stock/incrementar', [PrestableController::class, 'incrementarStock']);
+
+        // Stock management
+        Route::get('/{prestable}/stock/detalle', [PrestableStockController::class, 'show']);
+        Route::post('/{prestable}/stock/agregar-almacen', [PrestableStockController::class, 'agregarAlmacen']);
+    });
+
+    // Prestable Stock Records
+    Route::prefix('prestables-stock')->group(function () {
+        Route::put('/{prestableStock}', [PrestableStockController::class, 'update']);
+        Route::delete('/{prestableStock}', [PrestableStockController::class, 'destroy']);
+    });
+
+    // Préstamos a Clientes
+    Route::prefix('prestamos-cliente')->group(function () {
+        Route::get('/', [PrestamoClienteController::class, 'index']);
+        Route::post('/', [PrestamoClienteController::class, 'store']);
+        Route::get('/{prestamo}', [PrestamoClienteController::class, 'show']);
+        Route::post('/{prestamo}/devolver', [PrestamoClienteController::class, 'registrarDevolucion']);
+        Route::get('/chofer/{choferId}/pendientes', [PrestamoClienteController::class, 'obtenerPendientesChofer']);
+        Route::get('/cliente/{clienteId}/activos', [PrestamoClienteController::class, 'obtenerActivosCliente']);
+    });
+
+    // Préstamos a Proveedores
+    Route::prefix('prestamos-proveedor')->group(function () {
+        Route::get('/', [PrestamoProveedorController::class, 'index']);
+        Route::post('/', [PrestamoProveedorController::class, 'store']);
+        Route::get('/{prestamo}', [PrestamoProveedorController::class, 'show']);
+        Route::post('/{prestamo}/devolver', [PrestamoProveedorController::class, 'registrarDevolucion']);
+        Route::get('/proveedor/{proveedorId}/activos', [PrestamoProveedorController::class, 'obtenerActivosProveedor']);
+        Route::get('/proveedor/{proveedorId}/deuda', [PrestamoProveedorController::class, 'obtenerDeuda']);
+    });
+
+    // Reportes de Préstamos
+    Route::prefix('reportes')->group(function () {
+        Route::get('/stock', [ReportesController::class, 'reporteStock']);
+        Route::get('/stock/bajo', [ReportesController::class, 'reporteStockBajo']);
+        Route::get('/prestamos/cliente', [ReportesController::class, 'reportePrestamosCliente']);
+        Route::get('/devoluciones/pendientes', [ReportesController::class, 'reporteDevolucionesPendientes']);
+        Route::get('/proveedor/deudas', [ReportesController::class, 'reporteDeudas']);
+        Route::get('/resumen-prestamos', [ReportesController::class, 'reporteResumen']);
+    });
 });
 
 // ==========================================

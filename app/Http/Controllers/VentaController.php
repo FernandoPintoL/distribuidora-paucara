@@ -1260,7 +1260,21 @@ class VentaController extends Controller
         ]);
 
         try {
-            $pdf = $this->impresionService->imprimirVenta($venta, $formato);
+            // ✅ NUEVO: Obtener empresa del usuario autenticado y detectar si es farmacia
+            $empresa = auth()->user()?->empresa ?? \App\Models\Empresa::principal();
+            $esFarmacia = $empresa?->es_farmacia ?? false;
+
+            \Log::info('📋 [VentaController::imprimir] Detección de tipo de empresa', [
+                'venta_id'     => $venta->id,
+                'empresa_id'   => $empresa?->id,
+                'empresa_nombre' => $empresa?->nombre,
+                'es_farmacia'  => $esFarmacia,
+            ]);
+
+            // Llamar al método apropiado según el tipo de empresa
+            $pdf = $esFarmacia
+                ? $this->impresionService->imprimirVentaFarmacia($venta, $formato)
+                : $this->impresionService->imprimirVenta($venta, $formato);
 
             $nombreArchivo = "venta_{$venta->numero}_{$formato}.pdf";
 
@@ -1958,6 +1972,47 @@ class VentaController extends Controller
                 'success' => false,
                 'message' => 'Error al ejecutar reversión: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * GET /api/ventas/search
+     * Buscar ventas por número o ID para préstamos
+     *
+     * Parámetros:
+     * - q: término de búsqueda (número, ID)
+     */
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $query = $request->string('q', '');
+
+            $ventas = Venta::select('id', 'numero', 'cliente_id', 'total')
+                ->with(['cliente:id,nombre,razon_social']);
+
+            // Búsqueda por término
+            if ($query) {
+                $ventas->where(function ($q) use ($query) {
+                    $q->where('numero', 'ilike', "%{$query}%")
+                      ->orWhere('id', 'ilike', "%{$query}%");
+                });
+            }
+
+            $resultado = $ventas->orderByDesc('created_at')
+                ->limit(20)
+                ->get()
+                ->map(fn($venta) => [
+                    'id' => $venta->id,
+                    'numero' => $venta->numero,
+                    'cliente_id' => $venta->cliente_id,
+                    'nombre' => "Venta {$venta->numero}",
+                    'descripcion' => $venta->cliente?->nombre ?? 'Sin cliente',
+                ]);
+
+            return response()->json($resultado);
+        } catch (\Exception $e) {
+            Log::error('❌ Error buscando ventas', ['error' => $e->getMessage()]);
+            return response()->json([], 200);
         }
     }
 }

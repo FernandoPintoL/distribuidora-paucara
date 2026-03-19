@@ -763,7 +763,7 @@ reporteProductosVendidos.head = (options?: RouteQueryOptions): RouteDefinition<'
     reporteProductosVendidos.form = reporteProductosVendidosForm
 /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
 export const formatosDisponibles = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -778,7 +778,7 @@ formatosDisponibles.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
 formatosDisponibles.url = (options?: RouteQueryOptions) => {
@@ -787,7 +787,7 @@ formatosDisponibles.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
 formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -796,7 +796,7 @@ formatosDisponibles.get = (options?: RouteQueryOptions): RouteDefinition<'get'> 
 })
 /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
 formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -806,7 +806,7 @@ formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
     /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
     const formatosDisponiblesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -816,7 +816,7 @@ formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'
 
             /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
         formatosDisponiblesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -825,7 +825,7 @@ formatosDisponibles.head = (options?: RouteQueryOptions): RouteDefinition<'head'
         })
             /**
 * @see \App\Http\Controllers\VentaController::formatosDisponibles
- * @see app/Http/Controllers/VentaController.php:1363
+ * @see app/Http/Controllers/VentaController.php:1377
  * @route '/ventas/formatos-disponibles'
  */
         formatosDisponiblesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1239,7 +1239,7 @@ imprimirVenta.head = (args: { venta: number | { id: number } } | [venta: number 
     imprimirVenta.form = imprimirVentaForm
 /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
 export const preview = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1254,7 +1254,7 @@ preview.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
 preview.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1287,7 +1287,7 @@ preview.url = (args: { venta: number | { id: number } } | [venta: number | { id:
 
 /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
 preview.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1296,7 +1296,7 @@ preview.get = (args: { venta: number | { id: number } } | [venta: number | { id:
 })
 /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
 preview.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1306,7 +1306,7 @@ preview.head = (args: { venta: number | { id: number } } | [venta: number | { id
 
     /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
     const previewForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1316,7 +1316,7 @@ preview.head = (args: { venta: number | { id: number } } | [venta: number | { id
 
             /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
         previewForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1325,7 +1325,7 @@ preview.head = (args: { venta: number | { id: number } } | [venta: number | { id
         })
             /**
 * @see \App\Http\Controllers\VentaController::preview
- * @see app/Http/Controllers/VentaController.php:1282
+ * @see app/Http/Controllers/VentaController.php:1296
  * @route '/ventas/{venta}/preview'
  */
         previewForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1341,7 +1341,7 @@ preview.head = (args: { venta: number | { id: number } } | [venta: number | { id
     preview.form = previewForm
 /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
 export const exportarExcel = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1356,7 +1356,7 @@ exportarExcel.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
 exportarExcel.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1389,7 +1389,7 @@ exportarExcel.url = (args: { venta: number | { id: number } } | [venta: number |
 
 /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
 exportarExcel.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1398,7 +1398,7 @@ exportarExcel.get = (args: { venta: number | { id: number } } | [venta: number |
 })
 /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
 exportarExcel.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1408,7 +1408,7 @@ exportarExcel.head = (args: { venta: number | { id: number } } | [venta: number 
 
     /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
     const exportarExcelForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1418,7 +1418,7 @@ exportarExcel.head = (args: { venta: number | { id: number } } | [venta: number 
 
             /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
         exportarExcelForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1427,7 +1427,7 @@ exportarExcel.head = (args: { venta: number | { id: number } } | [venta: number 
         })
             /**
 * @see \App\Http\Controllers\VentaController::exportarExcel
- * @see app/Http/Controllers/VentaController.php:1387
+ * @see app/Http/Controllers/VentaController.php:1401
  * @route '/ventas/{venta}/exportar-excel'
  */
         exportarExcelForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1443,7 +1443,7 @@ exportarExcel.head = (args: { venta: number | { id: number } } | [venta: number 
     exportarExcel.form = exportarExcelForm
 /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
 export const exportarPdf = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1458,7 +1458,7 @@ exportarPdf.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
 exportarPdf.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1491,7 +1491,7 @@ exportarPdf.url = (args: { venta: number | { id: number } } | [venta: number | {
 
 /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
 exportarPdf.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1500,7 +1500,7 @@ exportarPdf.get = (args: { venta: number | { id: number } } | [venta: number | {
 })
 /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
 exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1510,7 +1510,7 @@ exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | 
 
     /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
     const exportarPdfForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1520,7 +1520,7 @@ exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | 
 
             /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
         exportarPdfForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -1529,7 +1529,7 @@ exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | 
         })
             /**
 * @see \App\Http\Controllers\VentaController::exportarPdf
- * @see app/Http/Controllers/VentaController.php:1423
+ * @see app/Http/Controllers/VentaController.php:1437
  * @route '/ventas/{venta}/exportar-pdf'
  */
         exportarPdfForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

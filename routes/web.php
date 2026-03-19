@@ -755,6 +755,26 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         });
     });
 
+    // ✅ PRÉSTAMOS DE CANASTILLAS Y EMBASES
+    Route::prefix('prestamos')->name('prestamos.')->middleware(['auth', 'verified'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\PrestamosInertiaController::class, 'index'])->name('index');
+        Route::get('prestables', [\App\Http\Controllers\PrestamosInertiaController::class, 'prestables'])->name('prestables');
+        Route::get('stock', [\App\Http\Controllers\PrestamosInertiaController::class, 'stock'])->name('stock');
+        Route::get('clientes', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesIndex'])->name('clientes.index');
+        Route::get('clientes/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesCrear'])->name('clientes.crear');
+        Route::post('clientes', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesStore'])->name('clientes.store');
+
+        // Impresión de préstamos de cliente (similar a ventas/{venta}/imprimir)
+        Route::get('clientes/{prestamo}/imprimir', [\App\Http\Controllers\PrestamoClienteController::class, 'imprimir'])
+            ->name('clientes.imprimir')
+            ->where('prestamo', '[0-9]+');
+
+        Route::get('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresIndex'])->name('proveedores.index');
+        Route::get('proveedores/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresCrear'])->name('proveedores.crear');
+        Route::post('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresStore'])->name('proveedores.store');
+        Route::get('reportes', [\App\Http\Controllers\PrestamosInertiaController::class, 'reportes'])->name('reportes');
+    });
+
     // Rutas para logística y envíos
     Route::prefix('logistica')->name('logistica.')->group(function () {
         Route::get('dashboard', [App\Http\Controllers\Web\LogisticaController::class, 'dashboard'])->name('dashboard');

@@ -251,11 +251,12 @@ class CompraController extends Controller
 
     public function edit($id)
     {
-        // ✅ NUEVO 2026-03-06: Cargar detalles con producto y sus relaciones (marca, unidad, codigosBarra)
+        // ✅ NUEVO 2026-03-06: Cargar detalles con producto y sus relaciones (marca, unidad, codigosBarra, stock)
         $compra = Compra::with([
             'detalles.producto.marca:id,nombre',
             'detalles.producto.unidad:id,codigo,nombre',
             'detalles.producto.codigosBarra:id,producto_id,codigo,es_principal',
+            'detalles.producto.stock:id,producto_id,almacen_id,cantidad,cantidad_disponible',
             'estadoDocumento',
             'tipoPago',
             'moneda',
@@ -275,10 +276,15 @@ class CompraController extends Controller
         $detallesMapeados = $compra->detalles->map(function ($detalle) {
             $producto = $detalle->producto;
 
-            // Obtener código principal
+            // Obtener código principal: código de barras principal, o null
             $codigosBarra = $producto->codigosBarra ?? collect();
-            $codigoPrincipal = $codigosBarra->where('es_principal', true)->first()?->codigo
-                ?: ($producto->codigo_qr ?: $producto->codigo_barras);
+            $codigoPrincipal = $codigosBarra->where('es_principal', true)->where('activo', true)->first()?->codigo ?? null;
+            $sku = $producto->sku ?? null;
+
+            // ✅ NUEVO 2026-03-06: Obtener stock disponible (totalizado de todos los almacenes)
+            $stockProductos = $producto->stock ?? collect();
+            $cantidadTotal = $stockProductos->sum('cantidad');
+            $cantidadDisponible = $stockProductos->sum('cantidad_disponible');
 
             return [
                 'id'                  => $detalle->id,
@@ -291,22 +297,26 @@ class CompraController extends Controller
                 'fecha_vencimiento'   => $detalle->fecha_vencimiento,
                 // ✅ NUEVO 2026-03-06: Incluir producto con todos los campos
                 'producto'            => [
-                    'id'             => $producto->id,
-                    'nombre'         => $producto->nombre,
-                    'codigo'         => $codigoPrincipal, // ✅ SKU/Código
-                    'codigo_barras'  => $codigoPrincipal,
-                    'precio_venta'   => $producto->precio_venta,
-                    'precio_compra'  => $producto->precio_compra,
+                    'id'                  => $producto->id,
+                    'nombre'              => $producto->nombre,
+                    'sku'                 => $sku,
+                    'codigo'              => $codigoPrincipal,
+                    'codigo_barras'       => $codigoPrincipal,
+                    'precio_venta'        => $producto->precio_venta,
+                    'precio_compra'       => $producto->precio_compra,
                     // ✅ NUEVO 2026-03-06: Incluir marca y unidad como objetos completos
-                    'marca'          => $producto->marca ? [
+                    'marca'               => $producto->marca ? [
                         'id'   => $producto->marca->id,
                         'nombre' => $producto->marca->nombre
                     ] : null,
-                    'unidad'         => $producto->unidad ? [
+                    'unidad'              => $producto->unidad ? [
                         'id'    => $producto->unidad->id,
                         'codigo' => $producto->unidad->codigo,
                         'nombre' => $producto->unidad->nombre
                     ] : null,
+                    // ✅ NUEVO: Stock disponible totalizado
+                    'stock_total'         => $cantidadTotal,
+                    'stock_disponible'    => $cantidadDisponible,
                 ],
             ];
         })->toArray();
@@ -314,12 +324,20 @@ class CompraController extends Controller
         // ✅ NUEVO 2026-03-06: Log para verificar estructura de detalles.producto
         if (count($detallesMapeados) > 0) {
             Log::info('CompraController::edit() - Estructura del primer detalle mapeado:', [
-                'detalle_id'      => $detallesMapeados[0]['id'],
-                'producto_id'     => $detallesMapeados[0]['producto_id'],
-                'producto_nombre' => $detallesMapeados[0]['producto']['nombre'],
-                'producto_codigo' => $detallesMapeados[0]['producto']['codigo'],
-                'producto_marca'  => $detallesMapeados[0]['producto']['marca'],
-                'producto_unidad' => $detallesMapeados[0]['producto']['unidad'],
+                'detalle_id'              => $detallesMapeados[0]['id'],
+                'producto_id'             => $detallesMapeados[0]['producto_id'],
+                'producto_nombre'         => $detallesMapeados[0]['producto']['nombre'],
+                'producto_sku'            => $detallesMapeados[0]['producto']['sku'],
+                'producto_codigo'         => $detallesMapeados[0]['producto']['codigo'],
+                'producto_codigo_barras'  => $detallesMapeados[0]['producto']['codigo_barras'],
+                'stock_total'             => $detallesMapeados[0]['producto']['stock_total'],
+                'stock_disponible'        => $detallesMapeados[0]['producto']['stock_disponible'],
+                'producto_marca'          => $detallesMapeados[0]['producto']['marca'],
+                'producto_unidad'         => $detallesMapeados[0]['producto']['unidad'],
+            ]);
+        } else {
+            Log::warning('CompraController::edit() - No hay detalles mapeados para la compra', [
+                'compra_id' => $compra->id,
             ]);
         }
 
@@ -413,12 +431,22 @@ class CompraController extends Controller
         try {
             DB::beginTransaction();
 
-            // Generar número automático si no se proporciona
-            if (empty($data['numero'])) {
-                $data['numero'] = $this->generarNumeroCompra();
-            }
-
+            // ✅ NUEVO 2026-03-19: El número de compra será COMP{fecha}-{id}
+            // Primero crear la compra con un número temporal
+            $data['numero'] = 'TMP-' . time(); // Temporal placeholder
             $compra = Compra::create($data);
+
+            // Generar número usando el ID: COMP20260319-28
+            $fecha = $compra->created_at->format('Ymd');
+            $numeroFinal = "COMP{$fecha}-{$compra->id}";
+
+            // Actualizar con el número final
+            $compra->update(['numero' => $numeroFinal]);
+
+            Log::info('CompraController::store() - Compra creada con número = COMP{fecha}-{id}', [
+                'compra_id' => $compra->id,
+                'compra_numero' => $compra->numero,
+            ]);
 
             // Obtener estados para validación
             $estadoAprobado = \App\Models\EstadoDocumento::where('codigo', 'APROBADO')->first();
@@ -484,6 +512,24 @@ class CompraController extends Controller
         $compra = Compra::findOrFail($id);
         $data   = $request->validated();
 
+        // ✅ DEBUG 2026-03-19: Log completo de lo que recibimos
+        Log::info('🔴 CompraController::update() - INICIANDO UPDATE', [
+            'compra_id'              => $compra->id,
+            'compra_numero'          => $compra->numero,
+            'estado_documento_id'    => $compra->estado_documento_id,
+            'detalles_count_actual'  => $compra->detalles()->count(),
+            'detalles_enviados'      => isset($data['detalles']) ? count($data['detalles']) : 'NINGUNO',
+            'data_keys'              => array_keys($data),
+            'detalles_estructura'    => json_encode($data['detalles'] ?? [], JSON_PRETTY_PRINT),
+        ]);
+
+        Log::info('CompraController::update() - Datos validados recibidos', [
+            'compra_id'        => $compra->id,
+            'estado_anterior'  => $compra->estado_documento_id,
+            'detalles_count'   => isset($data['detalles']) ? count($data['detalles']) : 0,
+            'detalles_payload' => json_encode($data['detalles'] ?? null, JSON_PRETTY_PRINT),
+        ]);
+
         try {
             DB::beginTransaction();
 
@@ -501,6 +547,56 @@ class CompraController extends Controller
                     "No se pueden modificar los detalles de una compra en estado {$estadoActual}. " .
                     "Solo se pueden editar compras en estado BORRADOR."
                 );
+            }
+
+            // ✅ NUEVO 2026-03-19: Validación de transiciones de estado permitidas
+            // Obtener estado Anulado y Pendiente
+            $estadoAnulado = \App\Models\EstadoDocumento::where('codigo', 'ANULADO')->first();
+            $estadoPendiente = \App\Models\EstadoDocumento::where('codigo', 'PENDIENTE')->first();
+
+            $estadoNuevo = $data['estado_documento_id'] ?? $estadoAnterior;
+
+            // ✅ FIX 2026-03-19: Permitir mantener el estado actual (usuario solo edita datos)
+            // Si el estado NO cambia, permitir la edición sin validar transiciones
+            if ($estadoNuevo != $estadoAnterior) {
+                // Mapeo de transiciones de estado permitidas (solo aplica si hay cambio de estado)
+                $transicionesPermitidas = [
+                    // BORRADOR: puede cambiar a Aprobado, Pendiente, o Anulado
+                    $estadoBorrador?->id      => [$estadoAprobado?->id, $estadoPendiente?->id, $estadoAnulado?->id],
+                    // PENDIENTE: puede cambiar a Aprobado o Anulado
+                    $estadoPendiente?->id     => [$estadoAprobado?->id, $estadoAnulado?->id],
+                    // APROBADO: puede cambiar a Facturado o Anulado (NO permitir cambiar a Aprobado nuevamente)
+                    $estadoAprobado?->id      => [$estadoRecibido?->id, $estadoAnulado?->id],
+                    // FACTURADO: puede cambiar a Cancelado o Anulado
+                    $estadoRecibido?->id      => [$estadoCancelado?->id, $estadoAnulado?->id],
+                    // CANCELADO: solo lectura
+                    $estadoCancelado?->id     => [],
+                    // ANULADO: solo lectura
+                    $estadoAnulado?->id       => [],
+                ];
+
+                $transicionesValidas = $transicionesPermitidas[$estadoAnterior] ?? [];
+
+                if (!in_array($estadoNuevo, $transicionesValidas)) {
+                    $estadoActualNombre = $compra->estadoDocumento?->nombre ?? 'Desconocido';
+                    $estadoNuevoNombre = EstadoDocumento::find($estadoNuevo)?->nombre ?? 'Desconocido';
+                    Log::warning('CompraController::update() - Transición de estado no permitida', [
+                        'compra_id' => $compra->id,
+                        'estado_actual' => $estadoActualNombre,
+                        'estado_solicitado' => $estadoNuevoNombre,
+                        'transiciones_validas' => $transicionesValidas,
+                    ]);
+                    throw new \Exception(
+                        "Transición de estado no permitida: {$estadoActualNombre} → {$estadoNuevoNombre}. " .
+                        "Una compra {$estadoActualNombre} solo puede cambiar a: " .
+                        implode(', ', EstadoDocumento::whereIn('id', $transicionesValidas)->pluck('nombre')->toArray()) . "."
+                    );
+                }
+            } else {
+                Log::info('CompraController::update() - Sin cambio de estado, permitiendo edición', [
+                    'compra_id' => $compra->id,
+                    'estado' => $compra->estadoDocumento?->nombre,
+                ]);
             }
 
             // ✅ Validación: APROBADO+ no puede cambiar almacén (stock ya registrado)
@@ -529,24 +625,69 @@ class CompraController extends Controller
             $compra->update($data);
             $compra->refresh(); // Recargar propiedades principales
 
-            // ✅ SEGUNDO: Detectar si los detalles realmente cambiaron
+            // ✅ SEGUNDO: Detectar si los detalles realmente cambiaron (FIX 2026-03-19: Comparar por ID, no por índice)
             $detallesChanged = false;
             if (isset($data['detalles'])) {
                 // Comparar cantidad de detalles primero
                 if ($compra->detalles()->count() !== count($data['detalles'])) {
                     $detallesChanged = true;
+                    Log::info('CompraController::update() - Cambio detectado: cantidad de detalles', [
+                        'compra_id' => $compra->id,
+                        'detalles_existentes' => $compra->detalles()->count(),
+                        'detalles_nuevos' => count($data['detalles']),
+                    ]);
                 } else {
-                    // Comparar cada detalle línea por línea
-                    $existingDetalles = $compra->detalles->toArray();
-                    foreach ($data['detalles'] as $index => $newDetalle) {
-                        $existingDetalle = $existingDetalles[$index] ?? null;
-                        if (! $existingDetalle ||
-                            $existingDetalle['producto_id'] !== $newDetalle['producto_id'] ||
-                            (float) $existingDetalle['cantidad'] != (float) $newDetalle['cantidad'] ||
-                            (float) $existingDetalle['precio_unitario'] != (float) $newDetalle['precio_unitario'] ||
-                            (float) ($existingDetalle['descuento'] ?? 0) != (float) ($newDetalle['descuento'] ?? 0)) {
-                            $detallesChanged = true;
-                            break;
+                    // ✅ MEJORADO: Comparar cada detalle por ID (no por índice)
+                    $existingDetalles = $compra->detalles->keyBy('id')->toArray();
+                    $detalleIds = array_filter(array_map(fn($d) => $d['id'] ?? null, $data['detalles']));
+
+                    // Verificar si hay detalles nuevos (sin ID) o detalles eliminados
+                    if (count($detalleIds) !== count($data['detalles']) ||
+                        count(array_diff(array_keys($existingDetalles), $detalleIds)) > 0) {
+                        $detallesChanged = true;
+                        Log::info('CompraController::update() - Cambio detectado: detalles nuevos o eliminados', [
+                            'compra_id' => $compra->id,
+                            'detalles_con_id' => count($detalleIds),
+                            'total_detalles_nuevos' => count($data['detalles']),
+                        ]);
+                    } else {
+                        // Comparar cambios en detalles existentes por ID
+                        foreach ($data['detalles'] as $newDetalle) {
+                            $id = $newDetalle['id'] ?? null;
+                            if (!$id) continue; // Saltar detalles sin ID (nuevos)
+
+                            $existingDetalle = $existingDetalles[$id] ?? null;
+                            if (! $existingDetalle) {
+                                $detallesChanged = true;
+                                Log::info('CompraController::update() - Cambio detectado: detalle no encontrado por ID', [
+                                    'compra_id' => $compra->id,
+                                    'detalle_id' => $id,
+                                ]);
+                                break;
+                            }
+
+                            // Comparar campos importantes (incluyendo lote y fecha_vencimiento)
+                            if ((int) $existingDetalle['producto_id'] !== (int) $newDetalle['producto_id'] ||
+                                (float) $existingDetalle['cantidad'] != (float) $newDetalle['cantidad'] ||
+                                (float) $existingDetalle['precio_unitario'] != (float) $newDetalle['precio_unitario'] ||
+                                (float) ($existingDetalle['descuento'] ?? 0) != (float) ($newDetalle['descuento'] ?? 0) ||
+                                ($existingDetalle['lote'] ?? '') !== ($newDetalle['lote'] ?? '') ||
+                                ($existingDetalle['fecha_vencimiento'] ?? '') !== ($newDetalle['fecha_vencimiento'] ?? '')) {
+                                $detallesChanged = true;
+                                Log::info('CompraController::update() - Cambio detectado en detalle', [
+                                    'compra_id' => $compra->id,
+                                    'detalle_id' => $id,
+                                    'producto_anterior' => $existingDetalle['producto_id'],
+                                    'producto_nuevo' => $newDetalle['producto_id'],
+                                    'cantidad_anterior' => $existingDetalle['cantidad'],
+                                    'cantidad_nueva' => $newDetalle['cantidad'],
+                                    'lote_anterior' => $existingDetalle['lote'] ?? null,
+                                    'lote_nuevo' => $newDetalle['lote'] ?? null,
+                                    'fecha_vencimiento_anterior' => $existingDetalle['fecha_vencimiento'] ?? null,
+                                    'fecha_vencimiento_nueva' => $newDetalle['fecha_vencimiento'] ?? null,
+                                ]);
+                                break;
+                            }
                         }
                     }
                 }
@@ -562,12 +703,49 @@ class CompraController extends Controller
                 ]);
 
                 // Eliminar detalles existentes
-                $compra->detalles()->delete();
+                $deletedCount = $compra->detalles()->delete();
+                Log::info('CompraController::update() - Detalles eliminados', [
+                    'compra_id' => $compra->id,
+                    'deleted_count' => $deletedCount,
+                ]);
 
-                // Crear nuevos detalles con valores del request
-                foreach ($data['detalles'] as $detalle) {
-                    $compra->detalles()->create($detalle);
+                // ✅ FIX 2026-03-19: Crear nuevos detalles con validación y mejor error handling
+                $createdCount = 0;
+                foreach ($data['detalles'] as $detalleData) {
+                    try {
+                        // Asegurar que el ID se excluya si es para un nuevo detalle
+                        $detalleParaCrear = $detalleData;
+                        $id = $detalleParaCrear['id'] ?? null;
+                        if ($id === null || $id === 'null') {
+                            unset($detalleParaCrear['id']);
+                        }
+
+                        $detalle = $compra->detalles()->create($detalleParaCrear);
+                        $createdCount++;
+                        Log::info('CompraController::update() - Detalle creado', [
+                            'compra_id' => $compra->id,
+                            'detalle_id' => $detalle->id,
+                            'producto_id' => $detalleParaCrear['producto_id'],
+                            'cantidad' => $detalleParaCrear['cantidad'],
+                            'lote_enviado' => $detalleParaCrear['lote'] ?? 'NO ENVIADO',
+                            'lote_guardado' => $detalle->lote ?? 'NO GUARDADO',
+                            'fecha_vencimiento_enviada' => $detalleParaCrear['fecha_vencimiento'] ?? 'NO ENVIADA',
+                            'fecha_vencimiento_guardada' => $detalle->fecha_vencimiento ?? 'NO GUARDADA',
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('CompraController::update() - Error creando detalle', [
+                            'compra_id' => $compra->id,
+                            'detalle_data' => $detalleParaCrear,
+                            'error' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
                 }
+
+                Log::info('CompraController::update() - Detalles recreados exitosamente', [
+                    'compra_id' => $compra->id,
+                    'created_count' => $createdCount,
+                ]);
 
                 $compra->load('detalles');
             } else if (isset($data['detalles'])) {
@@ -661,7 +839,24 @@ class CompraController extends Controller
                 }
             }
 
+            // ✅ DEBUG 2026-03-19: Verificar estado final antes de commit
+            Log::info('🟢 CompraController::update() - ANTES DE COMMIT', [
+                'compra_id'            => $compra->id,
+                'compra_numero'        => $compra->numero,
+                'detalles_en_db'       => $compra->detalles()->count(),
+                'detalles_listados'    => $compra->detalles->map(fn($d) => [
+                    'id' => $d->id,
+                    'producto_id' => $d->producto_id,
+                    'cantidad' => $d->cantidad,
+                ])->toArray(),
+            ]);
+
             DB::commit();
+
+            Log::info('✅ CompraController::update() - COMMIT EXITOSO', [
+                'compra_id' => $compra->id,
+                'mensaje' => 'Compra actualizada y guardada en BD',
+            ]);
 
             return redirect()->route('compras.index')
                 ->with('success', 'Compra actualizada exitosamente');

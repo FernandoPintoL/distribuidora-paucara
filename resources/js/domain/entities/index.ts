@@ -21,6 +21,9 @@ export * from './logistica';
 // Financial entities (NEW - Box/Cash management)
 export * from './cajas';
 
+// Lending entities (NEW - Basket/Packaging loans)
+export * from './prestamos';
+
 // movimientos-inventario already exported above (contains MovimientoUnificado)
 
 // Available entities:

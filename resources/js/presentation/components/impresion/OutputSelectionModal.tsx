@@ -11,7 +11,22 @@ import {
 import { Button } from '@/presentation/components/ui/button';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 
-export type TipoDocumento = 'venta' | 'proforma' | 'compra' | 'pago' | 'caja' | 'inventario' | 'entrega' | 'movimiento' | 'cuenta-por-cobrar' | 'cuenta-por-pagar' | 'stock' | 'ajuste' | 'merma' | 'reporte-productos-vendidos';
+export type TipoDocumento =
+    | 'venta'
+    | 'proforma'
+    | 'compra'
+    | 'pago'
+    | 'caja'
+    | 'inventario'
+    | 'entrega'
+    | 'movimiento'
+    | 'cuenta-por-cobrar'
+    | 'cuenta-por-pagar'
+    | 'stock'
+    | 'ajuste'
+    | 'merma'
+    | 'reporte-productos-vendidos'
+    | 'prestamo-cliente';
 
 interface FormatoConfig {
     formato: string;
@@ -99,6 +114,10 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'TICKET_58', nombre: 'Ticket 58mm', descripcion: 'Impresora térmica 58mm' },
     ],
     'reporte-productos-vendidos': [
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'prestamo-cliente': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
 };
@@ -209,6 +228,9 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'merma') {
             // Para mermas
             rutaBase = `/inventario/mermas/${documentoId}`;
+        } else if (tipoDocumento === 'prestamo-cliente') {
+            // Para préstamos de cliente
+            rutaBase = `/prestamos/clientes/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -267,6 +289,9 @@ export function OutputSelectionModal({
                 const params = new URLSearchParams(window.location.search);
                 const queryString = params.toString();
                 url = `/ventas/reporte-productos-vendidos/imprimir?${queryString}&formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'prestamo-cliente') {
+                // Para préstamos de cliente
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -310,6 +335,9 @@ export function OutputSelectionModal({
                 const params = new URLSearchParams(window.location.search);
                 const queryString = params.toString();
                 url = `/ventas/reporte-productos-vendidos/imprimir?${queryString}&formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'prestamo-cliente') {
+                // Para préstamos de cliente
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             }
