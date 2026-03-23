@@ -26,6 +26,7 @@ export interface Step1Props {
     es_fraccionado?: boolean; // ✨ NUEVO
     principio_activo?: string | null; // ✨ NUEVO - Ingrediente activo para medicamentos
     uso_de_medicacion?: string | null; // ✨ NUEVO - Indicaciones de uso para medicamentos
+    visible_app?: boolean; // ✨ NUEVO - Visible en app
   };
   errors: Record<string, string>;
   categoriasOptions: Option[];
@@ -35,6 +36,7 @@ export interface Step1Props {
   getInputClassName: (fieldName: keyof Record<string, string>) => string;
   permite_productos_fraccionados?: boolean; // ✨ NUEVO: Control de empresa
   es_farmacia?: boolean; // ✨ NUEVO - Indica si la empresa es farmacia
+  visible_app?: boolean; // ✨ NUEVO
 }
 
 function Step1DatosProducto({
@@ -46,7 +48,8 @@ function Step1DatosProducto({
   setData,
   getInputClassName,
   permite_productos_fraccionados, // ✨ NUEVO
-  es_farmacia // ✨ NUEVO - Indica si la empresa es farmacia
+  es_farmacia, // ✨ NUEVO - Indica si la empresa es farmacia
+  visible_app // ✨ NUEVO
 }: Step1Props) {
   // Estados para controlar la búsqueda de proveedores
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
@@ -585,6 +588,30 @@ function Step1DatosProducto({
           </div>
         </div>
       )}
+
+      {/* ✨ NUEVA SECCIÓN: Visibilidad en App */}
+      <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800 rounded-lg shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 pt-0.5">
+            <Checkbox
+              id="visible_app"
+              checked={!!data.visible_app}
+              onCheckedChange={(v) => setData('visible_app', !!v)}
+            />
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="visible_app" className="font-semibold cursor-pointer flex items-center gap-2 text-base">
+              <span>👁️</span> Visible en App
+            </Label>
+            <p className="text-sm text-green-700 dark:text-green-300 mt-2 leading-relaxed">
+              {data.visible_app ? '✅ Este producto es visible en la aplicación móvil' : '❌ Este producto está oculto en la aplicación móvil'}
+            </p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              💡 Desactiva esta opción si quieres ocultarlo de los clientes en la app
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

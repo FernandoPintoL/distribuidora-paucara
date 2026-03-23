@@ -7,7 +7,7 @@ import type { BaseEntity, BaseFormData } from './generic';
 // ============================================
 
 export type TipoPrestable = 'CANASTILLA' | 'EMBASES' | 'OTRO';
-export type EstadoPrestamo = 'ACTIVO' | 'COMPLETAMENTE_DEVUELTO' | 'PARCIALMENTE_DEVUELTO';
+export type EstadoPrestamo = 'ACTIVO' | 'COMPLETAMENTE_DEVUELTO' | 'PARCIALMENTE_DEVUELTO' | 'CANCELADO';
 export type TipoPrecio = 'VENTA' | 'PRESTAMO';
 
 // ============================================
@@ -54,7 +54,7 @@ export interface Prestable extends BaseEntity {
 
 export interface DevolucionCliente extends BaseEntity {
     id: Id;
-    prestamo_cliente_id: Id;
+    prestamo_cliente_detalle_id: Id;
     cantidad_devuelta: number;
     cantidad_dañada_parcial: number;
     cantidad_dañada_total: number;
@@ -63,22 +63,34 @@ export interface DevolucionCliente extends BaseEntity {
     observaciones?: string | null;
 }
 
+export interface PrestamoClienteDetalle extends BaseEntity {
+    id: Id;
+    prestamo_cliente_id: Id;
+    prestable_id: Id;
+    cantidad_prestada: number;
+    precio_unitario?: number | null;
+    precio_prestamo?: number | null;
+    estado: EstadoPrestamo;
+    devoluciones: DevolucionCliente[];
+    // Relaciones
+    prestable: Prestable;
+}
+
 export interface PrestamoCliente extends BaseEntity {
     id: Id;
-    prestable_id: Id;
     cliente_id: Id;
     chofer_id?: Id | null;
     venta_id?: Id | null;
-    cantidad: number;
     es_venta: boolean;
     es_evento?: boolean;
     monto_garantia: number;
     fecha_prestamo: string;
     fecha_esperada_devolucion?: string | null;
     estado: EstadoPrestamo;
+    observaciones?: string | null;
+    detalles: PrestamoClienteDetalle[];
     devoluciones: DevolucionCliente[];
     // Relaciones
-    prestable: Prestable;
     cliente: {
         id: Id;
         razon_social: string;
@@ -147,17 +159,24 @@ export interface NuevoPrestable extends BaseFormData {
     };
 }
 
-export interface NuevoPrestamoCliente extends BaseFormData {
+export interface NuevoPrestamoClienteDetalle {
     prestable_id: Id;
+    cantidad: number;
+    precio_unitario?: number;
+    precio_prestamo?: number;
+}
+
+export interface NuevoPrestamoCliente extends BaseFormData {
     cliente_id: Id;
     chofer_id?: Id;
     venta_id?: Id;
-    cantidad: number;
     es_venta: boolean;
     es_evento?: boolean;
     fecha_prestamo: string;
     fecha_esperada_devolucion?: string;
     monto_garantia?: number;
+    observaciones?: string;
+    detalles: NuevoPrestamoClienteDetalle[];
 }
 
 export interface NuevoPrestamoProveedor extends BaseFormData {
@@ -171,6 +190,7 @@ export interface NuevoPrestamoProveedor extends BaseFormData {
 }
 
 export interface DatosDevolucionCliente extends BaseFormData {
+    prestamo_cliente_detalle_id: Id;
     cantidad_devuelta: number;
     cantidad_dañada_parcial?: number;
     cantidad_dañada_total?: number;

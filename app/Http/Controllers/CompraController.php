@@ -15,6 +15,7 @@ use App\Models\TipoPago;
 use App\Services\DetectarCambiosPrecioService;
 use App\Services\ExcelExportService;
 use App\Services\ImpresionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +244,25 @@ class CompraController extends Controller
     {
         $compra = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago', 'detalles.producto'])
             ->findOrFail($id);
+
+        // ✅ NUEVO: Detectar si es solicitud API o web
+        if (request()->wantsJson()) {
+            return response()->json([
+                'data' => [
+                    'id' => $compra->id,
+                    'numero' => $compra->numero,
+                    'proveedor_id' => $compra->proveedor_id,
+                    'proveedor' => $compra->proveedor,
+                    'fecha' => $compra->fecha,
+                    'total' => $compra->total,
+                    'usuario' => $compra->usuario,
+                    'estadoDocumento' => $compra->estadoDocumento,
+                    'moneda' => $compra->moneda,
+                    'tipoPago' => $compra->tipoPago,
+                    'detalles' => $compra->detalles,
+                ]
+            ]);
+        }
 
         return Inertia::render('compras/show', [
             'compra' => $compra,
@@ -1790,5 +1810,78 @@ class CompraController extends Controller
         return response()->json([
             'data' => $compras,
         ]);
+    }
+
+    /**
+     * Buscar compras para AsyncSearchSelect
+     * Prioriza búsqueda por ID para mejor rendimiento
+     */
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $query = $request->string('q', '');
+
+            // Si no hay búsqueda, devolver compras recientes
+            if (!$query) {
+                $resultado = Compra::select('id', 'numero', 'proveedor_id', 'total')
+                    ->with(['proveedor:id,nombre,razon_social'])
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get()
+                    ->map(fn($compra) => [
+                        'id' => $compra->id,
+                        'numero' => $compra->numero,
+                        'proveedor_id' => $compra->proveedor_id,
+                        'nombre' => "Folio #{$compra->id} - Compra #{$compra->numero}",
+                        'descripcion' => $compra->proveedor?->nombre ?? 'Sin proveedor',
+                    ]);
+
+                return response()->json($resultado);
+            }
+
+            // Verificar si la búsqueda es un número (ID)
+            if (is_numeric($query)) {
+                // 🎯 PRIORIDAD 1: Búsqueda exacta por ID (más rápido)
+                $porId = Compra::select('id', 'numero', 'proveedor_id', 'total')
+                    ->with(['proveedor:id,nombre,razon_social'])
+                    ->where('id', $query)
+                    ->limit(1)
+                    ->get();
+
+                if ($porId->count() > 0) {
+                    $resultado = $porId->map(fn($compra) => [
+                        'id' => $compra->id,
+                        'numero' => $compra->numero,
+                        'proveedor_id' => $compra->proveedor_id,
+                        'nombre' => "Folio #{$compra->id} - Compra #{$compra->numero}",
+                        'descripcion' => $compra->proveedor?->nombre ?? 'Sin proveedor',
+                    ]);
+
+                    return response()->json($resultado);
+                }
+            }
+
+            // 🎯 PRIORIDAD 2: Búsqueda por número con LIKE
+            $compras = Compra::select('id', 'numero', 'proveedor_id', 'total')
+                ->with(['proveedor:id,nombre,razon_social'])
+                ->where(function ($q) use ($query) {
+                    $q->where('numero', 'ilike', "%{$query}%");
+                })
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get()
+                ->map(fn($compra) => [
+                    'id' => $compra->id,
+                    'numero' => $compra->numero,
+                    'proveedor_id' => $compra->proveedor_id,
+                    'nombre' => "Folio #{$compra->id} - Compra #{$compra->numero}",
+                    'descripcion' => $compra->proveedor?->nombre ?? 'Sin proveedor',
+                ]);
+
+            return response()->json($compras);
+        } catch (\Exception $e) {
+            Log::error('❌ Error buscando compras', ['error' => $e->getMessage()]);
+            return response()->json([], 200);
+        }
     }
 }

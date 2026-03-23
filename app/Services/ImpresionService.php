@@ -205,6 +205,17 @@ class ImpresionService
             \Log::info('📝 [ImpresionService::generarPDF] Cargando vista fallback', [
                 'vista' => $vistaFallback,
                 'tipoDocumento' => $tipoDocumento,
+                'documento_id' => is_object($documento) ? $documento->id ?? null : null,
+                'tiene_venta' => is_object($documento) && isset($documento->venta) ? true : false,
+                'venta_id' => is_object($documento) && isset($documento->venta) ? $documento->venta?->id : null,
+                'documento_datos' => is_object($documento) ? [
+                    'id' => $documento->id ?? null,
+                    'cliente_id' => $documento->cliente_id ?? null,
+                    'prestable_id' => $documento->prestable_id ?? null,
+                    'venta_id' => $documento->venta_id ?? null,
+                    'cantidad' => $documento->cantidad ?? null,
+                    'monto_garantia' => $documento->monto_garantia ?? null,
+                ] : null,
             ]);
 
             $pdf = PDF::loadView($vistaFallback, $datos);
@@ -289,7 +300,13 @@ class ImpresionService
             ],
             'prestamo_cliente' => [
                 'A4' => 'impresion.prestamos_clientes.hoja-completa',
+                'A4_COPIA' => 'impresion.prestamos_clientes.a4-2-copias',
                 'TICKET_80' => 'impresion.prestamos_clientes.ticket-80',
+            ],
+            'prestamo_proveedor' => [
+                'A4' => 'impresion.prestamos_proveedores.hoja-completa',
+                'A4_COPIA' => 'impresion.prestamos_proveedores.a4-2-copias',
+                'TICKET_80' => 'impresion.prestamos_proveedores.ticket-80',
             ],
             'compra' => [
                 'A4' => 'impresion.compras.hoja-completa',
@@ -439,6 +456,10 @@ class ImpresionService
             'A4' => [
                 'paper' => 'A4',
                 'orientation' => 'portrait',
+            ],
+            'A4_COPIA' => [
+                'paper' => 'A4',
+                'orientation' => 'landscape',
             ],
             'TICKET_80' => [
                 // 80mm de ancho, altura automática (muy largo para permitir contenido variable)

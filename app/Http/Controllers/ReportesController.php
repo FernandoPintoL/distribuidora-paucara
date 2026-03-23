@@ -114,6 +114,38 @@ class ReportesController extends Controller
     }
 
     /**
+     * GET /api/reportes/stock-bajo-prestables
+     * Lista de prestables con stock bajo
+     */
+    public function stockBajoPrestables(Request $request): JsonResponse
+    {
+        try {
+            $almacenId = $request->integer('almacen_id') ?? auth()->user()->empresa->almacen_id ?? 1;
+            $limite = $request->integer('limite', 10);
+
+            // Obtener prestables con stock bajo
+            $prestables = Prestable::whereHas('stocks', function ($q) use ($almacenId, $limite) {
+                $q->where('almacen_id', $almacenId)
+                  ->where('cantidad_disponible', '<', $limite);
+            })
+            ->with(['stocks' => function ($q) use ($almacenId) {
+                $q->where('almacen_id', $almacenId);
+            }])
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'almacen_id' => $almacenId,
+                'limite' => $limite,
+                'data' => $prestables,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Error en reporte de prestables con stock bajo', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Error generando reporte'], 500);
+        }
+    }
+
+    /**
      * GET /api/reportes/prestamos/cliente
      * Reporte de préstamos activos por cliente
      */

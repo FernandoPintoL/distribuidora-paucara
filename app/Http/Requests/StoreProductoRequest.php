@@ -125,6 +125,9 @@ class StoreProductoRequest extends FormRequest
             'principio_activo'         => ['nullable', 'string', 'max:255'], // ✨ NUEVO
             'uso_de_medicacion'        => ['nullable', 'string'], // ✨ NUEVO
 
+            // Visibilidad en app
+            'visible_app'              => ['nullable', 'boolean'], // ✨ NUEVO
+
             'activo'                   => ['nullable', 'boolean'],
         ];
     }
@@ -204,6 +207,8 @@ class StoreProductoRequest extends FormRequest
             'principio_activo.max'                     => 'El principio activo no puede exceder 255 caracteres.',
             'uso_de_medicacion.string'                 => 'El uso de medicación debe ser texto.',
 
+            'visible_app.boolean'                      => 'La visibilidad en app debe ser verdadero o falso.',
+
             'activo.boolean'                           => 'El estado activo debe ser verdadero o falso.',
         ];
     }
@@ -246,6 +251,8 @@ class StoreProductoRequest extends FormRequest
 
             'principio_activo'  => 'principio activo',
             'uso_de_medicacion' => 'uso de medicación',
+
+            'visible_app'      => 'visible en app',
 
             'activo'           => 'estado activo',
         ];

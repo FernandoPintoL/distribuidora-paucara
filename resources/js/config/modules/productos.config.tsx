@@ -205,6 +205,22 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       }
     },
     { key: 'activo', label: 'Estado', type: 'boolean' },
+    {
+      key: 'visible_app',
+      label: 'Visible en App',
+      type: 'custom',
+      sortable: true,
+      render: (value) => (
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-sm border transition-colors ${
+          value
+            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border-green-200 dark:border-green-700'
+            : 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+        }`}>
+          <span className="text-lg">{value ? '👁️' : '🚫'}</span>
+          <span>{value ? 'Visible' : 'Oculto'}</span>
+        </span>
+      )
+    },
     /* {
       key: 'historial_precios',
       label: 'Historial',
@@ -339,6 +355,13 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         type: 'boolean' as const,
         placeholder: 'Mostrar todos',
         width: 'sm' as const
+      },
+      {
+        key: 'visible_app',
+        label: 'Visible en App',
+        type: 'boolean' as const,
+        placeholder: 'Todos los estados',
+        width: 'sm' as const
       }
     ],
     sortOptions: [
@@ -367,11 +390,24 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
           <div className="text-muted-foreground text-xs italic">Sin imagen</div>
         )}
         <span className="absolute top-2 left-2 bg-blue-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">#{p.id}</span>
-        {p.activo ? (
-          <span className="absolute top-2 right-2 bg-emerald-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Activo</span>
-        ) : (
-          <span className="absolute top-2 right-2 bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
-        )}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
+          {p.activo ? (
+            <span className="bg-emerald-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Activo</span>
+          ) : (
+            <span className="bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
+          )}
+          {p.visible_app ? (
+            <span className="bg-green-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>👁️</span>
+              <span>Visible</span>
+            </span>
+          ) : (
+            <span className="bg-gray-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>🚫</span>
+              <span>Oculto</span>
+            </span>
+          )}
+        </div>
         {/* {(!p.precio_base || p.precio_base === 0) && (
           <span className="absolute bottom-2 left-2 bg-amber-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">⚠️ Sin precio</span>
         )} */}
@@ -380,6 +416,12 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         <div className="space-y-0.5">
           <h3 className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.25rem]">{p.nombre}</h3>
           <div className="flex flex-wrap gap-2 text-[10px] font-medium text-muted-foreground">
+            {!p.visible_app && (
+              <span className="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                <span>🚫</span>
+                <span>Oculto en App</span>
+              </span>
+            )}
             {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
             {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
             {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}

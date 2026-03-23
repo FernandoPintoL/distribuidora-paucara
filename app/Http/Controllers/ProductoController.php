@@ -87,6 +87,7 @@ class ProductoController extends Controller
         $marcaId     = $request->integer('marca_id');
         $proveedorId = $request->integer('proveedor_id');
         $sinPrecio   = $request->boolean('sin_precio');
+        $visibleApp  = $request->has('visible_app') ? $request->boolean('visible_app') : null; // ✨ NUEVO
         $orderBy     = $request->string('order_by')->toString();
         $orderDir    = strtolower($request->string('order_dir')->toString()) === 'asc' ? 'asc' : 'desc';
 
@@ -142,6 +143,7 @@ class ProductoController extends Controller
                         ->where('precio', '>', 0);
                 });
             })
+            ->when($visibleApp !== null, fn($qq) => $qq->where('productos.visible_app', $visibleApp)) // ✨ NUEVO
             ->select('productos.*')
             ->leftJoinSub(
                 'select producto_id, sum(cantidad) as stock_total_calc, sum(cantidad_disponible) as stock_disponible_calc from stock_productos where deleted_at is null group by producto_id',
@@ -201,6 +203,7 @@ class ProductoController extends Controller
                     'stock_total'           => $stockTotal,
                     'stock_disponible_calc' => $stockDisponible,
                     'activo'                => $producto->activo,
+                    'visible_app'           => (bool) $producto->visible_app, // ✨ NUEVO
                     'fecha_creacion'        => $producto->fecha_creacion,
                     'es_alquilable'         => $producto->es_alquilable,
                     'es_combo'              => (bool) $producto->es_combo,
@@ -235,6 +238,7 @@ class ProductoController extends Controller
                 'marca_id'     => $marcaId ?: null,
                 'proveedor_id' => $request->integer('proveedor_id') ?: null,
                 'sin_precio'   => $sinPrecio ?: null,
+                'visible_app'  => $visibleApp, // ✨ NUEVO
                 'order_by'     => $orderBy ?: null,
                 'order_dir'    => $orderDir,
             ],
@@ -318,6 +322,7 @@ class ProductoController extends Controller
                 'limite_venta'     => $data['limite_venta'] ?? null, // ✨ NUEVO
                 'principio_activo' => $data['principio_activo'] ?? null, // ✨ NUEVO - Campo para farmacias
                 'uso_de_medicacion' => $data['uso_de_medicacion'] ?? null, // ✨ NUEVO - Campo para farmacias
+                'visible_app'      => $data['visible_app'] ?? true, // ✨ NUEVO - Visible en app
             ]);
 
             // Gestionar códigos de barra usando la nueva tabla
@@ -685,6 +690,7 @@ class ProductoController extends Controller
                 'limite_venta'     => $data['limite_venta'] ?? $producto->limite_venta, // ✨ NUEVO
                 'principio_activo' => $data['principio_activo'] ?? $producto->principio_activo, // ✨ NUEVO - Campo para farmacias
                 'uso_de_medicacion' => $data['uso_de_medicacion'] ?? $producto->uso_de_medicacion, // ✨ NUEVO - Campo para farmacias
+                'visible_app'      => $data['visible_app'] ?? $producto->visible_app, // ✨ NUEVO - Visible en app
                 'activo'           => $data['activo'] ?? $producto->activo,
             ]);
 
@@ -1107,20 +1113,31 @@ class ProductoController extends Controller
         // 1. Stock > 0 en el almacén
         // 2. Precio de venta activo > 0
         // 3. Productos activos
+        // 4. Productos visibles en app (✨ NUEVO - 2026-03-22)
         $query = $query
             ->when($categoriaId, fn($q) => $q->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($q) => $q->where('marca_id', $marcaId))
             ->when($proveedorId, fn($q) => $q->where('proveedor_id', $proveedorId))
-            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
-                $stockQuery->where('almacen_id', $almacenId)
-                    ->where('cantidad_disponible', '>', 0);
+            // ✅ COMBOS: No requieren stock ni precio (línea 1131)
+            ->where(function ($q) use ($almacenId, $tipoPrecioVentaId) {
+                // Combos: solo deben ser activos y visibles
+                $q->where('es_combo', true)
+                    // O productos normales: con stock y precio
+                    ->orWhere(function ($subQ) use ($almacenId, $tipoPrecioVentaId) {
+                        $subQ->where('es_combo', false)
+                            ->whereHas('stock', function ($stockQuery) use ($almacenId) {
+                                $stockQuery->where('almacen_id', $almacenId)
+                                    ->where('cantidad_disponible', '>', 0);
+                            })
+                            ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
+                                $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
+                                    ->where('activo', true)
+                                    ->where('precio', '>', 0);
+                            });
+                    });
             })
-            ->whereHas('precios', function ($precioQuery) use ($tipoPrecioVentaId) {
-                $precioQuery->where('tipo_precio_id', $tipoPrecioVentaId)
-                    ->where('activo', true)
-                    ->where('precio', '>', 0);
-            })
-            ->where('activo', $activo);
+            ->where('activo', $activo)
+            ->where('visible_app', true); // ✨ NUEVO - Solo productos visibles en app
 
         // 🔍 DEBUG: Contar productos después de filtros
         Log::info('📊 [indexApi] DESPUÉS DE FILTROS', [
@@ -1130,6 +1147,7 @@ class ProductoController extends Controller
             'almacen_id' => $almacenId,
             'tipo_precio_id' => $tipoPrecioVentaId,
             'activo' => $activo,
+            'visible_app' => true, // ✨ NUEVO
             'productos_encontrados' => $query->count(),
         ]);
 

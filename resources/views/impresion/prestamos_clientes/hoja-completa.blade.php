@@ -55,20 +55,44 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>
-                        {{ $documento->prestable->nombre ?? 'Prestable' }}
-                    </td>
-                    <td class="text-right">
-                        {{ number_format($documento->cantidad_prestada ?? $documento->cantidad ?? 0, 0) }}
-                    </td>
-                    <td class="text-right">
-                        {{ number_format($documento->cantidad_devuelta ?? ($documento->devoluciones->sum('cantidad') ?? 0), 0) }}
-                    </td>
-                    <td class="text-right">
-                        {{ number_format(($documento->cantidad_prestada ?? $documento->cantidad ?? 0) - ($documento->cantidad_devuelta ?? ($documento->devoluciones->sum('cantidad') ?? 0)), 0) }}
-                    </td>
-                </tr>
+                @if($documento->detalles && count($documento->detalles) > 0)
+                    @foreach($documento->detalles as $detalle)
+                        @php
+                            $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
+                            $cantidadDevuelta = $detalle->devoluciones->sum('cantidad_devuelta') ?? 0;
+                            $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
+                        @endphp
+                        <tr>
+                            <td>
+                                {{ $detalle->prestable->nombre ?? 'Prestable' }}
+                            </td>
+                            <td class="text-right">
+                                {{ number_format($cantidadPrestada, 0) }}
+                            </td>
+                            <td class="text-right">
+                                {{ number_format($cantidadDevuelta, 0) }}
+                            </td>
+                            <td class="text-right">
+                                {{ number_format($cantidadPendiente, 0) }}
+                            </td>
+                        </tr>
+                    @endforeach
+                @else
+                    <tr>
+                        <td>
+                            {{ $documento->prestable->nombre ?? 'Prestable' }}
+                        </td>
+                        <td class="text-right">
+                            {{ number_format($documento->cantidad_prestada ?? $documento->cantidad ?? 0, 0) }}
+                        </td>
+                        <td class="text-right">
+                            {{ number_format($documento->cantidad_devuelta ?? ($documento->devoluciones->sum('cantidad_devuelta') ?? 0), 0) }}
+                        </td>
+                        <td class="text-right">
+                            {{ number_format(($documento->cantidad_prestada ?? $documento->cantidad ?? 0) - ($documento->cantidad_devuelta ?? ($documento->devoluciones->sum('cantidad_devuelta') ?? 0)), 0) }}
+                        </td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 

@@ -11,28 +11,32 @@ class PrestamoProveedor extends Model
     protected $table = 'prestamo_proveedor';
 
     protected $fillable = [
-        'prestable_id',
         'proveedor_id',
-        'cantidad',
+        'compra_id',
         'es_compra',
-        'precio_unitario',
-        'numero_documento',
+        'monto_garantia',
         'fecha_prestamo',
         'fecha_esperada_devolucion',
+        'observaciones',
         'estado',
     ];
 
     protected $casts = [
-        'cantidad' => 'integer',
         'es_compra' => 'boolean',
-        'precio_unitario' => 'decimal:2',
+        'monto_garantia' => 'decimal:2',
         'fecha_prestamo' => 'date',
         'fecha_esperada_devolucion' => 'date',
     ];
 
-    public function prestable(): BelongsTo
+    // ✅ Relación con detalles del préstamo
+    public function detalles(): HasMany
     {
-        return $this->belongsTo(Prestable::class);
+        return $this->hasMany(PrestamoProveedorDetalle::class, 'prestamo_proveedor_id');
+    }
+
+    public function compra(): BelongsTo
+    {
+        return $this->belongsTo(Compra::class);
     }
 
     public function proveedor(): BelongsTo
@@ -40,8 +44,9 @@ class PrestamoProveedor extends Model
         return $this->belongsTo(Proveedor::class);
     }
 
+    // ✅ Relación a través de detalles para devoluciones
     public function devoluciones(): HasMany
     {
-        return $this->hasMany(DevolucionProveedorPrestamo::class);
+        return $this->hasMany(DevolucionProveedorPrestamo::class, 'prestamo_proveedor_detalle_id');
     }
 }

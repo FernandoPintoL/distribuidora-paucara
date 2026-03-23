@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PrestamoProveedor;
+use App\Services\ImpresionService;
 use App\Services\Prestamos\PrestamoProveedorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,8 +11,10 @@ use Illuminate\Support\Facades\Log;
 
 class PrestamoProveedorController extends Controller
 {
-    public function __construct(private PrestamoProveedorService $prestamoService)
-    {
+    public function __construct(
+        private PrestamoProveedorService $prestamoService,
+        private ImpresionService $impresionService,
+    ) {
     }
 
     /**
@@ -21,7 +24,7 @@ class PrestamoProveedorController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = PrestamoProveedor::with(['prestable', 'proveedor', 'devoluciones']);
+            $query = PrestamoProveedor::with(['detalles.prestable', 'proveedor', 'detalles.devoluciones']);
 
             // Filtro por proveedor
             if ($request->has('proveedor_id')) {
@@ -58,14 +61,22 @@ class PrestamoProveedorController extends Controller
     {
         try {
             $validated = $request->validate([
-                'prestable_id' => 'required|exists:prestables,id',
                 'proveedor_id' => 'required|exists:proveedores,id',
-                'cantidad' => 'required|integer|min:1',
+                'compra_id' => 'nullable|exists:compras,id',
                 'es_compra' => 'required|boolean',
-                'precio_unitario' => 'required_if:es_compra,true|nullable|numeric|min:0',
-                'numero_documento' => 'nullable|string|max:255',
+                'monto_garantia' => 'nullable|numeric|min:0',
                 'fecha_prestamo' => 'required|date',
                 'fecha_esperada_devolucion' => 'nullable|date|after_or_equal:fecha_prestamo',
+                'observaciones' => 'nullable|string|max:1000',
+                // ✅ NUEVO: Validación para múltiples detalles
+                'detalles' => 'required|array|min:1',
+                'detalles.*.prestable_id' => 'required|exists:prestables,id',
+                'detalles.*.cantidad' => 'required|integer|min:1',
+            ]);
+
+            Log::info('✅ Validación exitosa para préstamo de proveedor', [
+                'proveedor_id' => $validated['proveedor_id'],
+                'detalles_count' => count($validated['detalles']),
             ]);
 
             $prestamo = $this->prestamoService->crearPrestamo($validated);
@@ -79,7 +90,7 @@ class PrestamoProveedorController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $prestamo->load(['prestable', 'proveedor']),
+                'data' => $prestamo->load(['detalles.prestable', 'proveedor']),
                 'message' => 'Préstamo registrado exitosamente',
             ], 201);
         } catch (\Exception $e) {
@@ -95,7 +106,7 @@ class PrestamoProveedorController extends Controller
     public function show(PrestamoProveedor $prestamo): JsonResponse
     {
         try {
-            $prestamo->load(['prestable', 'proveedor', 'devoluciones']);
+            $prestamo->load(['detalles.prestable', 'proveedor', 'detalles.devoluciones']);
             $resumen = $this->prestamoService->obtenerResumen($prestamo->id);
 
             return response()->json([
@@ -117,24 +128,31 @@ class PrestamoProveedorController extends Controller
     {
         try {
             $validated = $request->validate([
+                'prestamo_proveedor_detalle_id' => 'required|exists:prestamo_proveedor_detalle,id',
                 'cantidad_devuelta' => 'required|integer|min:1',
                 'observaciones' => 'nullable|string',
                 'fecha_devolucion' => 'required|date',
             ]);
 
-            // Validar cantidad
-            $cantidadYaDevuelta = $prestamo->devoluciones()->sum('cantidad_devuelta');
-            if ($cantidadYaDevuelta + $validated['cantidad_devuelta'] > $prestamo->cantidad) {
+            // ✅ NUEVO: Validar que el detalle pertenece a este préstamo
+            $detalle = \App\Models\PrestamoProveedorDetalle::findOrFail($validated['prestamo_proveedor_detalle_id']);
+            if ($detalle->prestamo_proveedor_id !== $prestamo->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cantidad a devolver excede lo adeudado',
+                    'message' => 'El detalle no pertenece a este préstamo',
                 ], 422);
             }
 
-            $devolución = $this->prestamoService->registrarDevolucion(array_merge(
-                $validated,
-                ['prestamo_proveedor_id' => $prestamo->id]
-            ));
+            // Validar cantidad contra el detalle
+            $cantidadYaDevuelta = $detalle->devoluciones()->sum('cantidad_devuelta');
+            if ($cantidadYaDevuelta + $validated['cantidad_devuelta'] > $detalle->cantidad_prestada) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cantidad a devolver excede lo prestado en este detalle',
+                ], 422);
+            }
+
+            $devolución = $this->prestamoService->registrarDevolucion($validated);
 
             if (!$devolución) {
                 return response()->json([
@@ -190,5 +208,27 @@ class PrestamoProveedorController extends Controller
             Log::error('❌ Error obteniendo deuda', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Error obteniendo deuda'], 500);
         }
+    }
+
+    /**
+     * GET /prestamos/proveedores/{prestamo}/imprimir
+     * Imprimir información del préstamo en PDF (formatos A4 y TICKET_80)
+     */
+    public function imprimir(PrestamoProveedor $prestamo, Request $request)
+    {
+        $formato = $request->input('formato', 'A4');      // A4 | TICKET_80
+        $accion  = $request->input('accion', 'download'); // download | stream
+
+        // Cargar relaciones necesarias para la impresión
+        $prestamo->load(['detalles.prestable', 'proveedor', 'compra', 'detalles.devoluciones']);
+
+        // Generar PDF usando el tipo de documento "prestamo_proveedor"
+        $pdf = $this->impresionService->generarPDF('prestamo_proveedor', $prestamo, $formato);
+
+        $nombreArchivo = "prestamo_proveedor_{$prestamo->id}_{$formato}.pdf";
+
+        return $accion === 'stream'
+            ? $pdf->stream($nombreArchivo)
+            : $pdf->download($nombreArchivo);
     }
 }

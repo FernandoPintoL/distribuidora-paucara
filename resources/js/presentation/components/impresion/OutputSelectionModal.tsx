@@ -26,7 +26,8 @@ export type TipoDocumento =
     | 'ajuste'
     | 'merma'
     | 'reporte-productos-vendidos'
-    | 'prestamo-cliente';
+    | 'prestamo-cliente'
+    | 'prestamo-proveedor';
 
 interface FormatoConfig {
     formato: string;
@@ -117,6 +118,10 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
     'prestamo-cliente': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'prestamo-proveedor': [
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
@@ -231,6 +236,9 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'prestamo-cliente') {
             // Para préstamos de cliente
             rutaBase = `/prestamos/clientes/${documentoId}`;
+        } else if (tipoDocumento === 'prestamo-proveedor') {
+            // Para préstamos a proveedor
+            rutaBase = `/prestamos/proveedores/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -292,6 +300,9 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'prestamo-cliente') {
                 // Para préstamos de cliente
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'prestamo-proveedor') {
+                // Para préstamos a proveedor
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
             }
@@ -337,6 +348,9 @@ export function OutputSelectionModal({
                 url = `/ventas/reporte-productos-vendidos/imprimir?${queryString}&formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'prestamo-cliente') {
                 // Para préstamos de cliente
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'prestamo-proveedor') {
+                // Para préstamos a proveedor
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;

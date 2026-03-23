@@ -53,6 +53,7 @@ export interface Producto extends BaseEntity {
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
+  visible_app?: boolean; // ✨ NUEVO: Visible en app móvil
   categoria_id?: Id;
   marca_id?: Id;
   proveedor_id?: Id;
@@ -107,6 +108,7 @@ export interface ProductoFormData extends BaseFormData {
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
+  visible_app?: boolean; // ✨ NUEVO: Visible en app móvil
   precios: Precio[];
   codigos: CodigoBarra[];
   almacenes?: StockAlmacen[];

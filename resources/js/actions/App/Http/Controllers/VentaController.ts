@@ -808,6 +808,304 @@ search.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     search.form = searchForm
 /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+const show4ef3bdaf30af0bedb0ce7d739d92fb7b = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, options),
+    method: 'get',
+})
+
+show4ef3bdaf30af0bedb0ce7d739d92fb7b.definition = {
+    methods: ["get","head"],
+    url: '/api/ventas/{id}/detalles',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+show4ef3bdaf30af0bedb0ce7d739d92fb7b.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return show4ef3bdaf30af0bedb0ce7d739d92fb7b.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+show4ef3bdaf30af0bedb0ce7d739d92fb7b.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+show4ef3bdaf30af0bedb0ce7d739d92fb7b.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+    const show4ef3bdaf30af0bedb0ce7d739d92fb7bForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+        show4ef3bdaf30af0bedb0ce7d739d92fb7bForm.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{id}/detalles'
+ */
+        show4ef3bdaf30af0bedb0ce7d739d92fb7bForm.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show4ef3bdaf30af0bedb0ce7d739d92fb7b.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show4ef3bdaf30af0bedb0ce7d739d92fb7b.form = show4ef3bdaf30af0bedb0ce7d739d92fb7bForm
+    /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+const show8a5319b95720abf558e2089cc13e71ec = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
+    method: 'get',
+})
+
+show8a5319b95720abf558e2089cc13e71ec.definition = {
+    methods: ["get","head"],
+    url: '/api/ventas/{venta}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+show8a5319b95720abf558e2089cc13e71ec.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { venta: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    venta: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        venta: args.venta,
+                }
+
+    return show8a5319b95720abf558e2089cc13e71ec.definition.url
+            .replace('{venta}', parsedArgs.venta.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+show8a5319b95720abf558e2089cc13e71ec.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+show8a5319b95720abf558e2089cc13e71ec.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+    const show8a5319b95720abf558e2089cc13e71ecForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+        show8a5319b95720abf558e2089cc13e71ecForm.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/api/ventas/{venta}'
+ */
+        show8a5319b95720abf558e2089cc13e71ecForm.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: show8a5319b95720abf558e2089cc13e71ec.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    show8a5319b95720abf558e2089cc13e71ec.form = show8a5319b95720abf558e2089cc13e71ecForm
+    /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+const showee84ecb1c01a6e60954e3bb60fb8ae07 = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
+    method: 'get',
+})
+
+showee84ecb1c01a6e60954e3bb60fb8ae07.definition = {
+    methods: ["get","head"],
+    url: '/ventas/{id}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+showee84ecb1c01a6e60954e3bb60fb8ae07.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { id: args }
+    }
+
+    
+    if (Array.isArray(args)) {
+        args = {
+                    id: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        id: args.id,
+                }
+
+    return showee84ecb1c01a6e60954e3bb60fb8ae07.definition.url
+            .replace('{id}', parsedArgs.id.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+showee84ecb1c01a6e60954e3bb60fb8ae07.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+showee84ecb1c01a6e60954e3bb60fb8ae07.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+    const showee84ecb1c01a6e60954e3bb60fb8ae07Form = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+        showee84ecb1c01a6e60954e3bb60fb8ae07Form.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\VentaController::show
+ * @see app/Http/Controllers/VentaController.php:605
+ * @route '/ventas/{id}'
+ */
+        showee84ecb1c01a6e60954e3bb60fb8ae07Form.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    showee84ecb1c01a6e60954e3bb60fb8ae07.form = showee84ecb1c01a6e60954e3bb60fb8ae07Form
+
+export const show = {
+    '/api/ventas/{id}/detalles': show4ef3bdaf30af0bedb0ce7d739d92fb7b,
+    '/api/ventas/{venta}': show8a5319b95720abf558e2089cc13e71ec,
+    '/ventas/{id}': showee84ecb1c01a6e60954e3bb60fb8ae07,
+}
+
+/**
 * @see \App\Http\Controllers\VentaController::verificarStock
  * @see app/Http/Controllers/VentaController.php:1127
  * @route '/api/ventas/verificar-stock'
@@ -2099,206 +2397,6 @@ export const store = {
 }
 
 /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-const show8a5319b95720abf558e2089cc13e71ec = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
-    method: 'get',
-})
-
-show8a5319b95720abf558e2089cc13e71ec.definition = {
-    methods: ["get","head"],
-    url: '/api/ventas/{venta}',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-show8a5319b95720abf558e2089cc13e71ec.url = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { venta: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    venta: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        venta: args.venta,
-                }
-
-    return show8a5319b95720abf558e2089cc13e71ec.definition.url
-            .replace('{venta}', parsedArgs.venta.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-show8a5319b95720abf558e2089cc13e71ec.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-show8a5319b95720abf558e2089cc13e71ec.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-    const show8a5319b95720abf558e2089cc13e71ecForm = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-        show8a5319b95720abf558e2089cc13e71ecForm.get = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show8a5319b95720abf558e2089cc13e71ec.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/api/ventas/{venta}'
- */
-        show8a5319b95720abf558e2089cc13e71ecForm.head = (args: { venta: string | number } | [venta: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: show8a5319b95720abf558e2089cc13e71ec.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    show8a5319b95720abf558e2089cc13e71ec.form = show8a5319b95720abf558e2089cc13e71ecForm
-    /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-const showee84ecb1c01a6e60954e3bb60fb8ae07 = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
-    method: 'get',
-})
-
-showee84ecb1c01a6e60954e3bb60fb8ae07.definition = {
-    methods: ["get","head"],
-    url: '/ventas/{id}',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-showee84ecb1c01a6e60954e3bb60fb8ae07.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
-    if (typeof args === 'string' || typeof args === 'number') {
-        args = { id: args }
-    }
-
-    
-    if (Array.isArray(args)) {
-        args = {
-                    id: args[0],
-                }
-    }
-
-    args = applyUrlDefaults(args)
-
-    const parsedArgs = {
-                        id: args.id,
-                }
-
-    return showee84ecb1c01a6e60954e3bb60fb8ae07.definition.url
-            .replace('{id}', parsedArgs.id.toString())
-            .replace(/\/+$/, '') + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-showee84ecb1c01a6e60954e3bb60fb8ae07.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-showee84ecb1c01a6e60954e3bb60fb8ae07.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-    const showee84ecb1c01a6e60954e3bb60fb8ae07Form = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-        showee84ecb1c01a6e60954e3bb60fb8ae07Form.get = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\VentaController::show
- * @see app/Http/Controllers/VentaController.php:605
- * @route '/ventas/{id}'
- */
-        showee84ecb1c01a6e60954e3bb60fb8ae07Form.head = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: showee84ecb1c01a6e60954e3bb60fb8ae07.url(args, {
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    showee84ecb1c01a6e60954e3bb60fb8ae07.form = showee84ecb1c01a6e60954e3bb60fb8ae07Form
-
-export const show = {
-    '/api/ventas/{venta}': show8a5319b95720abf558e2089cc13e71ec,
-    '/ventas/{id}': showee84ecb1c01a6e60954e3bb60fb8ae07,
-}
-
-/**
 * @see \App\Http\Controllers\VentaController::update
  * @see app/Http/Controllers/VentaController.php:661
  * @route '/api/ventas/{venta}'
@@ -3375,6 +3473,6 @@ exportarPdf.head = (args: { venta: number | { id: number } } | [venta: number | 
         })
     
     exportarPdf.form = exportarPdfForm
-const VentaController = { ventasCliente, registrarPago, imprimir, preview, ventasParaImpresion, search, verificarStock, productosStockBajo, obtenerStockProducto, obtenerResumenStock, anular, verificarReversionStock, ejecutarReversionStock, index, store, show, update, destroy, checkCajaAbierta, create, edit, formatosDisponibles, aprobar, rechazar, exportarExcel, exportarPdf }
+const VentaController = { ventasCliente, registrarPago, imprimir, preview, ventasParaImpresion, search, show, verificarStock, productosStockBajo, obtenerStockProducto, obtenerResumenStock, anular, verificarReversionStock, ejecutarReversionStock, index, store, update, destroy, checkCajaAbierta, create, edit, formatosDisponibles, aprobar, rechazar, exportarExcel, exportarPdf }
 
 export default VentaController

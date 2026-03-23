@@ -36,6 +36,7 @@ class Producto extends Model
         'marca_id',
         'proveedor_id',
         'empresa_id',
+        'visible_app',
         'precio_compra',
         'precio_venta',
     ];
@@ -51,6 +52,7 @@ class Producto extends Model
             'es_alquilable' => 'boolean',
             'es_fraccionado' => 'boolean',
             'es_combo' => 'boolean',
+            'visible_app' => 'boolean',
             'fecha_creacion' => 'datetime',
             'precio_compra' => 'decimal:2',
             'precio_venta' => 'decimal:2',

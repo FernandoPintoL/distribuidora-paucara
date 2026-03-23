@@ -53,36 +53,36 @@ class ValidacionPrestamosService
     }
 
     /**
-     * Validar si se puede devolver cantidad
+     * Validar si se puede devolver cantidad (por detalle)
      */
     public function puedoDevolver(
-        int $prestamoId,
+        int $detalleId,
         int $cantidadDevuelta,
         int $cantidadDañadaParcial = 0,
         int $cantidadDañadaTotal = 0
     ): array {
-        $prestamo = PrestamoCliente::find($prestamoId);
+        $detalle = \App\Models\PrestamoClienteDetalle::find($detalleId);
 
-        if (!$prestamo) {
+        if (!$detalle) {
             return [
                 'valido' => false,
-                'mensaje' => 'Préstamo no encontrado',
+                'mensaje' => 'Detalle de préstamo no encontrado',
             ];
         }
 
         $cantidadTotal = $cantidadDevuelta + $cantidadDañadaParcial + $cantidadDañadaTotal;
 
-        if ($cantidadTotal > $prestamo->cantidad) {
+        if ($cantidadTotal > $detalle->cantidad_prestada) {
             return [
                 'valido' => false,
-                'mensaje' => "Cantidad total devuelta ({$cantidadTotal}) excede cantidad prestada ({$prestamo->cantidad})",
+                'mensaje' => "Cantidad total devuelta ({$cantidadTotal}) excede cantidad prestada ({$detalle->cantidad_prestada})",
             ];
         }
 
         return [
             'valido' => true,
             'mensaje' => 'OK',
-            'prestamo' => $prestamo,
+            'detalle' => $detalle,
         ];
     }
 
@@ -175,22 +175,11 @@ class ValidacionPrestamosService
     }
 
     /**
-     * Validar datos para crear préstamo
+     * Validar datos para crear préstamo (con múltiples detalles)
      */
     public function datosCreacionPrestamo(array $datos): array
     {
         $errores = [];
-
-        // Validar prestable
-        if (!isset($datos['prestable_id'])) {
-            $errores[] = 'prestable_id requerido';
-        } else {
-            $prestableId = is_string($datos['prestable_id']) ? intval($datos['prestable_id']) : $datos['prestable_id'];
-            $validacion = $this->prestableValido($prestableId);
-            if (!$validacion['valido']) {
-                $errores[] = $validacion['mensaje'];
-            }
-        }
 
         // Validar cliente
         if (!isset($datos['cliente_id'])) {
@@ -202,13 +191,31 @@ class ValidacionPrestamosService
             }
         }
 
-        // Validar cantidad
-        if (!isset($datos['cantidad'])) {
-            $errores[] = 'cantidad requerida';
+        // Validar detalles (al menos uno)
+        if (!isset($datos['detalles']) || !is_array($datos['detalles']) || count($datos['detalles']) === 0) {
+            $errores[] = 'detalles requerido (al menos 1)';
         } else {
-            $cantidad = is_string($datos['cantidad']) ? intval($datos['cantidad']) : $datos['cantidad'];
-            if ($cantidad <= 0) {
-                $errores[] = 'cantidad debe ser > 0';
+            foreach ($datos['detalles'] as $i => $detalle) {
+                // Validar prestable de cada detalle
+                if (!isset($detalle['prestable_id'])) {
+                    $errores[] = "detalles[{$i}].prestable_id requerido";
+                } else {
+                    $prestableId = is_string($detalle['prestable_id']) ? intval($detalle['prestable_id']) : $detalle['prestable_id'];
+                    $validacion = $this->prestableValido($prestableId);
+                    if (!$validacion['valido']) {
+                        $errores[] = "detalles[{$i}]: {$validacion['mensaje']}";
+                    }
+                }
+
+                // Validar cantidad de cada detalle
+                if (!isset($detalle['cantidad'])) {
+                    $errores[] = "detalles[{$i}].cantidad requerida";
+                } else {
+                    $cantidad = is_string($detalle['cantidad']) ? intval($detalle['cantidad']) : $detalle['cantidad'];
+                    if ($cantidad <= 0) {
+                        $errores[] = "detalles[{$i}].cantidad debe ser > 0";
+                    }
+                }
             }
         }
 
@@ -253,18 +260,18 @@ class ValidacionPrestamosService
     }
 
     /**
-     * Validar datos para registrar devolución
+     * Validar datos para registrar devolución (por detalle)
      */
     public function datosDevolucion(array $datos): array
     {
         $errores = [];
 
-        // Validar préstamo
-        if (!isset($datos['prestamo_cliente_id'])) {
-            $errores[] = 'prestamo_cliente_id requerido';
+        // Validar detalle de préstamo
+        if (!isset($datos['prestamo_cliente_detalle_id'])) {
+            $errores[] = 'prestamo_cliente_detalle_id requerido';
         } else {
-            if (!PrestamoCliente::find($datos['prestamo_cliente_id'])) {
-                $errores[] = 'Préstamo no encontrado';
+            if (!\App\Models\PrestamoClienteDetalle::find($datos['prestamo_cliente_detalle_id'])) {
+                $errores[] = 'Detalle de préstamo no encontrado';
             }
         }
 

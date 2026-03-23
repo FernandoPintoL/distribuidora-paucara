@@ -76,6 +76,7 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import ReservaStockController from './ReservaStockController'
 import Inventario from './Inventario'
+import Prestamos from './Prestamos'
 import PrestamosInertiaController from './PrestamosInertiaController'
 import Web from './Web'
 import VendedorController from './VendedorController'
@@ -171,6 +172,7 @@ TipoAjusteInventarioController,
 InventarioInicialController,
 ReservaStockController,
 Inventario,
+Prestamos,
 PrestamosInertiaController,
 Web,
 VendedorController,

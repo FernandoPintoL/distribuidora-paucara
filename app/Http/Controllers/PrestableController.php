@@ -24,7 +24,12 @@ class PrestableController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Prestable::with(['producto:id,nombre,sku', 'proveedor:id,nombre', 'precios', 'condiciones', 'stocks']);
+            $almacenCanastillasEmbases = 3; // Almacén fijo para prestables
+
+            $query = Prestable::with(['producto:id,nombre,sku', 'proveedor:id,nombre', 'precios', 'condiciones', 'stocks', 'prestablePadre:id,nombre,codigo'])
+                ->whereHas('stocks', function ($q) use ($almacenCanastillasEmbases) {
+                    $q->where('almacen_id', $almacenCanastillasEmbases);
+                });
 
             // Filtro por tipo
             if ($request->has('tipo')) {
@@ -47,6 +52,30 @@ class PrestableController extends Controller
             }
 
             $prestables = $query->paginate($request->integer('per_page', 15));
+
+            // Agregar totales a cada prestable
+            $prestables->getCollection()->transform(function ($prestable) {
+                $totalCanastillas = 0;
+                $totalEmbases = 0;
+
+                foreach ($prestable->stocks as $stock) {
+                    $cantidadTotal = $stock->cantidad_disponible
+                        + $stock->cantidad_en_prestamo_cliente
+                        + $stock->cantidad_en_prestamo_proveedor
+                        + $stock->cantidad_vendida;
+
+                    $totalCanastillas += $cantidadTotal;
+
+                    if ($prestable->capacidad) {
+                        $totalEmbases += $cantidadTotal * $prestable->capacidad;
+                    }
+                }
+
+                $prestable->total_canastillas = $totalCanastillas;
+                $prestable->total_embases = $totalEmbases;
+
+                return $prestable;
+            });
 
             return response()->json([
                 'success' => true,
@@ -76,6 +105,7 @@ class PrestableController extends Controller
                 'capacidad' => 'nullable|integer|min:1',
                 'producto_id' => 'nullable|exists:productos,id',
                 'proveedor_id' => 'nullable|exists:proveedores,id',
+                'prestable_relacionado_id' => 'nullable|exists:prestables,id',
                 'descripcion' => 'nullable|string',
                 'precios' => 'nullable|array',
                 'precios.*.tipo_precio' => 'nullable|in:VENTA,PRESTAMO',
@@ -99,6 +129,7 @@ class PrestableController extends Controller
                     'capacidad' => $validated['capacidad'] ?? null,
                     'producto_id' => $validated['producto_id'] ?? null,
                     'proveedor_id' => $validated['proveedor_id'] ?? null,
+                    'prestable_relacionado_id' => $validated['prestable_relacionado_id'] ?? null,
                     'descripcion' => $validated['descripcion'] ?? null,
                     'activo' => true,
                 ]);
@@ -191,7 +222,27 @@ class PrestableController extends Controller
     public function show(Prestable $prestable): JsonResponse
     {
         try {
-            $prestable->load(['producto', 'proveedor', 'precios', 'condiciones', 'stocks.almacen']);
+            $prestable->load(['producto', 'proveedor', 'precios', 'condiciones', 'stocks.almacen', 'prestablePadre:id,nombre,codigo,capacidad']);
+
+            // Calcular totales de stock
+            $totalCanastillas = 0;
+            $totalEmbases = 0;
+
+            foreach ($prestable->stocks as $stock) {
+                $cantidadTotal = $stock->cantidad_disponible
+                    + $stock->cantidad_en_prestamo_cliente
+                    + $stock->cantidad_en_prestamo_proveedor
+                    + $stock->cantidad_vendida;
+
+                $totalCanastillas += $cantidadTotal;
+
+                if ($prestable->capacidad) {
+                    $totalEmbases += $cantidadTotal * $prestable->capacidad;
+                }
+            }
+
+            $prestable->total_canastillas = $totalCanastillas;
+            $prestable->total_embases = $totalEmbases;
 
             // Calcular stock resumido
             $almacenId = auth()->user()->empresa->almacen_id ?? 1;
@@ -223,6 +274,7 @@ class PrestableController extends Controller
                 'capacidad' => 'nullable|integer|min:1',
                 'producto_id' => 'nullable|exists:productos,id',
                 'proveedor_id' => 'nullable|exists:proveedores,id',
+                'prestable_relacionado_id' => 'nullable|exists:prestables,id',
                 'descripcion' => 'nullable|string',
                 'activo' => 'sometimes|boolean',
                 'precios' => 'nullable|array',
@@ -244,6 +296,7 @@ class PrestableController extends Controller
                     'capacidad' => $validated['capacidad'] ?? $prestable->capacidad,
                     'producto_id' => $validated['producto_id'] ?? $prestable->producto_id,
                     'proveedor_id' => $validated['proveedor_id'] ?? $prestable->proveedor_id,
+                    'prestable_relacionado_id' => $validated['prestable_relacionado_id'] ?? $prestable->prestable_relacionado_id,
                     'descripcion' => $validated['descripcion'] ?? $prestable->descripcion,
                     'activo' => $validated['activo'] ?? $prestable->activo,
                 ]);
@@ -370,6 +423,73 @@ class PrestableController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error obteniendo stock', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Error obteniendo stock'], 500);
+        }
+    }
+
+    /**
+     * GET /api/prestables/{prestable}/disponibilidad
+     * Obtener disponibilidad total del prestable (suma de todos los almacenes)
+     */
+    public function obtenerDisponibilidad(Prestable $prestable): JsonResponse
+    {
+        try {
+            $prestable->load(['stocks.almacen', 'prestablePadre:id,nombre,codigo,capacidad']);
+
+            // Calcular totales sumando todos los almacenes
+            $totalDisponible = 0;
+            $totalEnPrestamocliente = 0;
+            $totalEnPrestamoproveedor = 0;
+            $totalVendida = 0;
+            $totalGeneral = 0;
+
+            foreach ($prestable->stocks as $stock) {
+                $totalDisponible += $stock->cantidad_disponible;
+                $totalEnPrestamocliente += $stock->cantidad_en_prestamo_cliente;
+                $totalEnPrestamoproveedor += $stock->cantidad_en_prestamo_proveedor;
+                $totalVendida += $stock->cantidad_vendida;
+            }
+
+            $totalGeneral = $totalDisponible + $totalEnPrestamocliente + $totalEnPrestamoproveedor + $totalVendida;
+
+            // Calcular embases si aplica
+            $totalDisponibleEmbases = $prestable->capacidad ? $totalDisponible * $prestable->capacidad : null;
+            $totalEnPrestamoclienteEmbases = $prestable->capacidad ? $totalEnPrestamocliente * $prestable->capacidad : null;
+            $totalEnPrestamoproveedorEmbases = $prestable->capacidad ? $totalEnPrestamoproveedor * $prestable->capacidad : null;
+            $totalVendidaEmbases = $prestable->capacidad ? $totalVendida * $prestable->capacidad : null;
+            $totalGeneralEmbases = $prestable->capacidad ? $totalGeneral * $prestable->capacidad : null;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'prestable' => [
+                        'id' => $prestable->id,
+                        'nombre' => $prestable->nombre,
+                        'codigo' => $prestable->codigo,
+                        'tipo' => $prestable->tipo,
+                        'capacidad' => $prestable->capacidad,
+                        'prestablePadre' => $prestable->prestablePadre,
+                    ],
+                    'stock' => [
+                        'canastillas' => [
+                            'disponible' => $totalDisponible,
+                            'en_prestamo_cliente' => $totalEnPrestamocliente,
+                            'en_prestamo_proveedor' => $totalEnPrestamoproveedor,
+                            'vendida' => $totalVendida,
+                            'total' => $totalGeneral,
+                        ],
+                        'embases' => $prestable->capacidad ? [
+                            'disponible' => $totalDisponibleEmbases,
+                            'en_prestamo_cliente' => $totalEnPrestamoclienteEmbases,
+                            'en_prestamo_proveedor' => $totalEnPrestamoproveedorEmbases,
+                            'vendida' => $totalVendidaEmbases,
+                            'total' => $totalGeneralEmbases,
+                        ] : null,
+                    ],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo disponibilidad', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Error obteniendo disponibilidad'], 500);
         }
     }
 

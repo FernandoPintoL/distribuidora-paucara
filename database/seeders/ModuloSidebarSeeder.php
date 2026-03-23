@@ -190,8 +190,8 @@ class ModuloSidebarSeeder extends Seeder
                     'permisos'    => ['prestamos.index'],
                 ],
                 'submenu' => [
-                    ['titulo' => 'Lista de Préstamos', 'ruta' => '/prestamos', 'icono' => 'HandCoins', 'orden' => 1, 'permisos' => ['prestamos.index']],
-                    ['titulo' => 'Nuevo Préstamo', 'ruta' => '/prestamos/create', 'icono' => 'Plus', 'orden' => 2, 'permisos' => ['prestamos.create']],
+                    ['titulo' => 'Gestion de Préstamos', 'ruta' => '/prestamos', 'icono' => 'HandCoins', 'orden' => 1, 'permisos' => ['prestamos.index']],
+                    // ['titulo' => 'Nuevo Préstamo', 'ruta' => '/prestamos/create', 'icono' => 'Plus', 'orden' => 2, 'permisos' => ['prestamos.create']],
                 ],
             ],
 

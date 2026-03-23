@@ -32,6 +32,8 @@ interface Prestable {
         nombre: string;
         sku?: string;
     };
+    total_canastillas?: number;
+    total_embases?: number;
 }
 
 interface Almacen {
@@ -64,6 +66,7 @@ export default function GestionStockPrestables() {
     const [prestables, setPrestables] = useState<Prestable[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedPrestable, setSelectedPrestable] = useState<Prestable | null>(null);
+    const [prestablePadre, setPreestablePadre] = useState<Prestable | null>(null);
     const [stockDetail, setStockDetail] = useState<StockDetail | null>(null);
     const [showStockModal, setShowStockModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -72,7 +75,7 @@ export default function GestionStockPrestables() {
     const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [newStock, setNewStock] = useState({
-        almacen_id: '',
+        almacen_id: 3,
         cantidad_total: 0,
     });
 
@@ -110,11 +113,38 @@ export default function GestionStockPrestables() {
 
     const handleViewStock = async (prestable: Prestable) => {
         setSelectedPrestable(prestable);
+        setPreestablePadre(null);
+        setNewStock({ almacen_id: 3, cantidad_total: 0 });
+
         try {
             const response = await fetch(`/api/prestables/${prestable.id}/stock/detalle`);
             const result = await response.json();
             if (result.success) {
                 setStockDetail(result.data);
+
+                // Cargar prestable relacionado si existe (para EMBASES)
+                if ((prestable as any).prestable_relacionado_id) {
+                    try {
+                        const padreResponse = await fetch(`/api/prestables/${(prestable as any).prestable_relacionado_id}`);
+                        const padreResult = await padreResponse.json();
+                        if (padreResult.success) {
+                            const padre = padreResult.data;
+                            setPreestablePadre(padre);
+
+                            // Precargar cantidad teórica si es EMBASES relacionado con CANASTILLA
+                            if (prestable.tipo === 'EMBASES' && padre.total_canastillas && padre.capacidad) {
+                                const cantidadTeórica = padre.total_canastillas * padre.capacidad;
+                                setNewStock({
+                                    almacen_id: 3,
+                                    cantidad_total: cantidadTeórica,
+                                });
+                            }
+                        }
+                    } catch (padreError) {
+                        console.error('Error cargando prestable relacionado:', padreError);
+                    }
+                }
+
                 setShowStockModal(true);
             }
         } catch (error) {
@@ -210,7 +240,7 @@ export default function GestionStockPrestables() {
             if (result.success) {
                 setShowCreateModal(false);
                 setNewStock({
-                    almacen_id: '',
+                    almacen_id: 3,
                     cantidad_total: 0,
                 });
                 if (selectedPrestable) {
@@ -279,6 +309,8 @@ export default function GestionStockPrestables() {
                                     <TableHead className="text-gray-900 dark:text-gray-100">Tipo</TableHead>
                                     <TableHead className="text-gray-900 dark:text-gray-100">Capacidad</TableHead>
                                     <TableHead className="text-gray-900 dark:text-gray-100">Producto</TableHead>
+                                    <TableHead className="text-center text-gray-900 dark:text-gray-100">📦 Registrado</TableHead>
+                                    {/* <TableHead className="text-center text-gray-900 dark:text-gray-100">📊 Detalle</TableHead> */}
                                     <TableHead className="text-right text-gray-900 dark:text-gray-100">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -319,6 +351,37 @@ export default function GestionStockPrestables() {
                                                 '-'
                                             )}
                                         </TableCell>
+                                        <TableCell className="text-center">
+                                            {prestable.tipo === 'CANASTILLA' ? (
+                                                <div>
+                                                    <div className="font-bold text-lg text-purple-700 dark:text-purple-400">
+                                                        {prestable.total_canastillas || 0}
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">canastillas</p>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div className="font-bold text-lg text-blue-700 dark:text-blue-400">
+                                                        {prestable.total_canastillas || 0}
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">embases</p>
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        {/* <TableCell className="text-center">
+                                            {prestable.tipo === 'CANASTILLA' ? (
+                                                <div>
+                                                    <div className="font-bold text-lg text-green-700 dark:text-green-400">
+                                                        {prestable.capacidad || '-'}
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">embases/canastilla</p>
+                                                </div>
+                                            ) : (
+                                                <div className="text-gray-400 dark:text-gray-600">
+                                                    —
+                                                </div>
+                                            )}
+                                        </TableCell> */}
                                         <TableCell className="text-right">
                                             <Button
                                                 onClick={() => handleViewStock(prestable)}
@@ -327,7 +390,7 @@ export default function GestionStockPrestables() {
                                                 className="gap-2"
                                             >
                                                 <Edit2 size={16} />
-                                                Ver Stock
+                                                Gestionar Stock
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -697,9 +760,47 @@ export default function GestionStockPrestables() {
                         {/* Info Box */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                                <strong>ℹ️ Nota:</strong> Solo ingresa la cantidad total. Los movimientos de préstamos, devoluciones y ventas se registrarán automáticamente.
+                                <strong>ℹ️ Nota:</strong> Ingresa la cantidad total. Los movimientos de préstamos, devoluciones y ventas se registrarán automáticamente.
+                                {prestablePadre && selectedPrestable?.tipo === 'EMBASES' && (
+                                    <span className="block mt-1">Si es embase, puedes usar el valor sugerido o cambiarlo según tus necesidades.</span>
+                                )}
                             </p>
                         </div>
+
+                        {/* Capacidad Teórica (para EMBASES relacionados con CANASTILLA) */}
+                        {prestablePadre && selectedPrestable?.tipo === 'EMBASES' && (
+                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                                <h4 className="font-semibold text-sm text-green-900 dark:text-green-100 mb-3">
+                                    🔗 Capacidad Teórica (según canastilla relacionada)
+                                </h4>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-green-700 dark:text-green-300">Canastilla relacionada:</span>
+                                        <strong className="text-green-900 dark:text-green-100">{prestablePadre.nombre}</strong>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-green-700 dark:text-green-300">Canastillas registradas:</span>
+                                        <strong className="text-green-900 dark:text-green-100">
+                                            {prestablePadre.total_canastillas || 0} unidades
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-green-700 dark:text-green-300">Embases por canastilla:</span>
+                                        <strong className="text-green-900 dark:text-green-100">
+                                            {prestablePadre.capacidad || 0} embases/canastilla
+                                        </strong>
+                                    </div>
+                                    <div className="border-t border-green-200 dark:border-green-700 pt-2 mt-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-green-800 dark:text-green-200">Capacidad total posible:</span>
+                                            <strong className="text-lg text-green-700 dark:text-green-400">
+                                                {((prestablePadre.total_canastillas || 0) * (prestablePadre.capacidad || 0)).toLocaleString('es-BO')} embases
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Almacén */}
                         <div>

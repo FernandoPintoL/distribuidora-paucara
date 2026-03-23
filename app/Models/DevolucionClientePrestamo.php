@@ -10,7 +10,7 @@ class DevolucionClientePrestamo extends Model
     protected $table = 'devolucion_cliente_prestamo';
 
     protected $fillable = [
-        'prestamo_cliente_id',
+        'prestamo_cliente_detalle_id',
         'cantidad_devuelta',
         'cantidad_dañada_parcial',
         'cantidad_dañada_total',
@@ -30,9 +30,14 @@ class DevolucionClientePrestamo extends Model
         'fecha_devolucion' => 'date',
     ];
 
+    public function detallePrestamoCliente(): BelongsTo
+    {
+        return $this->belongsTo(PrestamoClienteDetalle::class, 'prestamo_cliente_detalle_id');
+    }
+
     public function prestamoCliente(): BelongsTo
     {
-        return $this->belongsTo(PrestamoCliente::class);
+        return $this->detallePrestamoCliente()->belongsTo(PrestamoCliente::class);
     }
 
     public function chofer(): BelongsTo

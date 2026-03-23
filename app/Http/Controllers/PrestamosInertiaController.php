@@ -97,12 +97,19 @@ class PrestamosInertiaController extends Controller
     public function proveedoresCrear(): Response
     {
         $proveedores = Proveedor::where('activo', true)
-            ->select('id', 'nombre')
-            ->orderBy('nombre')
+            ->select('id', 'razon_social', 'nombre')
+            ->orderBy('razon_social')
+            ->get();
+
+        $compras = \App\Models\Compra::select('id', 'numero', 'proveedor_id')
+            ->with(['proveedor:id,nombre,razon_social'])
+            ->orderByDesc('created_at')
+            ->limit(100)
             ->get();
 
         return Inertia::render('prestamos/proveedores/crear', [
             'proveedores' => $proveedores,
+            'compras' => $compras,
         ]);
     }
 

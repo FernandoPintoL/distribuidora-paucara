@@ -17,6 +17,7 @@ class Prestable extends Model
         'capacidad',
         'producto_id',
         'proveedor_id',
+        'prestable_relacionado_id',
         'descripcion',
         'activo',
     ];
@@ -44,6 +45,14 @@ class Prestable extends Model
     public function proveedor(): BelongsTo
     {
         return $this->belongsTo(Proveedor::class);
+    }
+
+    /**
+     * Canastilla relacionada (si este prestable es de tipo EMBASES)
+     */
+    public function prestablePadre(): BelongsTo
+    {
+        return $this->belongsTo(Prestable::class, 'prestable_relacionado_id');
     }
 
     /**

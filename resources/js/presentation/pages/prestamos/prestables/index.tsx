@@ -45,12 +45,14 @@ export default function PrestablesIndex() {
         }
     }, [showForm]);
     const [productos, setProductos] = useState<Array<{ id: number; nombre: string; sku?: string }>>([]);
-    const [formData, setFormData] = useState<Partial<NuevoPrestable & { activo?: boolean }>>({
+    const [canastillas, setCanastillas] = useState<Array<{ id: number; nombre: string; codigo: string }>>([]);
+    const [formData, setFormData] = useState<Partial<NuevoPrestable & { activo?: boolean; prestable_relacionado_id?: number }>>({
         nombre: '',
         codigo: '',
         tipo: 'CANASTILLA' as TipoPrestable,
         capacidad: undefined,
         producto_id: undefined,
+        prestable_relacionado_id: undefined,
         activo: true,
         precios: [
             { tipo_precio: 'PRESTAMO', valor: 0 },
@@ -66,6 +68,7 @@ export default function PrestablesIndex() {
     useEffect(() => {
         fetchPrestables();
         fetchProductos();
+        fetchCanastillas();
     }, []);
 
     const fetchProductos = async () => {
@@ -75,6 +78,18 @@ export default function PrestablesIndex() {
             setProductos(data.data?.data || data.data || []);
         } catch (error) {
             console.error('Error cargando productos:', error);
+        }
+    };
+
+    const fetchCanastillas = async () => {
+        try {
+            const response = await fetch('/api/prestables?tipo=CANASTILLA&per_page=1000');
+            const data = await response.json();
+            if (data.success) {
+                setCanastillas(data.data.data || []);
+            }
+        } catch (error) {
+            console.error('Error cargando canastillas:', error);
         }
     };
 
@@ -121,6 +136,7 @@ export default function PrestablesIndex() {
                 codigo: '',
                 tipo: 'CANASTILLA',
                 producto_id: undefined,
+                prestable_relacionado_id: undefined,
                 activo: true,
                 precios: [
                     { tipo_precio: 'PRESTAMO', valor: 0 },
@@ -188,6 +204,7 @@ export default function PrestablesIndex() {
             tipo: prestable.tipo as TipoPrestable,
             capacidad: prestable.capacidad,
             producto_id: prestable.producto_id,
+            prestable_relacionado_id: (prestable as any).prestable_relacionado_id,
             activo: prestable.activo,
             descripcion: prestable.descripcion,
             precios: preciosMapeados,
@@ -272,6 +289,7 @@ export default function PrestablesIndex() {
                                 tipo: 'CANASTILLA',
                                 capacidad: undefined,
                                 producto_id: undefined,
+                                prestable_relacionado_id: undefined,
                                 activo: true,
                                 precios: [
                                     { tipo_precio: 'PRESTAMO', valor: 0 },
@@ -286,29 +304,18 @@ export default function PrestablesIndex() {
                         }
                     }}
                 >
-                    <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900">
-                        <DialogHeader>
+                    <DialogContent
+                        style={{ width: '90vw', maxWidth: '90vw' }}
+                        className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 p-0"
+                    >
+                        <DialogHeader className="px-6 pt-6">
                             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
                                 {(formData as any).id ? 'Editar' : 'Crear'} Canastillas/Embases
                             </DialogTitle>
                         </DialogHeader>
 
-                        <form onSubmit={handleCreateOrUpdate} className="space-y-4 pr-4">
+                        <form onSubmit={handleCreateOrUpdate} className="space-y-4 px-6 pb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Nombre *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.nombre || ''}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, nombre: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                         Código *
@@ -323,44 +330,73 @@ export default function PrestablesIndex() {
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Tipo *
-                                    </label>
-                                    <select
-                                        required
-                                        value={formData.tipo || 'CANASTILLA'}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                tipo: e.target.value as TipoPrestable,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="CANASTILLA">Canastilla</option>
-                                        <option value="EMBASES">Embases</option>
-                                        <option value="OTRO">Otro</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Capacidad
+                                        Nombre *
                                     </label>
                                     <input
-                                        type="number"
-                                        value={formData.capacidad || ''}
+                                        type="text"
+                                        required
+                                        value={formData.nombre || ''}
                                         onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                capacidad: e.target.value ? Number(e.target.value) : undefined,
-                                            })
+                                            setFormData({ ...formData, nombre: e.target.value })
                                         }
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
+                                        Tipo de Prestable *
+                                    </label>
+                                    <div className="flex gap-6">
+                                        {(['CANASTILLA', 'EMBASES'] as const).map((tipo) => (
+                                            <div key={tipo} className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    id={`tipo-${tipo}`}
+                                                    name="tipo"
+                                                    value={tipo}
+                                                    checked={formData.tipo === tipo}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            tipo: e.target.value as TipoPrestable,
+                                                        })
+                                                    }
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                                <label
+                                                    htmlFor={`tipo-${tipo}`}
+                                                    className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                                                >
+                                                    {tipo === 'CANASTILLA' ? '📦 Canastilla' : '🔖 Embases'}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {formData.tipo === 'CANASTILLA' && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                            📦 Capacidad (embases por canastilla)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={formData.capacidad || ''}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    capacidad: e.target.value ? Number(e.target.value) : undefined,
+                                                })
+                                            }
+                                            placeholder="Ej: 24"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                )}
                                 <SearchSelect
-                                    label="Producto (Opcional)"
+                                    label="📦 Producto Relacionado (Opcional)"
                                     placeholder="Buscar producto..."
                                     value={(formData as any).producto_id || ''}
                                     options={productos.map((p) => ({
@@ -376,58 +412,81 @@ export default function PrestablesIndex() {
                                     }
                                     allowClear
                                 />
+                                {formData.tipo === 'EMBASES' && (
+                                    <SearchSelect
+                                        label="🔗 Relacionar con Canastilla (Opcional)"
+                                        placeholder="Buscar canastilla..."
+                                        value={(formData as any).prestable_relacionado_id || ''}
+                                        options={canastillas.map((c) => ({
+                                            value: c.id,
+                                            label: c.nombre,
+                                            description: c.codigo,
+                                        }))}
+                                        onChange={(id) =>
+                                            setFormData({
+                                                ...formData,
+                                                prestable_relacionado_id: id ? Number(id) : undefined,
+                                            })
+                                        }
+                                        allowClear
+                                    />
+                                )}
                             </div>
 
-                            {/* Estado Activo */}
-                            <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <input
-                                    type="checkbox"
-                                    id="activo"
-                                    checked={(formData as any).activo ?? true}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            activo: e.target.checked,
-                                        })
-                                    }
-                                    className="w-4 h-4 cursor-pointer"
-                                />
-                                <label htmlFor="activo" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                                    ✅ Activo
-                                </label>
-                            </div>
+                            {/* Estado Activo - Solo al editar */}
+                            {(formData as any).id && (
+                                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                    <input
+                                        type="checkbox"
+                                        id="activo"
+                                        checked={(formData as any).activo ?? true}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                activo: e.target.checked,
+                                            })
+                                        }
+                                        className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <label htmlFor="activo" className="text-sm font-medium text-green-700 dark:text-green-300 cursor-pointer">
+                                        ✅ Activo
+                                    </label>
+                                </div>
+                            )}
 
                             {/* Precios */}
                             <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
-                                    Precios
+                                    💰 Precios
                                 </h3>
-                                {formData.precios?.map((precio, idx) => (
-                                    <div key={idx} className="space-y-2 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            {precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' : '🛒 Precio Venta'}
-                                        </label>
-                                        <input
-                                            type="number"
-                                            placeholder="Ingrese el precio"
-                                            value={precio.valor ?? ''}
-                                            onChange={(e) => {
-                                                const newPrecios = [...(formData.precios || [])];
-                                                newPrecios[idx].valor = e.target.value ? Number(e.target.value) : 0;
-                                                setFormData({ ...formData, precios: newPrecios });
-                                            }}
-                                            step="0.01"
-                                            min="0"
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                ))}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {formData.precios?.map((precio, idx) => (
+                                        <div key={idx} className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' : '🛒 Precio Venta'}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                placeholder="Ingrese el precio"
+                                                value={precio.valor ?? ''}
+                                                onChange={(e) => {
+                                                    const newPrecios = [...(formData.precios || [])];
+                                                    newPrecios[idx].valor = e.target.value ? Number(e.target.value) : 0;
+                                                    setFormData({ ...formData, precios: newPrecios });
+                                                }}
+                                                step="0.01"
+                                                min="0"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Condiciones */}
                             <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
-                                    Condiciones
+                                    Condiciones Individuales
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
@@ -490,7 +549,7 @@ export default function PrestablesIndex() {
                                 </div>
                             </div>
 
-                        <DialogFooter className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                             <DialogClose asChild>
                                 <Button type="button" variant="outline">
                                     Cancelar
@@ -625,6 +684,29 @@ export default function PrestablesIndex() {
                                                     </p>
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Canastilla Relacionada (si es EMBASES) */}
+                                {(prestableToView as any).prestable_padre && (
+                                    <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                                        <h3 className="font-semibold text-lg mb-3 text-gray-900 dark:text-white">
+                                            🔗 Canastilla Relacionada
+                                        </h3>
+                                        <div className="space-y-3">
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                <p className="text-sm text-blue-600 dark:text-blue-400 mb-1">Nombre</p>
+                                                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                                                    {(prestableToView as any).prestable_padre.nombre}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                <p className="text-sm text-blue-600 dark:text-blue-400 mb-1">Código</p>
+                                                <p className="font-mono text-blue-900 dark:text-blue-100">
+                                                    {(prestableToView as any).prestable_padre.codigo}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

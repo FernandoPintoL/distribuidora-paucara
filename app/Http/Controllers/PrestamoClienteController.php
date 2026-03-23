@@ -26,7 +26,7 @@ class PrestamoClienteController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = PrestamoCliente::with(['prestable', 'cliente', 'chofer', 'devoluciones']);
+            $query = PrestamoCliente::with(['detalles.prestable', 'cliente', 'chofer', 'devoluciones']);
 
             // Filtro por cliente
             if ($request->has('cliente_id')) {
@@ -57,7 +57,7 @@ class PrestamoClienteController extends Controller
 
     /**
      * POST /api/prestamos-cliente
-     * Crear nuevo préstamo
+     * Crear nuevo préstamo con múltiples detalles
      */
     public function store(Request $request): JsonResponse
     {
@@ -81,29 +81,32 @@ class PrestamoClienteController extends Controller
                 ], 422);
             }
 
-            // Validar stock - Usar almacén 3 para canastillas
+            // Validar stock para cada detalle - Usar almacén 3 para canastillas
             $almacenId = 3;
-            Log::info('🏭 Validando stock', [
+            $detalles = $request->input('detalles', []);
+
+            Log::info('🏭 Validando stock para detalles', [
                 'almacen_id' => $almacenId,
-                'prestable_id' => $request->integer('prestable_id'),
-                'cantidad' => $request->integer('cantidad')
+                'cantidad_detalles' => count($detalles)
             ]);
 
-            $stockValido = $this->validacionService->puedoPrestar(
-                $request->integer('prestable_id'),
-                $almacenId,
-                $request->integer('cantidad')
-            );
+            foreach ($detalles as $i => $detalle) {
+                $stockValido = $this->validacionService->puedoPrestar(
+                    $detalle['prestable_id'],
+                    $almacenId,
+                    $detalle['cantidad']
+                );
 
-            if (!$stockValido['valido']) {
-                Log::warning('⚠️ Stock insuficiente', ['mensaje' => $stockValido['mensaje']]);
-                return response()->json([
-                    'success' => false,
-                    'message' => $stockValido['mensaje'],
-                ], 422);
+                if (!$stockValido['valido']) {
+                    Log::warning('⚠️ Stock insuficiente en detalle ' . $i, ['mensaje' => $stockValido['mensaje']]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Detalle {$i}: " . $stockValido['mensaje'],
+                    ], 422);
+                }
             }
 
-            Log::info('✅ Stock validado correctamente');
+            Log::info('✅ Stock validado correctamente para todos los detalles');
 
             // Crear préstamo
             Log::info('💾 Creando préstamo');
@@ -118,7 +121,7 @@ class PrestamoClienteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $prestamo->load(['prestable', 'cliente', 'chofer']),
+                'data' => $prestamo->load(['detalles.prestable', 'cliente', 'chofer']),
                 'message' => 'Préstamo creado exitosamente',
             ], 201);
         } catch (\Exception $e) {
@@ -134,8 +137,8 @@ class PrestamoClienteController extends Controller
     public function show(PrestamoCliente $prestamo): JsonResponse
     {
         try {
-            $prestamo->load(['prestable', 'cliente', 'chofer', 'venta', 'devoluciones']);
-            $resumen = $this->prestamoService->obtenerResumen($prestamo->id);
+            $prestamo->load(['detalles.prestable', 'detalles.devoluciones', 'cliente', 'chofer', 'venta', 'devoluciones']);
+            $resumen = $this->prestamoService->obtenerResumenPrestamo($prestamo->id);
 
             return response()->json([
                 'success' => true,
@@ -149,15 +152,61 @@ class PrestamoClienteController extends Controller
     }
 
     /**
+     * PATCH /api/prestamos-cliente/{prestamo}
+     * Actualizar préstamo (fecha esperada, garantía, observaciones)
+     */
+    public function update(Request $request, PrestamoCliente $prestamo): JsonResponse
+    {
+        try {
+            Log::info('📝 Actualizando préstamo', [
+                'prestamo_id' => $prestamo->id,
+                'datos' => $request->all()
+            ]);
+
+            // Validar y actualizar solo campos permitidos
+            $datosActualizacion = $request->validate([
+                'fecha_esperada_devolucion' => 'nullable|date',
+                'monto_garantia' => 'nullable|numeric|min:0',
+                'observaciones' => 'nullable|string|max:1000',
+            ]);
+
+            // Actualizar el préstamo
+            $prestamo->update($datosActualizacion);
+
+            Log::info('✅ Préstamo actualizado', [
+                'prestamo_id' => $prestamo->id,
+                'cambios' => $datosActualizacion
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $prestamo->load(['detalles.prestable', 'cliente', 'chofer']),
+                'message' => 'Préstamo actualizado exitosamente',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('⚠️ Validación fallida al actualizar préstamo', [
+                'errores' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error actualizando préstamo', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * POST /api/prestamos-cliente/{prestamo}/devolver
-     * Registrar devolución
+     * Registrar devolución por detalle
      */
     public function registrarDevolucion(Request $request, PrestamoCliente $prestamo): JsonResponse
     {
         try {
             // Validar datos de devolución
             $datosValidacion = $request->all();
-            $datosValidacion['prestamo_cliente_id'] = $prestamo->id;
 
             $validacion = $this->validacionService->datosDevolucion($datosValidacion);
             if (!$validacion['valido']) {
@@ -174,7 +223,7 @@ class PrestamoClienteController extends Controller
                                ($request->integer('cantidad_dañada_total') ?? 0);
 
             $validacionDevolucio = $this->validacionService->puedoDevolver(
-                $prestamo->id,
+                $request->integer('prestamo_cliente_detalle_id'),
                 $request->integer('cantidad_devuelta'),
                 $request->integer('cantidad_dañada_parcial'),
                 $request->integer('cantidad_dañada_total')
@@ -188,10 +237,7 @@ class PrestamoClienteController extends Controller
             }
 
             // Registrar devolución
-            $devolución = $this->prestamoService->registrarDevolucion(array_merge(
-                $request->all(),
-                ['prestamo_cliente_id' => $prestamo->id]
-            ));
+            $devolución = $this->prestamoService->registrarDevolucion($request->all());
 
             if (!$devolución) {
                 return response()->json([
@@ -200,9 +246,12 @@ class PrestamoClienteController extends Controller
                 ], 500);
             }
 
+            // Obtener el detalle para saber qué prestable es
+            $detalle = $devolución->detallePrestamoCliente;
+
             // Obtener montos a cobrar por daño
             $montos = $this->validacionService->obtenerMontosDaño(
-                $prestamo->prestable_id,
+                $detalle->prestable_id,
                 $request->integer('cantidad_dañada_parcial') ?? 0,
                 $request->integer('cantidad_dañada_total') ?? 0
             );
@@ -267,7 +316,7 @@ class PrestamoClienteController extends Controller
         $accion  = $request->input('accion', 'download'); // download | stream
 
         // Cargar relaciones necesarias para la impresión
-        $prestamo->load(['prestable', 'cliente', 'chofer', 'venta', 'devoluciones']);
+        $prestamo->load(['detalles.prestable', 'cliente', 'chofer', 'venta', 'devoluciones']);
 
         // Generar PDF usando el tipo de documento "prestamo_cliente"
         $pdf = $this->impresionService->generarPDF('prestamo_cliente', $prestamo, $formato);
@@ -277,5 +326,59 @@ class PrestamoClienteController extends Controller
         return $accion === 'stream'
             ? $pdf->stream($nombreArchivo)
             : $pdf->download($nombreArchivo);
+    }
+
+    /**
+     * POST /api/prestamos-cliente/{prestamo}/anular
+     * Anular préstamo (cancela y devuelve stock)
+     */
+    public function anularPrestamo(Request $request, PrestamoCliente $prestamo): JsonResponse
+    {
+        try {
+            Log::info('📝 Anulando préstamo', [
+                'prestamo_id' => $prestamo->id,
+                'datos' => $request->all()
+            ]);
+
+            // Validar datos
+            $datosValidacion = $request->validate([
+                'razon_anulacion' => 'nullable|string|max:500',
+            ]);
+
+            // Anular préstamo
+            $prestamoAnulado = $this->prestamoService->anularPrestamo(
+                $prestamo->id,
+                $datosValidacion['razon_anulacion'] ?? null
+            );
+
+            if (!$prestamoAnulado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error anulando préstamo',
+                ], 500);
+            }
+
+            Log::info('✅ Préstamo anulado correctamente', [
+                'prestamo_id' => $prestamoAnulado->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $prestamoAnulado->load(['detalles.prestable', 'cliente', 'chofer']),
+                'message' => 'Préstamo anulado exitosamente',
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('⚠️ Validación fallida al anular préstamo', [
+                'errores' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error anulando préstamo', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 }

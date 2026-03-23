@@ -772,6 +772,12 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresIndex'])->name('proveedores.index');
         Route::get('proveedores/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresCrear'])->name('proveedores.crear');
         Route::post('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresStore'])->name('proveedores.store');
+
+        // Impresión de préstamos de proveedor
+        Route::get('proveedores/{prestamo}/imprimir', [\App\Http\Controllers\PrestamoProveedorController::class, 'imprimir'])
+            ->name('proveedores.imprimir')
+            ->where('prestamo', '[0-9]+');
+
         Route::get('reportes', [\App\Http\Controllers\PrestamosInertiaController::class, 'reportes'])->name('reportes');
     });
 
@@ -1024,6 +1030,16 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // ==========================================
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('imprimir', [\App\Http\Controllers\ImpresionVentasController::class, 'imprimir'])->name('imprimir');
+    });
+
+    // ==========================================
+    // 📦 PRÉSTAMOS - DASHBOARD, STOCK Y ALERTAS
+    // ==========================================
+    Route::prefix('prestamos')->name('prestamos.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Prestamos\DashboardController::class, 'dashboard'])->name('dashboard');
+        Route::get('dashboard', [\App\Http\Controllers\Prestamos\DashboardController::class, 'dashboard'])->name('dashboard-alt');
+        Route::get('stock', [\App\Http\Controllers\Prestamos\StockController::class, 'stock'])->name('stock');
+        Route::get('alertas', [\App\Http\Controllers\Prestamos\AlertasController::class, 'alertas'])->name('alertas');
     });
 });
 

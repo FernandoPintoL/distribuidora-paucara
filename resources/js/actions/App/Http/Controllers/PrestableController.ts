@@ -79,7 +79,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     index.form = indexForm
 /**
 * @see \App\Http\Controllers\PrestableController::store
- * @see app/Http/Controllers/PrestableController.php:65
+ * @see app/Http/Controllers/PrestableController.php:94
  * @route '/api/prestables'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -94,7 +94,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::store
- * @see app/Http/Controllers/PrestableController.php:65
+ * @see app/Http/Controllers/PrestableController.php:94
  * @route '/api/prestables'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PrestableController::store
- * @see app/Http/Controllers/PrestableController.php:65
+ * @see app/Http/Controllers/PrestableController.php:94
  * @route '/api/prestables'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -113,7 +113,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\PrestableController::store
- * @see app/Http/Controllers/PrestableController.php:65
+ * @see app/Http/Controllers/PrestableController.php:94
  * @route '/api/prestables'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -123,7 +123,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\PrestableController::store
- * @see app/Http/Controllers/PrestableController.php:65
+ * @see app/Http/Controllers/PrestableController.php:94
  * @route '/api/prestables'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -134,7 +134,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
 export const show = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -149,7 +149,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
 show.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ show.url = (args: { prestable: number | { id: number } } | [prestable: number | 
 
 /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
 show.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -191,7 +191,7 @@ show.get = (args: { prestable: number | { id: number } } | [prestable: number | 
 })
 /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
 show.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -201,7 +201,7 @@ show.head = (args: { prestable: number | { id: number } } | [prestable: number |
 
     /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
     const showForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -211,7 +211,7 @@ show.head = (args: { prestable: number | { id: number } } | [prestable: number |
 
             /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
         showForm.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -220,7 +220,7 @@ show.head = (args: { prestable: number | { id: number } } | [prestable: number |
         })
             /**
 * @see \App\Http\Controllers\PrestableController::show
- * @see app/Http/Controllers/PrestableController.php:191
+ * @see app/Http/Controllers/PrestableController.php:222
  * @route '/api/prestables/{prestable}'
  */
         showForm.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -236,7 +236,7 @@ show.head = (args: { prestable: number | { id: number } } | [prestable: number |
     show.form = showForm
 /**
 * @see \App\Http\Controllers\PrestableController::update
- * @see app/Http/Controllers/PrestableController.php:215
+ * @see app/Http/Controllers/PrestableController.php:266
  * @route '/api/prestables/{prestable}'
  */
 export const update = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -251,7 +251,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::update
- * @see app/Http/Controllers/PrestableController.php:215
+ * @see app/Http/Controllers/PrestableController.php:266
  * @route '/api/prestables/{prestable}'
  */
 update.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -284,7 +284,7 @@ update.url = (args: { prestable: number | { id: number } } | [prestable: number 
 
 /**
 * @see \App\Http\Controllers\PrestableController::update
- * @see app/Http/Controllers/PrestableController.php:215
+ * @see app/Http/Controllers/PrestableController.php:266
  * @route '/api/prestables/{prestable}'
  */
 update.put = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -294,7 +294,7 @@ update.put = (args: { prestable: number | { id: number } } | [prestable: number 
 
     /**
 * @see \App\Http\Controllers\PrestableController::update
- * @see app/Http/Controllers/PrestableController.php:215
+ * @see app/Http/Controllers/PrestableController.php:266
  * @route '/api/prestables/{prestable}'
  */
     const updateForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -309,7 +309,7 @@ update.put = (args: { prestable: number | { id: number } } | [prestable: number 
 
             /**
 * @see \App\Http\Controllers\PrestableController::update
- * @see app/Http/Controllers/PrestableController.php:215
+ * @see app/Http/Controllers/PrestableController.php:266
  * @route '/api/prestables/{prestable}'
  */
         updateForm.put = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -325,7 +325,7 @@ update.put = (args: { prestable: number | { id: number } } | [prestable: number 
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\PrestableController::destroy
- * @see app/Http/Controllers/PrestableController.php:337
+ * @see app/Http/Controllers/PrestableController.php:390
  * @route '/api/prestables/{prestable}'
  */
 export const destroy = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -340,7 +340,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::destroy
- * @see app/Http/Controllers/PrestableController.php:337
+ * @see app/Http/Controllers/PrestableController.php:390
  * @route '/api/prestables/{prestable}'
  */
 destroy.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -373,7 +373,7 @@ destroy.url = (args: { prestable: number | { id: number } } | [prestable: number
 
 /**
 * @see \App\Http\Controllers\PrestableController::destroy
- * @see app/Http/Controllers/PrestableController.php:337
+ * @see app/Http/Controllers/PrestableController.php:390
  * @route '/api/prestables/{prestable}'
  */
 destroy.delete = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -383,7 +383,7 @@ destroy.delete = (args: { prestable: number | { id: number } } | [prestable: num
 
     /**
 * @see \App\Http\Controllers\PrestableController::destroy
- * @see app/Http/Controllers/PrestableController.php:337
+ * @see app/Http/Controllers/PrestableController.php:390
  * @route '/api/prestables/{prestable}'
  */
     const destroyForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -398,7 +398,7 @@ destroy.delete = (args: { prestable: number | { id: number } } | [prestable: num
 
             /**
 * @see \App\Http\Controllers\PrestableController::destroy
- * @see app/Http/Controllers/PrestableController.php:337
+ * @see app/Http/Controllers/PrestableController.php:390
  * @route '/api/prestables/{prestable}'
  */
         destroyForm.delete = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -414,7 +414,7 @@ destroy.delete = (args: { prestable: number | { id: number } } | [prestable: num
     destroy.form = destroyForm
 /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
 export const obtenerStock = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -429,7 +429,7 @@ obtenerStock.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
 obtenerStock.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -462,7 +462,7 @@ obtenerStock.url = (args: { prestable: number | { id: number } } | [prestable: n
 
 /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
 obtenerStock.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -471,7 +471,7 @@ obtenerStock.get = (args: { prestable: number | { id: number } } | [prestable: n
 })
 /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
 obtenerStock.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -481,7 +481,7 @@ obtenerStock.head = (args: { prestable: number | { id: number } } | [prestable: 
 
     /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
     const obtenerStockForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -491,7 +491,7 @@ obtenerStock.head = (args: { prestable: number | { id: number } } | [prestable: 
 
             /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
         obtenerStockForm.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -500,7 +500,7 @@ obtenerStock.head = (args: { prestable: number | { id: number } } | [prestable: 
         })
             /**
 * @see \App\Http\Controllers\PrestableController::obtenerStock
- * @see app/Http/Controllers/PrestableController.php:361
+ * @see app/Http/Controllers/PrestableController.php:414
  * @route '/api/prestables/{prestable}/stock'
  */
         obtenerStockForm.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -515,8 +515,110 @@ obtenerStock.head = (args: { prestable: number | { id: number } } | [prestable: 
     
     obtenerStock.form = obtenerStockForm
 /**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+export const obtenerDisponibilidad = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDisponibilidad.url(args, options),
+    method: 'get',
+})
+
+obtenerDisponibilidad.definition = {
+    methods: ["get","head"],
+    url: '/api/prestables/{prestable}/disponibilidad',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+obtenerDisponibilidad.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { prestable: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { prestable: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    prestable: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        prestable: typeof args.prestable === 'object'
+                ? args.prestable.id
+                : args.prestable,
+                }
+
+    return obtenerDisponibilidad.definition.url
+            .replace('{prestable}', parsedArgs.prestable.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+obtenerDisponibilidad.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: obtenerDisponibilidad.url(args, options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+obtenerDisponibilidad.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: obtenerDisponibilidad.url(args, options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+    const obtenerDisponibilidadForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: obtenerDisponibilidad.url(args, options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+        obtenerDisponibilidadForm.get = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDisponibilidad.url(args, options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\PrestableController::obtenerDisponibilidad
+ * @see app/Http/Controllers/PrestableController.php:433
+ * @route '/api/prestables/{prestable}/disponibilidad'
+ */
+        obtenerDisponibilidadForm.head = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: obtenerDisponibilidad.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    obtenerDisponibilidad.form = obtenerDisponibilidadForm
+/**
 * @see \App\Http\Controllers\PrestableController::incrementarStock
- * @see app/Http/Controllers/PrestableController.php:380
+ * @see app/Http/Controllers/PrestableController.php:500
  * @route '/api/prestables/{prestable}/stock/incrementar'
  */
 export const incrementarStock = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -531,7 +633,7 @@ incrementarStock.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestableController::incrementarStock
- * @see app/Http/Controllers/PrestableController.php:380
+ * @see app/Http/Controllers/PrestableController.php:500
  * @route '/api/prestables/{prestable}/stock/incrementar'
  */
 incrementarStock.url = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -564,7 +666,7 @@ incrementarStock.url = (args: { prestable: number | { id: number } } | [prestabl
 
 /**
 * @see \App\Http\Controllers\PrestableController::incrementarStock
- * @see app/Http/Controllers/PrestableController.php:380
+ * @see app/Http/Controllers/PrestableController.php:500
  * @route '/api/prestables/{prestable}/stock/incrementar'
  */
 incrementarStock.post = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -574,7 +676,7 @@ incrementarStock.post = (args: { prestable: number | { id: number } } | [prestab
 
     /**
 * @see \App\Http\Controllers\PrestableController::incrementarStock
- * @see app/Http/Controllers/PrestableController.php:380
+ * @see app/Http/Controllers/PrestableController.php:500
  * @route '/api/prestables/{prestable}/stock/incrementar'
  */
     const incrementarStockForm = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -584,7 +686,7 @@ incrementarStock.post = (args: { prestable: number | { id: number } } | [prestab
 
             /**
 * @see \App\Http\Controllers\PrestableController::incrementarStock
- * @see app/Http/Controllers/PrestableController.php:380
+ * @see app/Http/Controllers/PrestableController.php:500
  * @route '/api/prestables/{prestable}/stock/incrementar'
  */
         incrementarStockForm.post = (args: { prestable: number | { id: number } } | [prestable: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -593,6 +695,6 @@ incrementarStock.post = (args: { prestable: number | { id: number } } | [prestab
         })
     
     incrementarStock.form = incrementarStockForm
-const PrestableController = { index, store, show, update, destroy, obtenerStock, incrementarStock }
+const PrestableController = { index, store, show, update, destroy, obtenerStock, obtenerDisponibilidad, incrementarStock }
 
 export default PrestableController

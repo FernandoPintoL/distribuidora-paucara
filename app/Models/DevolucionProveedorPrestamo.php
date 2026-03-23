@@ -10,7 +10,7 @@ class DevolucionProveedorPrestamo extends Model
     protected $table = 'devolucion_proveedor_prestamo';
 
     protected $fillable = [
-        'prestamo_proveedor_id',
+        'prestamo_proveedor_detalle_id',
         'cantidad_devuelta',
         'observaciones',
         'fecha_devolucion',
@@ -21,8 +21,9 @@ class DevolucionProveedorPrestamo extends Model
         'fecha_devolucion' => 'date',
     ];
 
-    public function prestamoProveedor(): BelongsTo
+    // ✅ Relación con detalle del préstamo
+    public function detalle(): BelongsTo
     {
-        return $this->belongsTo(PrestamoProveedor::class);
+        return $this->belongsTo(PrestamoProveedorDetalle::class, 'prestamo_proveedor_detalle_id');
     }
 }

@@ -429,6 +429,10 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
 Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // ⚠️ IMPORTANTE: Rutas customizadas ANTES de apiResource para evitar conflictos con {id}
     Route::group(['prefix' => 'compras'], function () {
+        // 🔍 Búsqueda para AsyncSearchSelect
+        Route::get('search', [CompraController::class, 'search']);
+        // 📦 Obtener detalles de una compra (para prestamos)
+        Route::get('{id}/detalles', [CompraController::class, 'show']);
         // 🖨️ Rutas de impresión - ANTES que apiResource
         Route::get('para-impresion', [CompraController::class, 'comprasParaImpresion']);
     });
@@ -488,6 +492,8 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         // 🖨️ Rutas de impresión - ANTES que apiResource
         Route::get('para-impresion', [VentaController::class, 'ventasParaImpresion']);
         Route::get('search', [VentaController::class, 'search'])->name('api.ventas.search');
+        // 📦 Obtener detalles de una venta (para préstamos)
+        Route::get('{id}/detalles', [VentaController::class, 'show']);
         Route::post('verificar-stock', [VentaController::class, 'verificarStock']);
         Route::get('productos/stock-bajo', [VentaController::class, 'productosStockBajo']);
 
@@ -1338,6 +1344,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{prestable}', [PrestableController::class, 'update']);
         Route::delete('/{prestable}', [PrestableController::class, 'destroy']);
         Route::get('/{prestable}/stock', [PrestableController::class, 'obtenerStock']);
+        Route::get('/{prestable}/disponibilidad', [PrestableController::class, 'obtenerDisponibilidad']);
         Route::post('/{prestable}/stock/incrementar', [PrestableController::class, 'incrementarStock']);
 
         // Stock management
@@ -1356,7 +1363,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [PrestamoClienteController::class, 'index']);
         Route::post('/', [PrestamoClienteController::class, 'store']);
         Route::get('/{prestamo}', [PrestamoClienteController::class, 'show']);
+        Route::patch('/{prestamo}', [PrestamoClienteController::class, 'update']);
         Route::post('/{prestamo}/devolver', [PrestamoClienteController::class, 'registrarDevolucion']);
+        Route::post('/{prestamo}/anular', [PrestamoClienteController::class, 'anularPrestamo']);
         Route::get('/chofer/{choferId}/pendientes', [PrestamoClienteController::class, 'obtenerPendientesChofer']);
         Route::get('/cliente/{clienteId}/activos', [PrestamoClienteController::class, 'obtenerActivosCliente']);
     });
@@ -1373,11 +1382,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Reportes de Préstamos
     Route::prefix('reportes')->group(function () {
+        // Stock
         Route::get('/stock', [ReportesController::class, 'reporteStock']);
         Route::get('/stock/bajo', [ReportesController::class, 'reporteStockBajo']);
+        Route::get('/stock-bajo-prestables', [ReportesController::class, 'stockBajoPrestables']);
+        Route::get('/stock-prestables', [ReportesController::class, 'reporteStock']);
+
+        // Préstamos y Devoluciones
         Route::get('/prestamos/cliente', [ReportesController::class, 'reportePrestamosCliente']);
         Route::get('/devoluciones/pendientes', [ReportesController::class, 'reporteDevolucionesPendientes']);
+        Route::get('/devoluciones-pendientes', [ReportesController::class, 'reporteDevolucionesPendientes']);
+
+        // Proveedores y Resumen
         Route::get('/proveedor/deudas', [ReportesController::class, 'reporteDeudas']);
+        Route::get('/deudas-proveedores', [ReportesController::class, 'reporteDeudas']);
         Route::get('/resumen-prestamos', [ReportesController::class, 'reporteResumen']);
     });
 });

@@ -182,6 +182,7 @@ class EntregaPdfController extends Controller
                 'TICKET_80' => $this->configurarTicket80($pdf),
                 'TICKET_58' => $this->configurarTicket58($pdf),
                 'B1' => $this->configurarB1($pdf),
+                'A4_COPIA' => $this->configurarA4Copia($pdf),
                 default => $this->configurarA4($pdf),
             };
 
@@ -304,6 +305,7 @@ class EntregaPdfController extends Controller
                 'TICKET_80' => $this->configurarTicket80($pdf),
                 'TICKET_58' => $this->configurarTicket58($pdf),
                 'B1' => $this->configurarB1($pdf),
+                'A4_COPIA' => $this->configurarA4Copia($pdf),
                 default => $this->configurarA4($pdf),
             };
 
@@ -340,6 +342,19 @@ class EntregaPdfController extends Controller
             ->setOption('margin-bottom', 10)
             ->setOption('margin-left', 10)
             ->setOption('margin-right', 10);
+    }
+
+    /**
+     * Configurar PDF para formato A4 con 2 copias lado a lado
+     */
+    private function configurarA4Copia($pdf)
+    {
+        return $pdf
+            ->setPaper('A4', 'landscape')
+            ->setOption('margin-top', 5)
+            ->setOption('margin-bottom', 5)
+            ->setOption('margin-left', 5)
+            ->setOption('margin-right', 5);
     }
 
     /**
@@ -393,6 +408,7 @@ class EntregaPdfController extends Controller
             'TICKET_80' => 'impresion.entregas.ticket-80',
             'TICKET_58' => 'impresion.entregas.ticket-58',
             'B1' => 'impresion.entregas.b1',
+            'A4_COPIA' => 'impresion.entregas.a4-2-copias',
             default => 'impresion.entregas.hoja-completa',
         };
     }

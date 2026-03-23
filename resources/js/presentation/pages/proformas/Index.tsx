@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Head, Link, router } from '@inertiajs/react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card'
@@ -13,7 +13,7 @@ import {
     TableRow,
 } from '@/presentation/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select'
-import { Search, Eye, CheckCircle, XCircle, FileText, Filter, Printer, PencilIcon, ChevronDown, X, TrendingUp } from 'lucide-react'
+import { Search, Eye, CheckCircle, XCircle, FileText, Filter, Printer, PencilIcon, ChevronDown, X } from 'lucide-react'
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'
 import { ImprimirProformasButton } from '@/presentation/components/impresion/ImprimirProformasButton'
 import SearchSelect from '@/presentation/components/ui/search-select'
@@ -26,7 +26,6 @@ import type { Pagination, Id } from '@/domain/entities/shared'
 import { useEstadosProformas } from '@/application/hooks'
 
 // PRESENTATION LAYER: Componentes reutilizables
-import { PageHeader } from '@/presentation/components/entrega/PageHeader'
 import { ProformaEstadoBadge } from '@/presentation/components/proforma/ProformaEstadoBadge'
 
 interface Props {
@@ -45,33 +44,6 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
         const params = new URLSearchParams(window.location.search)
         return params.get(param) || defaultValue
     }
-
-    // ✅ NUEVO 2026-02-21: Extraer clientes únicos PRIMERO (necesario para useState inicial)
-    const clientesUnicos = useMemo(() => {
-        const clientesSet = new Set()
-        const clientesList = []
-        proformas.data.forEach(p => {
-            if (p.cliente && !clientesSet.has(p.cliente.id)) {
-                clientesSet.add(p.cliente.id)
-                clientesList.push(p.cliente)
-            }
-        })
-        return clientesList.sort((a, b) => a.nombre.localeCompare(b.nombre))
-    }, [proformas.data])
-
-    // ✅ NUEVO 2026-02-21: Extraer usuarios únicos PRIMERO (necesario para useState inicial)
-    const usuariosUnicos = useMemo(() => {
-        const usuariosSet = new Set()
-        const usuariosList = []
-        proformas.data.forEach(p => {
-            const user = (p.usuario_creador as any)
-            if (user && user.id && !usuariosSet.has(user.id)) {
-                usuariosSet.add(user.id)
-                usuariosList.push(user)
-            }
-        })
-        return usuariosList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-    }, [proformas.data])
 
     // ✅ FUNCIONES PARA FECHAS RÁPIDAS
     const getHoyFormato = () => {
@@ -218,15 +190,6 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
     // Los datos de proformas.data ya vienen filtrados desde el servidor basándose en los parámetros URL
     const filteredProformas = useMemo(() => {
         return proformas.data
-    }, [proformas.data])
-
-    // ✅ ACTUALIZADO 2026-02-21: Estadísticas de los resultados filtrados por servidor
-    const estadisticas = useMemo(() => {
-        const total = proformas.data.length
-        const sumaTotal = proformas.data.reduce((sum, p) => sum + p.total, 0)
-        const promedio = total > 0 ? sumaTotal / total : 0
-
-        return { total, sumaTotal, promedio }
     }, [proformas.data])
 
     // ✅ NUEVO 2026-02-21: Verificar si hay filtros activos
@@ -454,56 +417,6 @@ export default function ProformasIndex({ proformas, usuarios = [], clientes = []
                         </Button>
                     </div>
                 </div>
-
-                {/* ✅ NUEVO 2026-02-21: Estadísticas rápidas */}
-                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Resultados
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{estadisticas.total}</div>
-                            <p className="text-xs text-muted-foreground">
-                                de {proformas.total} proformas totales
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4" />
-                                Suma Total
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                Bs. {estadisticas.sumaTotal.toLocaleString('es-ES', { maximumFractionDigits: 2 })}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                de {proformas.data.reduce((s, p) => s + p.total, 0).toLocaleString('es-ES', { maximumFractionDigits: 2 })} total
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Promedio
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                Bs. {estadisticas.promedio.toLocaleString('es-ES', { maximumFractionDigits: 2 })}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                por proforma
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div> */}
 
                 {/* ✅ NUEVO 2026-02-21: Filtros colapsibles mejorados */}
                 <Card>

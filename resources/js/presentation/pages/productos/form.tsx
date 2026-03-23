@@ -39,6 +39,7 @@ const initialProductoData: ProductoFormData = {
   limite_venta: null, // ✨ NUEVO
   principio_activo: null, // ✨ NUEVO
   uso_de_medicacion: null, // ✨ NUEVO
+  visible_app: true, // ✨ NUEVO - Visible en app por defecto
   precios: [
     { monto: 0, tipo_precio_id: 1 },
     { monto: 0, tipo_precio_id: 2 },
@@ -106,6 +107,7 @@ export default function ProductoForm({
       limite_venta: producto.limite_venta ?? null, // ✨ NUEVO
       principio_activo: producto.principio_activo ?? null, // ✨ NUEVO
       uso_de_medicacion: producto.uso_de_medicacion ?? null, // ✨ NUEVO
+      visible_app: producto.visible_app ?? true, // ✨ NUEVO - Visible en app
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
       conversiones: producto.conversiones?.length ? producto.conversiones : [], // ✨ NUEVO
@@ -222,6 +224,7 @@ export default function ProductoForm({
       limite_venta: data.limite_venta ? String(data.limite_venta) : '', // ✨ NUEVO - Enviar solo si tiene valor
       principio_activo: data.principio_activo ?? '', // ✨ NUEVO - Campos de medicamento para farmacias
       uso_de_medicacion: data.uso_de_medicacion ?? '', // ✨ NUEVO - Campos de medicamento para farmacias
+      visible_app: data.visible_app ? 1 : 0, // ✨ NUEVO - Visible en app
     }).forEach(([k, v]) => formData.append(k, String(v ?? '')));
 
     // Imágenes (desde estado separado)
@@ -523,6 +526,7 @@ export default function ProductoForm({
                     getInputClassName={getInputClassName}
                     permite_productos_fraccionados={permite_productos_fraccionados} // ✨ NUEVO
                     es_farmacia={es_farmacia} // ✨ NUEVO
+                    visible_app={data.visible_app} // ✨ NUEVO
                   />
                 </TabsContent>
 
