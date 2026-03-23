@@ -299,12 +299,12 @@ class ImpresionService
                 'TICKET_58' => 'impresion.ventas.ticket-58',
             ],
             'prestamo_cliente' => [
-                'A4' => 'impresion.prestamos_clientes.hoja-completa',
+                'A4' => 'impresion.prestamos_clientes.a4-2-copias',
                 'A4_COPIA' => 'impresion.prestamos_clientes.a4-2-copias',
                 'TICKET_80' => 'impresion.prestamos_clientes.ticket-80',
             ],
             'prestamo_proveedor' => [
-                'A4' => 'impresion.prestamos_proveedores.hoja-completa',
+                'A4' => 'impresion.prestamos_proveedores.a4-2-copias',
                 'A4_COPIA' => 'impresion.prestamos_proveedores.a4-2-copias',
                 'TICKET_80' => 'impresion.prestamos_proveedores.ticket-80',
             ],
@@ -455,7 +455,7 @@ class ImpresionService
         $config = match($formato) {
             'A4' => [
                 'paper' => 'A4',
-                'orientation' => 'portrait',
+                'orientation' => 'landscape',
             ],
             'A4_COPIA' => [
                 'paper' => 'A4',

@@ -13,13 +13,14 @@ class TipoPago extends Model
     protected $table = 'tipos_pago';
 
     protected $fillable = [
-        'codigo', 'nombre', 'activo',
+        'codigo', 'nombre', 'activo', 'es_credito',
     ];
 
     protected function casts(): array
     {
         return [
             'activo' => 'boolean',
+            'es_credito' => 'boolean',
         ];
     }
 

@@ -473,7 +473,23 @@ class CompraController extends Controller
             $estadoRecibido = \App\Models\EstadoDocumento::where('codigo', 'FACTURADO')->first();
 
             foreach ($data['detalles'] as $detalle) {
+                // ✅ DEBUG: Log cantidad ANTES de crear detalle
+                Log::info('🔍 CompraController::store() - DETALLE ANTES DE CREAR', [
+                    'cantidad_raw' => $detalle['cantidad'],
+                    'cantidad_tipo' => gettype($detalle['cantidad']),
+                    'producto_id' => $detalle['producto_id'],
+                    'precio_unitario' => $detalle['precio_unitario'],
+                    'subtotal' => $detalle['subtotal'],
+                ]);
+
                 $detalleCompra = $compra->detalles()->create($detalle);
+
+                // ✅ DEBUG: Log cantidad DESPUÉS de crear detalle
+                Log::info('🔍 CompraController::store() - DETALLE DESPUÉS DE CREAR', [
+                    'detalle_id' => $detalleCompra->id,
+                    'cantidad_guardada' => $detalleCompra->cantidad,
+                    'cantidad_tipo' => gettype($detalleCompra->cantidad),
+                ]);
 
                 // ✅ Registrar inventario SOLO si el estado es APROBADO o FACTURADO
                 if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
@@ -1005,9 +1021,27 @@ class CompraController extends Controller
         }
 
         try {
-            $producto->registrarMovimiento(
+            // ✅ DEBUG: Verificar cantidad antes de procesar
+            $cantidadInt = (int) $detalle->cantidad;
+            Log::info('🔍 registrarEntradaInventario - DEBUG cantidad', [
+                'compra_id'   => $compra->id,
+                'producto_id' => $producto->id,
+                'detalle_cantidad' => $detalle->cantidad,
+                'cantidad_tipo' => gettype($detalle->cantidad),
+                'cantidad_int' => $cantidadInt,
+            ]);
+
+            Log::info('📞 LLAMANDO registrarMovimiento()', [
+                'producto_id' => $producto->id,
+                'almacen_id' => $almacen->id,
+                'cantidad' => $cantidadInt,
+                'lote' => $detalle->lote ?? 'NULL',
+                'fecha_vencimiento' => $detalle->fecha_vencimiento ?? 'NULL',
+            ]);
+
+            $movimiento = $producto->registrarMovimiento(
                 almacenId: $almacen->id,
-                cantidad: (int) $detalle->cantidad,
+                cantidad: $cantidadInt,
                 tipo: MovimientoInventario::TIPO_ENTRADA_COMPRA,
                 observacion: "Entrada por compra #{$compra->numero}",
                 numeroDocumento: $compra->numero,
@@ -1017,18 +1051,24 @@ class CompraController extends Controller
                 userId: $compra->usuario_id
             );
 
-            Log::info('Movimiento de inventario registrado por compra', [
+            Log::info('✅ Movimiento de inventario registrado exitosamente', [
                 'compra_id'   => $compra->id,
+                'movimiento_id' => $movimiento->id,
                 'producto_id' => $producto->id,
                 'cantidad'    => $detalle->cantidad,
+                'cantidad_int' => $cantidadInt,
                 'almacen_id'  => $almacen->id,
+                'stock_producto_id' => $movimiento->stock_producto_id,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error al registrar movimiento de inventario por compra', [
+            Log::error('❌ Error al registrar movimiento de inventario por compra', [
                 'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
                 'error'       => $e->getMessage(),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+                'trace'       => substr($e->getTraceAsString(), 0, 500),
             ]);
 
             // No detener la transacción, solo registrar el error

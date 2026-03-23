@@ -15,14 +15,14 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 9px; width: 100%; box-sizing: border-box; overflow: visible;">
                     <div style="box-sizing: border-box; width: 100%; overflow: visible;">
                         <p style="margin: 2px 0; box-sizing: border-box;"><strong>Venta #{{ $venta->numero }}</strong></p>
-                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Fecha:</strong> {{ $venta->fecha->format('d/m/Y') }}</p>
-                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Cliente:</strong> {{ $venta->cliente->nombre }}</p>
-                        @if($venta->cliente->direccion)
+                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Fecha:</strong> {{ $venta->fecha?->format('d/m/Y') ?? 'N/A' }}</p>
+                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Cliente:</strong> {{ $venta->cliente?->nombre ?? 'N/A' }}</p>
+                        @if($venta->cliente?->direccion)
                             <p style="margin: 2px 0; font-size: 8px; box-sizing: border-box;"><strong>Dir:</strong> {{ substr($venta->cliente->direccion, 0, 40) }}</p>
                         @endif
                     </div>
                     <div style="text-align: right; box-sizing: border-box; width: 100%; overflow: visible;">
-                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Documento:</strong> {{ $venta->tipoDocumento->nombre ?? 'FACTURA' }}</p>
+                        <p style="margin: 2px 0; box-sizing: border-box;"><strong>Documento:</strong> {{ $venta->tipoDocumento?->nombre ?? 'FACTURA' }}</p>
                         <p style="margin: 2px 0; box-sizing: border-box;"><strong>Vendedor:</strong> {{ $venta->usuario?->name ?? 'N/A' }}</p>
                         @if($venta->estadoDocumento)
                             <p style="margin: 2px 0; box-sizing: border-box;"><strong>Estado:</strong> {{ $venta->estadoDocumento->nombre }}</p>
@@ -48,8 +48,8 @@
                         <tr style="border-bottom: 1px dotted #ddd;">
                             <td style="padding: 3px 3px; box-sizing: border-box; overflow: hidden; word-wrap: break-word;">{{ $index + 1 }}</td>
                             <td style="padding: 3px 3px; box-sizing: border-box; overflow: hidden; word-wrap: break-word;">
-                                {{ substr($detalle->producto->nombre, 0, 35) }}
-                                @if($detalle->producto->codigo)
+                                {{ substr($detalle->producto?->nombre ?? 'N/A', 0, 35) }}
+                                @if($detalle->producto?->codigo)
                                     <br><span style="color: #999; font-size: 7px;">{{ $detalle->producto->codigo }}</span>
                                 @endif
                             </td>

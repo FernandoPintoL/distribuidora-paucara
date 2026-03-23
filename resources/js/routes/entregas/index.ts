@@ -377,7 +377,7 @@ preview.head = (args: { entrega: number | { id: number } } | [entrega: number | 
     preview.form = previewForm
 /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
 export const exportarExcel = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -392,7 +392,7 @@ exportarExcel.definition = {
 
 /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
 exportarExcel.url = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -425,7 +425,7 @@ exportarExcel.url = (args: { entrega: number | { id: number } } | [entrega: numb
 
 /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
 exportarExcel.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -434,7 +434,7 @@ exportarExcel.get = (args: { entrega: number | { id: number } } | [entrega: numb
 })
 /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
 exportarExcel.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -444,7 +444,7 @@ exportarExcel.head = (args: { entrega: number | { id: number } } | [entrega: num
 
     /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
     const exportarExcelForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -454,7 +454,7 @@ exportarExcel.head = (args: { entrega: number | { id: number } } | [entrega: num
 
             /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
         exportarExcelForm.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -463,7 +463,7 @@ exportarExcel.head = (args: { entrega: number | { id: number } } | [entrega: num
         })
             /**
 * @see \App\Http\Controllers\EntregaPdfController::exportarExcel
- * @see app/Http/Controllers/EntregaPdfController.php:632
+ * @see app/Http/Controllers/EntregaPdfController.php:633
  * @route '/api/entregas/{entrega}/exportar-excel'
  */
         exportarExcelForm.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -581,7 +581,7 @@ debug.head = (args: { entrega: number | { id: number } } | [entrega: number | { 
     debug.form = debugForm
 /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
 export const productosAgrupados = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -596,7 +596,7 @@ productosAgrupados.definition = {
 
 /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
 productosAgrupados.url = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -629,7 +629,7 @@ productosAgrupados.url = (args: { entrega: number | { id: number } } | [entrega:
 
 /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
 productosAgrupados.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -638,7 +638,7 @@ productosAgrupados.get = (args: { entrega: number | { id: number } } | [entrega:
 })
 /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
 productosAgrupados.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -648,7 +648,7 @@ productosAgrupados.head = (args: { entrega: number | { id: number } } | [entrega
 
     /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
     const productosAgrupadosForm = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -658,7 +658,7 @@ productosAgrupados.head = (args: { entrega: number | { id: number } } | [entrega
 
             /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
         productosAgrupadosForm.get = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -667,7 +667,7 @@ productosAgrupados.head = (args: { entrega: number | { id: number } } | [entrega
         })
             /**
 * @see \App\Http\Controllers\EntregaPdfController::productosAgrupados
- * @see app/Http/Controllers/EntregaPdfController.php:543
+ * @see app/Http/Controllers/EntregaPdfController.php:544
  * @route '/api/entregas/{entrega}/productos-agrupados'
  */
         productosAgrupadosForm.head = (args: { entrega: number | { id: number } } | [entrega: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -23,7 +23,7 @@ class DetalleCompra extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'decimal:6',
+            'cantidad' => 'decimal:6',  // ✅ FIXED 2026-03-23: Cambié columna a DECIMAL(18,6) en migración. Laravel respeta los 6 decimales de BD
             'precio_unitario' => 'decimal:10',
             'descuento' => 'decimal:10',
             'subtotal' => 'decimal:10',

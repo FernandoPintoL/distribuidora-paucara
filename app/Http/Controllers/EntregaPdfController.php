@@ -337,7 +337,7 @@ class EntregaPdfController extends Controller
     private function configurarA4($pdf)
     {
         return $pdf
-            ->setPaper('A4')
+            ->setPaper('A4', 'landscape')
             ->setOption('margin-top', 10)
             ->setOption('margin-bottom', 10)
             ->setOption('margin-left', 10)
@@ -408,6 +408,7 @@ class EntregaPdfController extends Controller
             'TICKET_80' => 'impresion.entregas.ticket-80',
             'TICKET_58' => 'impresion.entregas.ticket-58',
             'B1' => 'impresion.entregas.b1',
+            'A4' => 'impresion.entregas.a4-2-copias',
             'A4_COPIA' => 'impresion.entregas.a4-2-copias',
             default => 'impresion.entregas.hoja-completa',
         };

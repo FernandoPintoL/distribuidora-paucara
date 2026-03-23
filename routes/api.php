@@ -892,27 +892,27 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     Route::prefix('entregas')->group(function () {
         // 🖨️ Descargar entrega como PDF (múltiples formatos)
         Route::get('/{entrega}/descargar', [\App\Http\Controllers\EntregaPdfController::class, 'descargar'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('entregas.descargar');
 
         // 🖨️ Vista previa de entrega en navegador
         Route::get('/{entrega}/preview', [\App\Http\Controllers\EntregaPdfController::class, 'preview'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('entregas.preview');
 
         // 📊 Exportar entrega a Excel
         Route::get('/{entrega}/exportar-excel', [\App\Http\Controllers\EntregaPdfController::class, 'exportarExcel'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('entregas.exportar-excel');
 
         // 🔍 Debug - Ver datos de entrega (TEMPORAL)
         Route::get('/{entrega}/debug', [\App\Http\Controllers\EntregaPdfController::class, 'debug'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('entregas.debug');
 
         // 📦 Obtener productos agrupados de una entrega (consolidando cantidades)
         Route::get('/{entrega}/productos-agrupados', [\App\Http\Controllers\EntregaPdfController::class, 'obtenerProductosAgrupados'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('entregas.productos-agrupados');
 
         // Confirmar carga (cambiar a EN_CARGA)
@@ -1002,7 +1002,7 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
         // 🖨️ Formatos de impresión disponibles (ANTES de /{reporte} para mayor especificidad)
         Route::get('/formatos-disponibles', [ReporteCargoController::class, 'formatosDisponibles'])
-            ->middleware('auth')  // Solo requiere autenticación
+            ->middleware('auth:sanctum,web')  // Solo requiere autenticación
             ->name('reportes-carga.formatos-disponibles');
 
         // Obtener detalles de un reporte
@@ -1012,12 +1012,12 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
         // 🖨️ Vista previa de reporte
         Route::get('/{reporte}/preview', [ReporteCargoController::class, 'preview'])
-            ->middleware('auth')  // Solo requiere autenticación
+            ->middleware('auth:sanctum,web')  // Solo requiere autenticación
             ->name('reportes-carga.preview');
 
         // 🖨️ Descargar reporte como PDF
         Route::get('/{reporte}/descargar', [ReporteCargoController::class, 'descargar'])
-            ->middleware('auth')  // Solo requiere autenticación, no permiso específico
+            ->middleware('auth:sanctum,web')  // Solo requiere autenticación, no permiso específico
             ->name('reportes-carga.descargar');
 
         // Actualizar cantidad cargada de un detalle
@@ -1047,17 +1047,17 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
 
         // ✅ NUEVA: Generar PDF del reporte (descargar)
         Route::get('/{reporte}/pdf', [ReporteCargaPdfController::class, 'generarPdf'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('reportes-carga.pdf');
 
         // ✅ NUEVA: Generar PDF detallado con entregas (descargar)
         Route::get('/{reporte}/pdf-detallado', [ReporteCargaPdfController::class, 'generarPdfDetallado'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('reportes-carga.pdf-detallado');
 
         // ✅ NUEVA: Vista previa de PDF en navegador
         Route::get('/{reporte}/pdf-preview', [ReporteCargaPdfController::class, 'previewPdf'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('reportes-carga.pdf-preview');
     });
 
@@ -1065,12 +1065,12 @@ Route::middleware(['auth:sanctum', 'platform'])->group(function () {
     Route::group(['prefix' => 'reportes'], function () {
         // Obtener estadísticas de reportes
         Route::get('/estadisticas', [ReporteCargoListController::class, 'estadisticas'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('reportes.estadisticas');
 
         // Exportar múltiples reportes como ZIP
         Route::post('/exportar-zip', [ReporteCargoListController::class, 'exportarZip'])
-            ->middleware('auth')
+            ->middleware('auth:sanctum,web')
             ->name('reportes.exportar-zip');
     });
 

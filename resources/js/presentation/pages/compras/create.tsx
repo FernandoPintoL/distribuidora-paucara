@@ -711,6 +711,19 @@ export default function CompraForm() {
     // Filtrar detalles válidos
     const detallesValidos = data.detalles.filter(d => d.producto_id !== '');
 
+    // ✅ DEBUG: Mostrar cantidad en detallesValidos ANTES de transformar
+    console.log('📦 CompraForm::submit() - detallesValidos ANTES de transformar', {
+      totalDetalles: data.detalles.length,
+      detallesValidos_count: detallesValidos.length,
+      primero_detalle: detallesValidos[0] ? {
+        producto_id: detallesValidos[0].producto_id,
+        cantidad: detallesValidos[0].cantidad,
+        cantidad_tipo: typeof detallesValidos[0].cantidad,
+        precio_unitario: detallesValidos[0].precio_unitario,
+        subtotal: detallesValidos[0].subtotal,
+      } : null,
+    });
+
     console.log('📦 CompraForm::submit() - Validación de detalles', {
       totalDetalles: data.detalles.length,
       detallesValidos: detallesValidos.length,
