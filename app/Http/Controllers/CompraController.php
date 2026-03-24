@@ -242,8 +242,39 @@ class CompraController extends Controller
 
     public function show($id)
     {
-        $compra = Compra::with(['proveedor', 'usuario', 'estadoDocumento', 'moneda', 'tipoPago', 'detalles.producto'])
-            ->findOrFail($id);
+        $compra = Compra::with([
+            'proveedor',
+            'usuario',
+            'estadoDocumento',
+            'moneda',
+            'tipoPago',
+            'detalles.producto.codigosBarra',
+            'almacen'
+        ])->findOrFail($id);
+
+        // ✅ NUEVO 2026-03-24: Cargar movimientos de inventario para cada detalle
+        $detalles = $compra->detalles->map(function ($detalle) use ($compra) {
+            $movimiento = \App\Models\MovimientoInventario::where('numero_documento', $compra->numero)
+                ->where('tipo', 'ENTRADA_COMPRA')
+                ->whereHas('stockProducto', function ($q) use ($detalle) {
+                    $q->where('producto_id', $detalle->producto_id);
+                })
+                ->first();
+
+            return [
+                'id' => $detalle->id,
+                'compra_id' => $detalle->compra_id,
+                'producto_id' => $detalle->producto_id,
+                'producto' => $detalle->producto,
+                'cantidad' => $detalle->cantidad,
+                'precio_unitario' => $detalle->precio_unitario,
+                'subtotal' => $detalle->subtotal,
+                'lote' => $detalle->lote,
+                'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                'cantidad_anterior' => $movimiento?->cantidad_anterior ?? null,
+                'cantidad_posterior' => $movimiento?->cantidad_posterior ?? null,
+            ];
+        });
 
         // ✅ NUEVO: Detectar si es solicitud API o web
         if (request()->wantsJson()) {
@@ -259,13 +290,15 @@ class CompraController extends Controller
                     'estadoDocumento' => $compra->estadoDocumento,
                     'moneda' => $compra->moneda,
                     'tipoPago' => $compra->tipoPago,
-                    'detalles' => $compra->detalles,
+                    'detalles' => $detalles,
                 ]
             ]);
         }
 
         return Inertia::render('compras/show', [
-            'compra' => $compra,
+            'compra' => array_merge($compra->toArray(), [
+                'detalles' => $detalles,
+            ]),
         ]);
     }
 

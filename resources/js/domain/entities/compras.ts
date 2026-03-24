@@ -61,6 +61,9 @@ export interface DetalleCompra extends BaseEntity {
     subtotal: number;
     lote?: string | null;
     fecha_vencimiento?: string | null;
+    // ✅ NUEVO 2026-03-24: Stock movement tracking
+    cantidad_anterior?: number | null;
+    cantidad_posterior?: number | null;
 }
 
 export interface Compra extends BaseEntity {

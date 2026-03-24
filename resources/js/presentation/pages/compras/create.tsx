@@ -171,6 +171,7 @@ export default function CompraForm() {
       props.tipos_pago?.find(t => t.codigo === 'EFECTIVO')?.id ??
       props.tipos_pago?.[0]?.id ?? '',
     almacen_id: props.compra?.almacen_id ??
+      props.almacenes?.find(a => a.nombre === 'Almacen Principal')?.id ??  // ✅ NUEVO 2026-03-24: Buscar Almacen Principal por defecto
       props.almacenes?.find(a => a.activo)?.id ??
       props.almacenes?.[0]?.id ?? '',
     detalles: props.compra?.detalles?.map(d => ({
