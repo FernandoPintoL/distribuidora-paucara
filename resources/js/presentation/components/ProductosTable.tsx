@@ -1042,27 +1042,42 @@ export default function ProductosTable({
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             <input
-                                                type="number"
+                                                type="text"
                                                 inputMode="decimal"
-                                                step="0.01"
-                                                min="0"
                                                 disabled={readOnly}
-                                                value={detalle.cantidad || 0}
+                                                value={editingField?.index === index && editingField?.field === 'cantidad'
+                                                    ? editingField.value
+                                                    : detalle.cantidad.toString()}
+                                                placeholder="0.00"
+                                                onFocus={() => {
+                                                    setEditingField({
+                                                        index,
+                                                        field: 'cantidad',
+                                                        value: detalle.cantidad.toString()
+                                                    });
+                                                }}
                                                 onChange={(e) => {
                                                     const valor = e.target.value;
-                                                    const num = valor === '' ? 0 : parseFloat(valor);
-                                                    if (num >= 0) {
-                                                        handleUpdateDetail(index, 'cantidad', num);
+                                                    setEditingField(prev => prev && prev.index === index
+                                                        ? { ...prev, value: valor }
+                                                        : prev);
+                                                    // ✅ NUEVO: Validar que solo sea número decimal positivo
+                                                    if (valor === '' || /^\d*\.?\d*$/.test(valor)) {
+                                                        const num = valor === '' ? 0 : parseFloat(valor);
+                                                        if (num >= 0) {
+                                                            handleUpdateDetail(index, 'cantidad', num);
+                                                        }
                                                     }
                                                     console.log('🔍 ProductosTable - onChange cantidad', {
                                                         index,
                                                         valor,
-                                                        num,
                                                         detalle_cantidad_antes: detalle.cantidad,
-                                                        detalle_cantidad_despues: num
                                                     });
                                                 }}
-                                                className="w-16 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                onBlur={(e) => {
+                                                    setEditingField(null);
+                                                }}
+                                                className="w-16 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed font-mono"
                                             />
                                             <div>
                                                 {tipo === 'venta' && (

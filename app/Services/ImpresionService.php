@@ -129,7 +129,7 @@ class ImpresionService
                 ], $datosAdjuntos);
 
                 $pdf = PDF::loadView($opciones['vista_farmacia'], $datos);
-                $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4');
+                $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4', $tipoDocumento);
 
                 \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (vista farmacia)', [
                     'tipoDocumento' => $tipoDocumento,
@@ -224,7 +224,7 @@ class ImpresionService
                 'tipoDocumento' => $tipoDocumento,
             ]);
 
-            $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4');
+            $this->aplicarConfiguracionFormato($pdf, $formato ?? 'A4', $tipoDocumento);
 
             \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (fallback)', [
                 'tipoDocumento' => $tipoDocumento,
@@ -253,7 +253,7 @@ class ImpresionService
         ]);
 
         // Aplicar configuración específica del formato
-        $this->aplicarConfiguracionFormato($pdf, $plantilla->formato);
+        $this->aplicarConfiguracionFormato($pdf, $plantilla->formato, $tipoDocumento);
 
         \Log::info('✅ [ImpresionService::generarPDF] PDF generado exitosamente (plantilla)', [
             'tipoDocumento' => $tipoDocumento,
@@ -448,18 +448,29 @@ class ImpresionService
      *
      * @param \Barryvdh\DomPDF\PDF $pdf
      * @param string $formato
+     * @param string|null $tipoDocumento Tipo de documento para aplicar orientación específica
      * @return void
      */
-    private function aplicarConfiguracionFormato($pdf, string $formato): void
+    private function aplicarConfiguracionFormato($pdf, string $formato, ?string $tipoDocumento = null): void
     {
         $config = match($formato) {
             'A4' => [
                 'paper' => 'A4',
-                'orientation' => 'landscape',
+                // Entregas, Préstamos a clientes y Préstamos a proveedores = landscape
+                // Todo lo demás (pagos, compras, ventas, etc.) = portrait
+                'orientation' => in_array($tipoDocumento, ['envio', 'prestamo_cliente', 'prestamo_proveedor'])
+                    ? 'landscape'
+                    : 'portrait',
             ],
             'A4_COPIA' => [
                 'paper' => 'A4',
-                'orientation' => 'landscape',
+                'orientation' => in_array($tipoDocumento, ['envio', 'prestamo_cliente', 'prestamo_proveedor'])
+                    ? 'landscape'
+                    : 'portrait',
+            ],
+            'A4_PORTRAIT' => [
+                'paper' => 'A4',
+                'orientation' => 'portrait',
             ],
             'TICKET_80' => [
                 // 80mm de ancho, altura automática (muy largo para permitir contenido variable)
