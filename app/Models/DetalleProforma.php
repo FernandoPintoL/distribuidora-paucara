@@ -25,10 +25,10 @@ class DetalleProforma extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'decimal:6',
-            'precio_unitario' => 'decimal:2',
-            'descuento' => 'decimal:2',
-            'subtotal' => 'decimal:2',
+            'cantidad' => 'float',  // ✅ FIXED 2026-03-24: Cambié a float para evitar problemas con decimal:6
+            'precio_unitario' => 'float',
+            'descuento' => 'float',
+            'subtotal' => 'float',
             'combo_items_seleccionados' => 'array',  // ✅ NUEVO: Castear JSON a array
         ];
     }

@@ -484,6 +484,10 @@ class CompraController extends Controller
 
                 $detalleCompra = $compra->detalles()->create($detalle);
 
+                // ✅ CRITICAL FIX 2026-03-24: REFRESH el detalle para obtener el valor correcto del DB
+                // El cast float() en memoria devuelve 1, pero el DB tiene el valor correcto (100)
+                $detalleCompra->refresh();
+
                 // ✅ DEBUG: Log cantidad DESPUÉS de crear detalle
                 Log::info('🔍 CompraController::store() - DETALLE DESPUÉS DE CREAR', [
                     'detalle_id' => $detalleCompra->id,
@@ -757,12 +761,17 @@ class CompraController extends Controller
                         }
 
                         $detalle = $compra->detalles()->create($detalleParaCrear);
+
+                        // ✅ CRITICAL FIX 2026-03-24: REFRESH el detalle para obtener el valor correcto del DB
+                        $detalle->refresh();
+
                         $createdCount++;
                         Log::info('CompraController::update() - Detalle creado', [
                             'compra_id' => $compra->id,
                             'detalle_id' => $detalle->id,
                             'producto_id' => $detalleParaCrear['producto_id'],
                             'cantidad' => $detalleParaCrear['cantidad'],
+                            'cantidad_guardada' => $detalle->cantidad,  // ← Ahora con el valor correcto
                             'lote_enviado' => $detalleParaCrear['lote'] ?? 'NO ENVIADO',
                             'lote_guardado' => $detalle->lote ?? 'NO GUARDADO',
                             'fecha_vencimiento_enviada' => $detalleParaCrear['fecha_vencimiento'] ?? 'NO ENVIADA',
@@ -1022,12 +1031,16 @@ class CompraController extends Controller
 
         try {
             // ✅ DEBUG: Verificar cantidad antes de procesar
-            $cantidadInt = (int) $detalle->cantidad;
+            // ✅ IMPORTANTE: Usar floatval para manejar correctamente decimales y strings
+            $cantidadFloat = floatval($detalle->cantidad);
+            $cantidadInt = intval($cantidadFloat); // Después convertir a int si es necesario
+
             Log::info('🔍 registrarEntradaInventario - DEBUG cantidad', [
                 'compra_id'   => $compra->id,
                 'producto_id' => $producto->id,
-                'detalle_cantidad' => $detalle->cantidad,
-                'cantidad_tipo' => gettype($detalle->cantidad),
+                'detalle_cantidad_raw' => $detalle->cantidad,
+                'detalle_cantidad_tipo' => gettype($detalle->cantidad),
+                'cantidad_float' => $cantidadFloat,
                 'cantidad_int' => $cantidadInt,
             ]);
 
@@ -1093,10 +1106,13 @@ class CompraController extends Controller
             }
 
             try {
+                // ✅ IMPORTANTE: Usar floatval para manejar correctamente decimales y strings
+                $cantidadRevertir = -intval(floatval($detalle->cantidad)); // Negativo para salida
+
                 // Registrar salida para revertir la entrada original
                 $producto->registrarMovimiento(
                     almacenId: $almacenPrincipal->id,
-                    cantidad: -(int) $detalle->cantidad, // Negativo para salida
+                    cantidad: $cantidadRevertir,
                     tipo: \App\Models\MovimientoInventario::TIPO_AJUSTE,
                     observacion: "Reversión por actualización de compra #{$compra->numero}",
                     numeroDocumento: $compra->numero_factura,

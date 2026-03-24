@@ -23,10 +23,10 @@ class DetalleCompra extends Model
     protected function casts(): array
     {
         return [
-            'cantidad' => 'decimal:6',  // ✅ FIXED 2026-03-23: Cambié columna a DECIMAL(18,6) en migración. Laravel respeta los 6 decimales de BD
-            'precio_unitario' => 'decimal:10',
-            'descuento' => 'decimal:10',
-            'subtotal' => 'decimal:10',
+            'cantidad' => 'float',  // ✅ FIXED 2026-03-24: Cambié a float para evitar problemas con el cast decimal
+            'precio_unitario' => 'float',
+            'descuento' => 'float',
+            'subtotal' => 'float',
             'fecha_vencimiento' => 'date',
         ];
     }

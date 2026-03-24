@@ -25,9 +25,9 @@ class DetalleDevolucion extends Model
     protected function casts(): array
     {
         return [
-            'cantidad_devuelta' => 'decimal:6',
-            'precio_unitario' => 'decimal:2',
-            'subtotal' => 'decimal:2',
+            'cantidad_devuelta' => 'float',  // ✅ FIXED 2026-03-24: Cambié a float para evitar problemas con decimal:6
+            'precio_unitario' => 'float',
+            'subtotal' => 'float',
         ];
     }
 
