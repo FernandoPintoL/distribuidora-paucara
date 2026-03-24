@@ -1,5 +1,5 @@
 {{-- Información de Pago para Compras --}}
-<div class="informacion-pago">
+<div class="informacion-pago" style="font-size: 13px;">
     {{-- Tipo de pago --}}
     @if($compra->tipoPago)
         <p><strong>Tipo de Pago:</strong> {{ $compra->tipoPago->nombre }}</p>
@@ -24,7 +24,7 @@
 
     {{-- Número de referencia si existe --}}
     @if($compra->numero_factura)
-        <p><strong>Factura #:</strong> {{ $compra->numero_factura }}</p>
+        <p><strong>Numero Factura Proveedor: </strong> #{{ $compra->numero_factura }}</p>
     @endif
 
     {{-- Estado del documento --}}

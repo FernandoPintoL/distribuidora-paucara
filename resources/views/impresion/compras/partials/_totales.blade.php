@@ -3,7 +3,7 @@
     ✅ Muestra subtotal, descuento e impuesto
     ✅ Muestra el total final
 --}}
-<div class="totales">
+<div class="totales" style="font-size: 13px;">
     <table>
         {{-- SUBTOTAL --}}
         <tr>

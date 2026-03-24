@@ -8,14 +8,15 @@
 <div class="documento-info">
     <div class="documento-info-grid">
         <div class="documento-info-seccion">
-            <h2>COMPROBANTE DE COMPRA #{{ $compra->numero }}</h2>
+            <h2>COMPRA #{{ $compra->id }}</h2>
+            <p><strong>Numero Compra: </strong>{{ $compra->numero }}</p>
             <p><strong>Fecha:</strong> {{ $compra->fecha->format('d/m/Y') }}</p>
-            <p><strong>Moneda:</strong> {{ $compra->moneda->codigo ?? 'BOB' }}</p>
+            {{-- <p><strong>Moneda:</strong> {{ $compra->moneda->codigo ?? 'BOB' }}</p> --}}
             @if($compra->estadoDocumento)
                 <p><strong>Estado:</strong> {{ $compra->estadoDocumento->nombre }}</p>
             @endif
             @if($compra->numero_factura)
-                <p><strong>Factura #:</strong> {{ $compra->numero_factura }}</p>
+                <p><strong>Numero Factura Proveedor: </strong> #{{ $compra->numero_factura }}</p>
             @endif
             @if($compra->usuario)
                 <p><strong>Recibido por:</strong> {{ $compra->usuario->name }}</p>

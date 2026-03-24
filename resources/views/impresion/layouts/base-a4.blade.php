@@ -35,9 +35,10 @@
 
         /* Header con información de empresa */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 30px;
+            align-items: center;
             margin-bottom: 20px;
             border-bottom: 2px solid #4F81BD;
             padding-bottom: 10px;
@@ -52,30 +53,33 @@
 
         .header-logo {
             flex: 0 0 auto;
+            display: flex;
+            align-items: center;
         }
 
         .header-logo img {
-            max-width: 150px;
-            max-height: 80px;
+            max-width: 80px;
+            max-height: 60px;
             object-fit: contain;
         }
 
         .header-empresa {
             flex: 1;
-            text-align: right;
-            padding-left: 20px;
-            font-size: 10px;
+            text-align: left;
+            font-size: 11px;
         }
 
         .header-empresa h1 {
             color: #4F81BD;
             margin-bottom: 5px;
             font-weight: bold;
+            font-size: 13px;
         }
 
         .header-empresa p {
-            margin: 2px 0;
-            color: #555;
+            margin: 3px 0;
+            color: #666;
+            line-height: 1.3;
         }
 
         /* Información del documento */
@@ -336,11 +340,11 @@
         {{-- Header con datos de empresa --}}
         <div class="header">
             <div class="header-logo">
-                @if($empresa->logo_principal)
+                {{-- @if($empresa->logo_principal)
                     <img src="{{ $empresa->logo_principal }}" alt="{{ $empresa->nombre_comercial }}">
-                @endif
+                @endif --}}
                 @if(!empty($logo_principal_base64))
-                    <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 390px; max-height: 130px; object-fit: contain;">
+                    <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 80px; max-height: 60px; object-fit: contain;">
                 @endif
             </div>
             <div class="header-empresa">
