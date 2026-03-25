@@ -61,13 +61,15 @@ interface MovimientosTableProps {
     isLoading?: boolean;
     pagination?: PaginationInfo;
     onPageChange?: (page: number) => void;
+    onPerPageChange?: (perPage: number) => void; // ✅ NUEVO: Callback para cambiar items por página
 }
 
 const MovimientosTable: React.FC<MovimientosTableProps> = ({
     movimientos = [],
     isLoading = false,
     pagination,
-    onPageChange
+    onPageChange,
+    onPerPageChange // ✅ NUEVO: Recibir callback para cambiar items por página
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMovimiento, setSelectedMovimiento] = useState<MovimientoInventario | null>(null);
@@ -351,8 +353,28 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                 {/* Paginación */}
                 {pagination && pagination.last_page > 1 && (
                     <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                        <div className="text-sm text-muted-foreground">
-                            Mostrando <strong>{pagination.from}</strong> a <strong>{pagination.to}</strong> de <strong>{pagination.total}</strong> resultados
+                        <div className="flex items-center gap-4">
+                            <div className="text-sm text-muted-foreground">
+                                Mostrando <strong>{pagination.from}</strong> a <strong>{pagination.to}</strong> de <strong>{pagination.total}</strong> resultados
+                            </div>
+
+                            {/* ✅ NUEVO: Selector de items por página */}
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="per_page" className="text-sm text-muted-foreground">Items por página:</label>
+                                <select
+                                    id="per_page"
+                                    value={pagination.per_page}
+                                    onChange={(e) => onPerPageChange?.(parseInt(e.target.value))}
+                                    className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2">

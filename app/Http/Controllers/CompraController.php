@@ -927,29 +927,57 @@ class CompraController extends Controller
             }
 
             // ✅ SÉPTIMO (NUEVO 2026-03-25): Si ya está APROBADO y cambió detalle (sin cambio de estado)
-            // Registrar inventario nuevamente para generar nuevo lote/movimiento (Opción A)
+            // FIX 2026-03-25: En lugar de registrar entrada nuevamente (duplica stock),
+            // actualizar el stock_productos existente con el nuevo lote/fecha_vencimiento
             $yaEstabaAprobado = $estadoAnterior == $estadoAprobado?->id &&
                                 $compra->estado_documento_id == $estadoAprobado?->id &&
                                 $detallesChanged;
 
             if ($yaEstabaAprobado && $compra->detalles()->exists()) {
-                Log::info('CompraController::update() - APROBADO: Detalles cambiaron, registrando inventario nuevo', [
+                Log::info('CompraController::update() - APROBADO: Actualizando lote/fecha_vencimiento en stock existente', [
                     'compra_numero'  => $compra->numero,
                     'detalles_count' => $compra->detalles->count(),
-                    'motivo'         => 'Cambio de lote/fecha_vencimiento en compra APROBADA',
                 ]);
 
                 foreach ($compra->detalles as $detalle) {
-                    Log::info('Registrando inventario para detalle actualizado', [
-                        'detalle_id'          => $detalle->id,
-                        'producto_id'         => $detalle->producto_id,
-                        'lote'                => $detalle->lote,
-                        'fecha_vencimiento'   => $detalle->fecha_vencimiento,
-                    ]);
-                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
+                    try {
+                        // Buscar el stock_producto de esta compra
+                        $stockProducto = \App\Models\StockProducto::where('producto_id', $detalle->producto_id)
+                            ->where('almacen_id', $data['almacen_id'] ?? $compra->almacen_id)
+                            ->orderByDesc('created_at')
+                            ->first();
+
+                        if ($stockProducto) {
+                            // Actualizar solo lote y fecha_vencimiento, NO crear nuevo stock
+                            $stockProducto->update([
+                                'lote' => $detalle->lote,
+                                'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                            ]);
+
+                            Log::info('Stock actualizado con nuevo lote/fecha_vencimiento', [
+                                'stock_id'           => $stockProducto->id,
+                                'detalle_id'         => $detalle->id,
+                                'producto_id'        => $detalle->producto_id,
+                                'lote_nuevo'         => $detalle->lote,
+                                'fecha_vencimiento'  => $detalle->fecha_vencimiento,
+                            ]);
+                        } else {
+                            // Si no existe stock (caso extraño), registrar movimiento normal
+                            Log::warning('Stock no encontrado, registrando movimiento de entrada', [
+                                'producto_id' => $detalle->producto_id,
+                                'almacen_id'  => $data['almacen_id'] ?? $compra->almacen_id,
+                            ]);
+                            $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error al actualizar stock con lote/fecha_vencimiento', [
+                            'detalle_id' => $detalle->id,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    }
                 }
 
-                Log::info('CompraController::update() - Inventario re-registrado para cambios en APROBADO', [
+                Log::info('CompraController::update() - Stock actualizado para cambios en APROBADO', [
                     'compra_id'      => $compra->id,
                     'compra_numero'  => $compra->numero,
                 ]);

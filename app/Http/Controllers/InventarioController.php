@@ -527,7 +527,7 @@ class InventarioController extends Controller
         $productoBusqueda = $request->filled('producto_busqueda') ? $request->string('producto_busqueda') : null;
         $observaciones = $request->filled('observaciones') ? $request->string('observaciones') : null;
         $numeroDocumento = $request->filled('numero_documento') ? $request->string('numero_documento') : null;
-        $perPage     = 15;
+        $perPage     = $request->integer('per_page', 15); // ✅ Dinámico: permite cambiar items por página
 
         // Construir query con filtros
         // ✅ MEJORADO (2026-02-18): Incluir información de conversiones de unidades
@@ -775,7 +775,9 @@ class InventarioController extends Controller
                 'fecha_fin'         => $fechaFin->toDateString(),
                 'tipo'              => $tipo,
                 'almacen_id'        => $almacenId,
-                'producto_id'       => $productoId,
+                // ✅ FIX: Solo devolver producto_id si fue buscado por ID específico
+                // Si se buscó por producto_busqueda, devolver null para evitar conflicto
+                'producto_id'       => $productoBusqueda ? null : $productoId,
                 'producto_busqueda' => $productoBusqueda,
                 'numero_documento'  => $numeroDocumento,
                 'observaciones'     => $observaciones,

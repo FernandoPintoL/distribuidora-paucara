@@ -247,7 +247,24 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                                 to: movimientos.to,
                             }}
                             onPageChange={(page) => {
-                                router.get('/inventario/movimientos', { page }, {
+                                // Preservar filtros actuales cuando cambias de página
+                                const queryParams = {
+                                    ...filtros,
+                                    page,
+                                };
+                                router.get('/inventario/movimientos', queryParams, {
+                                    preserveState: true,
+                                    preserveScroll: true,
+                                });
+                            }}
+                            onPerPageChange={(perPage) => {
+                                // ✅ NUEVO: Cambiar items por página (volver a página 1)
+                                const queryParams = {
+                                    ...filtros,
+                                    per_page: perPage,
+                                    page: 1, // Resetear a página 1
+                                };
+                                router.get('/inventario/movimientos', queryParams, {
                                     preserveState: true,
                                     preserveScroll: true,
                                 });
