@@ -613,12 +613,15 @@ class CompraController extends Controller
             $estadoRecibido  = \App\Models\EstadoDocumento::where('codigo', 'FACTURADO')->first();
             $estadoCancelado = \App\Models\EstadoDocumento::where('codigo', 'CANCELADO')->first();
 
-            // ✅ Validación: Solo BORRADOR puede editar detalles y cambiar almacén
+            // ✅ Validación: BORRADOR y APROBADO pueden editar detalles (incluyendo lote y fecha_vencimiento)
+            // FACTURADO+: solo lectura
             $estadoBorrador = \App\Models\EstadoDocumento::where('codigo', 'BORRADOR')->first();
-            if ($estadoAnterior != $estadoBorrador?->id && isset($data['detalles'])) {
+            $estadoFacturado = \App\Models\EstadoDocumento::where('codigo', 'FACTURADO')->first();
+
+            if (in_array($estadoAnterior, [$estadoFacturado?->id, $estadoCancelado?->id]) && isset($data['detalles'])) {
                 throw new \Exception(
                     "No se pueden modificar los detalles de una compra en estado {$estadoActual}. " .
-                    "Solo se pueden editar compras en estado BORRADOR."
+                    "Solo se pueden editar compras en estado BORRADOR o APROBADO."
                 );
             }
 
@@ -689,8 +692,14 @@ class CompraController extends Controller
                 );
             }
 
-            // Si la compra está en estado FACTURADO y se van a modificar detalles, revertir inventario
-            if (isset($data['detalles']) && $estadoAnterior == $estadoRecibido?->id) {
+            // ✅ NUEVO 2026-03-25: Si está en APROBADO o FACTURADO y se van a modificar detalles, revertir inventario
+            // Esto permite cambiar lote/fecha_vencimiento generando nuevos movimientos (Opción A)
+            if (isset($data['detalles']) && in_array($estadoAnterior, [$estadoAprobado?->id, $estadoRecibido?->id])) {
+                Log::info('CompraController::update() - Revirtiendo inventario antes de actualizar detalles', [
+                    'compra_id' => $compra->id,
+                    'compra_numero' => $compra->numero,
+                    'estado_actual' => $estadoActual,
+                ]);
                 $this->revertirInventarioDetalles($compra);
             }
 
@@ -915,6 +924,35 @@ class CompraController extends Controller
                 foreach ($compra->detalles as $detalle) {
                     $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
                 }
+            }
+
+            // ✅ SÉPTIMO (NUEVO 2026-03-25): Si ya está APROBADO y cambió detalle (sin cambio de estado)
+            // Registrar inventario nuevamente para generar nuevo lote/movimiento (Opción A)
+            $yaEstabaAprobado = $estadoAnterior == $estadoAprobado?->id &&
+                                $compra->estado_documento_id == $estadoAprobado?->id &&
+                                $detallesChanged;
+
+            if ($yaEstabaAprobado && $compra->detalles()->exists()) {
+                Log::info('CompraController::update() - APROBADO: Detalles cambiaron, registrando inventario nuevo', [
+                    'compra_numero'  => $compra->numero,
+                    'detalles_count' => $compra->detalles->count(),
+                    'motivo'         => 'Cambio de lote/fecha_vencimiento en compra APROBADA',
+                ]);
+
+                foreach ($compra->detalles as $detalle) {
+                    Log::info('Registrando inventario para detalle actualizado', [
+                        'detalle_id'          => $detalle->id,
+                        'producto_id'         => $detalle->producto_id,
+                        'lote'                => $detalle->lote,
+                        'fecha_vencimiento'   => $detalle->fecha_vencimiento,
+                    ]);
+                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
+                }
+
+                Log::info('CompraController::update() - Inventario re-registrado para cambios en APROBADO', [
+                    'compra_id'      => $compra->id,
+                    'compra_numero'  => $compra->numero,
+                ]);
             }
 
             // ✅ DEBUG 2026-03-19: Verificar estado final antes de commit
