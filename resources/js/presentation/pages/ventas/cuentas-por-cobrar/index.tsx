@@ -137,6 +137,11 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
     const [motivoAnulacion, setMotivoAnulacion] = useState('');
     const [anulandoPago, setAnulandoPago] = useState(false);
 
+    // ✅ NUEVO: Estados para anular cuentas por cobrar
+    const [cuentaAAnular, setCuentaAAnular] = useState<CuentaPorCobrar | null>(null);
+    const [motivoCuentaAnulacion, setMotivoCuentaAnulacion] = useState('');
+    const [anulandoCuenta, setAnulandoCuenta] = useState(false);
+
     // Estados para modal de impresión
     const [modalImpresionOpen, setModalImpresionOpen] = useState(false);
     const [cuentaAImprimir, setCuentaAImprimir] = useState<CuentaPorCobrar | null>(null);
@@ -279,6 +284,41 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
             toast.error('Error al anular el pago');
         } finally {
             setAnulandoPago(false);
+        }
+    };
+
+    // ✅ NUEVO: Anular cuenta por cobrar completa
+    const handleAnularCuenta = async () => {
+        if (!cuentaAAnular) return;
+
+        try {
+            setAnulandoCuenta(true);
+            const response = await fetch(`/ventas/cuentas-por-cobrar/${cuentaAAnular.id}/anular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    motivo: motivoCuentaAnulacion,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`✅ Cuenta por cobrar #${cuentaAAnular.id} anulada exitosamente (Monto: ${formatCurrency(cuentaAAnular.saldo_pendiente)})`);
+                setCuentaAAnular(null);
+                setMotivoCuentaAnulacion('');
+                router.get('/ventas/cuentas-por-cobrar');
+            } else {
+                toast.error(data.message || 'Error al anular la cuenta');
+            }
+        } catch (error) {
+            console.error('Error anulando cuenta:', error);
+            toast.error('Error al anular la cuenta');
+        } finally {
+            setAnulandoCuenta(false);
         }
     };
 
@@ -921,6 +961,17 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                             Cobrar
                                                         </Button>
                                                     )}
+                                                    {cuenta.estado !== 'ANULADO' && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => setCuentaAAnular(cuenta)}
+                                                            variant="destructive"
+                                                            title="Anular cuenta por cobrar"
+                                                        >
+                                                            <XCircle className="w-4 h-4 mr-2" />
+                                                            Anular
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -1332,6 +1383,73 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                     className="flex-1"
                                 >
                                     {anulandoPago ? '⏳ Anulando...' : '❌ Anular Pago'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
+
+                {/* ✅ NUEVO: Modal de confirmación para anular cuenta por cobrar */}
+                {cuentaAAnular && (
+                    <Dialog open={!!cuentaAAnular} onOpenChange={() => {
+                        setCuentaAAnular(null);
+                        setMotivoCuentaAnulacion('');
+                    }}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-red-600">
+                                    ⚠️ Anular Cuenta por Cobrar
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                <Alert variant="destructive" className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertDescription className="text-red-800 dark:text-red-200">
+                                        ¿Está seguro de que desea anular esta cuenta por cobrar?
+                                        <div className="mt-2 space-y-1 text-sm">
+                                            <p><strong>Folio:</strong> #{cuentaAAnular.id}</p>
+                                            <p><strong>Cliente:</strong> {cuentaAAnular.cliente?.nombre}</p>
+                                            <p><strong>Monto a anular:</strong> {formatCurrency(cuentaAAnular.saldo_pendiente)}</p>
+                                            <p className="text-xs mt-2">
+                                                Esta acción no puede deshacerse. Se revertirán todos los movimientos asociados.
+                                            </p>
+                                        </div>
+                                    </AlertDescription>
+                                </Alert>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-900 dark:text-white">
+                                        Motivo de anulación (obligatorio)
+                                    </label>
+                                    <textarea
+                                        value={motivoCuentaAnulacion}
+                                        onChange={(e) => setMotivoCuentaAnulacion(e.target.value)}
+                                        placeholder="Ej: Crédito no cobrable, acuerdo con cliente, producto dañado..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none"
+                                        rows={3}
+                                        disabled={anulandoCuenta}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setCuentaAAnular(null);
+                                        setMotivoCuentaAnulacion('');
+                                    }}
+                                    disabled={anulandoCuenta}
+                                    className="flex-1"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleAnularCuenta}
+                                    disabled={anulandoCuenta || !motivoCuentaAnulacion.trim()}
+                                    className="flex-1"
+                                >
+                                    {anulandoCuenta ? '⏳ Anulando...' : '❌ Anular Cuenta'}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

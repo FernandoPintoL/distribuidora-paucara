@@ -92,12 +92,6 @@ interface ProformaDetalleDialogo {
     tipo_precio_id?: number | null
 }
 
-// Interfaz para detalle de proforma completo
-interface ProformaDetalleInput extends ProformaDetalleDialogo {
-    proforma_id: Id
-    descuento: number
-}
-
 // Componente para seleccionar producto
 interface ProductSelectionDialogProps {
     open: boolean
@@ -450,6 +444,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
 
     // ✅ NUEVO: Flag para evitar que el componente se remonte durante flujo de aprobación + conversión
     const [isFlowAprobacionConversion, setIsFlowAprobacionConversion] = useState(false)
+
+    // ✅ NUEVO: Estado local para deshabilitar botón de Aprobar mientras se procesa
+    const [isAprohandoLocal, setIsAprohandoLocal] = useState(false)
 
     // ✅ NUEVO: Estado para el modal de selección de salida (OutputSelection)
     const [showOutputSelection, setShowOutputSelection] = useState(false)
@@ -1140,6 +1137,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     const handleAprobarYConvertirConPago = async () => {
         console.log('%c📋 Iniciando flujo combinado: Aprobar + Convertir', 'color: blue; font-weight: bold;');
 
+        // ✅ NUEVO: Deshabilitar botón de Aprobar mientras se procesa
+        setIsAprohandoLocal(true);
+
         // ✅ CRÍTICO: Establecer flag para evitar que el componente se remonte
         setIsFlowAprobacionConversion(true);
         // Inicializar flujo
@@ -1392,6 +1392,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
 
             // ✅ CRÍTICO: Resetear flag para permitir que el componente se actualice nuevamente
             setIsFlowAprobacionConversion(false);
+        } finally {
+            // ✅ NUEVO: Deshabilitar el estado de cargando local
+            setIsAprohandoLocal(false);
         }
     }
 
@@ -2274,7 +2277,7 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                         onCoordinacionChange={setCoordinacion}
                         onSubmit={handleAprobar}
                         onCancel={() => setShowAprobarDialog(false)}
-                        isSubmitting={isSubmitting}
+                        isSubmitting={isSubmitting || isAprohandoLocal}
                         errorState={convertErrorState}
                         onRenovarReservas={() => {
                             renovarReservas(() => {

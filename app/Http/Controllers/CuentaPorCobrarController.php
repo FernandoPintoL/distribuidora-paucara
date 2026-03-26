@@ -427,6 +427,154 @@ class CuentaPorCobrarController extends Controller
     }
 
     /**
+     * ✅ NUEVO: Anular una cuenta por cobrar completa
+     * Reversa: Pagos, Movimientos de Caja
+     */
+    public function anularCuenta(Request $request, CuentaPorCobrar $cuentaPorCobrar): JsonResponse
+    {
+        try {
+            Log::info('🗑️ [ANULAR CUENTA POR COBRAR] Iniciando anulación', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'usuario_id' => Auth::id(),
+            ]);
+
+            // Verificar permisos
+            if (!auth()->user()->hasRole(['admin', 'Admin'])) {
+                return response()->json(['message' => 'No tienes permiso para anular cuentas'], 403);
+            }
+
+            // Validar que no está ya anulada
+            if ($cuentaPorCobrar->estado === 'ANULADO') {
+                return response()->json(['message' => 'Esta cuenta ya está anulada'], 422);
+            }
+
+            $motivo = $request->input('motivo', 'Sin motivo especificado');
+
+            // Cargar relaciones necesarias
+            $cuentaPorCobrar->load(['pagos', 'venta']);
+
+            // Ejecutar en transacción
+            DB::transaction(function () use ($cuentaPorCobrar, $motivo) {
+                $montoAnulado = $cuentaPorCobrar->saldo_pendiente;
+                $cajaRevertida = false;
+                $pagosAnulados = 0;
+
+                // PASO 1: Anular todos los pagos asociados (para revertir movimientos de caja)
+                foreach ($cuentaPorCobrar->pagos as $pago) {
+                    if ($pago->estado !== 'ANULADO') {
+                        // PASO 2: Revertir movimiento de caja de PAGOS
+                        if ($pago->movimientoCaja) {
+                            try {
+                                $movOriginal = $pago->movimientoCaja;
+                                $tipoAnulacion = TipoOperacionCaja::where('codigo', 'ANULACION')->firstOrFail();
+
+                                MovimientoCaja::create([
+                                    'caja_id' => $movOriginal->caja_id,
+                                    'tipo_operacion_id' => $tipoAnulacion->id,
+                                    'numero_documento' => $cuentaPorCobrar->venta?->numero ?? "CuentaPorCobrar#{$cuentaPorCobrar->id}",
+                                    'observaciones' => "REVERSIÓN por anulación de pago #{$pago->id} - Cuenta #{$cuentaPorCobrar->id}",
+                                    'monto' => abs($movOriginal->monto) * -1,
+                                    'fecha' => now(),
+                                    'user_id' => Auth::id(),
+                                ]);
+
+                                $cajaRevertida = true;
+                                Log::info('✅ Movimiento de caja de pago revertido', [
+                                    'pago_id' => $pago->id,
+                                    'cuenta_id' => $cuentaPorCobrar->id,
+                                    'monto' => $movOriginal->monto,
+                                ]);
+                            } catch (\Exception $e) {
+                                Log::warning('⚠️ No se pudo revertir movimiento de caja del pago', [
+                                    'pago_id' => $pago->id,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
+
+                        // Marcar pago como anulado
+                        $pago->update(['estado' => 'ANULADO']);
+                        $pagosAnulados++;
+                    }
+                }
+
+                // PASO 2.5: Revertir movimiento de caja de la VENTA (si existe)
+                if ($cuentaPorCobrar->venta && $cuentaPorCobrar->venta->movimientoCaja) {
+                    try {
+                        $movVenta = $cuentaPorCobrar->venta->movimientoCaja;
+                        $tipoAnulacion = TipoOperacionCaja::where('codigo', 'ANULACION')->firstOrFail();
+
+                        MovimientoCaja::create([
+                            'caja_id' => $movVenta->caja_id,
+                            'tipo_operacion_id' => $tipoAnulacion->id,
+                            'numero_documento' => $cuentaPorCobrar->venta->numero,
+                            'observaciones' => "REVERSIÓN de movimiento de venta por anulación de CxC #{$cuentaPorCobrar->id}",
+                            'monto' => abs($movVenta->monto) * -1,
+                            'fecha' => now(),
+                            'user_id' => Auth::id(),
+                        ]);
+
+                        $cajaRevertida = true;
+                        Log::info('✅ Movimiento de caja de venta revertido', [
+                            'venta_id' => $cuentaPorCobrar->venta->id,
+                            'cuenta_id' => $cuentaPorCobrar->id,
+                            'monto' => $movVenta->monto,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('⚠️ No se pudo revertir movimiento de caja de venta', [
+                            'venta_id' => $cuentaPorCobrar->venta->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // PASO 3: Actualizar estado de la cuenta a ANULADO
+                $observacionesFinales = ($cuentaPorCobrar->observaciones ? $cuentaPorCobrar->observaciones . "\n" : "") .
+                    "[ANULADO] Motivo: {$motivo}\n" .
+                    "Usuario: " . auth()->user()->name . "\n" .
+                    "Fecha: " . now()->format('Y-m-d H:i:s') . "\n" .
+                    "Pagos anulados: {$pagosAnulados}\n" .
+                    "Movimientos de caja revertidos: " . ($cajaRevertida ? 'Sí' : 'No');
+
+                $cuentaPorCobrar->update([
+                    'estado' => 'ANULADO',
+                    'saldo_pendiente' => 0,
+                    'observaciones' => $observacionesFinales,
+                ]);
+
+                Log::info('✅ [ANULAR CUENTA POR COBRAR] Cuenta anulada exitosamente', [
+                    'cuenta_id' => $cuentaPorCobrar->id,
+                    'venta_id' => $cuentaPorCobrar->venta_id,
+                    'monto_anulado' => $montoAnulado,
+                    'pagos_anulados' => $pagosAnulados,
+                    'movimientos_caja_revertidos' => $cajaRevertida,
+                    'motivo' => $motivo,
+                    'usuario_id' => Auth::id(),
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cuenta por cobrar anulada exitosamente. Se han revertido movimientos de caja y pagos asociados.',
+                'data' => [
+                    'cuenta' => $cuentaPorCobrar->fresh(),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ [ANULAR CUENTA POR COBRAR] Error anulando cuenta', [
+                'cuenta_id' => $cuentaPorCobrar->id,
+                'error' => $e->getMessage(),
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'message' => 'Error al anular la cuenta: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * ✅ NUEVO: Actualizar fecha de vencimiento de una cuenta por cobrar
      */
     public function actualizarFechaVencimiento(Request $request, CuentaPorCobrar $cuentaPorCobrar)

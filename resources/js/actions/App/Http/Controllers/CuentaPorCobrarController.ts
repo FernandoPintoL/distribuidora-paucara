@@ -516,7 +516,7 @@ imprimirTicket80.head = (args: { cuentaPorCobrar: number | { id: number } } | [c
     imprimirTicket80.form = imprimirTicket80Form
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::actualizarFechaVencimiento
- * @see app/Http/Controllers/CuentaPorCobrarController.php:432
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:580
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento'
  */
 export const actualizarFechaVencimiento = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -531,7 +531,7 @@ actualizarFechaVencimiento.definition = {
 
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::actualizarFechaVencimiento
- * @see app/Http/Controllers/CuentaPorCobrarController.php:432
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:580
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento'
  */
 actualizarFechaVencimiento.url = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -564,7 +564,7 @@ actualizarFechaVencimiento.url = (args: { cuentaPorCobrar: number | { id: number
 
 /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::actualizarFechaVencimiento
- * @see app/Http/Controllers/CuentaPorCobrarController.php:432
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:580
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento'
  */
 actualizarFechaVencimiento.put = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -574,7 +574,7 @@ actualizarFechaVencimiento.put = (args: { cuentaPorCobrar: number | { id: number
 
     /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::actualizarFechaVencimiento
- * @see app/Http/Controllers/CuentaPorCobrarController.php:432
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:580
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento'
  */
     const actualizarFechaVencimientoForm = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -589,7 +589,7 @@ actualizarFechaVencimiento.put = (args: { cuentaPorCobrar: number | { id: number
 
             /**
 * @see \App\Http\Controllers\CuentaPorCobrarController::actualizarFechaVencimiento
- * @see app/Http/Controllers/CuentaPorCobrarController.php:432
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:580
  * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/actualizar-fecha-vencimiento'
  */
         actualizarFechaVencimientoForm.put = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -603,6 +603,85 @@ actualizarFechaVencimiento.put = (args: { cuentaPorCobrar: number | { id: number
         })
     
     actualizarFechaVencimiento.form = actualizarFechaVencimientoForm
-const CuentaPorCobrarController = { checkCajaAbierta, registrarPago, anularPago, index, show, imprimirTicket80, actualizarFechaVencimiento }
+/**
+* @see \App\Http\Controllers\CuentaPorCobrarController::anularCuenta
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:433
+ * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular'
+ */
+export const anularCuenta = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: anularCuenta.url(args, options),
+    method: 'post',
+})
+
+anularCuenta.definition = {
+    methods: ["post"],
+    url: '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\CuentaPorCobrarController::anularCuenta
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:433
+ * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular'
+ */
+anularCuenta.url = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { cuentaPorCobrar: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { cuentaPorCobrar: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    cuentaPorCobrar: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        cuentaPorCobrar: typeof args.cuentaPorCobrar === 'object'
+                ? args.cuentaPorCobrar.id
+                : args.cuentaPorCobrar,
+                }
+
+    return anularCuenta.definition.url
+            .replace('{cuentaPorCobrar}', parsedArgs.cuentaPorCobrar.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\CuentaPorCobrarController::anularCuenta
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:433
+ * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular'
+ */
+anularCuenta.post = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: anularCuenta.url(args, options),
+    method: 'post',
+})
+
+    /**
+* @see \App\Http\Controllers\CuentaPorCobrarController::anularCuenta
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:433
+ * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular'
+ */
+    const anularCuentaForm = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        action: anularCuenta.url(args, options),
+        method: 'post',
+    })
+
+            /**
+* @see \App\Http\Controllers\CuentaPorCobrarController::anularCuenta
+ * @see app/Http/Controllers/CuentaPorCobrarController.php:433
+ * @route '/ventas/cuentas-por-cobrar/{cuentaPorCobrar}/anular'
+ */
+        anularCuentaForm.post = (args: { cuentaPorCobrar: number | { id: number } } | [cuentaPorCobrar: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+            action: anularCuenta.url(args, options),
+            method: 'post',
+        })
+    
+    anularCuenta.form = anularCuentaForm
+const CuentaPorCobrarController = { checkCajaAbierta, registrarPago, anularPago, index, show, imprimirTicket80, actualizarFechaVencimiento, anularCuenta }
 
 export default CuentaPorCobrarController

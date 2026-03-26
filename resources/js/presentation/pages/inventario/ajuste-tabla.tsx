@@ -1054,19 +1054,24 @@ export default function AjusteTabla() {
                                                     <Input
                                                         type="number"
                                                         min="0"
+                                                        step="0.01"
                                                         value={
-                                                            ajuste.cantidad_ajuste
+                                                            ajuste.cantidad_ajuste || ''
                                                         }
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
+                                                            const valor = e.target.value.trim();
+                                                            // Convertir a número, permitiendo decimales
+                                                            const numero = valor === '' ? 0 : parseFloat(valor) || 0;
                                                             actualizarFila(
                                                                 ajuste.id,
                                                                 'cantidad_ajuste',
-                                                                parseInt(
-                                                                    e.target
-                                                                        .value
-                                                                ) || 0
-                                                            )
-                                                        }
+                                                                numero
+                                                            );
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            // ✅ Seleccionar todo el texto al hacer foco
+                                                            e.target.select();
+                                                        }}
                                                         className="w-full"
                                                         placeholder="0"
                                                     />
