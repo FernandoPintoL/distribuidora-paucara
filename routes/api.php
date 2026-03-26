@@ -539,8 +539,10 @@ Route::group(['prefix' => 'inventario'], function () {
     Route::post('ajustes', [InventarioController::class, 'procesarAjusteApi']);
     // ✅ NUEVO: Endpoint mejorado para ajustes por tabla
     Route::post('ajuste', [InventarioController::class, 'procesarAjusteTabla']);
-    // ✅ NUEVO: Búsqueda de productos por almacén
+    // ✅ NUEVO: Búsqueda de productos por almacén (incluye productos sin stock)
     Route::get('productos-almacen/{almacen_id}', [InventarioController::class, 'buscarProductosAlmacen']);
+    // ✅ NUEVO: Crear stock_producto para producto nuevo
+    Route::post('crear-stock-producto', [InventarioController::class, 'crearStockProducto']);
     Route::get('movimientos', [InventarioController::class, 'movimientosApi']);
     Route::get('movimientos-para-impresion', [InventarioController::class, 'movimientosParaImpresion']);
     Route::post('movimientos', [InventarioController::class, 'crearMovimiento']);

@@ -3267,74 +3267,178 @@ class InventarioController extends Controller
                 ]);
             }
 
-            // ✅ Obtener TODOS los stocks del almacén (sin restricción de cantidad)
-            // Para ajustes de inventario, necesitamos ver todos los lotes/stocks
-            // sin importar si tienen cantidad 0 o no disponible
+            $searchLower = strtolower($searchTerm);
+            $isNumeric = is_numeric($searchTerm);
+
+            // ✅ PASO 1: Obtener productos que ya existen en stock en este almacén
             $stockProductos = StockProducto::where('almacen_id', $almacenId)
                 ->with(['producto:id,nombre,sku,codigo_barras', 'producto.codigosBarra'])
                 ->get();
 
-            // Priorizar búsqueda: primero SKU exacto/parcial, luego nombre
-            $resultados = $stockProductos->sort(function ($a, $b) use ($searchTerm) {
-                $searchLower = strtolower($searchTerm);
-                $skuA = strtolower($a->producto->sku ?? '');
-                $skuB = strtolower($b->producto->sku ?? '');
-                $nombreA = strtolower($a->producto->nombre ?? '');
-                $nombreB = strtolower($b->producto->nombre ?? '');
+            // ✅ PASO 2: Obtener todos los productos (incluyendo los que NO existen en stock)
+            // Búsqueda incluye: ID, SKU, Códigos de Barra, Nombre (todo case-insensitive)
+            $todosProductos = \App\Models\Producto::with('codigosBarra')
+                ->select('id', 'nombre', 'sku', 'codigo_barras')
+                ->where(function ($query) use ($searchLower, $isNumeric, $searchTerm) {
+                    // ID exacto (si es numérico)
+                    if ($isNumeric) {
+                        $query->orWhere('id', (int)$searchTerm);
+                    }
+                    // SKU
+                    $query->orWhereRaw('LOWER(sku) LIKE ?', ['%' . $searchLower . '%'])
+                          // Nombre
+                          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%' . $searchLower . '%'])
+                          // Código de barras principal
+                          ->orWhereRaw('LOWER(codigo_barras) LIKE ?', ['%' . $searchLower . '%']);
+                })
+                ->orWhereHas('codigosBarra', function ($query) use ($searchLower) {
+                    // Códigos de barra adicionales (si existen en tabla relacional)
+                    $query->whereRaw('LOWER(codigo) LIKE ?', ['%' . $searchLower . '%']);
+                })
+                ->get();
 
-                // Prioridad 1: SKU coincidencia exacta
+            // ✅ PASO 3: Helper function para obtener todos los códigos de barra de un producto
+            $obtenerCodigosBarra = function ($producto) {
+                $codigos = [];
+                // Código principal
+                if (!empty($producto->codigo_barras)) {
+                    $codigos[] = strtolower($producto->codigo_barras);
+                }
+                // Códigos adicionales desde la relación
+                if ($producto->codigosBarra) {
+                    foreach ($producto->codigosBarra as $cb) {
+                        $codigos[] = strtolower($cb->codigo ?? '');
+                    }
+                }
+                return array_filter($codigos);
+            };
+
+            // ✅ PASO 4: Combinar resultados - Priorizar los que ya existen en stock
+            $resultadosColecccion = collect();
+
+            // Primero agregar los que ya están en stock
+            foreach ($stockProductos as $sp) {
+                $sku = strtolower($sp->producto->sku ?? '');
+                $nombre = strtolower($sp->producto->nombre ?? '');
+                $codigos = $obtenerCodigosBarra($sp->producto);
+
+                $coincide = strpos($sku, $searchLower) !== false ||
+                           strpos($nombre, $searchLower) !== false ||
+                           in_array($searchLower, $codigos) ||
+                           array_filter($codigos, fn($c) => strpos($c, $searchLower) !== false);
+
+                if ($coincide) {
+                    $resultadosColecccion->push([
+                        'id' => $sp->id,
+                        'stock_producto_id' => $sp->id,
+                        'producto_id' => $sp->producto->id,
+                        'nombre' => $sp->producto->nombre,
+                        'sku' => $sp->producto->sku,
+                        'codigo_barras' => $sp->producto->codigo_barras,
+                        'cantidad_disponible' => $sp->cantidad_disponible,
+                        'cantidad_actual' => $sp->cantidad,
+                        'lote' => $sp->lote,
+                        'producto' => $sp->producto,
+                        'existe_en_almacen' => true,
+                    ]);
+                }
+            }
+
+            // Luego agregar productos que NO están en stock en este almacén
+            foreach ($todosProductos as $producto) {
+                // Verificar si ya fue agregado (existe en stock)
+                $yaExiste = $resultadosColecccion->contains(function ($item) use ($producto) {
+                    return $item['producto_id'] === $producto->id;
+                });
+
+                if (!$yaExiste) {
+                    $resultadosColecccion->push([
+                        'id' => null,  // No hay stock_producto aún
+                        'stock_producto_id' => null,
+                        'producto_id' => $producto->id,
+                        'nombre' => $producto->nombre,
+                        'sku' => $producto->sku,
+                        'codigo_barras' => $producto->codigo_barras,
+                        'cantidad_disponible' => 0,
+                        'cantidad_actual' => 0,
+                        'lote' => null,
+                        'producto' => $producto,
+                        'existe_en_almacen' => false,  // Marca como nuevo en almacén
+                    ]);
+                }
+            }
+
+            // ✅ PASO 5: Ordenar por relevancia (Prioridades: ID > SKU > CodigosBarra > Nombre)
+            $resultados = $resultadosColecccion->sort(function ($a, $b) use ($searchLower, $isNumeric, $searchTerm, $obtenerCodigosBarra) {
+                $idA = (string)$a['producto_id'];
+                $idB = (string)$b['producto_id'];
+                $skuA = strtolower($a['sku'] ?? '');
+                $skuB = strtolower($b['sku'] ?? '');
+                $nombreA = strtolower($a['nombre'] ?? '');
+                $nombreB = strtolower($b['nombre'] ?? '');
+
+                $codigosA = $obtenerCodigosBarra($a['producto']);
+                $codigosB = $obtenerCodigosBarra($b['producto']);
+
+                // Prioridad 0: Existentes en almacén
+                if ($a['existe_en_almacen'] !== $b['existe_en_almacen']) {
+                    return $a['existe_en_almacen'] ? -1 : 1;
+                }
+
+                // Prioridad 1: ID coincidencia exacta
+                if ($isNumeric) {
+                    $idMatch = (int)$searchTerm;
+                    $matchA = $a['producto_id'] === $idMatch ? 1 : 0;
+                    $matchB = $b['producto_id'] === $idMatch ? 1 : 0;
+                    if ($matchA !== $matchB) return $matchB - $matchA;
+                }
+
+                // Prioridad 2: SKU coincidencia exacta
                 if ($skuA === $searchLower && $skuB !== $searchLower) return -1;
                 if ($skuA !== $searchLower && $skuB === $searchLower) return 1;
 
-                // Prioridad 2: SKU comienza con término
-                $startsA = strpos($skuA, $searchLower) === 0 ? 1 : 0;
-                $startsB = strpos($skuB, $searchLower) === 0 ? 1 : 0;
-                if ($startsA !== $startsB) return $startsB - $startsA;
+                // Prioridad 3: Código de barras coincidencia exacta
+                $codigoExactoA = in_array($searchLower, $codigosA) ? 1 : 0;
+                $codigoExactoB = in_array($searchLower, $codigosB) ? 1 : 0;
+                if ($codigoExactoA !== $codigoExactoB) return $codigoExactoB - $codigoExactoA;
 
-                // Prioridad 3: SKU contiene término
-                $containsA = strpos($skuA, $searchLower) !== false ? 1 : 0;
-                $containsB = strpos($skuB, $searchLower) !== false ? 1 : 0;
-                if ($containsA !== $containsB) return $containsB - $containsA;
+                // Prioridad 4: SKU comienza con término
+                $skuStartsA = strpos($skuA, $searchLower) === 0 ? 1 : 0;
+                $skuStartsB = strpos($skuB, $searchLower) === 0 ? 1 : 0;
+                if ($skuStartsA !== $skuStartsB) return $skuStartsB - $skuStartsA;
 
-                // Prioridad 4: Nombre comienza con término
-                $startsNameA = strpos($nombreA, $searchLower) === 0 ? 1 : 0;
-                $startsNameB = strpos($nombreB, $searchLower) === 0 ? 1 : 0;
-                if ($startsNameA !== $startsNameB) return $startsNameB - $startsNameA;
+                // Prioridad 5: Código de barras comienza con término
+                $codigoStartsA = array_filter($codigosA, fn($c) => strpos($c, $searchLower) === 0);
+                $codigoStartsB = array_filter($codigosB, fn($c) => strpos($c, $searchLower) === 0);
+                if ((bool)$codigoStartsA !== (bool)$codigoStartsB) return (bool)$codigoStartsB ? 1 : -1;
 
-                // Prioridad 5: Nombre contiene término
-                $containsNameA = strpos($nombreA, $searchLower) !== false ? 1 : 0;
-                $containsNameB = strpos($nombreB, $searchLower) !== false ? 1 : 0;
-                return $containsNameB - $containsNameA;
-            })
-            ->filter(function ($sp) use ($searchTerm) {
-                $searchLower = strtolower($searchTerm);
-                $sku = strtolower($sp->producto->sku ?? '');
-                $nombre = strtolower($sp->producto->nombre ?? '');
+                // Prioridad 6: SKU contiene término
+                $skuContainsA = strpos($skuA, $searchLower) !== false ? 1 : 0;
+                $skuContainsB = strpos($skuB, $searchLower) !== false ? 1 : 0;
+                if ($skuContainsA !== $skuContainsB) return $skuContainsB - $skuContainsA;
 
-                return strpos($sku, $searchLower) !== false ||
-                       strpos($nombre, $searchLower) !== false;
+                // Prioridad 7: Código de barras contiene término
+                $codigoContainsA = array_filter($codigosA, fn($c) => strpos($c, $searchLower) !== false);
+                $codigoContainsB = array_filter($codigosB, fn($c) => strpos($c, $searchLower) !== false);
+                if ((bool)$codigoContainsA !== (bool)$codigoContainsB) return (bool)$codigoContainsB ? 1 : -1;
+
+                // Prioridad 8: Nombre comienza con término
+                $nombreStartsA = strpos($nombreA, $searchLower) === 0 ? 1 : 0;
+                $nombreStartsB = strpos($nombreB, $searchLower) === 0 ? 1 : 0;
+                if ($nombreStartsA !== $nombreStartsB) return $nombreStartsB - $nombreStartsA;
+
+                // Prioridad 9: Nombre contiene término
+                $nombreContainsA = strpos($nombreA, $searchLower) !== false ? 1 : 0;
+                $nombreContainsB = strpos($nombreB, $searchLower) !== false ? 1 : 0;
+                return $nombreContainsB - $nombreContainsA;
             })
             ->take($limit)
             ->values();
 
-            $data = $resultados->map(function ($sp) {
-                return [
-                    'id' => $sp->id,
-                    'stock_producto_id' => $sp->id,
-                    'nombre' => $sp->producto->nombre,
-                    'sku' => $sp->producto->sku,
-                    'codigo_barras' => $sp->producto->codigo_barras,
-                    'cantidad_disponible' => $sp->cantidad_disponible,
-                    'cantidad_actual' => $sp->cantidad,
-                    'lote' => $sp->lote,  // ✅ Incluir lote
-                    'producto' => $sp->producto,
-                ];
-            });
-
             return response()->json([
                 'success' => true,
-                'data' => $data->toArray(),
-                'total' => $data->count(),
+                'data' => $resultados->toArray(),
+                'total' => $resultados->count(),
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -3352,6 +3456,93 @@ class InventarioController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al buscar productos: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear stock_producto para un producto nuevo en un almacén
+     * POST /api/inventario/crear-stock-producto
+     */
+    public function crearStockProducto(Request $request): JsonResponse
+    {
+        try {
+            $productoId = (int) $request->input('producto_id');
+            $almacenId = (int) $request->input('almacen_id');
+
+            if (!$productoId || !$almacenId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'producto_id y almacen_id son requeridos',
+                ], 400);
+            }
+
+            // Validar que existan producto y almacén
+            $producto = Producto::findOrFail($productoId);
+            $almacen = Almacen::findOrFail($almacenId);
+
+            // Verificar si ya existe stock para este producto en este almacén
+            $stockExistente = StockProducto::where('producto_id', $productoId)
+                ->where('almacen_id', $almacenId)
+                ->first();
+
+            if ($stockExistente) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Stock ya existe',
+                    'data' => [
+                        'id' => $stockExistente->id,
+                        'stock_producto_id' => $stockExistente->id,
+                        'producto_id' => $stockExistente->producto_id,
+                        'nombre' => $producto->nombre,
+                        'sku' => $producto->sku,
+                        'cantidad_actual' => $stockExistente->cantidad,
+                        'cantidad_disponible' => $stockExistente->cantidad_disponible,
+                    ],
+                ]);
+            }
+
+            // ✅ Crear nuevo stock_producto con cantidad 0
+            $nuevoStock = StockProducto::create([
+                'producto_id' => $productoId,
+                'almacen_id' => $almacenId,
+                'cantidad' => 0,
+                'cantidad_disponible' => 0,
+                'lote' => null,
+                'fecha_vencimiento' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock creado correctamente',
+                'data' => [
+                    'id' => $nuevoStock->id,
+                    'stock_producto_id' => $nuevoStock->id,
+                    'producto_id' => $nuevoStock->producto_id,
+                    'nombre' => $producto->nombre,
+                    'sku' => $producto->sku,
+                    'codigo_barras' => $producto->codigo_barras,
+                    'cantidad_actual' => $nuevoStock->cantidad,
+                    'cantidad_disponible' => $nuevoStock->cantidad_disponible,
+                ],
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Producto o almacén no encontrado',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error en crearStockProducto', [
+                'error' => $e->getMessage(),
+                'producto_id' => $productoId ?? null,
+                'almacen_id' => $almacenId ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear stock: ' . $e->getMessage(),
             ], 500);
         }
     }

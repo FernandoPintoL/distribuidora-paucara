@@ -105,6 +105,7 @@ function DropdownPortal({
                 nombre: item.nombre,
                 sku: item.sku,
                 producto_id: productoId,
+                existe_en_almacen: item.existe_en_almacen ?? true,  // ✅ Rastrear si es producto nuevo
                 lotes: []
             };
         }
@@ -130,9 +131,20 @@ function DropdownPortal({
                     className="border-b dark:border-slate-600 last:border-b-0"
                 >
                     {/* Encabezado del Producto */}
-                    <div className="px-3 py-2 bg-gray-50 dark:bg-slate-600 sticky top-0">
-                        <div className="font-semibold text-sm dark:text-gray-100">
-                            {grupo.nombre}
+                    <div className={`px-3 py-2 sticky top-0 ${
+                        grupo.existe_en_almacen
+                            ? 'bg-gray-50 dark:bg-slate-600'
+                            : 'bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500'
+                    }`}>
+                        <div className="flex items-center justify-between">
+                            <div className="font-semibold text-sm dark:text-gray-100">
+                                {grupo.nombre}
+                            </div>
+                            {!grupo.existe_en_almacen && (
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900 px-2 py-1 rounded">
+                                    🆕 NUEVO
+                                </span>
+                            )}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-300">
                             SKU: {grupo.sku}
@@ -206,6 +218,18 @@ export default function AjusteTabla() {
         }
     }, []);
 
+    // ✅ Seleccionar "Almacen Principal" por defecto al montar
+    useEffect(() => {
+        const almacenPrincipal = almacenes.find(
+            (a) => a.nombre && a.nombre.toLowerCase().includes('principal')
+        );
+
+        if (almacenPrincipal) {
+            setAlmacenSeleccionado(String(almacenPrincipal.id));
+            console.log('📦 Almacén Principal seleccionado:', almacenPrincipal.nombre);
+        }
+    }, [almacenes]);
+
     // Estados para búsqueda de productos
     const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
     const [searchResults, setSearchResults] = useState<{ [key: string]: any[] }>({});
@@ -233,44 +257,95 @@ export default function AjusteTabla() {
 
     // Seleccionar producto de la búsqueda
     const seleccionarProducto = useCallback(
-        (ajusteId: string, producto: any) => {
-            // Cerrar dropdown
-            setShowDropdown((prev) => ({
-                ...prev,
-                [ajusteId]: false,
-            }));
+        async (ajusteId: string, producto: any) => {
+            try {
+                // ✅ Si el producto NO existe en este almacén, crear automáticamente stock_producto
+                if (!producto.existe_en_almacen && producto.producto_id && almacenSeleccionado) {
+                    console.log('📦 Creando stock_producto para producto nuevo:', {
+                        producto_id: producto.producto_id,
+                        almacen_id: almacenSeleccionado,
+                        nombre: producto.nombre,
+                        sku: producto.sku,
+                    });
 
-            // Actualizar el término de búsqueda con el nombre del producto
-            setSearchTerms((prev) => ({
-                ...prev,
-                [ajusteId]: `${producto.sku ? `${producto.sku} - ` : ''}${producto.nombre}`,
-            }));
+                    const createResponse = await fetch('/api/inventario/crear-stock-producto', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            producto_id: producto.producto_id,
+                            almacen_id: almacenSeleccionado,
+                        }),
+                    });
 
-            // Actualizar la fila con el stock_producto_id
-            // Actualizar ajustes directamente aquí para evitar stale closure
-            setAjustes((prevAjustes) =>
-                prevAjustes.map((ajuste) => {
-                    if (ajuste.id !== ajusteId) return ajuste;
+                    const createData = await createResponse.json();
 
-                    const actualizado = { ...ajuste, stock_producto_id: producto.id };
-
-                    // Buscar el producto en los stock filtrados
-                    const stockProducto = stockProductosFiltrados.find(
-                        (sp) => sp.id === producto.id
-                    );
-
-                    if (stockProducto) {
-                        actualizado.producto = stockProducto;
-                        actualizado.cantidad_actual =
-                            parseFloat(stockProducto.cantidad) || 0;  // ✅ Usar cantidad (stock total), no cantidad_disponible
-                        actualizado.cantidad_nueva = actualizado.cantidad_actual;
+                    if (!createData.success) {
+                        toast.error('Error al crear stock: ' + createData.message);
+                        return;
                     }
 
-                    return actualizado;
-                })
-            );
+                    // ✅ Actualizar el producto con el nuevo stock_producto_id
+                    producto.stock_producto_id = createData.data.stock_producto_id;
+                    producto.id = createData.data.stock_producto_id;
+                    console.log('✅ Stock creado:', createData.data);
+                }
+
+                // Cerrar dropdown
+                setShowDropdown((prev) => ({
+                    ...prev,
+                    [ajusteId]: false,
+                }));
+
+                // Actualizar el término de búsqueda con el nombre del producto
+                setSearchTerms((prev) => ({
+                    ...prev,
+                    [ajusteId]: `${producto.sku ? `${producto.sku} - ` : ''}${producto.nombre}`,
+                }));
+
+                // Actualizar la fila con el stock_producto_id
+                // Actualizar ajustes directamente aquí para evitar stale closure
+                setAjustes((prevAjustes) =>
+                    prevAjustes.map((ajuste) => {
+                        if (ajuste.id !== ajusteId) return ajuste;
+
+                        const actualizado = { ...ajuste, stock_producto_id: producto.id || producto.stock_producto_id };
+
+                        // Buscar el producto en los stock filtrados
+                        const stockProducto = stockProductosFiltrados.find(
+                            (sp) => sp.id === (producto.id || producto.stock_producto_id)
+                        );
+
+                        if (stockProducto) {
+                            actualizado.producto = stockProducto;
+                            actualizado.cantidad_actual =
+                                parseFloat(stockProducto.cantidad) || 0;  // ✅ Usar cantidad (stock total), no cantidad_disponible
+                            actualizado.cantidad_nueva = actualizado.cantidad_actual;
+                        } else {
+                            // ✅ Si es producto nuevo, inicializar con cantidad 0
+                            actualizado.producto = {
+                                id: producto.stock_producto_id,
+                                nombre: producto.nombre,
+                                sku: producto.sku,
+                                codigo_barras: producto.codigo_barras,
+                                cantidad: 0,
+                                cantidad_disponible: 0,
+                            };
+                            actualizado.cantidad_actual = 0;
+                            actualizado.cantidad_nueva = 0;
+                        }
+
+                        return actualizado;
+                    })
+                );
+            } catch (error) {
+                console.error('Error al seleccionar producto:', error);
+                toast.error('Error al seleccionar producto');
+            }
         },
-        [stockProductosFiltrados]
+        [stockProductosFiltrados, almacenSeleccionado]
     );
 
     // Buscar productos por término de búsqueda (Enter o botón)
