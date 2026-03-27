@@ -95,6 +95,7 @@ class ModuloSidebarSeeder extends Seeder
                 'submenu' => [
                     ['titulo' => 'Lista de Ventas', 'ruta' => '/ventas', 'icono' => 'List', 'orden' => 1, 'permisos' => ['ventas.index']],
                     ['titulo' => 'Nueva Venta', 'ruta' => '/ventas/create', 'icono' => 'Plus', 'orden' => 2, 'permisos' => ['ventas.create']],
+                    ['titulo' => 'Reporte: Ventas por Producto', 'ruta' => '/ventas/reportes/ventas-por-producto', 'icono' => 'TrendingUp', 'orden' => 3, 'permisos' => ['ventas.index']],
                 ],
             ],
 

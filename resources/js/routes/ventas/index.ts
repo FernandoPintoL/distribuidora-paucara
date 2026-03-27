@@ -1,6 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 import logistica from './logistica'
 import reporteProductosVendidos from './reporte-productos-vendidos'
+import reportes from './reportes'
 import cuentasPorCobrar from './cuentas-por-cobrar'
 import stock from './stock'
 import detalles from './detalles'
@@ -1729,6 +1730,7 @@ edit,
 update,
 destroy,
 reporteProductosVendidos,
+reportes,
 formatosDisponibles,
 cuentasPorCobrar,
 anular,

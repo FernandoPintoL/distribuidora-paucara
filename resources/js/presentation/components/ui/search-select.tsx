@@ -56,15 +56,31 @@ export default function SearchSelect({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filtrar opciones basado en la búsqueda
+  // IMPORTANTE: Si onSearch está presente, el servidor ya filtra las opciones
+  // No hacer filtrado local para evitar duplicar la lógica
   const filteredOptions = useMemo(() => {
-    if (!searchQuery.trim()) return options;
+    // Si hay búsqueda en servidor, NO filtrar localmente
+    if (onSearch) {
+      console.log('🌐 [SearchSelect] Búsqueda en servidor activa, NO filtrar localmente:', { totalOpciones: options.length });
+      return options;
+    }
+
+    // Filtrado local solo si NO hay búsqueda en servidor
+    if (!searchQuery.trim()) {
+      console.log('🔓 [SearchSelect] searchQuery vacío, retornando todas las opciones:', options);
+      return options;
+    }
 
     const query = searchQuery.toLowerCase();
-    return options.filter(option =>
+    const filtered = options.filter(option =>
       (option.label?.toLowerCase() ?? '').includes(query) ||
       (option.description?.toLowerCase() ?? '').includes(query)
     );
-  }, [options, searchQuery]);
+    console.log('🔎 [SearchSelect] Filtrando localmente:', { searchQuery, totalOpciones: options.length, filtradas: filtered.length });
+    console.log('   Opciones originales:', options);
+    console.log('   Opciones filtradas:', filtered);
+    return filtered;
+  }, [options, searchQuery, onSearch]);
 
   // Encontrar la opción seleccionada
   const selectedOption = useMemo(() => {
@@ -114,6 +130,7 @@ export default function SearchSelect({
 
   const handleToggle = () => {
     if (!disabled) {
+      console.log('🔘 [SearchSelect] Toggle:', { currentIsOpen: isOpen, willBe: !isOpen, totalOpciones: options.length });
       setIsOpen(!isOpen);
       if (!isOpen) {
         setSearchQuery('');
@@ -122,6 +139,7 @@ export default function SearchSelect({
   };
 
   const handleSelect = (option: SelectOption) => {
+    console.log('✅ [SearchSelect] Seleccionando:', option);
     if (!option.disabled) {
       onChange(option.value);
       setIsOpen(false);
@@ -221,7 +239,9 @@ export default function SearchSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-0.5 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
+        <>
+          {console.log('📂 [SearchSelect] Renderizando dropdown abierto:', { filteredOptions, loading })}
+          <div className="absolute z-50 w-full mt-0.5 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
           {/* Search Input with Close Button */}
           <div className="p-1.5 border-b border-border flex gap-1.5 items-center">
             <Input
@@ -291,6 +311,7 @@ export default function SearchSelect({
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* Error Message */}

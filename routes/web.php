@@ -387,6 +387,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('reporte-productos-vendidos.imprimir-directo')
             ->middleware('permission:ventas.index');
 
+        // ✅ NUEVO: Reporte de ventas por producto (con filtros de fecha)
+        Route::get('reportes/ventas-por-producto', [\App\Http\Controllers\ReporteController::class, 'ventasPorProducto'])
+            ->name('reportes.ventas-por-producto')
+            ->middleware('permission:ventas.index');
+
         // Rutas sin parámetros dinámicos PRIMERO
         // IMPORTANTE: Las rutas sin parámetros dinámicos DEBEN ir ANTES de las que sí tienen parámetros
         Route::get('formatos-disponibles', [\App\Http\Controllers\VentaController::class, 'formatosDisponibles'])->name('formatos-disponibles');

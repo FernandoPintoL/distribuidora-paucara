@@ -32,29 +32,47 @@ export default function AsyncSearchSelect({
 
   // Función para realizar búsqueda en el servidor
   const handleSearch = async (query: string) => {
+    console.log('🔍 [AsyncSearchSelect] Búsqueda iniciada:', { query, minSearchLength });
+
     if (query.length < minSearchLength) {
+      console.log('⚠️ [AsyncSearchSelect] Query muy corta, limpiando opciones');
       setOptions(initialOptions);
       return;
     }
 
-    if (query === lastSearch) return;
+    if (query === lastSearch) {
+      console.log('ℹ️ [AsyncSearchSelect] Misma búsqueda anterior, ignorando');
+      return;
+    }
 
     setLoading(true);
     try {
-      const response = await fetch(`${searchEndpoint}?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const url = `${searchEndpoint}?q=${encodeURIComponent(query)}`;
+      console.log('📡 [AsyncSearchSelect] Enviando petición a:', url);
 
-      // Asumir que el servidor devuelve un array de objetos con estructura: { id, nombre, descripcion? }
-      const searchOptions: SelectOption[] = data.map((item: { id: string | number; nombre: string; descripcion?: string }) => ({
+      const response = await fetch(url);
+      console.log('📥 [AsyncSearchSelect] Status HTTP:', response.status, response.statusText);
+
+      const result = await response.json();
+      console.log('📦 [AsyncSearchSelect] Respuesta del servidor:', result);
+
+      // Manejar respuesta envuelta { success, data } o array directo
+      const items = result.data || result;
+      console.log('📋 [AsyncSearchSelect] Items extraídos:', items);
+      console.log('✅ [AsyncSearchSelect] ¿Es array?:', Array.isArray(items));
+
+      const searchOptions: SelectOption[] = (Array.isArray(items) ? items : []).map((item: { id: string | number; nombre: string; descripcion?: string }) => ({
         value: item.id,
         label: item.nombre,
         description: item.descripcion || undefined,
       }));
 
+      console.log('🎯 [AsyncSearchSelect] Opciones procesadas:', searchOptions);
       setOptions(searchOptions);
       setLastSearch(query);
     } catch (error) {
-      console.error('Error en búsqueda:', error);
+      console.error('❌ [AsyncSearchSelect] Error en búsqueda:', error);
+      console.error('📍 Stack:', (error as Error).stack);
       setOptions([]);
     } finally {
       setLoading(false);
