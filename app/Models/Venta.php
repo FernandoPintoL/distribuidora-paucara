@@ -654,8 +654,11 @@ class Venta extends Model
             foreach ($movimientos as $movimiento) {
                 $stockProducto = $movimiento->stockProducto;
                 $cantidadADevolver = abs($movimiento->cantidad);
+
+                // ✅ CAPTURAR LOS 6 VALORES ANTES de actualizar
                 $cantidadAnterior = $stockProducto->cantidad;
                 $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
+                $cantidadReservadaAnterior = $stockProducto->cantidad_reservada;
 
                 // ✅ DEBUG: Log ANTES de actualizar
                 Log::debug('🔄 [ANULAR VENTA - STOCK REVERT] ANTES DE ACTUALIZAR', [
@@ -666,6 +669,7 @@ class Venta extends Model
                     'cantidad_a_devolver' => $cantidadADevolver,
                     'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
                 ]);
 
                 // ✅ CORREGIDO: Actualizar stock usando UPDATE atómico
@@ -687,6 +691,7 @@ class Venta extends Model
                 $stockActualizado = \App\Models\StockProducto::find($stockProducto->id);
                 $cantidadNueva = $stockActualizado->cantidad;
                 $cantidadDisponibleNueva = $stockActualizado->cantidad_disponible;
+                $cantidadReservadaNueva = $stockActualizado->cantidad_reservada;  // No cambia, pero lo capturamos para registro
 
                 // ✅ DEBUG: Log DESPUÉS de actualizar
                 Log::debug('✅ [ANULAR VENTA - STOCK REVERT] DESPUÉS DE ACTUALIZAR', [
@@ -696,6 +701,8 @@ class Venta extends Model
                     'cantidad_nueva' => $cantidadNueva,
                     'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                     'cantidad_disponible_nueva' => $cantidadDisponibleNueva,
+                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                    'cantidad_reservada_nueva' => $cantidadReservadaNueva,
                     'diferencia_cantidad' => $cantidadNueva - $cantidadAnterior,
                     'diferencia_disponible' => $cantidadDisponibleNueva - $cantidadDisponibleAnterior,
                 ]);
@@ -718,6 +725,13 @@ class Venta extends Model
                     'numero_documento'  => $this->numero . '-REV',
                     'cantidad_anterior' => $cantidadAnterior,
                     'cantidad_posterior' => $cantidadNueva,  // ✅ Ahora con valor real de BD
+                    // ✅ NUEVO (2026-03-27): Registrar los 6 campos para auditoría completa
+                    'cantidad_total_anterior' => (int) $cantidadAnterior,
+                    'cantidad_total_posterior' => (int) $cantidadNueva,
+                    'cantidad_disponible_anterior' => (int) $cantidadDisponibleAnterior,
+                    'cantidad_disponible_posterior' => (int) $cantidadDisponibleNueva,
+                    'cantidad_reservada_anterior' => (int) $cantidadReservadaAnterior,
+                    'cantidad_reservada_posterior' => (int) $cantidadReservadaNueva,
                     'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
                     'user_id'           => Auth::id() ?? 1,  // ✅ CORREGIDO: Fallback a usuario 1 si no hay autenticación
                 ];

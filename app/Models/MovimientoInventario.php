@@ -50,6 +50,13 @@ class MovimientoInventario extends Model
         'unidad_base_id',
         'factor_conversion',
         'es_conversion_aplicada',
+        // ✅ NUEVO (2026-03-26): Columnas para registrar impacto en las 3 métricas de stock
+        'cantidad_total_anterior',
+        'cantidad_total_posterior',
+        'cantidad_disponible_anterior',
+        'cantidad_disponible_posterior',
+        'cantidad_reservada_anterior',
+        'cantidad_reservada_posterior',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -64,6 +71,13 @@ class MovimientoInventario extends Model
             'cantidad_posterior' => 'float',
             'cantidad_solicitada' => 'float',  // ✅ NUEVO: También debe ser float
             'factor_conversion'  => 'float',    // ✅ NUEVO: También debe ser float
+            // ✅ NUEVO (2026-03-26): Casts para nuevas columnas de stock
+            'cantidad_total_anterior' => 'float',
+            'cantidad_total_posterior' => 'float',
+            'cantidad_disponible_anterior' => 'float',
+            'cantidad_disponible_posterior' => 'float',
+            'cantidad_reservada_anterior' => 'float',
+            'cantidad_reservada_posterior' => 'float',
             'fecha'              => 'datetime',
             'created_at'         => 'datetime',
             'updated_at'         => 'datetime',
@@ -176,6 +190,14 @@ class MovimientoInventario extends Model
      */
     public function scopePorTipo($query, string $tipo)
     {
+        // ✅ NUEVO (2026-03-26): SALIDA_VENTA incluye CONSUMO_RESERVA (ventas desde proforma)
+        if ($tipo === 'SALIDA_VENTA') {
+            return $query->whereIn('tipo', [
+                'SALIDA_VENTA',      // Ventas creadas directamente
+                'CONSUMO_RESERVA'    // Ventas convertidas desde proforma
+            ]);
+        }
+
         // Tipos genéricos que necesitan LIKE
         $tiposGenericos = ['ENTRADA', 'SALIDA', 'AJUSTE'];
 
@@ -303,8 +325,10 @@ class MovimientoInventario extends Model
         ?int $referenciaId = null,
         ?string $ipDispositivo = null
     ): self {
-        $cantidadAnterior = $stockProducto->cantidad;
-        $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
+        // ✅ NUEVO (2026-03-26): Capturar TODAS las cantidades ANTES
+        $cantidadAnterior = (float) $stockProducto->cantidad;
+        $cantidadDisponibleAnterior = (float) $stockProducto->cantidad_disponible;
+        $cantidadReservadaAnterior = (float) $stockProducto->cantidad_reservada;
 
         // Actualizar usando UPDATE atómico para evitar race conditions
         $affected = \Illuminate\Support\Facades\DB::table('stock_productos')
@@ -323,6 +347,11 @@ class MovimientoInventario extends Model
         $stockProducto->cantidad += $cantidadMovimiento;
         $stockProducto->cantidad_disponible += $cantidadMovimiento;
         $stockProducto->fecha_actualizacion = now();
+
+        // ✅ NUEVO (2026-03-26): Capturar TODAS las cantidades DESPUÉS
+        $cantidadPosterior = (float) $stockProducto->cantidad;
+        $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
+        $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
 
         // Validar que no quede negativo (BLOQUEAR si es negativo)
         if ($stockProducto->cantidad < 0) {
@@ -385,7 +414,14 @@ class MovimientoInventario extends Model
             'observacion'               => $observacion,
             'numero_documento'          => $numeroDocumento,
             'cantidad_anterior'         => $cantidadAnterior,
-            'cantidad_posterior'        => $stockProducto->cantidad,
+            'cantidad_posterior'        => $cantidadPosterior,
+            // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+            'cantidad_total_anterior' => $cantidadAnterior,
+            'cantidad_total_posterior' => $cantidadPosterior,
+            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+            'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
             'tipo'                      => $tipo,
             'user_id'                   => $userId ?? (\Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null),
             'tipo_ajuste_inventario_id' => $tipoAjusteInventarioId,

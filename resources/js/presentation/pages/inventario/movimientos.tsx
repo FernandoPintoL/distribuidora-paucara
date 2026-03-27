@@ -74,9 +74,12 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
     const handleFiltrosChange = (nuevosFiltros: FiltrosMovimientos) => {
         console.log('Aplicando filtros:', nuevosFiltros);
 
+        // ✅ NUEVO (2026-03-27): Limpiar parámetros vacíos
+        const filtrosLimpios = limpiarFiltros(nuevosFiltros);
+
         // Convertir filtros a parámetros de query
         const queryParams = {
-            ...nuevosFiltros,
+            ...filtrosLimpios,
             page: 1, // Resetear a página 1 cuando se aplican filtros
         };
 
@@ -85,6 +88,18 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
             preserveState: true,
             preserveScroll: true,
         });
+    };
+
+    // ✅ Función auxiliar para limpiar filtros vacíos (2026-03-27)
+    const limpiarFiltros = (filtrosObj: any) => {
+        const filtrosLimpios: any = {};
+        Object.entries(filtrosObj).forEach(([key, value]) => {
+            // Solo incluir parámetros que tengan valor (no vacíos, no null, no undefined)
+            if (value !== '' && value !== null && value !== undefined) {
+                filtrosLimpios[key] = value;
+            }
+        });
+        return filtrosLimpios;
     };
 
     // ✅ Breadcrumbs
@@ -248,8 +263,10 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                             }}
                             onPageChange={(page) => {
                                 // Preservar filtros actuales cuando cambias de página
+                                // ✅ NUEVO (2026-03-27): Limpiar parámetros vacíos
+                                const filtrosLimpios = limpiarFiltros(filtros);
                                 const queryParams = {
-                                    ...filtros,
+                                    ...filtrosLimpios,
                                     page,
                                 };
                                 router.get('/inventario/movimientos', queryParams, {
@@ -259,8 +276,10 @@ const MovimientosInventarioPage: React.FC<PageProps> = ({
                             }}
                             onPerPageChange={(perPage) => {
                                 // ✅ NUEVO: Cambiar items por página (volver a página 1)
+                                // ✅ NUEVO (2026-03-27): Limpiar parámetros vacíos
+                                const filtrosLimpios = limpiarFiltros(filtros);
                                 const queryParams = {
-                                    ...filtros,
+                                    ...filtrosLimpios,
                                     per_page: perPage,
                                     page: 1, // Resetear a página 1
                                 };

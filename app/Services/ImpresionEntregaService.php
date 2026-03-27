@@ -106,7 +106,7 @@ class ImpresionEntregaService
             'total_items_unicos' => $productosGenerico->groupBy('producto_id')->count(),
             'total_cantidad' => $productosGenerico->sum('cantidad'),
             'total_subtotal' => $productosGenerico->sum('subtotal'),
-            'total_clientes' => $productosGenerico->groupBy('cliente_id')->count(),
+            'total_clientes' => $entrega->ventas->pluck('cliente_id')->unique()->count(),
             'total_ventas' => $entrega->ventas->count(),
         ];
     }

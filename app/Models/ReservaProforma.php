@@ -229,6 +229,13 @@ class ReservaProforma extends Model
                     'cantidad_anterior' => (int) $stockAntes->cantidad,
                     'cantidad' => -$this->cantidad_reservada, // Negativa = salida de stock
                     'cantidad_posterior' => (int) $stockDespues->cantidad,
+                    // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                    'cantidad_total_anterior' => (int) $stockAntes->cantidad,
+                    'cantidad_total_posterior' => (int) $stockDespues->cantidad,
+                    'cantidad_disponible_anterior' => (int) $stockAntes->cantidad_disponible,
+                    'cantidad_disponible_posterior' => (int) $stockDespues->cantidad_disponible,
+                    'cantidad_reservada_anterior' => (int) $stockAntes->cantidad_reservada,
+                    'cantidad_reservada_posterior' => (int) $stockDespues->cantidad_reservada,
                     'numero_documento' => $numeroVenta,
                     'observacion' => json_encode($observacionData, JSON_UNESCAPED_UNICODE),
                     'user_id' => \Illuminate\Support\Facades\Auth::id(),

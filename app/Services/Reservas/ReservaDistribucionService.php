@@ -117,9 +117,20 @@ class ReservaDistribucionService
                         'estado' => ReservaProforma::ACTIVA,
                     ]);
 
+                    // ✅ NUEVO (2026-03-26): Capturar ANTES de actualizar
+                    $cantidadTotalAntes = (float) $stock_producto->cantidad;
+                    $cantidadDisponibleAntes = (float) $stock_producto->cantidad_disponible;
+                    $cantidadReservadaAntes = (float) $stock_producto->cantidad_reservada;
+
                     // Actualizar cantidades en stock
                     $stock_producto->decrement('cantidad_disponible', $cantidad_a_reservar);
                     $stock_producto->increment('cantidad_reservada', $cantidad_a_reservar);
+
+                    // ✅ NUEVO (2026-03-26): Capturar DESPUÉS de actualizar
+                    $stock_producto->refresh();
+                    $cantidadTotalDespues = (float) $stock_producto->cantidad;
+                    $cantidadDisponibleDespues = (float) $stock_producto->cantidad_disponible;
+                    $cantidadReservadaDespues = (float) $stock_producto->cantidad_reservada;
 
                     // 📊 CAPTURAR TOTAL DEL PRODUCTO DESPUÉS DE ACTUALIZAR
                     $totalProductoDespues = $producto->stock()
@@ -132,11 +143,30 @@ class ReservaDistribucionService
                         'cantidad' => -$cantidad_a_reservar,  // Negativo: reserva
                         'cantidad_anterior' => $totalProductoAntes,  // 📊 TOTAL del producto ANTES
                         'cantidad_posterior' => $totalProductoDespues,  // 📊 TOTAL del producto DESPUÉS
+                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                        'cantidad_total_anterior' => $cantidadTotalAntes,
+                        'cantidad_total_posterior' => $cantidadTotalDespues,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                        'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                        'cantidad_reservada_posterior' => $cantidadReservadaDespues,
                         'tipo' => MovimientoInventario::TIPO_RESERVA_PROFORMA,
                         'numero_documento' => $proforma->numero,
                         'referencia_tipo' => 'proforma',
                         'referencia_id' => $proforma->id,
-                        'observacion' => "FIFO: {$cantidad_a_reservar} unidades de lote {$stock_producto->lote} (Total producto: {$totalProductoAntes}→{$totalProductoDespues}, Vencimiento: {$dias_vencimiento}d)",
+                        'observacion' => json_encode([
+                            'evento' => 'Reserva de proforma',
+                            'proforma_numero' => $proforma->numero,
+                            'cantidad_reservada' => $cantidad_a_reservar,
+                            'lote' => $stock_producto->lote,
+                            'dias_vencimiento' => $dias_vencimiento,
+                            'cantidad_total_anterior' => $cantidadTotalAntes,
+                            'cantidad_total_posterior' => $cantidadTotalDespues,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                            'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                            'cantidad_reservada_posterior' => $cantidadReservadaDespues,
+                        ]),
                         'user_id' => Auth::id() ?? 1,
                         'fecha' => now(),
                     ]);
@@ -227,19 +257,47 @@ class ReservaDistribucionService
                     $cantidad = $reserva->cantidad_reservada;
                     $stock = $reserva->stockProducto;
 
+                    // ✅ NUEVO (2026-03-26): Capturar valores ANTES de actualizar
+                    $cantidadTotalAntes = (float) $stock->cantidad;
+                    $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
+
                     // Restaurar stock
                     $stock->increment('cantidad_disponible', $cantidad);
                     $stock->decrement('cantidad_reservada', $cantidad);
+
+                    // ✅ NUEVO (2026-03-26): Capturar valores DESPUÉS de actualizar
+                    $stock->refresh();
+                    $cantidadTotalDespues = (float) $stock->cantidad;
+                    $cantidadDisponibleDespues = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaDespues = (float) $stock->cantidad_reservada;
 
                     // Registrar movimiento
                     MovimientoInventario::create([
                         'stock_producto_id' => $stock->id,
                         'cantidad' => $cantidad,  // Positivo: liberar
+                        'cantidad_anterior' => 0,  // Compatibilidad con sistema antiguo
+                        'cantidad_posterior' => 0,  // Compatibilidad
+                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas
+                        'cantidad_total_anterior' => $cantidadTotalAntes,
+                        'cantidad_total_posterior' => $cantidadTotalDespues,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                        'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                        'cantidad_reservada_posterior' => $cantidadReservadaDespues,
                         'tipo' => MovimientoInventario::TIPO_LIBERACION_RESERVA,
                         'numero_documento' => $proforma->numero,
                         'referencia_tipo' => 'proforma',
                         'referencia_id' => $proforma->id,
-                        'observacion' => "{$motivo} (lote: {$stock->lote})",
+                        'observacion' => json_encode([
+                            'motivo' => $motivo,
+                            'lote' => $stock->lote,
+                            'cantidad_liberada' => $cantidad,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                            'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                            'cantidad_reservada_posterior' => $cantidadReservadaDespues,
+                        ]),
                         'user_id' => Auth::id() ?? 1,
                         'fecha' => now(),
                     ]);
@@ -315,6 +373,11 @@ class ReservaDistribucionService
                     $producto = $stock->producto;
                     $almacen_id = $stock->almacen_id;
 
+                    // ✅ CAPTURAR VALORES ANTES de actualizar
+                    $cantidadTotalAntes = (float) $stock->cantidad;
+                    $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
+
                     // 📊 CAPTURAR TOTAL DEL PRODUCTO ANTES DE RESTAURAR
                     $totalProductoAntes = $producto->stock()
                         ->where('almacen_id', $almacen_id)
@@ -329,17 +392,40 @@ class ReservaDistribucionService
                         ->where('almacen_id', $almacen_id)
                         ->sum('cantidad_disponible');
 
+                    // ✅ CAPTURAR VALORES DESPUÉS de actualizar (con refresh para sincronizar desde BD)
+                    $stock->refresh();
+                    $cantidadTotalDespues = (float) $stock->cantidad;  // No cambia
+                    $cantidadDisponibleDespues = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaDespues = (float) $stock->cantidad_reservada;
+
                     // Registrar movimiento de liberación con TOTAL del producto
                     MovimientoInventario::create([
                         'stock_producto_id' => $stock->id,
                         'cantidad' => $cantidad,  // Positivo: liberar
                         'cantidad_anterior' => $totalProductoAntes,  // 📊 TOTAL del producto ANTES
                         'cantidad_posterior' => $totalProductoDespues,  // 📊 TOTAL del producto DESPUÉS
+                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                        'cantidad_total_anterior' => $cantidadTotalAntes,
+                        'cantidad_total_posterior' => $cantidadTotalDespues,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                        'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                        'cantidad_reservada_posterior' => $cantidadReservadaDespues,
                         'tipo' => MovimientoInventario::TIPO_LIBERACION_RESERVA,
                         'numero_documento' => $proforma->numero,
                         'referencia_tipo' => 'proforma',
                         'referencia_id' => $proforma->id,
-                        'observacion' => "{$motivo}: {$cantidad} unidades liberadas de lote {$stock->lote} (Total producto: {$totalProductoAntes}→{$totalProductoDespues})",
+                        'observacion' => json_encode([
+                            'motivo' => $motivo,
+                            'cantidad_liberada' => $cantidad,
+                            'lote' => $stock->lote,
+                            'total_producto_antes' => $totalProductoAntes,
+                            'total_producto_despues' => $totalProductoDespues,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                            'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                            'cantidad_reservada_posterior' => $cantidadReservadaDespues,
+                        ]),
                         'user_id' => Auth::id() ?? 1,
                         'fecha' => now(),
                     ]);

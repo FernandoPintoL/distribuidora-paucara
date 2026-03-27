@@ -380,19 +380,45 @@ class StockService
                     ]
                 );
 
+                // ✅ NUEVO (2026-03-26): Guardar valores ANTES de incrementar
+                $cantidadTotalAnterior = (float) $stock->cantidad;
+                $cantidadDisponibleAnterior = (float) $stock->cantidad_disponible;
+                $cantidadReservadaAnterior = (float) $stock->cantidad_reservada;
+
                 // Aumentar cantidad
                 $stock->increment('cantidad', $cantidad);
                 $stock->increment('cantidad_disponible', $cantidad);
+
+                // ✅ NUEVO (2026-03-26): Valores DESPUÉS de incrementar
+                $cantidadTotalPosterior = (float) $stock->cantidad;
+                $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
+                $cantidadReservadaPosterior = (float) $stock->cantidad_reservada;
 
                 // Registrar movimiento
                 $movimiento = MovimientoInventario::create([
                     'stock_producto_id'  => $stock->id,
                     'cantidad'           => $cantidad,
-                    'cantidad_anterior'  => $stock->cantidad - $cantidad,
-                    'cantidad_posterior' => $stock->cantidad,
+                    'cantidad_anterior'  => $cantidadTotalAnterior,
+                    'cantidad_posterior' => $cantidadTotalPosterior,
+                    // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                    'cantidad_total_anterior' => $cantidadTotalAnterior,
+                    'cantidad_total_posterior' => $cantidadTotalPosterior,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                    'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                     'tipo'               => MovimientoInventario::TIPO_ENTRADA_COMPRA,
                     'numero_documento'   => $referencia,
-                    'observacion'        => 'Compra',
+                    'observacion'        => json_encode([
+                        'evento' => 'Entrada por compra',
+                        'referencia' => $referencia,
+                        'cantidad_total_anterior' => $cantidadTotalAnterior,
+                        'cantidad_total_posterior' => $cantidadTotalPosterior,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                        'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                        'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                    ]),
                     'fecha'              => now(),
                     'user_id'            => Auth::id(),
                 ]);

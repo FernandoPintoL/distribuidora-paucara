@@ -656,8 +656,8 @@ class EntregaPdfController extends Controller
             // ✅ REFACTORIZADO 2026-02-16: Usar MISMA lógica que endpoint API para evitar discrepancias
             // Cargar ventas con relaciones necesarias
             $ventasCargas = $entrega->load(['ventas' => function ($q) {
-                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_pago', 'tipo_pago_id')
-                  ->with('tipoPago:id,codigo,nombre');
+                $q->select('id', 'entrega_id', 'numero', 'total', 'estado_pago', 'tipo_pago_id', 'cliente_id')
+                  ->with('tipoPago:id,codigo,nombre', 'cliente:id,nombre');
             }])->ventas;
 
             // Filtrar SOLO ventas NO a crédito (CRÍTICO: excluir CREDITO del resumen)

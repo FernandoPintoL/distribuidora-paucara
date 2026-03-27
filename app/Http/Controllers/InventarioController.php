@@ -519,7 +519,7 @@ class InventarioController extends Controller
      */
     public function movimientos(Request $request): Response
     {
-        $fechaInicio = $request->date('fecha_inicio') ?? now()->subMonth();
+        $fechaInicio = $request->date('fecha_inicio') ?? now()->startOfDay();
         $fechaFin    = $request->date('fecha_fin') ?? now();
         $tipo        = $request->filled('tipo') ? $request->string('tipo') : null;
         $almacenId   = $request->filled('almacen_id') ? $request->integer('almacen_id') : null;
@@ -527,6 +527,9 @@ class InventarioController extends Controller
         $productoBusqueda = $request->filled('producto_busqueda') ? $request->string('producto_busqueda') : null;
         $observaciones = $request->filled('observaciones') ? $request->string('observaciones') : null;
         $numeroDocumento = $request->filled('numero_documento') ? $request->string('numero_documento') : null;
+        $anulado     = $request->filled('anulado') ? $request->boolean('anulado') : null;
+        $esReversión = $request->filled('es_reversión') ? $request->boolean('es_reversión') : null;  // ✅ NUEVO: Filtro de reversiones
+        $referenciaTipo = $request->filled('referencia_tipo') ? $request->string('referencia_tipo') : null;  // ✅ NUEVO (2026-03-27): Filtro por tipo de referencia (proforma, venta, etc)
         $perPage     = $request->integer('per_page', 15); // ✅ Dinámico: permite cambiar items por página
 
         // Construir query con filtros
@@ -565,6 +568,21 @@ class InventarioController extends Controller
             $query->where('numero_documento', 'LIKE', '%' . $numeroDocumento . '%');
         }
 
+        // Filtrar por estado (anulado)
+        if ($anulado !== null) {
+            $query->where('anulado', $anulado);
+        }
+
+        // ✅ NUEVO: Filtrar por reversiones (es_reversión=true filtra solo ENTRADA_AJUSTE)
+        if ($esReversión === true) {
+            $query->where('tipo', 'ENTRADA_AJUSTE');
+        }
+
+        // ✅ NUEVO (2026-03-27): Filtrar por tipo de referencia (proforma, venta, etc)
+        if ($referenciaTipo && ! empty($referenciaTipo)) {
+            $query->where('referencia_tipo', $referenciaTipo);
+        }
+
         // Obtener total para estadísticas
         $totalMovimientos = $query->count();
         $totalEntradas    = (clone $query)->where('tipo', 'like', 'ENTRADA%')->count();
@@ -582,6 +600,8 @@ class InventarioController extends Controller
 
             if (!$stockProducto) {
                 // Si el stock_producto fue eliminado, crear datos fallback
+                $cantidadesExtraidas = $this->extraerCantidadesDelJSON($movimiento->observacion);
+
                 return [
                     'id'                => $movimiento->id,
                     'tipo'              => $this->mapearTipoMovimiento($movimiento->tipo),
@@ -592,6 +612,13 @@ class InventarioController extends Controller
                     'cantidad'          => $movimiento->cantidad,
                     'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
                     'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
+                    // ✅ NUEVO (2026-03-26): Información adicional de cantidades - Usar columnas directas
+                    'cantidad_total_anterior' => $movimiento->cantidad_total_anterior ?? $cantidadesExtraidas['cantidad_total_anterior'],
+                    'cantidad_total_posterior' => $movimiento->cantidad_total_posterior ?? $cantidadesExtraidas['cantidad_total_posterior'],
+                    'cantidad_disponible_anterior' => $movimiento->cantidad_disponible_anterior ?? 0,
+                    'cantidad_disponible_posterior' => $movimiento->cantidad_disponible_posterior ?? 0,
+                    'cantidad_reservada_anterior' => $movimiento->cantidad_reservada_anterior ?? $cantidadesExtraidas['cantidad_reservada_anterior'],
+                    'cantidad_reservada_posterior' => $movimiento->cantidad_reservada_posterior ?? $cantidadesExtraidas['cantidad_reservada_posterior'],
                     'fecha'             => $movimiento->fecha->toISOString(),
                     'created_at'        => $movimiento->created_at->toISOString(),  // ✅ NUEVO (2026-02-11): Fecha de creación
                     'usuario'           => [
@@ -626,6 +653,8 @@ class InventarioController extends Controller
                 ];
             }
 
+            $cantidadesExtraidas = $this->extraerCantidadesDelJSON($movimiento->observacion);
+
             return [
                 'id'                => $movimiento->id,
                 'tipo'              => $this->mapearTipoMovimiento($movimiento->tipo),
@@ -636,6 +665,13 @@ class InventarioController extends Controller
                 'cantidad'          => $movimiento->cantidad,
                 'cantidad_anterior' => $movimiento->cantidad_anterior,  // ✅ Nombre correcto
                 'cantidad_posterior' => $movimiento->cantidad_posterior,  // ✅ Nombre correcto
+                // ✅ NUEVO (2026-03-26): Información adicional de cantidades - Usar columnas directas
+                'cantidad_total_anterior' => $movimiento->cantidad_total_anterior ?? $cantidadesExtraidas['cantidad_total_anterior'],
+                'cantidad_total_posterior' => $movimiento->cantidad_total_posterior ?? $cantidadesExtraidas['cantidad_total_posterior'],
+                'cantidad_disponible_anterior' => $movimiento->cantidad_disponible_anterior ?? 0,
+                'cantidad_disponible_posterior' => $movimiento->cantidad_disponible_posterior ?? 0,
+                'cantidad_reservada_anterior' => $movimiento->cantidad_reservada_anterior ?? $cantidadesExtraidas['cantidad_reservada_anterior'],
+                'cantidad_reservada_posterior' => $movimiento->cantidad_reservada_posterior ?? $cantidadesExtraidas['cantidad_reservada_posterior'],
                 'fecha'             => $movimiento->fecha->toISOString(),
                 'created_at'        => $movimiento->created_at->toISOString(),  // ✅ NUEVO (2026-02-11): Fecha de creación
                 'usuario'           => [
@@ -775,12 +811,14 @@ class InventarioController extends Controller
                 'fecha_fin'         => $fechaFin->toDateString(),
                 'tipo'              => $tipo,
                 'almacen_id'        => $almacenId,
-                // ✅ FIX: Solo devolver producto_id si fue buscado por ID específico
-                // Si se buscó por producto_busqueda, devolver null para evitar conflicto
-                'producto_id'       => $productoBusqueda ? null : $productoId,
-                'producto_busqueda' => $productoBusqueda,
+                // ✅ FIX: No preseleccionar producto por defecto - null para ambos
+                'producto_id'       => null,
+                'producto_busqueda' => null,
                 'numero_documento'  => $numeroDocumento,
                 'observaciones'     => $observaciones,
+                'anulado'           => $anulado,
+                'es_reversión'      => $esReversión,  // ✅ NUEVO: Pasar filtro de reversiones al frontend
+                'referencia_tipo'   => $referenciaTipo,  // ✅ NUEVO (2026-03-27): Pasar filtro de referencia_tipo para mantenerlo en navegación
             ],
             'almacenes'               => $almacenes,
             'productos'               => $productos,
@@ -789,6 +827,40 @@ class InventarioController extends Controller
             'tipos_ajuste_inventario' => $tipos_ajueste_inventario,
             'estado_mermas'           => $estado_mermas,
         ]);
+    }
+
+    /**
+     * ✅ NUEVO (2026-03-26): Extraer información de cantidad desde JSON de observacion
+     * Devuelve: cantidad_total_anterior, cantidad_total_posterior, cantidad_reservada_anterior, cantidad_reservada_posterior
+     */
+    private function extraerCantidadesDelJSON(?string $observacion): array
+    {
+        $datos = [
+            'cantidad_total_anterior' => null,
+            'cantidad_total_posterior' => null,
+            'cantidad_reservada_anterior' => null,
+            'cantidad_reservada_posterior' => null,
+        ];
+
+        if (!$observacion) {
+            return $datos;
+        }
+
+        try {
+            $json = json_decode($observacion, true);
+            if (is_array($json)) {
+                return [
+                    'cantidad_total_anterior' => $json['cantidad_total_anterior'] ?? null,
+                    'cantidad_total_posterior' => $json['cantidad_total_posterior'] ?? null,
+                    'cantidad_reservada_anterior' => $json['cantidad_reservada_anterior'] ?? null,
+                    'cantidad_reservada_posterior' => $json['cantidad_reservada_posterior'] ?? null,
+                ];
+            }
+        } catch (\Exception $e) {
+            // Si hay error al parsear JSON, devolver nulls
+        }
+
+        return $datos;
     }
 
     /**

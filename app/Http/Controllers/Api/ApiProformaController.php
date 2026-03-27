@@ -3772,6 +3772,8 @@ class ApiProformaController extends Controller
             $stockProducto->refresh();
             $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
+            $cantidadTotalAntes = (float) $stockProducto->cantidad;  // Total no cambia en liberación
+            $cantidadTotalDespues = (float) $stockProducto->cantidad;
 
             // 4️⃣ Actualizar estado de la reserva
             $reserva->update(['estado' => \App\Models\ReservaProforma::LIBERADA]);
@@ -3782,6 +3784,13 @@ class ApiProformaController extends Controller
                 'cantidad'           => $cantidadALiberar,  // Positivo: liberado
                 'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
                 'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                'cantidad_total_anterior' => $cantidadTotalAntes,
+                'cantidad_total_posterior' => $cantidadTotalDespues,
+                'cantidad_disponible_anterior' => $cantidadAnterior,
+                'cantidad_disponible_posterior' => $cantidadPosterior,
+                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'fecha'              => now(),
                 'observacion'        => json_encode([
                     'evento'                       => 'Liberación de reserva de proforma',
@@ -3789,6 +3798,8 @@ class ApiProformaController extends Controller
                     'reserva_id'                   => $reserva->id,
                     'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                    'cantidad_disponible_anterior' => $cantidadAnterior,
+                    'cantidad_disponible_posterior' => $cantidadPosterior,
                 ]),
                 'numero_documento'   => $numeroProforma,
                 'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
@@ -3840,6 +3851,9 @@ class ApiProformaController extends Controller
             // 4️⃣ Obtener valores DESPUÉS
             $stockProducto->refresh();
             $cantidadDisponiblePosterior = $stockProducto->cantidad_disponible;
+            $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
+            $cantidadTotalAntes = (float) $stockProducto->cantidad;  // Total no cambia en reducción
+            $cantidadTotalDespues = (float) $stockProducto->cantidad;
 
             // 5️⃣ Registrar movimiento con cantidad_anterior y cantidad_posterior
             \App\Models\MovimientoInventario::create([
@@ -3847,12 +3861,21 @@ class ApiProformaController extends Controller
                 'cantidad'           => $diferencia,                  // Positivo: liberado
                 'cantidad_anterior'  => $cantidadDisponibleAnterior,  // ✅ ANTES
                 'cantidad_posterior' => $cantidadDisponiblePosterior, // ✅ DESPUÉS
+                // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                'cantidad_total_anterior' => $cantidadTotalAntes,
+                'cantidad_total_posterior' => $cantidadTotalDespues,
+                'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'fecha'              => now(),
                 'observacion'        => json_encode([
                     'evento'                       => 'Reducción de cantidad de reserva',
                     'reserva_id'                   => $reserva->id,
                     'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadNueva,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                 ]),
                 'numero_documento'   => $reserva->proforma->numero ?? null,
                 'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
@@ -3898,6 +3921,8 @@ class ApiProformaController extends Controller
             $stockProducto->refresh();
             $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
+            $cantidadTotalAntes = (float) $stockProducto->cantidad;  // Total no cambia en liberación
+            $cantidadTotalDespues = (float) $stockProducto->cantidad;
 
             // 4️⃣ Registrar movimiento con cantidad_anterior y cantidad_posterior
             \App\Models\MovimientoInventario::create([
@@ -3905,6 +3930,13 @@ class ApiProformaController extends Controller
                 'cantidad'           => $exceso,            // Positivo: liberado
                 'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
                 'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                'cantidad_total_anterior' => $cantidadTotalAntes,
+                'cantidad_total_posterior' => $cantidadTotalDespues,
+                'cantidad_disponible_anterior' => $cantidadAnterior,
+                'cantidad_disponible_posterior' => $cantidadPosterior,
+                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'fecha'              => now(),
                 'observacion'        => json_encode([
                     'evento'                       => 'Liberación de exceso de reserva',
@@ -3912,6 +3944,8 @@ class ApiProformaController extends Controller
                     'reserva_id'                   => $reserva->id,
                     'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                    'cantidad_disponible_anterior' => $cantidadAnterior,
+                    'cantidad_disponible_posterior' => $cantidadPosterior,
                 ]),
                 'numero_documento'   => $numeroProforma,
                 'tipo'               => \App\Models\MovimientoInventario::TIPO_LIBERACION_RESERVA,
@@ -3968,6 +4002,9 @@ class ApiProformaController extends Controller
             // 5️⃣ Obtener valores DESPUÉS
             $stockProducto->refresh();
             $cantidadDisponiblePosterior = $stockProducto->cantidad_disponible;
+            $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
+            $cantidadTotalAntes = (float) $stockProducto->cantidad;  // Total no cambia en ampliación
+            $cantidadTotalDespues = (float) $stockProducto->cantidad;
 
             // 6️⃣ Registrar movimiento en inventario con cantidad_anterior/posterior
             \App\Models\MovimientoInventario::create([
@@ -3975,12 +4012,21 @@ class ApiProformaController extends Controller
                 'cantidad'           => -$diferencia,                 // Negativo: reservar
                 'cantidad_anterior'  => $cantidadDisponibleAnterior,  // ✅ ANTES
                 'cantidad_posterior' => $cantidadDisponiblePosterior, // ✅ DESPUÉS
+                // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                'cantidad_total_anterior' => $cantidadTotalAntes,
+                'cantidad_total_posterior' => $cantidadTotalDespues,
+                'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'fecha'              => now(),
                 'observacion'        => json_encode([
                     'evento'                       => 'Aumento de cantidad de reserva',
                     'reserva_id'                   => $reserva->id,
                     'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadNueva,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                    'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                 ]),
                 'numero_documento'   => $proforma?->numero,
                 'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,
@@ -4046,6 +4092,8 @@ class ApiProformaController extends Controller
             $stockProducto->refresh();
             $cantidadPosterior          = $stockProducto->cantidad_disponible;
             $cantidadReservadaPosterior = $stockProducto->cantidad_reservada;
+            $cantidadTotalAntes = (float) $stockProducto->cantidad;  // Total no cambia en reserva
+            $cantidadTotalDespues = (float) $stockProducto->cantidad;
 
             // 6️⃣ Registrar movimiento en inventario con cantidad_anterior/posterior
             \App\Models\MovimientoInventario::create([
@@ -4053,12 +4101,21 @@ class ApiProformaController extends Controller
                 'cantidad'           => -$cantidad,         // Negativo: reservar
                 'cantidad_anterior'  => $cantidadAnterior,  // ✅ ANTES
                 'cantidad_posterior' => $cantidadPosterior, // ✅ DESPUÉS
+                // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                'cantidad_total_anterior' => $cantidadTotalAntes,
+                'cantidad_total_posterior' => $cantidadTotalDespues,
+                'cantidad_disponible_anterior' => $cantidadAnterior,
+                'cantidad_disponible_posterior' => $cantidadPosterior,
+                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'fecha'              => now(),
                 'observacion'        => json_encode([
                     'evento'                       => 'Nueva reserva adicional creada',
                     'reserva_id'                   => $reserva->id,
                     'cantidad_reservada_anterior'  => $cantidadReservadaAnterior,
                     'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                    'cantidad_disponible_anterior' => $cantidadAnterior,
+                    'cantidad_disponible_posterior' => $cantidadPosterior,
                 ]),
                 'numero_documento'   => $proforma->numero,
                 'tipo'               => \App\Models\MovimientoInventario::TIPO_RESERVA_PROFORMA,

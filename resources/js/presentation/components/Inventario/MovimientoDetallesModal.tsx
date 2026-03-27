@@ -2,7 +2,8 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/presentation/components/ui/dialog';
 import { Button } from '@/presentation/components/ui/button';
 import { Badge } from '@/presentation/components/ui/badge';
-import { Copy, X } from 'lucide-react';
+import { Copy, X, ChevronDown } from 'lucide-react';
+import ObservacionesDetalle from './ObservacionesDetalle';
 
 interface MovimientoDetallesModalProps {
     isOpen: boolean;
@@ -15,10 +16,15 @@ interface MovimientoDetallesModalProps {
         cantidad: number;
         cantidad_anterior?: number;
         cantidad_posterior?: number;
-        observacion?: string;
+        observaciones?: string;
         created_at: string;
         usuario: { name: string };
         referencia?: string;
+        // ✅ NUEVO (2026-03-26): Información adicional de cantidades
+        cantidad_total_anterior?: number;
+        cantidad_total_posterior?: number;
+        cantidad_reservada_anterior?: number;
+        cantidad_reservada_posterior?: number;
     } | null;
 }
 
@@ -32,8 +38,8 @@ export default function MovimientoDetallesModal({
     // Intentar parsear el JSON de observación
     let observacionParsed: any = null;
     try {
-        if (movimiento.observacion) {
-            observacionParsed = JSON.parse(movimiento.observacion);
+        if (movimiento.observaciones) {
+            observacionParsed = JSON.parse(movimiento.observaciones);
         }
     } catch (e) {
         // Si no es JSON válido, mostrar como texto
@@ -45,8 +51,8 @@ export default function MovimientoDetallesModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="!w-[95vw] !h-[95vh] !max-w-none !rounded-lg p-0 flex flex-col">
+                <DialogHeader className="p-4 border-b">
                     <DialogTitle className="flex items-center justify-between">
                         <span>📋 Detalles del Movimiento #{movimiento.id}</span>
                         <Button
@@ -60,7 +66,7 @@ export default function MovimientoDetallesModal({
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6 flex-1 overflow-y-auto p-6">
                     {/* Información General */}
                     <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-3">
                         <h3 className="font-semibold text-sm">📌 Información General</h3>
@@ -154,72 +160,113 @@ export default function MovimientoDetallesModal({
                         </div>
                     </div>
 
-                    {/* Observaciones / JSON */}
-                    {(observacionParsed || movimiento.observacion) && (
-                        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-3">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-sm">📝 Observaciones Detalladas</h3>
-                                {movimiento.observacion && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(movimiento.observacion || '')}
-                                        className="h-7 gap-1"
-                                    >
-                                        <Copy className="h-3 w-3" />
-                                        Copiar
-                                    </Button>
-                                )}
+                    {/* ✅ NUEVO (2026-03-26): Observaciones Detalladas - Información completa */}
+                    {(observacionParsed || movimiento.observaciones) && (
+                        <>
+                            {/* SECCIÓN 1: Observaciones Detalladas con Componente */}
+                            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold text-sm">📝 Observaciones Detalladas</h3>
+                                    {movimiento.observaciones && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(movimiento.observaciones || '')}
+                                            className="h-7 gap-1"
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                            Copiar JSON
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {/* Usar componente ObservacionesDetalle para mostrar información formateada */}
+                                <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+                                    <ObservacionesDetalle observaciones={movimiento.observaciones} />
+                                </div>
                             </div>
 
-                            {observacionParsed ? (
-                                // Mostrar JSON formateado
-                                <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto">
-                                    <pre className="text-xs whitespace-pre-wrap break-words font-mono">
-                                        {JSON.stringify(observacionParsed, null, 2)}
-                                    </pre>
-                                </div>
-                            ) : (
-                                // Mostrar como texto plano
-                                <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
-                                    <p className="text-sm whitespace-pre-wrap">
-                                        {movimiento.observacion || 'Sin observaciones'}
-                                    </p>
-                                </div>
-                            )}
+                            {/* SECCIÓN 2: Detalles de Stock Expandido */}
+                            {(movimiento.cantidad_total_anterior !== undefined ||
+                                movimiento.cantidad_disponible_anterior !== undefined ||
+                                movimiento.cantidad_reservada_anterior !== undefined) && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-3">
+                                    <h3 className="font-semibold text-sm">📊 Detalles Completos del Stock</h3>
 
-                            {/* Información destacada si es CONSUMO_RESERVA */}
-                            {observacionParsed && observacionParsed.venta_numero && (
-                                <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded mt-3 border-l-4 border-pink-500">
-                                    <p className="text-sm font-semibold text-pink-900 dark:text-pink-200">
-                                        🔗 Venta Asociada
-                                    </p>
-                                    <p className="text-sm text-pink-800 dark:text-pink-300 mt-1">
-                                        <strong>Número:</strong> {observacionParsed.venta_numero}
-                                        {observacionParsed.venta_id && (
-                                            <span className="ml-2">
-                                                <strong>ID:</strong> {observacionParsed.venta_id}
-                                            </span>
-                                        )}
-                                    </p>
-                                    {observacionParsed.producto_nombre && (
-                                        <p className="text-sm text-pink-800 dark:text-pink-300 mt-1">
-                                            <strong>Producto:</strong> {observacionParsed.producto_nombre}
+                                    {/* Stock Anterior */}
+                                    <div className="space-y-2">
+                                        <p className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                                            📈 Stock ANTES del movimiento:
                                         </p>
-                                    )}
-                                    {observacionParsed.cantidad_consumida && (
-                                        <p className="text-sm text-pink-800 dark:text-pink-300 mt-1">
-                                            <strong>Cantidad Consumida:</strong> {observacionParsed.cantidad_consumida}
+                                        <div className="grid grid-cols-3 gap-2 ml-2">
+                                            {movimiento.cantidad_total_anterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">📦 Total</p>
+                                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                                        {movimiento.cantidad_total_anterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">stock.cantidad</p>
+                                                </div>
+                                            )}
+                                            {movimiento.cantidad_disponible_anterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">📊 Disponible</p>
+                                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                        {movimiento.cantidad_disponible_anterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">cantidad_disponible</p>
+                                                </div>
+                                            )}
+                                            {movimiento.cantidad_reservada_anterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">🔒 Reservada</p>
+                                                    <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                                        {movimiento.cantidad_reservada_anterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">cantidad_reservada</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Stock Posterior */}
+                                    <div className="space-y-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                                        <p className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                                            📉 Stock DESPUÉS del movimiento:
                                         </p>
-                                    )}
-                                    {observacionParsed.lote && (
-                                        <p className="text-sm text-pink-800 dark:text-pink-300 mt-1">
-                                            <strong>Lote:</strong> {observacionParsed.lote}
-                                        </p>
-                                    )}
+                                        <div className="grid grid-cols-3 gap-2 ml-2">
+                                            {movimiento.cantidad_total_posterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">📦 Total</p>
+                                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                                        {movimiento.cantidad_total_posterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">stock.cantidad</p>
+                                                </div>
+                                            )}
+                                            {movimiento.cantidad_disponible_posterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">📊 Disponible</p>
+                                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                        {movimiento.cantidad_disponible_posterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">cantidad_disponible</p>
+                                                </div>
+                                            )}
+                                            {movimiento.cantidad_reservada_posterior !== undefined && (
+                                                <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                    <p className="text-xs text-muted-foreground">🔒 Reservada</p>
+                                                    <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                                        {movimiento.cantidad_reservada_posterior}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">cantidad_reservada</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-                        </div>
+                        </>
                     )}
                 </div>
             </DialogContent>

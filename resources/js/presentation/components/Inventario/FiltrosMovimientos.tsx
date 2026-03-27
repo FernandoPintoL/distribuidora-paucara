@@ -105,6 +105,9 @@ export default function FiltrosMovimientos({
 
     const hasActiveFilters = Object.keys(filtrosLocal).length > 0;
 
+    // ✅ NUEVO (2026-03-27): Detectar si está activo el filtro de proformas
+    const isProformasFilterActive = (filtrosLocal as any).referencia_tipo === 'proforma';
+
     return (
         <Card>
             <CardHeader className="pb-4">
@@ -149,6 +152,157 @@ export default function FiltrosMovimientos({
                     </div>
                 </div>
             </CardHeader>
+
+            {/* ✅ NUEVO: Botones de filtro rápido */}
+            <CardContent className="pb-0 pt-2 space-y-3">
+                {/* Filtro de tipo */}
+                <div className="flex flex-wrap gap-2">
+                    <Label className="text-xs text-muted-foreground w-full">Por tipo:</Label>
+                    <Button
+                        variant={filtrosLocal.tipo === 'SALIDA_VENTA' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            // ✅ TOGGLE: Si ya está seleccionado, deselecciona; si no, selecciona
+                            const newFiltros = filtrosLocal.tipo === 'SALIDA_VENTA'
+                                ? { ...filtrosLocal, tipo: undefined }
+                                : { ...filtrosLocal, tipo: 'SALIDA_VENTA' };
+                            setFiltrosLocal(newFiltros);
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        💰 Ventas
+                    </Button>
+                    <Button
+                        variant={filtrosLocal.tipo === 'ENTRADA_COMPRA' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            const newFiltros = filtrosLocal.tipo === 'ENTRADA_COMPRA'
+                                ? { ...filtrosLocal, tipo: undefined }
+                                : { ...filtrosLocal, tipo: 'ENTRADA_COMPRA' };
+                            setFiltrosLocal(newFiltros);
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        📦 Compras
+                    </Button>
+                    <Button
+                        variant={filtrosLocal.tipo === 'AJUSTE' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            const newFiltros = filtrosLocal.tipo === 'AJUSTE'
+                                ? { ...filtrosLocal, tipo: undefined }
+                                : { ...filtrosLocal, tipo: 'AJUSTE' };
+                            setFiltrosLocal(newFiltros);
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        🔧 Ajustes
+                    </Button>
+                    {/* ✅ NUEVO (2026-03-27): Filtro rápido para Proformas - Usa referencia_tipo */}
+                    <Button
+                        variant={isProformasFilterActive ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            if (isProformasFilterActive) {
+                                // Si ya está seleccionado, deselecciona
+                                const newFiltros = { ...filtrosLocal } as any;
+                                delete newFiltros.referencia_tipo;
+                                setFiltrosLocal(newFiltros);
+                            } else {
+                                // Selecciona todas las proformas (RESERVA_PROFORMA, LIBERACION_RESERVA, CONSUMO_RESERVA)
+                                setFiltrosLocal({ ...filtrosLocal, referencia_tipo: 'proforma' } as any);
+                            }
+                        }}
+                        className="flex-shrink-0"
+                        title="Filtra por movimientos de proformas (Reservas, Liberaciones, Consumos)"
+                    >
+                        📋 Proformas
+                    </Button>
+                    {filtrosLocal.tipo && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                const newFiltros = { ...filtrosLocal };
+                                delete newFiltros.tipo;
+                                setFiltrosLocal(newFiltros);
+                            }}
+                            className="flex-shrink-0 ml-auto"
+                        >
+                            <X className="h-3 w-3 mr-1" />
+                            Limpiar
+                        </Button>
+                    )}
+                </div>
+
+                {/* Filtro de estado */}
+                <div className="flex flex-wrap gap-2">
+                    <Label className="text-xs text-muted-foreground w-full">Por estado:</Label>
+                    <Button
+                        variant={filtrosLocal.anulado === false ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            // ✅ TOGGLE: Si ya está seleccionado, deselecciona (sin estado = TODOS)
+                            const newFiltros = filtrosLocal.anulado === false
+                                ? { ...filtrosLocal, anulado: undefined }
+                                : { ...filtrosLocal, anulado: false };
+                            setFiltrosLocal(newFiltros);
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        ✅ Aprobados
+                    </Button>
+                    <Button
+                        variant={filtrosLocal.anulado === true ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            const newFiltros = filtrosLocal.anulado === true
+                                ? { ...filtrosLocal, anulado: undefined }
+                                : { ...filtrosLocal, anulado: true };
+                            setFiltrosLocal(newFiltros);
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        ❌ Anulados
+                    </Button>
+                    <Button
+                        variant={filtrosLocal.tipo === 'ENTRADA_AJUSTE' && filtrosLocal.es_reversión === true ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                            // ✅ TOGGLE: Reversiones es un tipo especial
+                            const isReversionsSelected = filtrosLocal.tipo === 'ENTRADA_AJUSTE' && filtrosLocal.es_reversión === true;
+                            if (isReversionsSelected) {
+                                const newFiltros = { ...filtrosLocal };
+                                delete newFiltros.tipo;
+                                delete newFiltros.es_reversión;
+                                setFiltrosLocal(newFiltros);
+                            } else {
+                                setFiltrosLocal({ ...filtrosLocal, tipo: 'ENTRADA_AJUSTE', es_reversión: true });
+                            }
+                        }}
+                        className="flex-shrink-0"
+                    >
+                        🔄 Reversiones
+                    </Button>
+                    {(filtrosLocal.anulado !== undefined || (filtrosLocal.tipo === 'ENTRADA_AJUSTE' && filtrosLocal.es_reversión === true)) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                const newFiltros = { ...filtrosLocal };
+                                delete newFiltros.anulado;
+                                delete newFiltros.tipo;
+                                delete newFiltros.es_reversión;
+                                setFiltrosLocal(newFiltros);
+                            }}
+                            className="flex-shrink-0 ml-auto"
+                        >
+                            <X className="h-3 w-3 mr-1" />
+                            Limpiar
+                        </Button>
+                    )}
+                </div>
+            </CardContent>
 
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleContent>

@@ -259,6 +259,9 @@ class VentaDistribucionService
                     // ✅ CORREGIDO (2026-02-18): Convertir a float para preservar decimales
                     $cantidadPosterior = (float) $stock->cantidad;
                     $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
+                    // ✅ NUEVO (2026-03-26): Guardar también cantidad reservada para contexto completo
+                    $cantidadReservadaAnterior = (float) ($stock->cantidad_reservada + $cantidadTomar);
+                    $cantidadReservadaPosterior = (float) $stock->cantidad_reservada;
 
                     // ✅ NUEVO (2026-02-16): Registrar movimiento con información de conversión
                     // ✅ MEJORADO (2026-02-18): Usar columnas dedicadas para conversiones + JSON para metadatos
@@ -267,6 +270,13 @@ class VentaDistribucionService
                         'cantidad' => -$cantidadTomar,  // ← NEGATIVO (salida) EN UNIDAD ALMACENAMIENTO
                         'cantidad_anterior' => $cantidadAnterior,
                         'cantidad_posterior' => $cantidadPosterior,
+                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                        'cantidad_total_anterior' => $cantidadAnterior,
+                        'cantidad_total_posterior' => $cantidadPosterior,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                        'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                        'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                         'tipo' => MovimientoInventario::TIPO_SALIDA_VENTA,
                         'numero_documento' => $numeroVenta,
                         // ✅ NUEVO (2026-02-18): Columnas específicas para conversiones
@@ -285,10 +295,12 @@ class VentaDistribucionService
                             'cantidad_consumida' => $cantidadAConsumir,              // ← Cantidad en unidad almacenamiento
                             'conversion_aplicada' => $conversionAplicada,            // ← Si se aplicó conversión
                             'factor_conversion' => $factorConversion,                // ← Factor usado
-                            'cantidad_anterior' => $cantidadAnterior,               // ← Stock ANTES
-                            'cantidad_posterior' => $cantidadPosterior,             // ← Stock DESPUÉS
+                            'cantidad_total_anterior' => $cantidadAnterior,          // ✅ NUEVO (2026-03-26): Cantidad total ANTES
+                            'cantidad_total_posterior' => $cantidadPosterior,        // ✅ NUEVO (2026-03-26): Cantidad total DESPUÉS
                             'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                             'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,  // ✅ NUEVO (2026-03-26): Cantidad reservada ANTES
+                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior, // ✅ NUEVO (2026-03-26): Cantidad reservada DESPUÉS
                         ]),
                         'fecha' => now(),
                         'user_id' => Auth::id() ?? 1,
@@ -419,6 +431,11 @@ class VentaDistribucionService
                         'cantidad' => $cantidadADevolver,  // ← POSITIVO (entrada)
                         'cantidad_anterior' => $cantidadAnterior,
                         'cantidad_posterior' => $cantidadPosterior,
+                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                        'cantidad_total_anterior' => $cantidadAnterior,
+                        'cantidad_total_posterior' => $cantidadPosterior,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                        'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                         'tipo' => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
                         'numero_documento' => $numeroVenta . '-DEV',
                         'observacion' => json_encode([
@@ -430,6 +447,8 @@ class VentaDistribucionService
                             'cantidad_posterior' => $cantidadPosterior,
                             'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                             'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                            'cantidad_total_anterior' => $cantidadAnterior,
+                            'cantidad_total_posterior' => $cantidadPosterior,
                         ]),
                         'fecha' => now(),
                         'user_id' => Auth::id() ?? 1,

@@ -10,6 +10,12 @@ import {
 import { Badge } from '@/presentation/components/ui/badge';
 import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Button } from '@/presentation/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/presentation/components/ui/tooltip';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import MovimientoDetallesModal from './MovimientoDetallesModal';
 
@@ -45,6 +51,18 @@ interface MovimientoInventario {
     factor_conversion?: number;
     unidad_venta_nombre?: string;
     unidad_base_nombre?: string;  // ✅ NUEVO: Nombre de la unidad base (almacenamiento)
+    // ✅ NUEVO (2026-03-26): Información completa de cantidades
+    cantidad_total_anterior?: number;
+    cantidad_total_posterior?: number;
+    cantidad_reservada_anterior?: number;
+    cantidad_reservada_posterior?: number;
+    // ✅ NUEVO (2026-03-26): Observaciones del movimiento
+    observaciones?: string;
+    referencia?: string;
+    referencia_tipo?: string;
+    referencia_id?: number;
+    anulado?: boolean;
+    motivo_anulacion?: string;
 }
 
 interface PaginationInfo {
@@ -110,7 +128,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
     }
 
     return (
-        <Card>
+        <TooltipProvider>
+            <Card>
             <CardContent className="p-0">
                 <Table>
                     <TableHeader>
@@ -128,13 +147,13 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                             <TableHead className="text-center">Cambio</TableHead>
                             <TableHead className="text-center">Cant. Posterior</TableHead>
                             {/* ✅ NUEVO (2026-02-18): Columna de conversiones de unidades */}
-                            <TableHead className="text-center">📐 Conversión</TableHead>
+                            {/* <TableHead className="text-center">📐 Conversión</TableHead> */}
                             {/* ✅ NUEVO: Columna de documento relacionado (venta/proforma) */}
-                            <TableHead>📋 Documento</TableHead>
+                            {/* <TableHead>📋 Documento</TableHead> */}
                             {/* <TableHead>Motivo</TableHead> */}
                             {/* <TableHead>Usuario</TableHead> */}
                             {/* ✅ NUEVO (2026-02-12): Columna de detalles */}
-                            <TableHead className="text-center">Detalles</TableHead>
+                            <TableHead>Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -150,7 +169,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                     <TableCell className="font-medium">
                                         <div>
                                             <div className="font-semibold">#{movimiento.id}</div>
-                                            <div className="text-sm">{movimiento.referencia || movimiento.numero}</div>
+                                            <div className="text-sm">{movimiento.referencia}</div>
                                             <div className="text-xs text-muted-foreground mt-1">
                                                 <div>{new Date(movimiento.created_at).toLocaleDateString('es-ES')}</div>
                                                 <div className="text-gray-500 dark:text-gray-400">
@@ -161,6 +180,8 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                                     })}
                                                 </div>
                                             </div>
+                                            <div className="text-sm mt-2">{movimiento.motivo}</div>
+                                            <div>{movimiento.usuario.name}</div>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -181,7 +202,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                             <div className="font-medium">
                                                 {movimiento.stock_producto_id ? (
                                                     <span className="text-blue-600 dark:text-blue-400">
-                                                        Folio Stock: {movimiento.stock_producto_id}
+                                                        ID Stock: {movimiento.stock_producto_id}
                                                     </span>
                                                 ) : (
                                                     <span className="text-muted-foreground">-</span>
@@ -192,11 +213,36 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                             </div>
                                         </div>
                                     </TableCell>
-                                    {/* ✅ NUEVO: Cantidad Anterior */}
-                                    <TableCell className="text-center font-medium">
-                                        <span className="text-gray-700 dark:text-gray-300">
-                                            {movimiento.cantidad_anterior}
-                                        </span>
+                                    {/* ✅ NUEVO: Cantidad Anterior - Mostrar todos los valores directamente */}
+                                    <TableCell className="text-center text-xs font-medium">
+                                        <div className="space-y-1">
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Total</p>
+                                                <p className="text-blue-700 dark:text-blue-400 font-bold">
+                                                    {(movimiento.cantidad_total_anterior !== undefined && movimiento.cantidad_total_anterior !== null)
+                                                        ? movimiento.cantidad_total_anterior
+                                                        : (movimiento.cantidad_anterior !== undefined && movimiento.cantidad_anterior !== null)
+                                                        ? movimiento.cantidad_anterior
+                                                        : 0}
+                                                </p>
+                                            </div>
+                                            <div className="bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Disponible</p>
+                                                <p className="text-green-700 dark:text-green-400 font-bold">
+                                                    {movimiento.cantidad_disponible_anterior !== undefined && movimiento.cantidad_disponible_anterior !== null
+                                                        ? movimiento.cantidad_disponible_anterior
+                                                        : 0}
+                                                </p>
+                                            </div>
+                                            <div className="bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Reservada</p>
+                                                <p className="text-orange-700 dark:text-orange-400 font-bold">
+                                                    {movimiento.cantidad_reservada_anterior !== undefined && movimiento.cantidad_reservada_anterior !== null
+                                                        ? movimiento.cantidad_reservada_anterior
+                                                        : 0}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </TableCell>
                                     {/* ✅ NUEVO: Cambio (Cantidad) */}
                                     <TableCell className="text-center font-bold">
@@ -208,138 +254,45 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
                                             {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
                                         </span>
                                     </TableCell>
-                                    {/* ✅ NUEVO: Cantidad Posterior */}
-                                    <TableCell className="text-center font-bold">
-                                        <span className="text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-                                            {movimiento.cantidad_posterior}
-                                        </span>
-                                    </TableCell>
-                                    {/* ✅ MEJORADO (2026-02-18): Información de conversión con comparativa antes/cambio/después */}
-                                    <TableCell className="text-center">
-                                        {movimiento.es_conversion_aplicada ? (
-                                            <div className="text-xs space-y-2">
-                                                {/* EN UNIDAD DE VENTA (lo solicitado) */}
-                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-200 dark:border-orange-800">
-                                                    <div className="text-gray-600 dark:text-gray-400 text-xs font-semibold mb-1">
-                                                        📦 {movimiento.unidad_venta_nombre}
-                                                    </div>
-                                                    <div className="grid grid-cols-3 gap-1 text-xs">
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Antes</div>
-                                                            <div className="font-bold text-orange-700 dark:text-orange-400">
-                                                                {movimiento.cantidad_anterior && movimiento.factor_conversion
-                                                                    ? (Number(movimiento.cantidad_anterior) * Number(movimiento.factor_conversion)).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Cambio</div>
-                                                            <div className="font-bold text-red-600 dark:text-red-400">
-                                                                {movimiento.cantidad_solicitada
-                                                                    ? Number(movimiento.cantidad_solicitada).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Después</div>
-                                                            <div className="font-bold text-orange-700 dark:text-orange-400">
-                                                                {movimiento.cantidad_posterior && movimiento.factor_conversion
-                                                                    ? (Number(movimiento.cantidad_posterior) * Number(movimiento.factor_conversion)).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Factor de conversión */}
-                                                {movimiento.factor_conversion ? (
-                                                    <div className="flex items-center justify-center gap-1 py-0.5">
-                                                        <span className="text-gray-500">Factor:</span>
-                                                        <span className="text-orange-600 dark:text-orange-400 font-semibold">
-                                                            1 {movimiento.unidad_base_nombre} = {Number(movimiento.factor_conversion).toFixed(2)} {movimiento.unidad_venta_nombre}
-                                                        </span>
-                                                    </div>
-                                                ) : null}
-
-                                                {/* EN UNIDAD BASE (lo descargado del stock) */}
-                                                {/* <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800">
-                                                    <div className="text-gray-600 dark:text-gray-400 text-xs font-semibold mb-1">
-                                                        📦 {movimiento.unidad_base_nombre || 'Unidad'}
-                                                    </div>
-                                                    <div className="grid grid-cols-3 gap-1 text-xs">
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Antes</div>
-                                                            <div className="font-bold text-blue-700 dark:text-blue-400">
-                                                                {movimiento.cantidad_anterior
-                                                                    ? Number(movimiento.cantidad_anterior).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Cambio</div>
-                                                            <div className="font-bold text-red-600 dark:text-red-400">
-                                                                {movimiento.cantidad
-                                                                    ? Number(movimiento.cantidad).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-gray-500 dark:text-gray-400">Después</div>
-                                                            <div className="font-bold text-blue-700 dark:text-blue-400">
-                                                                {movimiento.cantidad_posterior
-                                                                    ? Number(movimiento.cantidad_posterior).toFixed(2)
-                                                                    : '-'
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div> */}
+                                    {/* ✅ NUEVO: Cantidad Posterior - Mostrar todos los valores directamente */}
+                                    <TableCell className="text-center text-xs font-medium">
+                                        <div className="space-y-1">
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Total</p>
+                                                <p className="text-blue-700 dark:text-blue-400 font-bold">
+                                                    {(movimiento.cantidad_total_posterior !== undefined && movimiento.cantidad_total_posterior !== null)
+                                                        ? movimiento.cantidad_total_posterior
+                                                        : (movimiento.cantidad_posterior !== undefined && movimiento.cantidad_posterior !== null)
+                                                        ? movimiento.cantidad_posterior
+                                                        : 0}
+                                                </p>
                                             </div>
-                                        ) : (
-                                            <span className="text-gray-400 dark:text-gray-500">-</span>
-                                        )}
+                                            <div className="bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Disponible</p>
+                                                <p className="text-green-700 dark:text-green-400 font-bold">
+                                                    {movimiento.cantidad_disponible_posterior !== undefined && movimiento.cantidad_disponible_posterior !== null
+                                                        ? movimiento.cantidad_disponible_posterior
+                                                        : 0}
+                                                </p>
+                                            </div>
+                                            <div className="bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+                                                <p className="text-gray-600 dark:text-gray-400 text-xs">Reservada</p>
+                                                <p className="text-orange-700 dark:text-orange-400 font-bold">
+                                                    {movimiento.cantidad_reservada_posterior !== undefined && movimiento.cantidad_reservada_posterior !== null
+                                                        ? movimiento.cantidad_reservada_posterior
+                                                        : 0}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </TableCell>
-                                    {/* ✅ NUEVO: Documento relacionado (Venta, Proforma, etc) */}
-                                    <TableCell>
-                                        {movimiento.numero_documento ? (
-                                            <a
-                                                href={`/ventas/${movimiento.numero_documento.split('-')[1]}`}
-                                                className="font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                                                title={`Ver documento: ${movimiento.numero_documento}`}
-                                            >
-                                                📋 {movimiento.numero_documento}
-                                            </a>
-                                        ) : (
-                                            <span className="text-muted-foreground text-sm">-</span>
-                                        )}
-                                        <div className="text-sm mt-2">{movimiento.motivo}</div>
-                                        <div>{movimiento.usuario.name}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        
-                                        {/* <p>
-                                            {movimiento.usuario.rol ? (
-                                                <Badge className="bg-blue-100 text-blue-800">
-                                                    {movimiento.usuario.rol}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-muted-foreground">Sin rol</span>
-                                            )}
-                                        </p> */}
-                                    </TableCell>
-                                    {/* ✅ NUEVO (2026-02-12): Botón Ver Detalles */}
-                                    <TableCell>
+                                    {/* ✅ NUEVO (2026-03-26): Botón simple para ver detalles */}
+                                    <TableCell className="text-center">
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() => handleOpenDetalles(movimiento)}
                                             className="h-8 w-8 p-0"
-                                            title="Ver detalles y observaciones del movimiento"
+                                            title="Ver detalles y observaciones completas del movimiento"
                                         >
                                             <Eye className="h-4 w-4" />
                                         </Button>
@@ -440,6 +393,7 @@ const MovimientosTable: React.FC<MovimientosTableProps> = ({
             />
             </CardContent>
         </Card>
+        </TooltipProvider>
     );
 };
 

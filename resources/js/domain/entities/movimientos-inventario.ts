@@ -337,6 +337,9 @@ export interface FiltrosMovimientos {
     requiere_aprobacion?: boolean;
     solo_pendientes?: boolean;
     solo_mermas?: boolean;
+
+    // ✅ NUEVO (2026-03-27): Filtro por tipo de referencia
+    referencia_tipo?: string;  // 'proforma', 'venta', etc.
 }
 
 export interface EstadisticasMovimientos {
