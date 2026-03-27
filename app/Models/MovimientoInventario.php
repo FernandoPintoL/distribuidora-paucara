@@ -263,6 +263,70 @@ class MovimientoInventario extends Model
     }
 
     /**
+     * ✅ NUEVO (2026-03-27): Scope para búsqueda de productos con PRIORIDAD
+     * Busca por ID primero, si no encuentra resultados, busca por SKU
+     *
+     * FLUJO:
+     * 1. Si es número, intenta buscar por ID de producto
+     * 2. Si no encuentra resultados, intenta buscar por SKU
+     * 3. Si tampoco encuentra, busca en nombre y código de barras
+     */
+    public function scopePorProductoBusquedaConPrioridad($query, string $busqueda)
+    {
+        $busquedaNormalizada = strtolower($busqueda);
+        $esNumero = is_numeric($busqueda);
+
+        // Si es número, busca por ID primero
+        if ($esNumero) {
+            $numeroInt = (int) $busqueda;
+
+            // Contar resultados por ID
+            $resultadosPorId = (clone $query)->whereHas('stockProducto.producto', function ($q) use ($numeroInt) {
+                $q->where('id', $numeroInt);
+            })->count();
+
+            // Si encontramos por ID, retornar solo resultados por ID
+            if ($resultadosPorId > 0) {
+                return $query->whereHas('stockProducto.producto', function ($q) use ($numeroInt) {
+                    $q->where('id', $numeroInt);
+                });
+            }
+
+            // Si no encontró por ID, buscar por SKU
+            return $query->whereHas('stockProducto.producto', function ($q) use ($busqueda, $busquedaNormalizada) {
+                $q->where(function ($subQuery) use ($busqueda, $busquedaNormalizada) {
+                    $subQuery->where('sku', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(sku) LIKE ?', ['%' . $busquedaNormalizada . '%'])
+                             ->orWhere('nombre', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(nombre) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                });
+
+                // Búsqueda por código de barras (case-insensitive)
+                $q->orWhereHas('codigosBarra', function ($barQuery) use ($busqueda, $busquedaNormalizada) {
+                    $barQuery->where('codigo', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(codigo) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                });
+            });
+        } else {
+            // Si no es número, buscar en SKU, nombre y código de barras
+            return $query->whereHas('stockProducto.producto', function ($q) use ($busqueda, $busquedaNormalizada) {
+                $q->where(function ($subQuery) use ($busqueda, $busquedaNormalizada) {
+                    $subQuery->where('sku', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(sku) LIKE ?', ['%' . $busquedaNormalizada . '%'])
+                             ->orWhere('nombre', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(nombre) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                });
+
+                // Búsqueda por código de barras (case-insensitive)
+                $q->orWhereHas('codigosBarra', function ($barQuery) use ($busqueda, $busquedaNormalizada) {
+                    $barQuery->where('codigo', 'LIKE', '%' . $busqueda . '%')
+                             ->orWhereRaw('LOWER(codigo) LIKE ?', ['%' . $busquedaNormalizada . '%']);
+                });
+            });
+        }
+    }
+
+    /**
      * Scope para filtrar por observaciones
      */
     public function scopePorObservaciones($query, string $observaciones)

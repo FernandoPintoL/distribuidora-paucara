@@ -5,6 +5,7 @@ namespace App\Services\Venta;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\StockProducto;
+use App\Services\Stock\MovimientoInventarioService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -121,21 +122,31 @@ class VentaDistribucionService
     }
 
     /**
-     * Consumir stock para una venta usando FIFO
+     * ✅ NUEVO (2026-03-27): Servicio centralizado para registrar movimientos
+     */
+    private MovimientoInventarioService $movimientoService;
+
+    public function __construct()
+    {
+        $this->movimientoService = new MovimientoInventarioService();
+    }
+
+    /**
+     * ✅ REFACTORIZADO (2026-03-27): Consumir stock para una venta usando FIFO con movimientos AGRUPADOS
      *
      * FLUJO:
      * 1. Validar datos
      * 2. Para cada producto:
      *    a. Obtener stocks con FIFO (vencimiento cercano primero)
      *    b. Validar si hay disponible (excepto CREDITO)
-     *    c. Consumir según FIFO
-     *    d. Registrar movimiento SALIDA_VENTA
+     *    c. Consumir según FIFO, recolectando detalles de cada lote
+     *    d. Registrar UN SOLO movimiento AGRUPADO por producto con detalles de lotes en JSON
      * 3. Retornar movimientos creados
      *
      * @param array $detalles Array de productos: [['producto_id' => X, 'cantidad' => Y], ...]
      * @param string $numeroVenta Referencia para movimiento (ej: VEN20260211-0001)
      * @param bool $permitirStockNegativo Para CREDITO (permite stock negativo)
-     * @return array Movimientos creados en movimientos_inventario
+     * @return array Movimientos creados en movimientos_inventario (AGRUPADOS por producto)
      * @throws Exception Si stock insuficiente o error en proceso
      */
     public function consumirStock(
@@ -233,8 +244,9 @@ class VentaDistribucionService
                     ]);
                 }
 
-                // 4. Consumir stock según FIFO
-                $cantidadRestante = (float) $cantidadAConsumir;  // ✅ Asegurar que es float/decimal
+                // 4. ✅ REFACTORIZADO (2026-03-27): Consumir stock según FIFO y recolectar detalles de lotes
+                $cantidadRestante = (float) $cantidadAConsumir;
+                $detallesLotes = [];
 
                 foreach ($stocks as $stock) {
                     if ($cantidadRestante <= 0) {
@@ -242,13 +254,12 @@ class VentaDistribucionService
                     }
 
                     // Tomar lo menor: lo que necesito o lo que hay disponible
-                    // ✅ CORREGIDO (2026-02-18): Asegurar que ambos valores son floats para decimales correctos
                     $cantidadTomar = (float) min($cantidadRestante, (float) $stock->cantidad_disponible);
 
                     // Guardar valores ANTES de actualizar
-                    // ✅ CORREGIDO (2026-02-18): Convertir a float para preservar decimales
                     $cantidadAnterior = (float) $stock->cantidad;
                     $cantidadDisponibleAnterior = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaAnterior = (float) $stock->cantidad_reservada;
 
                     // Actualizar stock_productos
                     $stock->decrement('cantidad_disponible', $cantidadTomar);
@@ -256,69 +267,63 @@ class VentaDistribucionService
 
                     // Recargar para obtener valores actualizados
                     $stock->refresh();
-                    // ✅ CORREGIDO (2026-02-18): Convertir a float para preservar decimales
                     $cantidadPosterior = (float) $stock->cantidad;
                     $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
-                    // ✅ NUEVO (2026-03-26): Guardar también cantidad reservada para contexto completo
-                    $cantidadReservadaAnterior = (float) ($stock->cantidad_reservada + $cantidadTomar);
                     $cantidadReservadaPosterior = (float) $stock->cantidad_reservada;
 
-                    // ✅ NUEVO (2026-02-16): Registrar movimiento con información de conversión
-                    // ✅ MEJORADO (2026-02-18): Usar columnas dedicadas para conversiones + JSON para metadatos
-                    $movimiento = MovimientoInventario::create([
+                    // ✅ NUEVO: Recolectar detalle de este lote
+                    // El MovimientoInventarioService sumará estos valores para obtener los totales
+                    $detallesLotes[] = [
                         'stock_producto_id' => $stock->id,
-                        'cantidad' => -$cantidadTomar,  // ← NEGATIVO (salida) EN UNIDAD ALMACENAMIENTO
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $cantidadPosterior,
-                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
+                        'lote' => $stock->lote,
+                        'cantidad' => $cantidadTomar,
                         'cantidad_total_anterior' => $cantidadAnterior,
                         'cantidad_total_posterior' => $cantidadPosterior,
                         'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                         'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                         'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
                         'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
-                        'tipo' => MovimientoInventario::TIPO_SALIDA_VENTA,
-                        'numero_documento' => $numeroVenta,
-                        // ✅ NUEVO (2026-02-18): Columnas específicas para conversiones
-                        'cantidad_solicitada' => $conversionAplicada ? -$cantidad : null,     // ← Cantidad en unidad de venta
-                        'unidad_venta_id' => $conversionAplicada ? $unidadVentaId : null,    // ← ID de unidad de venta
-                        'unidad_base_id' => $conversionAplicada ? $producto->unidad_id : null, // ← ID de unidad base (almacenamiento)
-                        'factor_conversion' => $conversionAplicada ? $factorConversion : null, // ← Factor de conversión
-                        'es_conversion_aplicada' => $conversionAplicada,                       // ← ¿Se aplicó conversión?
-                        'observacion' => json_encode([
-                            'evento' => 'Consumo de stock para venta',
-                            'venta_numero' => $numeroVenta,
-                            'producto_id' => $productoId,
-                            'lote' => $stock->lote,
-                            'cantidad_solicitada' => $cantidad,                      // ← Cantidad en unidad de venta
-                            'unidad_solicitud_id' => $unidadVentaId,                 // ← ID de unidad de venta
-                            'cantidad_consumida' => $cantidadAConsumir,              // ← Cantidad en unidad almacenamiento
-                            'conversion_aplicada' => $conversionAplicada,            // ← Si se aplicó conversión
-                            'factor_conversion' => $factorConversion,                // ← Factor usado
-                            'cantidad_total_anterior' => $cantidadAnterior,          // ✅ NUEVO (2026-03-26): Cantidad total ANTES
-                            'cantidad_total_posterior' => $cantidadPosterior,        // ✅ NUEVO (2026-03-26): Cantidad total DESPUÉS
-                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
-                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,  // ✅ NUEVO (2026-03-26): Cantidad reservada ANTES
-                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior, // ✅ NUEVO (2026-03-26): Cantidad reservada DESPUÉS
-                        ]),
-                        'fecha' => now(),
-                        'user_id' => Auth::id() ?? 1,
-                    ]);
+                    ];
 
-                    Log::debug('📦 [VentaDistribucionService] Consumo registrado', [
+                    Log::debug('📦 [VentaDistribucionService] Stock consumido de lote', [
                         'venta' => $numeroVenta,
                         'stock_producto_id' => $stock->id,
                         'producto_id' => $productoId,
                         'lote' => $stock->lote,
                         'cantidad_consumida' => $cantidadTomar,
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $cantidadPosterior,
                     ]);
 
-                    $movimientos[] = $movimiento;
-                    $cantidadRestante = (float) ($cantidadRestante - $cantidadTomar);  // ✅ Mantener como float
+                    $cantidadRestante = (float) ($cantidadRestante - $cantidadTomar);
                 }
+
+                // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento agrupado para este producto
+                $movimiento = $this->movimientoService->registrarMovimientoAgrupado(
+                    producto_id: $productoId,
+                    almacen_id: $almacenId,
+                    tipo: MovimientoInventario::TIPO_SALIDA_VENTA,
+                    cantidad: -$cantidadAConsumir,  // Negativo para salida
+                    numero_documento: $numeroVenta,
+                    detallesLotes: $detallesLotes,
+                    opciones: [
+                        'referencia_tipo' => 'venta',
+                        'referencia_id' => null,  // Se establecerá con el venta_id si es necesario
+                        'observacion_extra' => [
+                            'cantidad_solicitada' => $cantidad,
+                            'unidad_venta_id' => $unidadVentaId,
+                            'conversion_aplicada' => $conversionAplicada,
+                            'factor_conversion' => $factorConversion,
+                        ]
+                    ]
+                );
+
+                Log::info('✅ [VentaDistribucionService] Movimiento agrupado registrado', [
+                    'venta' => $numeroVenta,
+                    'producto_id' => $productoId,
+                    'movimiento_id' => $movimiento->id,
+                    'cantidad_lotes' => count($detallesLotes),
+                ]);
+
+                $movimientos[] = $movimiento;
             }
 
             Log::info('✅ [VentaDistribucionService::consumirStock] Stock consumido exitosamente', [
@@ -333,14 +338,16 @@ class VentaDistribucionService
     }
 
     /**
-     * Devolver stock cuando se anula una venta
+     * ✅ REFACTORIZADO (2026-03-27): Devolver stock cuando se anula una venta con movimientos AGRUPADOS
      *
      * FLUJO:
-     * 1. Obtener movimientos de consumo de la venta
-     * 2. Para cada movimiento:
-     *    a. Restaurar cantidad en stock_productos
-     *    b. Registrar movimiento ENTRADA_AJUSTE inverso
-     * 3. Retornar resultado de devolución
+     * 1. Obtener movimientos de consumo de la venta (SALIDA_VENTA + CONSUMO_RESERVA)
+     * 2. Agrupar por producto
+     * 3. Para cada producto:
+     *    a. Recolectar detalles de todos los lotes
+     *    b. Restaurar cantidad en stock_productos para cada lote
+     *    c. Registrar UN SOLO movimiento ENTRADA_AJUSTE agrupado con detalles de lotes en JSON
+     * 4. Retornar resultado de devolución
      *
      * @param string $numeroVenta Referencia de la venta a devolver
      * @return array Resultado de devolución: ['success' => bool, 'cantidad_devuelta' => int, 'movimientos' => int, 'error' => string|null]
@@ -381,87 +388,100 @@ class VentaDistribucionService
                 $totalDevuelto = 0;
                 $movimientosCreados = 0;
 
-                foreach ($movimientos as $movimiento) {
-                    $stock = $movimiento->stockProducto;
-                    $cantidadADevolver = abs($movimiento->cantidad);
+                // ✅ REFACTORIZADO (2026-03-27): Agrupar movimientos por producto
+                $movimientosPorProducto = $movimientos->groupBy(function ($mov) {
+                    return $mov->stockProducto->producto_id;
+                });
 
-                    // Valores ANTES de devolver
-                    $cantidadAnterior = $stock->cantidad;
-                    $cantidadDisponibleAnterior = $stock->cantidad_disponible;
+                foreach ($movimientosPorProducto as $productoId => $productosMovimientos) {
+                    $detallesLotes = [];
+                    $cantidadTotalADevolver = 0;
+                    $almacenId = auth()->user()?->empresa?->almacen_id ?? 1;
 
-                    Log::debug('🔄 [VentaDistribucionService] ANTES de devolver', [
-                        'venta' => $numeroVenta,
-                        'stock_producto_id' => $stock->id,
-                        'lote' => $stock->lote,
-                        'cantidad_a_devolver' => $cantidadADevolver,
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                    ]);
+                    foreach ($productosMovimientos as $movimiento) {
+                        $stock = $movimiento->stockProducto;
+                        $cantidadADevolver = abs($movimiento->cantidad);
 
-                    // Restaurar stock usando UPDATE atómico
-                    $affected = DB::table('stock_productos')
-                        ->where('id', $stock->id)
-                        ->update([
-                            'cantidad' => DB::raw("cantidad + " . (int) $cantidadADevolver),
-                            'cantidad_disponible' => DB::raw("cantidad_disponible + " . (int) $cantidadADevolver),
-                            'fecha_actualizacion' => DB::raw('CURRENT_TIMESTAMP'),
+                        // Valores ANTES de devolver
+                        $cantidadAnterior = $stock->cantidad;
+                        $cantidadDisponibleAnterior = $stock->cantidad_disponible;
+                        $cantidadReservadaAnterior = $stock->cantidad_reservada;
+
+                        Log::debug('🔄 [VentaDistribucionService] ANTES de devolver', [
+                            'venta' => $numeroVenta,
+                            'stock_producto_id' => $stock->id,
+                            'lote' => $stock->lote,
+                            'cantidad_a_devolver' => $cantidadADevolver,
+                            'cantidad_anterior' => $cantidadAnterior,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                         ]);
 
-                    if ($affected === 0) {
-                        throw new Exception("Error al restaurar stock para stock_producto_id {$stock->id}");
-                    }
+                        // Restaurar stock usando UPDATE atómico
+                        $affected = DB::table('stock_productos')
+                            ->where('id', $stock->id)
+                            ->update([
+                                'cantidad' => DB::raw("cantidad + " . (int) $cantidadADevolver),
+                                'cantidad_disponible' => DB::raw("cantidad_disponible + " . (int) $cantidadADevolver),
+                                'fecha_actualizacion' => DB::raw('CURRENT_TIMESTAMP'),
+                            ]);
 
-                    // Recargar stock para obtener valores actualizados
-                    $stock->refresh();
-                    $cantidadPosterior = $stock->cantidad;
-                    $cantidadDisponiblePosterior = $stock->cantidad_disponible;
+                        if ($affected === 0) {
+                            throw new Exception("Error al restaurar stock para stock_producto_id {$stock->id}");
+                        }
 
-                    Log::debug('✅ [VentaDistribucionService] DESPUÉS de devolver', [
-                        'venta' => $numeroVenta,
-                        'stock_producto_id' => $stock->id,
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $cantidadPosterior,
-                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                        'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
-                    ]);
+                        // Recargar stock para obtener valores actualizados
+                        $stock->refresh();
+                        $cantidadPosterior = $stock->cantidad;
+                        $cantidadDisponiblePosterior = $stock->cantidad_disponible;
+                        $cantidadReservadaPosterior = $stock->cantidad_reservada;
 
-                    // Registrar movimiento de devolución ENTRADA_AJUSTE
-                    MovimientoInventario::create([
-                        'stock_producto_id' => $stock->id,
-                        'cantidad' => $cantidadADevolver,  // ← POSITIVO (entrada)
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $cantidadPosterior,
-                        // ✅ NUEVO (2026-03-26): Registrar en columnas específicas también
-                        'cantidad_total_anterior' => $cantidadAnterior,
-                        'cantidad_total_posterior' => $cantidadPosterior,
-                        'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                        'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
-                        'tipo' => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                        'numero_documento' => $numeroVenta . '-DEV',
-                        'observacion' => json_encode([
-                            'evento' => 'Devolución de stock por anulación de venta',
-                            'venta_numero' => $numeroVenta,
-                            'producto_id' => $stock->producto_id,
-                            'lote' => $stock->lote,
+                        Log::debug('✅ [VentaDistribucionService] DESPUÉS de devolver', [
+                            'venta' => $numeroVenta,
+                            'stock_producto_id' => $stock->id,
                             'cantidad_anterior' => $cantidadAnterior,
                             'cantidad_posterior' => $cantidadPosterior,
                             'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
                             'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                        ]);
+
+                        // ✅ NUEVO: Recolectar detalle de este lote
+                        $detallesLotes[] = [
+                            'stock_producto_id' => $stock->id,
+                            'lote' => $stock->lote,
+                            'cantidad' => $cantidadADevolver,
                             'cantidad_total_anterior' => $cantidadAnterior,
                             'cantidad_total_posterior' => $cantidadPosterior,
-                        ]),
-                        'fecha' => now(),
-                        'user_id' => Auth::id() ?? 1,
-                    ]);
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                        ];
 
-                    Log::info('✅ [VentaDistribucionService] Devolución registrada', [
+                        $totalDevuelto += $cantidadADevolver;
+                        $cantidadTotalADevolver += $cantidadADevolver;
+                    }
+
+                    // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento agrupado para este producto
+                    $movimientoDevolucion = $this->movimientoService->registrarMovimientoAgrupado(
+                        producto_id: $productoId,
+                        almacen_id: $almacenId,
+                        tipo: MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                        cantidad: $cantidadTotalADevolver,  // Positivo para entrada/devolución
+                        numero_documento: $numeroVenta . '-DEV',
+                        detallesLotes: $detallesLotes,
+                        opciones: [
+                            'referencia_tipo' => 'venta_devolucion',
+                            'referencia_id' => null,
+                        ]
+                    );
+
+                    Log::info('✅ [VentaDistribucionService] Devolución agrupada registrada', [
                         'venta' => $numeroVenta,
-                        'stock_producto_id' => $stock->id,
-                        'lote' => $stock->lote,
-                        'cantidad_devuelta' => $cantidadADevolver,
+                        'producto_id' => $productoId,
+                        'movimiento_id' => $movimientoDevolucion->id,
+                        'cantidad_lotes' => count($detallesLotes),
                     ]);
 
-                    $totalDevuelto += $cantidadADevolver;
                     $movimientosCreados++;
                 }
 

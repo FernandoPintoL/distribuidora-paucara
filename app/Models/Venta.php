@@ -636,182 +636,193 @@ class Venta extends Model
      */
     public function revertirMovimientosStock(): void
     {
-        // ✅ CORREGIDO (2026-02-10): Buscar AMBOS tipos de movimiento
+        // ✅ REFACTORIZADO (2026-03-27): Revertir movimientos de venta AGRUPADOS
+        // Busca AMBOS tipos de movimiento:
         // - SALIDA_VENTA: Ventas creadas directamente (sin proforma)
         // - CONSUMO_RESERVA: Ventas convertidas desde proforma
-        // ✅ CORREGIDO (2026-02-11): Agregado lockForUpdate() para prevenir race conditions
+
         $movimientos = MovimientoInventario::where('numero_documento', $this->numero)
             ->whereIn('tipo', [
                 MovimientoInventario::TIPO_SALIDA_VENTA,
-                'CONSUMO_RESERVA'  // ✅ Agregar este tipo para proformas convertidas a venta
+                'CONSUMO_RESERVA'
             ])
-            ->lockForUpdate()  // ✅ Previene race conditions en actualizaciones concurrentes
+            ->lockForUpdate()
             ->get();
 
-        DB::beginTransaction();
+        if ($movimientos->isEmpty()) {
+            Log::warning('⚠️ No hay movimientos de venta para revertir', [
+                'venta' => $this->numero,
+            ]);
+            return;
+        }
 
-        try {
-            foreach ($movimientos as $movimiento) {
-                $stockProducto = $movimiento->stockProducto;
-                $cantidadADevolver = abs($movimiento->cantidad);
+        DB::transaction(function () use ($movimientos) {
+            // Agrupar movimientos por producto
+            $movimientosPorProducto = $movimientos->groupBy(function ($mov) {
+                // Si el movimiento tiene JSON con detalles_lotes (agregado)
+                // extraer producto_id del stock_producto del primer detalle
+                if ($mov->stockProducto) {
+                    return $mov->stockProducto->producto_id;
+                }
+                return null;
+            })->filter();
 
-                // ✅ CAPTURAR LOS 6 VALORES ANTES de actualizar
-                $cantidadAnterior = $stockProducto->cantidad;
-                $cantidadDisponibleAnterior = $stockProducto->cantidad_disponible;
-                $cantidadReservadaAnterior = $stockProducto->cantidad_reservada;
+            foreach ($movimientosPorProducto as $productoId => $productosMovimientos) {
+                $detallesLotes = [];
+                $cantidadTotalARevertir = 0;
+                $almacenId = null;
 
-                // ✅ DEBUG: Log ANTES de actualizar
-                Log::debug('🔄 [ANULAR VENTA - STOCK REVERT] ANTES DE ACTUALIZAR', [
-                    'venta' => $this->numero,
-                    'stock_producto_id' => $stockProducto->id,
-                    'producto_id' => $stockProducto->producto_id,
-                    'lote' => $stockProducto->lote,
-                    'cantidad_a_devolver' => $cantidadADevolver,
-                    'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
-                ]);
+                // Procesar todas los movimientos de este producto
+                foreach ($productosMovimientos as $movimiento) {
+                    $cantidadADevolver = abs($movimiento->cantidad);
+                    $stock = $movimiento->stockProducto;
+                    $almacenId = $stock->almacen_id;
 
-                // ✅ CORREGIDO: Actualizar stock usando UPDATE atómico
-                // Usar parámetros vinculados para evitar inyección SQL y asegurar que cantidad_disponible se actualiza
-                // ✅ CORREGIDO (2026-02-16): Cast a (float) para preservar decimales en productos fraccionados
-                $affected = DB::table('stock_productos')
-                    ->where('id', $stockProducto->id)
-                    ->update([
-                        'cantidad' => DB::raw("cantidad + " . (float)$cantidadADevolver),
-                        'cantidad_disponible' => DB::raw("cantidad_disponible + " . (float)$cantidadADevolver),
-                        'fecha_actualizacion' => DB::raw('CURRENT_TIMESTAMP'),
-                    ]);
+                    // ✅ Si el movimiento es AGRUPADO (tiene detalles_lotes en JSON)
+                    // extraer los detalles y revertirvarios lotes
+                    $observacionData = $movimiento->observacion ? json_decode($movimiento->observacion, true) : [];
 
-                if ($affected === 0) {
-                    throw new Exception("Error al revertir stock para stock_producto_id {$stockProducto->id}");
+                    if (!empty($observacionData['detalles_lotes'])) {
+                        // Movimiento AGRUPADO: procesar cada lote del JSON
+                        foreach ($observacionData['detalles_lotes'] as $detalleJson) {
+                            $stock_id = $detalleJson['stock_producto_id'] ?? null;
+                            $stockLote = \App\Models\StockProducto::find($stock_id);
+
+                            if (!$stockLote) {
+                                Log::warning('Stock producto no encontrado al revertir', [
+                                    'stock_producto_id' => $stock_id,
+                                    'venta' => $this->numero,
+                                ]);
+                                continue;
+                            }
+
+                            $cantidadLote = abs($detalleJson['cantidad'] ?? 0);
+                            $cantidadAnterior = (float) ($detalleJson['cantidad_total_anterior'] ?? 0);
+                            $cantidadDisponibleAnterior = (float) ($detalleJson['cantidad_disponible_anterior'] ?? 0);
+                            $cantidadReservadaAnterior = (float) ($detalleJson['cantidad_reservada_anterior'] ?? 0);
+
+                            // Restaurar stock: incrementar cantidad y cantidad_disponible
+                            $stockLote->increment('cantidad', $cantidadLote);
+                            $stockLote->increment('cantidad_disponible', $cantidadLote);
+
+                            // Recargar para obtener DESPUÉS
+                            $stockLote->refresh();
+                            $cantidadPosterior = (float) $stockLote->cantidad;
+                            $cantidadDisponiblePosterior = (float) $stockLote->cantidad_disponible;
+                            $cantidadReservadaPosterior = (float) $stockLote->cantidad_reservada;
+
+                            // Agregar detalle para movimiento agrupado de reversión
+                            $detallesLotes[] = [
+                                'stock_producto_id' => $stockLote->id,
+                                'lote' => $stockLote->lote,
+                                'cantidad' => $cantidadLote,  // Positivo: entrada (reversión)
+                                'cantidad_total_anterior' => $cantidadAnterior,
+                                'cantidad_total_posterior' => $cantidadPosterior,
+                                'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                                'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                            ];
+
+                            $cantidadTotalARevertir += $cantidadLote;
+
+                            // Eliminar lote si queda en 0
+                            if ($cantidadPosterior <= 0) {
+                                Log::info('Eliminando lote por anulación de venta', [
+                                    'venta' => $this->numero,
+                                    'stock_producto_id' => $stockLote->id,
+                                    'producto_id' => $stockLote->producto_id,
+                                    'lote' => $stockLote->lote,
+                                ]);
+
+                                // Eliminar movimientos asociados primero (FK constraint)
+                                \App\Models\MovimientoInventario::where('stock_producto_id', $stockLote->id)
+                                    ->forceDelete();
+
+                                $stockLote->forceDelete();
+                            }
+                        }
+                    } else {
+                        // Movimiento ANTIGUO (per-lote): procesar directamente
+                        $cantidadAnterior = (float) $stock->cantidad;
+                        $cantidadDisponibleAnterior = (float) $stock->cantidad_disponible;
+                        $cantidadReservadaAnterior = (float) $stock->cantidad_reservada;
+
+                        // Restaurar stock
+                        $stock->increment('cantidad', $cantidadADevolver);
+                        $stock->increment('cantidad_disponible', $cantidadADevolver);
+
+                        // Recargar
+                        $stock->refresh();
+                        $cantidadPosterior = (float) $stock->cantidad;
+                        $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
+                        $cantidadReservadaPosterior = (float) $stock->cantidad_reservada;
+
+                        $detallesLotes[] = [
+                            'stock_producto_id' => $stock->id,
+                            'lote' => $stock->lote,
+                            'cantidad' => $cantidadADevolver,
+                            'cantidad_total_anterior' => $cantidadAnterior,
+                            'cantidad_total_posterior' => $cantidadPosterior,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                        ];
+
+                        $cantidadTotalARevertir += $cantidadADevolver;
+
+                        if ($cantidadPosterior <= 0) {
+                            Log::info('Eliminando lote por anulación de venta', [
+                                'venta' => $this->numero,
+                                'stock_producto_id' => $stock->id,
+                            ]);
+
+                            \App\Models\MovimientoInventario::where('stock_producto_id', $stock->id)
+                                ->forceDelete();
+
+                            $stock->forceDelete();
+                        }
+                    }
                 }
 
-                // ✅ CORREGIDO: Obtener los valores REALES de BD después de actualizar
-                $stockActualizado = \App\Models\StockProducto::find($stockProducto->id);
-                $cantidadNueva = $stockActualizado->cantidad;
-                $cantidadDisponibleNueva = $stockActualizado->cantidad_disponible;
-                $cantidadReservadaNueva = $stockActualizado->cantidad_reservada;  // No cambia, pero lo capturamos para registro
+                // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento ENTRADA_AJUSTE agregado
+                if ($cantidadTotalARevertir > 0 && $almacenId) {
+                    $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                    $movimiento = $movimientoService->registrarMovimientoAgrupado(
+                        $productoId,
+                        $almacenId,
+                        MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                        $cantidadTotalARevertir,  // Positivo: entrada/reversión
+                        $this->numero . '-REV',
+                        $detallesLotes,
+                        [
+                            'referencia_tipo' => 'venta_anulacion',
+                            'referencia_id' => $this->id,
+                            'observacion_extra' => [
+                                'venta_numero' => $this->numero,
+                                'venta_id' => $this->id,
+                                'motivo' => 'Reversión por anulación de venta',
+                            ]
+                        ]
+                    );
 
-                // ✅ DEBUG: Log DESPUÉS de actualizar
-                Log::debug('✅ [ANULAR VENTA - STOCK REVERT] DESPUÉS DE ACTUALIZAR', [
-                    'venta' => $this->numero,
-                    'stock_producto_id' => $stockProducto->id,
-                    'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_nueva' => $cantidadNueva,
-                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                    'cantidad_disponible_nueva' => $cantidadDisponibleNueva,
-                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
-                    'cantidad_reservada_nueva' => $cantidadReservadaNueva,
-                    'diferencia_cantidad' => $cantidadNueva - $cantidadAnterior,
-                    'diferencia_disponible' => $cantidadDisponibleNueva - $cantidadDisponibleAnterior,
-                ]);
-
-                // ✅ CORREGIDO (2026-02-18): Preservar información de conversión en reversión
-                // Si el movimiento original tiene info de conversión, la reversión también debe tenerla
-                $datosReversion = [
-                    'stock_producto_id' => $stockProducto->id,
-                    'cantidad'          => $cantidadADevolver,
-                    'fecha'             => now(),
-                    'observacion'       => json_encode([
-                        'evento' => 'Reversión de venta anulada',
-                        'venta_numero' => $this->numero,
-                        'venta_id' => $this->id,
-                        'movimiento_original_id' => $movimiento->id,
-                        'cantidad_original' => $movimiento->cantidad,
-                        'cantidad_revertida' => $cantidadADevolver,
-                        'fue_conversion_aplicada' => $movimiento->es_conversion_aplicada,
-                    ]),
-                    'numero_documento'  => $this->numero . '-REV',
-                    'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_posterior' => $cantidadNueva,  // ✅ Ahora con valor real de BD
-                    // ✅ NUEVO (2026-03-27): Registrar los 6 campos para auditoría completa
-                    'cantidad_total_anterior' => (int) $cantidadAnterior,
-                    'cantidad_total_posterior' => (int) $cantidadNueva,
-                    'cantidad_disponible_anterior' => (int) $cantidadDisponibleAnterior,
-                    'cantidad_disponible_posterior' => (int) $cantidadDisponibleNueva,
-                    'cantidad_reservada_anterior' => (int) $cantidadReservadaAnterior,
-                    'cantidad_reservada_posterior' => (int) $cantidadReservadaNueva,
-                    'tipo'              => MovimientoInventario::TIPO_ENTRADA_AJUSTE,
-                    'user_id'           => Auth::id() ?? 1,  // ✅ CORREGIDO: Fallback a usuario 1 si no hay autenticación
-                ];
-
-                // ✅ NUEVO (2026-02-18): Si el movimiento original fue una conversión, preservar la información
-                if ($movimiento->es_conversion_aplicada) {
-                    $datosReversion['cantidad_solicitada'] = abs($movimiento->cantidad_solicitada ?? 0);
-                    $datosReversion['unidad_venta_id'] = $movimiento->unidad_venta_id;
-                    $datosReversion['unidad_base_id'] = $movimiento->unidad_base_id;
-                    $datosReversion['factor_conversion'] = $movimiento->factor_conversion;
-                    $datosReversion['es_conversion_aplicada'] = true;
-                }
-
-                MovimientoInventario::create($datosReversion);
-
-                // Si el lote queda en cantidad 0 o negativo, eliminarlo completamente (hard delete)
-                if ($cantidadNueva <= 0) {
-                    Log::info('Eliminando lote completamente por anulación de venta', [
+                    Log::info('✅ Movimiento de reversión agrupado registrado', [
                         'venta' => $this->numero,
-                        'stock_producto_id' => $stockProducto->id,
-                        'producto_id' => $stockProducto->producto_id,
-                        'lote' => $stockProducto->lote,
-                        'almacen_id' => $stockProducto->almacen_id,
-                        'cantidad_final' => $cantidadNueva,
+                        'producto_id' => $productoId,
+                        'movimiento_id' => $movimiento->id,
+                        'cantidad_lotes' => count($detallesLotes),
+                        'cantidad_total' => $cantidadTotalARevertir,
                     ]);
-
-                    // ✅ Primero eliminar los movimientos de inventario asociados (para evitar FK constraint)
-                    \App\Models\MovimientoInventario::where('stock_producto_id', $stockProducto->id)
-                        ->forceDelete();
-
-                    // ✅ Luego eliminar el stock_producto - Hard delete
-                    $stockProducto->forceDelete();
                 }
-
-                // ✅ MEJORADO (2026-02-18): Log más detallado incluyendo información de conversiones
-                $logData = [
-                    'venta' => $this->numero,
-                    'stock_producto_id' => $stockProducto->id,
-                    'producto_id' => $stockProducto->producto_id,
-                    'lote' => $stockProducto->lote,
-                    'cantidad_devuelta' => $cantidadADevolver,
-                    'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_final' => $cantidadNueva,
-                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                    'cantidad_disponible_final' => $cantidadDisponibleNueva,
-                    'movimiento_revercion_registrado' => $this->numero . '-REV',
-                ];
-
-                // ✅ NUEVO: Incluir datos de conversión si aplica
-                if ($movimiento->es_conversion_aplicada) {
-                    $logData['conversion_aplicada'] = true;
-                    $logData['cantidad_solicitada_original'] = $movimiento->cantidad_solicitada;
-                    $logData['unidad_venta_nombre'] = $movimiento->unidadVenta?->nombre ?? 'N/A';
-                    $logData['unidad_base_nombre'] = $movimiento->unidadBase?->nombre ?? 'N/A';
-                    $logData['factor_conversion'] = $movimiento->factor_conversion;
-                }
-
-                Log::info('✅ Stock revertido por anulación de venta', $logData);
             }
 
-            DB::commit();
-
-            Log::info('✅ Movimientos de venta revertidos exitosamente (incluye CONSUMO_RESERVA)', [
+            Log::info('✅ Movimientos de venta revertidos exitosamente (AGRUPADOS)', [
                 'venta' => $this->numero,
-                'movimientos_revertidos' => $movimientos->count(),
-                'tipos_revertidos' => $movimientos->pluck('tipo')->unique()->toArray(),
+                'movimientos_procesados' => $movimientos->count(),
+                'productos_revertidos' => count($movimientosPorProducto),
             ]);
-
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            Log::error('❌ Error al revertir movimientos de venta (CONSUMO_RESERVA + SALIDA_VENTA)', [
-                'venta' => $this->numero,
-                'error' => $e->getMessage(),
-                'movimientos_encontrados' => $movimientos->count() ?? 0,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        });
     }
 
     /**

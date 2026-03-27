@@ -99,110 +99,156 @@ class Compra extends Model
      */
     public function revertirMovimientosInventario(): void
     {
-        foreach ($this->detalles as $detalle) {
-            $producto = $detalle->producto;
-            // ✅ Usar el almacén de la compra, no el primero disponible
-            $almacen = $this->almacen;
+        // ✅ REFACTORIZADO (2026-03-27): Revertir movimientos de compra AGRUPADOS
+        // Agrupa detalles por producto_id y crea movimientos agregados
 
-            if (!$almacen) {
-                \Illuminate\Support\Facades\Log::warning('No hay almacén configurado para la compra', [
-                    'compra_id' => $this->id,
-                    'detalle_id' => $detalle->id,
-                    'almacen_id' => $this->almacen_id,
-                ]);
-                continue;
-            }
+        $almacen = $this->almacen;
 
-            try {
-                // ✅ Buscar o crear el stock para revertir
-                $stockProducto = \App\Models\StockProducto::where('producto_id', $producto->id)
-                    ->where('almacen_id', $almacen->id)
-                    ->where(function ($q) use ($detalle) {
-                        if ($detalle->lote) {
-                            $q->where('lote', $detalle->lote);
-                        } else {
-                            $q->whereNull('lote');
-                        }
-                    })
-                    ->first();
-
-                if (!$stockProducto) {
-                    // Si no existe, crearlo (caso raro, pero posible)
-                    $stockProducto = \App\Models\StockProducto::create([
-                        'producto_id' => $producto->id,
-                        'almacen_id' => $almacen->id,
-                        'cantidad' => 0,
-                        'cantidad_disponible' => 0,
-                        'cantidad_reservada' => 0,
-                        'lote' => $detalle->lote,
-                        'fecha_vencimiento' => $detalle->fecha_vencimiento,
-                        'fecha_actualizacion' => now(),
-                    ]);
-                }
-
-                // ✅ Actualizar directamente (sin validación de stock negativo)
-                $cantidadAnterior = $stockProducto->cantidad;
-                $cantidadNueva = $cantidadAnterior - (int)$detalle->cantidad;
-
-                \Illuminate\Support\Facades\DB::table('stock_productos')
-                    ->where('id', $stockProducto->id)
-                    ->update([
-                        'cantidad' => $cantidadNueva,
-                        'cantidad_disponible' => $cantidadNueva,
-                        'fecha_actualizacion' => now(),
-                    ]);
-
-                // ✅ Registrar movimiento de ajuste (sin validación)
-                \App\Models\MovimientoInventario::create([
-                    'stock_producto_id' => $stockProducto->id,
-                    'cantidad' => -(int)$detalle->cantidad,
-                    'fecha' => now(),
-                    'observacion' => "Reversión por anulación de compra #{$this->numero}",
-                    'numero_documento' => $this->numero,
-                    'cantidad_anterior' => $cantidadAnterior,
-                    'cantidad_posterior' => $cantidadNueva,
-                    'tipo' => \App\Models\MovimientoInventario::TIPO_SALIDA_AJUSTE,
-                    'user_id' => \Illuminate\Support\Facades\Auth::id(),
-                ]);
-
-                // ✅ Si el lote queda en cantidad 0 o negativo, eliminarlo completamente (hard delete)
-                if ($cantidadNueva <= 0) {
-                    \Illuminate\Support\Facades\Log::info('Eliminando lote completamente por anulación de compra', [
-                        'stock_producto_id' => $stockProducto->id,
-                        'producto_id' => $producto->id,
-                        'lote' => $detalle->lote,
-                        'almacen_id' => $almacen->id,
-                        'cantidad_final' => $cantidadNueva,
-                    ]);
-
-                    // ✅ Primero eliminar los movimientos de inventario asociados (para evitar FK constraint)
-                    \App\Models\MovimientoInventario::where('stock_producto_id', $stockProducto->id)
-                        ->forceDelete();
-
-                    // ✅ Luego eliminar el stock_producto
-                    $stockProducto->forceDelete();  // Hard delete - elimina completamente del registro
-                }
-
-                \Illuminate\Support\Facades\Log::info('Inventario revertido por anulación de compra', [
-                    'compra_id' => $this->id,
-                    'producto_id' => $producto->id,
-                    'cantidad' => $detalle->cantidad,
-                    'almacen_id' => $almacen->id,
-                    'lote' => $detalle->lote,
-                    'cantidad_final' => $cantidadNueva,
-                ]);
-
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error al revertir movimiento de inventario por compra', [
-                    'compra_id' => $this->id,
-                    'producto_id' => $producto->id,
-                    'lote' => $detalle->lote,
-                    'error' => $e->getMessage(),
-                ]);
-
-                throw $e;
-            }
+        if (!$almacen) {
+            \Illuminate\Support\Facades\Log::warning('No hay almacén configurado para la compra', [
+                'compra_id' => $this->id,
+                'almacen_id' => $this->almacen_id,
+            ]);
+            return;
         }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($almacen) {
+            // Agrupar detalles por producto_id
+            $detallesPorProducto = $this->detalles->groupBy('producto_id');
+
+            foreach ($detallesPorProducto as $productoId => $detallesProducto) {
+                $detallesLotes = [];
+                $cantidadTotalARevertir = 0;
+                $producto = $detallesProducto->first()->producto;
+
+                // Procesar cada detalle (lote) del producto
+                foreach ($detallesProducto as $detalle) {
+                    try {
+                        // Buscar o crear stock_producto para este lote específico
+                        $stockProducto = \App\Models\StockProducto::where('producto_id', $productoId)
+                            ->where('almacen_id', $almacen->id)
+                            ->where(function ($q) use ($detalle) {
+                                if ($detalle->lote) {
+                                    $q->where('lote', $detalle->lote);
+                                } else {
+                                    $q->whereNull('lote');
+                                }
+                            })
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$stockProducto) {
+                            // Si no existe, crearlo (caso raro)
+                            $stockProducto = \App\Models\StockProducto::create([
+                                'producto_id' => $productoId,
+                                'almacen_id' => $almacen->id,
+                                'cantidad' => 0,
+                                'cantidad_disponible' => 0,
+                                'cantidad_reservada' => 0,
+                                'lote' => $detalle->lote,
+                                'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                                'fecha_actualizacion' => now(),
+                            ]);
+                        }
+
+                        // Capturar ANTES de actualizar
+                        $cantidadAnterior = (float) $stockProducto->cantidad;
+                        $cantidadDisponibleAnterior = (float) $stockProducto->cantidad_disponible;
+                        $cantidadReservadaAnterior = (float) $stockProducto->cantidad_reservada;
+                        $cantidadARevertir = (int) $detalle->cantidad;
+
+                        // Revertir: decrementar cantidad (salida)
+                        $stockProducto->decrement('cantidad', $cantidadARevertir);
+                        $stockProducto->decrement('cantidad_disponible', $cantidadARevertir);
+
+                        // Recargar para obtener DESPUÉS
+                        $stockProducto->refresh();
+                        $cantidadPosterior = (float) $stockProducto->cantidad;
+                        $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
+                        $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
+
+                        // Guardar detalle por lote
+                        $detallesLotes[] = [
+                            'stock_producto_id' => $stockProducto->id,
+                            'lote' => $stockProducto->lote,
+                            'cantidad' => -$cantidadARevertir,  // Negativo: salida
+                            'cantidad_total_anterior' => $cantidadAnterior,
+                            'cantidad_total_posterior' => $cantidadPosterior,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                        ];
+
+                        $cantidadTotalARevertir += $cantidadARevertir;
+
+                        // Eliminar lote si queda en 0 o negativo
+                        if ($cantidadPosterior <= 0) {
+                            \Illuminate\Support\Facades\Log::info('Eliminando lote completamente por anulación de compra', [
+                                'stock_producto_id' => $stockProducto->id,
+                                'producto_id' => $productoId,
+                                'lote' => $detalle->lote,
+                                'almacen_id' => $almacen->id,
+                                'cantidad_final' => $cantidadPosterior,
+                            ]);
+
+                            // Eliminar movimientos primero (FK constraint)
+                            \App\Models\MovimientoInventario::where('stock_producto_id', $stockProducto->id)
+                                ->forceDelete();
+
+                            $stockProducto->forceDelete();
+                        }
+
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Error al revertir detalle de compra', [
+                            'compra_id' => $this->id,
+                            'producto_id' => $productoId,
+                            'detalle_id' => $detalle->id,
+                            'lote' => $detalle->lote,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        throw $e;
+                    }
+                }
+
+                // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento SALIDA_AJUSTE agregado
+                if ($cantidadTotalARevertir > 0) {
+                    $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                    $movimiento = $movimientoService->registrarMovimientoAgrupado(
+                        $productoId,
+                        $almacen->id,
+                        \App\Models\MovimientoInventario::TIPO_SALIDA_AJUSTE,
+                        -$cantidadTotalARevertir,  // Negativo: salida
+                        $this->numero,
+                        $detallesLotes,
+                        [
+                            'referencia_tipo' => 'compra_anulacion',
+                            'referencia_id' => $this->id,
+                            'observacion_extra' => [
+                                'compra_numero' => $this->numero,
+                                'compra_id' => $this->id,
+                                'motivo' => 'Reversión por anulación de compra',
+                            ]
+                        ]
+                    );
+
+                    \Illuminate\Support\Facades\Log::info('✅ Movimiento de reversión agrupado registrado para compra', [
+                        'compra' => $this->numero,
+                        'producto_id' => $productoId,
+                        'movimiento_id' => $movimiento->id,
+                        'cantidad_lotes' => count($detallesLotes),
+                        'cantidad_total' => $cantidadTotalARevertir,
+                    ]);
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::info('✅ Inventario revertido exitosamente por anulación de compra (AGRUPADO)', [
+                'compra_id' => $this->id,
+                'compra_numero' => $this->numero,
+                'productos_revertidos' => count($detallesPorProducto),
+            ]);
+        });
     }
 
     /**

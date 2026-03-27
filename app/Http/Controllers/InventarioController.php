@@ -22,7 +22,9 @@ use App\Models\TransferenciaInventario;
 use App\Models\User;
 use App\Models\Venta;
 use App\Models\Vehiculo;
+use App\Services\Ajuste\AjusteDistribucionService;
 use App\Services\ExcelExportService;
+use App\Services\Merma\MermaDistribucionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,10 +37,18 @@ use Inertia\Response;
 class InventarioController extends Controller
 {
     private ExcelExportService $excelExportService;
+    private AjusteDistribucionService $ajusteDistribucionService;
+    private MermaDistribucionService $mermaDistribucionService;
 
-    public function __construct(ExcelExportService $excelExportService)
+    public function __construct(
+        ExcelExportService $excelExportService,
+        AjusteDistribucionService $ajusteDistribucionService,
+        MermaDistribucionService $mermaDistribucionService
+    )
     {
         $this->excelExportService = $excelExportService;
+        $this->ajusteDistribucionService = $ajusteDistribucionService;
+        $this->mermaDistribucionService = $mermaDistribucionService;
     }
     /**
      * Generar número secuencial para ajuste de inventario
@@ -555,7 +565,8 @@ class InventarioController extends Controller
         if ($productoId && $productoId > 0) {
             $query->porProducto($productoId);
         } elseif ($productoBusqueda && ! empty($productoBusqueda)) {
-            $query->porProductoBusqueda($productoBusqueda);
+            // ✅ MODIFICADO (2026-03-27): Usar búsqueda con PRIORIDAD (ID primero, luego SKU)
+            $query->porProductoBusquedaConPrioridad($productoBusqueda);
         }
 
         // Filtrar por observaciones
@@ -813,7 +824,7 @@ class InventarioController extends Controller
                 'almacen_id'        => $almacenId,
                 // ✅ FIX: No preseleccionar producto por defecto - null para ambos
                 'producto_id'       => null,
-                'producto_busqueda' => null,
+                'producto_busqueda' => $productoBusqueda,  // ✅ FIXED (2026-03-27): Preservar búsqueda actual en navegación
                 'numero_documento'  => $numeroDocumento,
                 'observaciones'     => $observaciones,
                 'anulado'           => $anulado,
@@ -1181,10 +1192,13 @@ class InventarioController extends Controller
     }
 
     /**
-     * Método privado compartido para procesar ajustes de inventario
+     * ✅ REFACTORIZADO (2026-03-27): Método privado compartido para procesar ajustes AGRUPADOS
+     *
+     * Ahora usa AjusteDistribucionService para crear movimientos AGRUPADOS por producto
+     * En lugar de UN movimiento por lote, crea UN movimiento por producto
      *
      * @param array $ajustes Array de ajustes a procesar
-     * @return array Array de movimientos creados
+     * @return array Array de movimientos creados (AGRUPADOS por producto)
      * @throws \Exception Si hay error al procesar
      */
     private function procesarAjustesInventario(array $ajustes): array
@@ -1203,17 +1217,17 @@ class InventarioController extends Controller
 
             // ✅ NUEVO: Recolectar tipos de ajuste y observación general
             $tiposAjusteResumen = [];
-            $observacionGeneral = $ajustes[0]['observacion'] ?? 'Ajuste de inventario'; // ✅ Obtener observación del usuario
+            $observacionGeneral = $ajustes[0]['observacion'] ?? 'Ajuste de inventario';
 
             // Crear el registro maestro de AjusteInventario (sin número aún)
             $ajuste = AjusteInventario::create([
-                'numero' => 'TEMP',  // Temporal, se actualiza después de obtener el ID
+                'numero' => 'TEMP',
                 'almacen_id' => $almacenId,
                 'user_id' => auth()->id(),
-                'cantidad_entradas' => 0, // Se actualiza después
-                'cantidad_salidas' => 0,  // Se actualiza después
+                'cantidad_entradas' => 0,
+                'cantidad_salidas' => 0,
                 'cantidad_productos' => $cantidadProductos,
-                'observacion' => $observacionGeneral, // ✅ Guardar observación del usuario
+                'observacion' => $observacionGeneral,
                 'estado' => AjusteInventario::ESTADO_PROCESADO,
             ]);
 
@@ -1223,21 +1237,48 @@ class InventarioController extends Controller
             $numeroFinal = AjusteInventario::generarNumero($ajusteInventarioId);
             $ajuste->update(['numero' => $numeroFinal]);
 
+            Log::info('✅ [InventarioController] Ajuste maestro creado', [
+                'ajuste_id' => $ajusteInventarioId,
+                'ajuste_numero' => $numeroFinal,
+                'cantidad_detalles' => count($ajustes),
+            ]);
+
+            // ✅ REFACTORIZADO (2026-03-27): Usar servicio centralizado para registrar movimientos AGRUPADOS
+            try {
+                $movimientos = $this->ajusteDistribucionService->registrarAjustesAgrupados(
+                    ajustes: $ajustes,
+                    numeroAjuste: $numeroFinal,
+                    almacenId: $almacenId,
+                    usuarioId: auth()->id() ?? 1
+                );
+
+                Log::info('✅ [InventarioController] Movimientos agrupados registrados', [
+                    'ajuste_numero' => $numeroFinal,
+                    'movimientos_creados' => count($movimientos),
+                    'nota' => 'Movimientos AGRUPADOS por producto (no por lote)',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('❌ [InventarioController] Error al registrar movimientos agrupados', [
+                    'ajuste_numero' => $numeroFinal,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+
+            // ✅ Asociar movimientos al ajuste maestro y contar entradas/salidas
+            foreach ($movimientos as $movimiento) {
+                $movimiento->update(['ajuste_inventario_id' => $ajusteInventarioId]);
+
+                // Contar entradas y salidas según tipo de movimiento
+                if ($movimiento->tipo === MovimientoInventario::TIPO_ENTRADA_AJUSTE) {
+                    $cantidadEntradas += abs($movimiento->cantidad);
+                } else {
+                    $cantidadSalidas += abs($movimiento->cantidad);
+                }
+            }
+
+            // ✅ Recolectar tipos de ajuste desde los detalles originales para observación
             foreach ($ajustes as $ajusteItem) {
-                $stockProducto = StockProducto::findOrFail($ajusteItem['stock_producto_id']);
-                $observacion   = $ajusteItem['observacion'] ?? 'Ajuste masivo de inventario';
-
-                // Generar número de documento único para este ajuste
-                $numeroDocumento = $this->generarNumeroAjuste();
-
-                // Siempre procesar el ajuste, incluso si la cantidad no ha cambiado
-                // Esto permite registrar el tipo de ajuste y la observación
-                $diferencia = $ajusteItem['nueva_cantidad'] - $stockProducto->cantidad;
-                $tipo       = $diferencia >= 0 ?
-                MovimientoInventario::TIPO_ENTRADA_AJUSTE :
-                MovimientoInventario::TIPO_SALIDA_AJUSTE;
-
-                // ✅ NUEVO: Obtener nombre del tipo de ajuste si existe
                 $tipoAjusteInventarioId = $ajusteItem['tipo_ajuste_inventario_id'] ?? null;
                 if ($tipoAjusteInventarioId) {
                     $tipoAjuste = TipoAjusteInventario::find($tipoAjusteInventarioId);
@@ -1245,42 +1286,25 @@ class InventarioController extends Controller
                         $tiposAjusteResumen[] = $tipoAjuste->label;
                     }
                 }
-
-                // Registrar el movimiento con el tipo de ajuste y número de documento
-                $movimiento = MovimientoInventario::registrar(
-                    $stockProducto,
-                    $diferencia,
-                    $tipo,
-                    $observacion,
-                    $numeroDocumento,
-                    null,
-                    $tipoAjusteInventarioId  // ✅ CORREGIDO: usar tipo_ajuste_inventario_id
-                );
-
-                // Asociar el movimiento al ajuste maestro
-                $movimiento->update(['ajuste_inventario_id' => $ajusteInventarioId]);
-
-                // Contar entradas y salidas
-                if ($diferencia >= 0) {
-                    $cantidadEntradas += $diferencia;
-                } else {
-                    $cantidadSalidas += abs($diferencia);
-                }
-
-                $movimientos[] = $movimiento;
             }
 
-            // ✅ ACTUALIZADO: Construir observación con observación del usuario + tipos de ajuste
-            $observacionFinal = $observacionGeneral;  // ✅ Mantener observación del usuario como base
+            // Construir observación final
+            $observacionFinal = $observacionGeneral;
             if (!empty($tiposAjusteResumen)) {
-                $observacionFinal .= ' | Tipos: ' . implode(', ', $tiposAjusteResumen);  // ✅ Agregar tipos
+                $observacionFinal .= ' | Tipos: ' . implode(', ', $tiposAjusteResumen);
             }
 
-            // Actualizar el ajuste maestro con los totales reales Y la observación completa
+            // Actualizar el ajuste maestro con los totales reales
             $ajuste->update([
                 'cantidad_entradas' => $cantidadEntradas,
                 'cantidad_salidas' => $cantidadSalidas,
-                'observacion' => $observacionFinal,  // ✅ Observación completa: usuario + tipos
+                'observacion' => $observacionFinal,
+            ]);
+
+            Log::info('✅ [InventarioController] Ajuste finalizado', [
+                'ajuste_numero' => $numeroFinal,
+                'cantidad_entradas' => $cantidadEntradas,
+                'cantidad_salidas' => $cantidadSalidas,
             ]);
         });
 
@@ -1599,114 +1623,35 @@ class InventarioController extends Controller
                 'almacen'  => $data['almacen_id'],
             ]);
 
-            // PASO 2: Procesar cada producto
-            $movimientosRegistrados = [];
-            $costTotalMerma         = 0;
+            // ✅ REFACTORIZADO (2026-03-27): Usar servicio centralizado para registrar mermas AGRUPADAS
+            try {
+                $resultado = $this->mermaDistribucionService->registrarMermasAgrupadas(
+                    productos: $data['productos'],
+                    numeroMerma: 'TEMP',  // Se actualizará después
+                    almacenId: $data['almacen_id'],
+                    motivo: $data['motivo'],
+                    usuarioId: auth()->id() ?? 1
+                );
 
-            foreach ($data['productos'] as $productoData) {
-                // Encontrar el stock del producto - Preferir stock_producto_id si está especificado
-                $stockProductos = null;
-                $stockProductoPrincipal = null;
+                $movimientosRegistrados = $resultado['movimientos'];
+                $costTotalMerma = $resultado['costo_total'];
 
-                if (! empty($productoData['stock_producto_id'])) {
-                    // Si se especifica un lote específico, usar ese
-                    $stockProductoPrincipal = StockProducto::where('id', $productoData['stock_producto_id'])
-                        ->where('almacen_id', $data['almacen_id'])
-                        ->first();
+                Log::info('✅ [REGISTRAR MERMA] Movimientos agrupados registrados', [
+                    'merma_id'         => $mermaInventario->id,
+                    'movimientos'      => count($movimientosRegistrados),
+                    'costo_total'      => $costTotalMerma,
+                    'nota'             => 'Movimientos AGRUPADOS por producto (no por lote)',
+                ]);
 
-                    if (! $stockProductoPrincipal) {
-                        DB::rollBack();
-                        Log::warning('⚠️ [REGISTRAR MERMA] Lote no encontrado', [
-                            'stock_producto_id' => $productoData['stock_producto_id'],
-                            'almacen_id'        => $data['almacen_id'],
-                        ]);
-                        return ApiResponse::error(
-                            "Lote no encontrado para el almacén seleccionado",
-                            422
-                        );
-                    }
-                    $stockProductos = collect([$stockProductoPrincipal]);
-                } else {
-                    // Si NO se especifica lote, buscar TODOS los lotes del producto en el almacén (FIFO)
-                    $stockProductos = StockProducto::where('producto_id', $productoData['producto_id'])
-                        ->where('almacen_id', $data['almacen_id'])
-                        ->orderBy('id', 'asc') // FIFO: primero creado (menor ID), primero usado
-                        ->get();
-
-                    if ($stockProductos->isEmpty()) {
-                        DB::rollBack();
-                        Log::warning('⚠️ [REGISTRAR MERMA] Stock no encontrado', [
-                            'producto_id' => $productoData['producto_id'],
-                            'almacen_id'  => $data['almacen_id'],
-                        ]);
-                        return ApiResponse::error(
-                            "Stock no encontrado para producto ID {$productoData['producto_id']} en almacén seleccionado",
-                            422
-                        );
-                    }
-
-                    $stockProductoPrincipal = $stockProductos->first();
-                }
-
-                // Validar cantidad disponible - sumar todos los lotes
-                $stockTotalDisponible = $stockProductos->sum('cantidad');
-
-                if ($stockTotalDisponible < $productoData['cantidad']) {
-                    DB::rollBack();
-                    Log::warning('⚠️ [REGISTRAR MERMA] Stock insuficiente', [
-                        'producto_id' => $productoData['producto_id'],
-                        'disponible'  => $stockTotalDisponible,
-                        'solicitado'  => $productoData['cantidad'],
-                    ]);
-                    return ApiResponse::error(
-                        "Stock insuficiente para {$stockProductoPrincipal->producto->nombre}. Disponible: {$stockTotalDisponible}",
-                        422
-                    );
-                }
-
-                // Distribuir la merma entre los lotes usando FIFO
-                $cantidadFaltante = $productoData['cantidad'];
-                $costoUnitario = $productoData['costo_unitario'] ?? 0;
-
-                foreach ($stockProductos as $lote) {
-                    if ($cantidadFaltante <= 0) break;
-
-                    $cantidadAMermar = min($cantidadFaltante, $lote->cantidad);
-                    $cantidadFaltante -= $cantidadAMermar;
-
-                    // Registrar movimiento de inventario para este lote
-                    $movimiento = MovimientoInventario::registrar(
-                        $lote,
-                        -$cantidadAMermar,
-                        MovimientoInventario::TIPO_SALIDA_MERMA,
-                        $data['motivo'],
-                        'TEMP', // Se actualiza después
-                        auth()->id(),
-                        null,
-                        null,
-                        null,
-                        'MERMA',
-                        null
-                    );
-
-                    // Vincular movimiento con la merma maestra
-                    $movimiento->update([
-                        'merma_inventario_id' => $mermaInventario->id,
-                        'numero_documento'    => 'TEMP', // Se actualiza después
-                    ]);
-
-                    $movimientosRegistrados[] = $movimiento;
-
-                    // Sumar costo total de merma
-                    $costTotalMerma += ($cantidadAMermar * $costoUnitario);
-
-                    Log::info('✅ [REGISTRAR MERMA] Movimiento registrado por lote', [
-                        'producto_id'         => $productoData['producto_id'],
-                        'lote_id'             => $lote->id,
-                        'cantidad'            => $cantidadAMermar,
-                        'merma_inventario_id' => $mermaInventario->id,
-                    ]);
-                }
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('❌ [REGISTRAR MERMA] Error al registrar mermas agrupadas', [
+                    'error' => $e->getMessage(),
+                ]);
+                return ApiResponse::error(
+                    'Error al registrar merma: ' . $e->getMessage(),
+                    422
+                );
             }
 
             // PASO 4: Actualizar número de la merma usando el ID
@@ -1716,9 +1661,13 @@ class InventarioController extends Controller
                 'costo_total' => $costTotalMerma,
             ]);
 
-            // PASO 5: Actualizar movimientos con número final
-            MovimientoInventario::where('merma_inventario_id', $mermaInventario->id)
-                ->update(['numero_documento' => $numeroMerma]);
+            // PASO 5: ✅ Asociar movimientos con merma maestro y actualizar número_documento
+            foreach ($movimientosRegistrados as $movimiento) {
+                $movimiento->update([
+                    'merma_inventario_id' => $mermaInventario->id,
+                    'numero_documento'    => $numeroMerma,
+                ]);
+            }
 
             DB::commit();
 

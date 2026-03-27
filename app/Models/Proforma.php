@@ -370,13 +370,6 @@ class Proforma extends Model
             return false;
         }
 
-        $this->update([
-            'estado_proforma_id' => 3, // ID = 3 para RECHAZADA
-            'usuario_aprobador_id' => $usuario->id,
-            'fecha_aprobacion' => now(),
-            'observaciones_rechazo' => $motivo,
-        ]);
-
         // ✅ LIBERAR RESERVAS DE STOCK cuando se rechaza
         // Usar el servicio de distribución para liberar todas las reservas de forma consistente
         try {
@@ -404,6 +397,16 @@ class Proforma extends Model
             ]);
             // No lanzar excepción: solo registrar en log para no bloquear el rechazo
         }
+
+        // ✅ REFACTORIZADO (2026-03-27): Usar updateQuietly() para NO disparar el observer
+        // Las reservas ya fueron liberadas explícitamente arriba (línea anterior)
+        // Esto previene que el observer intente liberar nuevamente con método antiguo
+        $this->updateQuietly([
+            'estado_proforma_id' => 3, // ID = 3 para RECHAZADA
+            'usuario_aprobador_id' => $usuario->id,
+            'fecha_aprobacion' => now(),
+            'observaciones_rechazo' => $motivo,
+        ]);
 
         // ✅ Disparar evento para notificaciones
         try {
@@ -446,7 +449,10 @@ class Proforma extends Model
             return false;
         }
 
-        $this->update(['estado_proforma_id' => 4]); // ID = 4 para CONVERTIDA
+        // ✅ REFACTORIZADO (2026-03-27): Usar updateQuietly() para NO disparar el observer
+        // El consumo de reservas se maneja explícitamente en el controller/service
+        // Esto previene doble consumo si el observer intenta consumir nuevamente
+        $this->updateQuietly(['estado_proforma_id' => 4]); // ID = 4 para CONVERTIDA
 
         return true;
     }

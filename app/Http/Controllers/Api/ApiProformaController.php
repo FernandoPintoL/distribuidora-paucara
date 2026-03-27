@@ -3077,10 +3077,19 @@ class ApiProformaController extends Controller
                 }
 
                 try {
-                    $proforma->consumirReservas($numeroVenta);
-                    Log::info('✅ [ApiProformaController::convertirAVenta] Reservas consumidas exitosamente', [
+                    // ✅ REFACTORIZADO (2026-03-27): Usar servicio centralizado para consumir reservas agrupadas
+                    $reservaService = new ReservaDistribucionService();
+                    $resultadoConsumo = $reservaService->consumirReservasAgrupadas($proforma, $numeroVenta);
+
+                    if (!$resultadoConsumo['success']) {
+                        throw new \Exception($resultadoConsumo['error'] ?? 'Error desconocido al consumir reservas');
+                    }
+
+                    Log::info('✅ [ApiProformaController::convertirAVenta] Reservas consumidas exitosamente (AGRUPADAS)', [
                         'proforma_id'                    => $proforma->id,
                         'numero_venta'                   => $numeroVenta,
+                        'cantidad_consumida'             => $resultadoConsumo['cantidad_consumida'],
+                        'reservas_consumidas'            => $resultadoConsumo['reservas_consumidas'],
                         'cantidad_detalles_con_reservas' => count($reservasDetalles),
                     ]);
                 } catch (\Exception $e) {

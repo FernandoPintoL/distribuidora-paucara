@@ -12,6 +12,7 @@ use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\TipoPago;
+use App\Services\Compra\CompraDistribucionService;
 use App\Services\DetectarCambiosPrecioService;
 use App\Services\ExcelExportService;
 use App\Services\ImpresionService;
@@ -26,11 +27,17 @@ class CompraController extends Controller
 {
     private ExcelExportService $excelExportService;
     private ImpresionService $impresionService;
+    private CompraDistribucionService $compraDistribucionService;
 
-    public function __construct(ExcelExportService $excelExportService, ImpresionService $impresionService)
+    public function __construct(
+        ExcelExportService $excelExportService,
+        ImpresionService $impresionService,
+        CompraDistribucionService $compraDistribucionService
+    )
     {
         $this->excelExportService = $excelExportService;
         $this->impresionService   = $impresionService;
+        $this->compraDistribucionService = $compraDistribucionService;
 
         $this->middleware('permission:compras.index')->only('index');
         $this->middleware('permission:compras.show')->only('show');
@@ -527,10 +534,44 @@ class CompraController extends Controller
                     'cantidad_guardada' => $detalleCompra->cantidad,
                     'cantidad_tipo' => gettype($detalleCompra->cantidad),
                 ]);
+            }
 
-                // ✅ Registrar inventario SOLO si el estado es APROBADO o FACTURADO
-                if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
-                    $this->registrarEntradaInventario($detalleCompra, $compra, $data['almacen_id'] ?? null);
+            // ✅ REFACTORIZADO (2026-03-27): Registrar inventario AGRUPADO después de crear todos los detalles
+            if ($compra->estado_documento_id == $estadoAprobado?->id || $compra->estado_documento_id == $estadoRecibido?->id) {
+                $detallesParaInventario = $compra->detalles->map(function ($detalle) {
+                    return [
+                        'producto_id' => $detalle->producto_id,
+                        'cantidad' => (float) $detalle->cantidad,
+                        'lote' => $detalle->lote,
+                        'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                    ];
+                })->toArray();
+
+                Log::info("Registrando inventario en store() - Usando CompraDistribucionService", [
+                    'compra_numero'     => $compra->numero,
+                    'cantidad_detalles' => count($detallesParaInventario),
+                    'almacen_id'        => $data['almacen_id'] ?? null,
+                ]);
+
+                try {
+                    $movimientosStock = $this->compraDistribucionService->registrarEntradaCompra(
+                        detalles: $detallesParaInventario,
+                        numeroCompra: $compra->numero,
+                        almacenId: (int)($data['almacen_id'] ?? 1),
+                        usuarioId: Auth::id() ?? 1
+                    );
+
+                    Log::info("Movimientos de inventario registrados en store()", [
+                        'compra_numero'        => $compra->numero,
+                        'movimientos_creados'  => count($movimientosStock),
+                        'nota'                 => 'Movimientos AGRUPADOS por producto (no por lote)',
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('❌ Error al registrar inventario en store()', [
+                        'compra_numero' => $compra->numero,
+                        'error'         => $e->getMessage(),
+                    ]);
+                    throw $e;
                 }
             }
 
@@ -872,15 +913,36 @@ class CompraController extends Controller
                     'escenario'      => $escenario,
                 ]);
 
-                // 1️⃣ Registrar inventario (CON DETALLES NUEVOS si fueron modificados, CON DETALLES EXISTENTES si no)
-                foreach ($compra->detalles as $detalle) {
-                    Log::info("Registrando inventario - Detalle", [
-                        'producto_id'     => $detalle->producto_id,
-                        'cantidad'        => $detalle->cantidad,
-                        'precio_unitario' => $detalle->precio_unitario,
-                    ]);
-                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
-                }
+                // 1️⃣ ✅ REFACTORIZADO (2026-03-27): Registrar inventario con servicio centralizado AGRUPADO
+                // En lugar de registrar UN movimiento por detalle,
+                // ahora registra UN movimiento por producto con detalles de todos los lotes en JSON
+                $detallesParaInventario = $compra->detalles->map(function ($detalle) {
+                    return [
+                        'producto_id' => $detalle->producto_id,
+                        'cantidad' => (float) $detalle->cantidad,
+                        'lote' => $detalle->lote,
+                        'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                    ];
+                })->toArray();
+
+                Log::info("Registrando inventario - Usando CompraDistribucionService", [
+                    'compra_numero'     => $compra->numero,
+                    'cantidad_detalles' => count($detallesParaInventario),
+                    'almacen_id'        => $data['almacen_id'] ?? $compra->almacen_id,
+                ]);
+
+                $movimientosStock = $this->compraDistribucionService->registrarEntradaCompra(
+                    detalles: $detallesParaInventario,
+                    numeroCompra: $compra->numero,
+                    almacenId: (int)($data['almacen_id'] ?? $compra->almacen_id),
+                    usuarioId: Auth::id() ?? 1
+                );
+
+                Log::info("Movimientos de inventario registrados", [
+                    'compra_numero'        => $compra->numero,
+                    'movimientos_creados'  => count($movimientosStock),
+                    'nota'                 => 'Movimientos AGRUPADOS por producto (no por lote)',
+                ]);
 
                 // 2️⃣ ✨ NUEVO: Registrar CuentaPorPagar si es CRÉDITO
                 $compra->load('tipoPago');
@@ -919,11 +981,33 @@ class CompraController extends Controller
                 ]);
             }
 
-            // ✅ SEXTO: Si FACTURADO, registrar inventario con detalles nuevos
+            // ✅ SEXTO: Si FACTURADO, registrar inventario con detalles nuevos (también AGRUPADO)
             if ($cambioARecibido && $compra->detalles()->exists()) {
-                foreach ($compra->detalles as $detalle) {
-                    $this->registrarEntradaInventario($detalle, $compra, $data['almacen_id'] ?? $compra->almacen_id);
-                }
+                $detallesParaInventario = $compra->detalles->map(function ($detalle) {
+                    return [
+                        'producto_id' => $detalle->producto_id,
+                        'cantidad' => (float) $detalle->cantidad,
+                        'lote' => $detalle->lote,
+                        'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                    ];
+                })->toArray();
+
+                Log::info("Registrando inventario al cambiar a FACTURADO", [
+                    'compra_numero'     => $compra->numero,
+                    'cantidad_detalles' => count($detallesParaInventario),
+                ]);
+
+                $movimientosStock = $this->compraDistribucionService->registrarEntradaCompra(
+                    detalles: $detallesParaInventario,
+                    numeroCompra: $compra->numero,
+                    almacenId: (int)($data['almacen_id'] ?? $compra->almacen_id),
+                    usuarioId: Auth::id() ?? 1
+                );
+
+                Log::info("Inventario registrado (FACTURADO)", [
+                    'compra_numero'       => $compra->numero,
+                    'movimientos_creados' => count($movimientosStock),
+                ]);
             }
 
             // ✅ SÉPTIMO (NUEVO 2026-03-25): Si ya está APROBADO y cambió detalle (sin cambio de estado)
@@ -1188,51 +1272,40 @@ class CompraController extends Controller
     }
 
     /**
-     * Revertir inventario de detalles antes de modificarlos
+     * ✅ REFACTORIZADO (2026-03-27): Revertir inventario de detalles antes de modificarlos
+     * Ahora usa CompraDistribucionService para generar movimientos AGRUPADOS
      */
     private function revertirInventarioDetalles(Compra $compra): void
     {
-        foreach ($compra->detalles as $detalle) {
-            $producto         = $detalle->producto;
-            $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
+        try {
+            Log::info('🔄 [CompraController] Revirtiendo inventario de compra', [
+                'compra_numero' => $compra->numero,
+                'detalles_count' => $compra->detalles->count(),
+            ]);
 
-            if (! $almacenPrincipal) {
-                Log::warning('No hay almacén disponible para revertir inventario', [
-                    'compra_id'  => $compra->id,
-                    'detalle_id' => $detalle->id,
+            // ✅ NUEVO: Usar CompraDistribucionService para revertir movimientos AGRUPADOS
+            $resultado = $this->compraDistribucionService->revertirEntradaCompra($compra->numero);
+
+            if (!$resultado['success']) {
+                Log::warning('⚠️ Error al revertir entrada de compra', [
+                    'compra_numero' => $compra->numero,
+                    'error' => $resultado['error'],
                 ]);
-                continue;
+            } else {
+                Log::info('✅ Inventario revertido exitosamente', [
+                    'compra_numero' => $compra->numero,
+                    'cantidad_revertida' => $resultado['cantidad_revertida'],
+                    'movimientos_creados' => $resultado['movimientos'],
+                ]);
             }
 
-            try {
-                // ✅ IMPORTANTE: Usar floatval para manejar correctamente decimales y strings
-                $cantidadRevertir = -intval(floatval($detalle->cantidad)); // Negativo para salida
-
-                // Registrar salida para revertir la entrada original
-                $producto->registrarMovimiento(
-                    almacenId: $almacenPrincipal->id,
-                    cantidad: $cantidadRevertir,
-                    tipo: \App\Models\MovimientoInventario::TIPO_AJUSTE,
-                    observacion: "Reversión por actualización de compra #{$compra->numero}",
-                    numeroDocumento: $compra->numero_factura,
-                    lote: $detalle->lote,
-                    userId: Auth::id()
-                );
-
-                Log::info('Inventario revertido por actualización de compra', [
-                    'compra_id'   => $compra->id,
-                    'producto_id' => $producto->id,
-                    'cantidad'    => $detalle->cantidad,
-                ]);
-
-            } catch (\Exception $e) {
-                Log::error('Error al revertir inventario en actualización', [
-                    'compra_id'   => $compra->id,
-                    'producto_id' => $producto->id,
-                    'error'       => $e->getMessage(),
-                ]);
-                // Continuar con los demás detalles
-            }
+        } catch (\Exception $e) {
+            Log::error('❌ Error al revertir inventario en actualización', [
+                'compra_numero' => $compra->numero,
+                'error'         => $e->getMessage(),
+                'trace'         => substr($e->getTraceAsString(), 0, 500),
+            ]);
+            // Continuar con la transacción (no fallar completamente)
         }
     }
 

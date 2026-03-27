@@ -686,30 +686,42 @@ class ProformaService
                 'proforma_estado_en_memoria' => $proforma->estado,
             ]);
 
-            // ✅ IMPORTANTE: Consumir las reservas de stock (manejado por modelo Proforma)
+            // ✅ REFACTORIZADO (2026-03-27): Consumir reservas de stock (AGRUPADAS)
             // Esto marca las reservas_proforma como consumidas
-            Log::info('🔄 [ProformaService::convertirAVenta] Consumiendo reservas de stock', [
+            Log::info('🔄 [ProformaService::convertirAVenta] Consumiendo reservas de stock (AGRUPADAS)', [
                 'proforma_id'       => $proformaId,
+                'venta_numero'      => $ventaDTO->numero,
                 'transaction_level' => DB::transactionLevel(),
             ]);
 
             try {
-                $resultadoConsumir = $proforma->consumirReservas();
-                Log::info('✅ consumirReservas() retornó', [
+                // ✅ NUEVO: Usar servicio centralizado para consumir reservas agrupadas
+                $reservaService = new \App\Services\Reservas\ReservaDistribucionService();
+                $resultadoConsumir = $reservaService->consumirReservasAgrupadas($proforma, $ventaDTO->numero);
+
+                if (!$resultadoConsumir['success']) {
+                    throw new \Exception($resultadoConsumir['error'] ?? 'Error desconocido al consumir reservas');
+                }
+
+                Log::info('✅ consumirReservasAgrupadas() completado', [
                     'proforma_id' => $proformaId,
-                    'resultado'   => $resultadoConsumir,
+                    'venta_numero' => $ventaDTO->numero,
+                    'cantidad_consumida' => $resultadoConsumir['cantidad_consumida'],
+                    'reservas_consumidas' => $resultadoConsumir['reservas_consumidas'],
                 ]);
             } catch (\Exception $e) {
-                Log::error('❌ consumirReservas() lanzó excepción', [
+                Log::error('❌ consumirReservasAgrupadas() lanzó excepción', [
                     'proforma_id' => $proformaId,
+                    'venta_numero' => $ventaDTO->numero,
                     'error'       => $e->getMessage(),
                     'trace'       => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }
 
-            Log::info('✅ [ProformaService::convertirAVenta] Reservas de stock consumidas', [
+            Log::info('✅ [ProformaService::convertirAVenta] Reservas de stock consumidas (AGRUPADAS)', [
                 'proforma_id' => $proformaId,
+                'venta_numero' => $ventaDTO->numero,
             ]);
 
             // Marcar proforma como convertida
