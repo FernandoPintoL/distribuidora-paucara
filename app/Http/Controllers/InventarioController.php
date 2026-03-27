@@ -3772,42 +3772,105 @@ class InventarioController extends Controller
             }
 
             $motivo = $request->input('motivo', '');
+            $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
 
-            DB::transaction(function () use ($ajuste, $motivo) {
+            DB::transaction(function () use ($ajuste, $motivo, $movimientoService) {
                 // 3. Cargar movimientos con relaciones
-                $ajuste->load('movimientos.stockProducto');
+                $ajuste->load('movimientos.stockProducto.producto', 'almacen');
+
+                // Agrupar movimientos por producto para registrar un movimiento agrupado por producto
+                $movimientosPorProducto = [];
 
                 foreach ($ajuste->movimientos as $movimiento) {
                     $stockProducto = $movimiento->stockProducto;
-                    $cantidadAnterior = $stockProducto->cantidad;
+                    $producto = $stockProducto->producto;
+                    $productoId = $producto->id;
+
+                    if (!isset($movimientosPorProducto[$productoId])) {
+                        $movimientosPorProducto[$productoId] = [
+                            'producto_id' => $productoId,
+                            'producto' => $producto,
+                            'almacen_id' => $ajuste->almacen_id,
+                            'movimientos' => [],
+                            'cantidad_total' => 0,
+                            'cantidad_total_anterior' => 0,
+                            'cantidad_total_posterior' => 0,
+                            'cantidad_disponible_anterior' => 0,
+                            'cantidad_disponible_posterior' => 0,
+                            'cantidad_reservada_anterior' => 0,
+                            'cantidad_reservada_posterior' => 0,
+                        ];
+                    }
+
+                    // Capturar valores ANTES
+                    $cantidadTotalAntes = (float) $stockProducto->cantidad;
+                    $cantidadDisponibleAntes = (float) $stockProducto->cantidad_disponible;
+                    $cantidadReservadaAntes = (float) $stockProducto->cantidad_reservada;
 
                     // Determinar tipo inverso y cantidad inversa
                     if ($movimiento->tipo === MovimientoInventario::TIPO_ENTRADA_AJUSTE) {
                         // Si fue entrada, crear salida inversa
                         $tipoInverso = MovimientoInventario::TIPO_SALIDA_AJUSTE;
                         $cantidadInversa = -abs($movimiento->cantidad);
+                        // ✅ REVERTIR ENTRADA: restar de cantidad Y cantidad_disponible
                         $stockProducto->decrement('cantidad', abs($movimiento->cantidad));
+                        $stockProducto->decrement('cantidad_disponible', abs($movimiento->cantidad));
                     } else {
                         // Si fue salida, crear entrada inversa
                         $tipoInverso = MovimientoInventario::TIPO_ENTRADA_AJUSTE;
                         $cantidadInversa = abs($movimiento->cantidad);
+                        // ✅ REVERTIR SALIDA: sumar a cantidad Y cantidad_disponible
                         $stockProducto->increment('cantidad', abs($movimiento->cantidad));
+                        $stockProducto->increment('cantidad_disponible', abs($movimiento->cantidad));
                     }
 
-                    $cantidadPosterior = $stockProducto->fresh()->cantidad;
+                    // Capturar valores DESPUÉS
+                    $stockProducto->refresh();
+                    $cantidadTotalDespues = (float) $stockProducto->cantidad;
+                    $cantidadDisponibleDespues = (float) $stockProducto->cantidad_disponible;
+                    $cantidadReservadaDespues = (float) $stockProducto->cantidad_reservada;
 
-                    // Registrar movimiento inverso
-                    MovimientoInventario::create([
+                    // Acumular para movimiento agrupado (se registrará una sola vez por producto)
+                    $movimientosPorProducto[$productoId]['cantidad_total'] += $cantidadInversa;
+                    $movimientosPorProducto[$productoId]['cantidad_total_anterior'] += $cantidadTotalAntes;
+                    $movimientosPorProducto[$productoId]['cantidad_total_posterior'] += $cantidadTotalDespues;
+                    $movimientosPorProducto[$productoId]['cantidad_disponible_anterior'] += $cantidadDisponibleAntes;
+                    $movimientosPorProducto[$productoId]['cantidad_disponible_posterior'] += $cantidadDisponibleDespues;
+                    $movimientosPorProducto[$productoId]['cantidad_reservada_anterior'] += $cantidadReservadaAntes;
+                    $movimientosPorProducto[$productoId]['cantidad_reservada_posterior'] += $cantidadReservadaDespues;
+
+                    $movimientosPorProducto[$productoId]['movimientos'][] = [
                         'stock_producto_id' => $stockProducto->id,
-                        'tipo' => $tipoInverso,
+                        'lote' => $stockProducto->lote,
                         'cantidad' => $cantidadInversa,
-                        'cantidad_anterior' => $cantidadAnterior,
-                        'cantidad_posterior' => $cantidadPosterior,
-                        'numero_documento' => $ajuste->numero . '-REV',
-                        'observacion' => 'Reversión de ajuste ' . $ajuste->numero . ($motivo ? ": $motivo" : ''),
-                        'user_id' => auth()->id(),
-                        'ajuste_inventario_id' => $ajuste->id,
-                    ]);
+                        'cantidad_total_anterior' => $cantidadTotalAntes,
+                        'cantidad_total_posterior' => $cantidadTotalDespues,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                        'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                        'cantidad_reservada_posterior' => $cantidadReservadaDespues,
+                    ];
+                }
+
+                // ✅ Registrar movimientos agrupados por producto usando el servicio
+                foreach ($movimientosPorProducto as $productoData) {
+                    $movimientoService->registrarMovimientoAgrupado(
+                        $productoData['producto_id'],
+                        $productoData['almacen_id'],
+                        MovimientoInventario::TIPO_AJUSTE, // Tipo genérico para anulación
+                        $productoData['cantidad_total'],
+                        $ajuste->numero . '-REV',
+                        $productoData['movimientos'],
+                        [
+                            'referencia_tipo' => 'ajuste_inventario',
+                            'referencia_id' => $ajuste->id,
+                            'observacion_extra' => [
+                                'ajuste_numero' => $ajuste->numero,
+                                'motivo_anulacion' => $motivo,
+                                'usuario_anulacion' => auth()->user()->name,
+                            ],
+                        ]
+                    );
                 }
 
                 // 4. Actualizar el ajuste maestro
@@ -3821,12 +3884,13 @@ class InventarioController extends Controller
                         ($motivo ? " - Motivo: $motivo" : ''),
                 ]);
 
-                Log::info('✅ [InventarioController::anularAjuste] Ajuste anulado exitosamente', [
+                Log::info('✅ [InventarioController::anularAjuste] Ajuste anulado exitosamente con servicio centralizado', [
                     'ajuste_id' => $ajuste->id,
                     'ajuste_numero' => $ajuste->numero,
                     'user_id' => auth()->id(),
                     'motivo' => $motivo,
                     'movimientos_revertidos' => $ajuste->movimientos->count(),
+                    'productos_afectados' => count($movimientosPorProducto),
                 ]);
             });
 
@@ -3843,6 +3907,7 @@ class InventarioController extends Controller
             Log::error('❌ [InventarioController::anularAjuste] Error al anular ajuste', [
                 'error' => $e->getMessage(),
                 'ajuste_id' => $ajuste->id ?? null,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

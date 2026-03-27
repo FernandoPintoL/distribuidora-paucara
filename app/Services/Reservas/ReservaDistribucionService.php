@@ -92,7 +92,9 @@ class ReservaDistribucionService
                 $proforma,
                 $producto,
                 $almacen_id,
-                $dias_vencimiento
+                $dias_vencimiento,
+                $producto_id,
+                $cantidad_solicitada
             ) {
                 // 📊 Capturar ANTES de todas las actualizaciones
                 $totalProductoAntes = $producto->stock()

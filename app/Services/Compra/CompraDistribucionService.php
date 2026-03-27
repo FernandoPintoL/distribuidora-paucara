@@ -96,8 +96,9 @@ class CompraDistribucionService
 
                 $cantidadTotalAñadida = 0;
                 $detallesLotes = [];
-                $cantidadTotalAnterior = 0;
-                $cantidadTotalPosterior = 0;
+                $cantidadTotalAnterior_acumulada = 0;
+                $cantidadDisponibleAnterior_acumulada = 0;
+                $cantidadReservadaAnterior_acumulada = 0;
 
                 // Procesar cada lote del producto
                 foreach ($detallesProducto as $detalle) {
@@ -160,6 +161,11 @@ class CompraDistribucionService
                     $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
                     $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
 
+                    // ✅ ACUMULAR valores para obtener totales del producto
+                    $cantidadTotalAnterior_acumulada += $cantidadAnterior;
+                    $cantidadDisponibleAnterior_acumulada += $cantidadDisponibleAnterior;
+                    $cantidadReservadaAnterior_acumulada += $cantidadReservadaAnterior;
+
                     // Recolectar detalle de este lote
                     $detallesLotes[] = [
                         'stock_producto_id' => $stockProducto->id,
@@ -174,8 +180,6 @@ class CompraDistribucionService
                     ];
 
                     $cantidadTotalAñadida += $cantidad;
-                    $cantidadTotalAnterior = $cantidadAnterior;
-                    $cantidadTotalPosterior = $cantidadPosterior;
 
                     Log::debug('📦 [CompraDistribucionService] Lote procesado', [
                         'compra' => $numeroCompra,
@@ -185,6 +189,19 @@ class CompraDistribucionService
                         'cantidad_entrada' => $cantidad,
                     ]);
                 }
+
+                // ✅ Obtener totales FINALES del producto DESPUÉS de procesar todos los lotes
+                $cantidadTotalPosterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $cantidadDisponiblePosterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $cantidadReservadaPosterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
 
                 // Crear UN SOLO movimiento agrupado para este producto
                 $movimiento = $this->movimientoService->registrarMovimientoAgrupado(

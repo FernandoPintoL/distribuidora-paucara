@@ -561,10 +561,26 @@ class CompraController extends Controller
                         usuarioId: Auth::id() ?? 1
                     );
 
-                    Log::info("Movimientos de inventario registrados en store()", [
+                    // ✅ Log con resumen agrupado (como ajustes, proformas, ventas)
+                    $resumenPorProducto = [];
+                    foreach ($movimientosStock as $movimiento) {
+                        $detallesObservacion = json_decode($movimiento->observacion, true);
+                        $resumenPorProducto[] = [
+                            'producto_id' => $movimiento->numero_documento === $compra->numero ?
+                                ($detallesObservacion['producto_id'] ?? 'N/A') : 'N/A',
+                            'producto_nombre' => $detallesObservacion['producto_nombre'] ?? 'N/A',
+                            'cantidad' => $detallesObservacion['cantidad_total'] ?? 0,
+                            'cantidad_lotes' => $detallesObservacion['cantidad_lotes'] ?? 1,
+                            'detalles_lotes' => $detallesObservacion['detalles_lotes'] ?? [],
+                        ];
+                    }
+
+                    Log::info("✅ Inventario registrado (AGRUPADO por producto)", [
                         'compra_numero'        => $compra->numero,
                         'movimientos_creados'  => count($movimientosStock),
-                        'nota'                 => 'Movimientos AGRUPADOS por producto (no por lote)',
+                        'productos_afectados'  => count($resumenPorProducto),
+                        'resumen' => $resumenPorProducto,
+                        'nota'                 => 'Movimientos AGRUPADOS por producto | Detalles por lote en observaciones',
                     ]);
                 } catch (\Exception $e) {
                     Log::error('❌ Error al registrar inventario en store()', [
