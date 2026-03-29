@@ -1022,6 +1022,100 @@ class EntregaController extends Controller
     }
 
     /**
+     * Buscar entregas por ID, número, chofer o vehículo
+     *
+     * GET /logistica/entregas/search?q=150
+     * Busca por:
+     * - ID de entrega (número)
+     * - número_entrega (readable ID)
+     * - nombre del chofer
+     * - placa del vehículo
+     */
+    public function searchEntregas(Request $request): JsonResponse
+    {
+        $searchTerm = $request->input('q', '');
+        $page = $request->input('page', 1);
+        $perPage = 25;
+
+        \Log::info('🔍 [searchEntregas] Parámetros recibidos:', [
+            'q' => $searchTerm,
+            'page' => $page,
+        ]);
+
+        $query = Entrega::query()
+            ->with([
+                'chofer',
+                'vehiculo',
+                'estadoEntrega',
+                'ventas',
+            ])
+            ->where('estado_entrega_id', '<>', 4) // Excluir entregas canceladas
+            ->orderByDesc('created_at');
+
+        // Aplicar búsqueda si existe término
+        if ($searchTerm) {
+            $searchLower = strtolower($searchTerm);
+            $searchNumeric = is_numeric($searchTerm) ? intval($searchTerm) : null;
+
+            $query->where(function ($q) use ($searchLower, $searchNumeric) {
+                // Buscar por ID de entrega (número)
+                if ($searchNumeric) {
+                    $q->orWhere('id', $searchNumeric);
+                }
+
+                // Buscar por número_entrega (readable ID como "ENT-20251227-001")
+                $q->orWhereRaw('LOWER(numero_entrega) LIKE ?', ["%{$searchLower}%"]);
+
+                // Buscar por nombre del chofer (columna: name, no nombre)
+                $q->orWhereHas('chofer', fn($choferQ) =>
+                    $choferQ->whereRaw('LOWER(name) LIKE ?', ["%{$searchLower}%"])
+                );
+
+                // Buscar por placa del vehículo
+                $q->orWhereHas('vehiculo', fn($vehiculoQ) =>
+                    $vehiculoQ->whereRaw('LOWER(placa) LIKE ?', ["%{$searchLower}%"])
+                );
+            });
+        }
+
+        $entregasPaginated = $query->paginate($perPage, ['*'], 'page', $page);
+
+        // Formatear respuesta
+        $entregas = $entregasPaginated->items();
+        $entregas = array_map(function ($entrega) {
+            return [
+                'id' => $entrega->id,
+                'numero_entrega' => $entrega->numero_entrega,
+                'estado' => $entrega->estadoEntrega?->nombre ?? $entrega->estado,
+                'estado_codigo' => $entrega->estadoEntrega?->codigo,
+                'chofer' => [
+                    'name' => $entrega->chofer?->name,
+                ],
+                'vehiculo' => [
+                    'placa' => $entrega->vehiculo?->placa,
+                ],
+                'cant_ventas' => $entrega->ventas()->count(),
+                'created_at' => $entrega->created_at,
+            ];
+        }, $entregas);
+
+        \Log::info('✅ [searchEntregas] Resultados encontrados: ' . count($entregas));
+
+        $response = [
+            'data' => $entregas,
+            'pagination' => [
+                'current_page' => $entregasPaginated->currentPage(),
+                'per_page' => $entregasPaginated->perPage(),
+                'total' => $entregasPaginated->total(),
+                'last_page' => $entregasPaginated->lastPage(),
+                'has_more' => $entregasPaginated->hasMorePages(),
+            ],
+        ];
+
+        return response()->json($response);
+    }
+
+    /**
      * Crear nueva entrega
      *
      * POST /logistica/entregas (web form)

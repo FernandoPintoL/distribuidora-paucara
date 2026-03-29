@@ -489,6 +489,10 @@ class ReservaDistribucionService
      * 4. Marcar todas las reservas como CONSUMIDA
      * 5. Retornar resultado
      *
+     * ✅ MEJORADO (2026-03-28): Sin DB::transaction() para evitar transacciones anidadas
+     * Este método es llamado desde dentro de convertirAVenta() que ya tiene su propia transacción.
+     * Crear una transacción anidada causa problemas de rollback inconsistente cuando fallan movimientos.
+     *
      * @param Proforma $proforma Proforma a consumir reservas
      * @param string $numeroVenta Número de venta para referencia
      * @return array Resultado de consumo: ['success' => bool, 'cantidad_consumida' => float, 'reservas_consumidas' => int, 'error' => string|null]
@@ -500,150 +504,143 @@ class ReservaDistribucionService
             $cantidad_consumida = 0;
             $reservas_consumidas = 0;
 
-            return DB::transaction(function () use (
-                &$cantidad_consumida,
-                &$reservas_consumidas,
-                $proforma,
-                $numeroVenta
-            ) {
-                // Obtener TODAS las reservas activas de esta proforma
-                $reservas = ReservaProforma::where('proforma_id', $proforma->id)
-                    ->where('estado', ReservaProforma::ACTIVA)
-                    ->with('stockProducto.producto')
-                    ->orderBy('stock_producto_id')
-                    ->lockForUpdate()
-                    ->get();
+            // Obtener TODAS las reservas activas de esta proforma
+            $reservas = ReservaProforma::where('proforma_id', $proforma->id)
+                ->where('estado', ReservaProforma::ACTIVA)
+                ->with('stockProducto.producto')
+                ->orderBy('stock_producto_id')
+                ->lockForUpdate()
+                ->get();
 
-                if ($reservas->isEmpty()) {
-                    Log::warning('⚠️ No hay reservas activas para consumir', [
-                        'proforma_id' => $proforma->id,
-                        'numero_venta' => $numeroVenta,
-                    ]);
-
-                    return [
-                        'success' => true,
-                        'cantidad_consumida' => 0,
-                        'reservas_consumidas' => 0,
-                        'error' => null,
-                    ];
-                }
-
-                // Agrupar por producto para movimiento agrupado
-                $reservasPorProducto = $reservas->groupBy(function ($reserva) {
-                    return $reserva->stockProducto->producto_id;
-                });
-
-                Log::info('🔄 [ReservaDistribucionService::consumirReservasAgrupadas] Iniciando consumo de reservas', [
+            if ($reservas->isEmpty()) {
+                Log::warning('⚠️ No hay reservas activas para consumir', [
                     'proforma_id' => $proforma->id,
                     'numero_venta' => $numeroVenta,
-                    'cantidad_productos' => $reservasPorProducto->count(),
-                ]);
-
-                foreach ($reservasPorProducto as $producto_id => $reservasProducto) {
-                    // Procesar cada producto (puede tener múltiples lotes)
-                    $detallesLotes = [];
-                    $cantidad_total_producto = 0;
-                    $almacen_id = null;
-                    $producto = null;
-
-                    // Procesar todas las reservas de este producto
-                    foreach ($reservasProducto as $reserva) {
-                        $cantidad = $reserva->cantidad_reservada;
-                        $stock = $reserva->stockProducto;
-                        $producto = $stock->producto;
-                        $almacen_id = $stock->almacen_id;
-
-                        // ✅ Capturar ANTES de actualizar
-                        $cantidadTotalAntes = (float) $stock->cantidad;
-                        $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
-                        $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
-
-                        // Consumir stock: decrementar cantidad y cantidad_reservada
-                        $stock->decrement('cantidad', $cantidad);
-                        $stock->decrement('cantidad_reservada', $cantidad);
-                        // cantidad_disponible se mantiene igual (ya estaba descontada en reserva)
-
-                        // ✅ Capturar DESPUÉS de actualizar
-                        $stock->refresh();
-                        $cantidadTotalDespues = (float) $stock->cantidad;
-                        $cantidadDisponibleDespues = (float) $stock->cantidad_disponible;
-                        $cantidadReservadaDespues = (float) $stock->cantidad_reservada;
-
-                        // Guardar detalle por lote
-                        $detallesLotes[] = [
-                            'stock_producto_id' => $stock->id,
-                            'lote' => $stock->lote,
-                            'cantidad' => -$cantidad,  // Negativo: consumo (salida)
-                            'cantidad_total_anterior' => $cantidadTotalAntes,
-                            'cantidad_total_posterior' => $cantidadTotalDespues,
-                            'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
-                            'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
-                            'cantidad_reservada_anterior' => $cantidadReservadaAntes,
-                            'cantidad_reservada_posterior' => $cantidadReservadaDespues,
-                        ];
-
-                        // Marcar reserva como consumida
-                        $reserva->update(['estado' => ReservaProforma::CONSUMIDA]);
-
-                        $cantidad_consumida += $cantidad;
-                        $cantidad_total_producto += $cantidad;
-                        $reservas_consumidas++;
-
-                        Log::debug('📦 [ReservaDistribucionService] Lote consumido', [
-                            'reserva_id' => $reserva->id,
-                            'proforma_id' => $proforma->id,
-                            'stock_producto_id' => $stock->id,
-                            'cantidad_consumida' => $cantidad,
-                            'numero_venta' => $numeroVenta,
-                        ]);
-                    }
-
-                    // ✅ NUEVO (2026-03-27): Registrar UN SOLO movimiento AGRUPADO con detalles por lote
-                    if ($cantidad_total_producto > 0 && $producto && $almacen_id) {
-                        $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
-                        $movimiento = $movimientoService->registrarMovimientoAgrupado(
-                            $producto->id,
-                            $almacen_id,
-                            MovimientoInventario::TIPO_CONSUMO_RESERVA,
-                            -$cantidad_total_producto,  // Negativo: consumo (salida)
-                            $numeroVenta,
-                            $detallesLotes,
-                            [
-                                'referencia_tipo' => 'proforma',
-                                'referencia_id' => $proforma->id,
-                                'observacion_extra' => [
-                                    'proforma_numero' => $proforma->numero,
-                                    'venta_numero' => $numeroVenta,
-                                    'motivo' => 'Consumo de reserva - Convertida a Venta',
-                                ]
-                            ]
-                        );
-
-                        Log::info('✅ [ReservaDistribucionService] Movimiento agrupado registrado', [
-                            'proforma_id' => $proforma->id,
-                            'numero_venta' => $numeroVenta,
-                            'producto_id' => $producto->id,
-                            'movimiento_id' => $movimiento->id,
-                            'cantidad_lotes' => count($detallesLotes),
-                            'cantidad_total' => $cantidad_total_producto,
-                        ]);
-                    }
-                }
-
-                Log::info('✅ [ReservaDistribucionService::consumirReservasAgrupadas] Consumo de reservas completado', [
-                    'proforma_id' => $proforma->id,
-                    'numero_venta' => $numeroVenta,
-                    'cantidad_total_consumida' => $cantidad_consumida,
-                    'reservas_consumidas' => $reservas_consumidas,
                 ]);
 
                 return [
                     'success' => true,
-                    'cantidad_consumida' => $cantidad_consumida,
-                    'reservas_consumidas' => $reservas_consumidas,
+                    'cantidad_consumida' => 0,
+                    'reservas_consumidas' => 0,
                     'error' => null,
                 ];
+            }
+
+            // Agrupar por producto para movimiento agrupado
+            $reservasPorProducto = $reservas->groupBy(function ($reserva) {
+                return $reserva->stockProducto->producto_id;
             });
+
+            Log::info('🔄 [ReservaDistribucionService::consumirReservasAgrupadas] Iniciando consumo de reservas', [
+                'proforma_id' => $proforma->id,
+                'numero_venta' => $numeroVenta,
+                'cantidad_productos' => $reservasPorProducto->count(),
+            ]);
+
+            foreach ($reservasPorProducto as $producto_id => $reservasProducto) {
+                // Procesar cada producto (puede tener múltiples lotes)
+                $detallesLotes = [];
+                $cantidad_total_producto = 0;
+                $almacen_id = null;
+                $producto = null;
+
+                // Procesar todas las reservas de este producto
+                foreach ($reservasProducto as $reserva) {
+                    $cantidad = $reserva->cantidad_reservada;
+                    $stock = $reserva->stockProducto;
+                    $producto = $stock->producto;
+                    $almacen_id = $stock->almacen_id;
+
+                    // ✅ Capturar ANTES de actualizar
+                    $cantidadTotalAntes = (float) $stock->cantidad;
+                    $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
+
+                    // Consumir stock: decrementar cantidad y cantidad_reservada
+                    $stock->decrement('cantidad', $cantidad);
+                    $stock->decrement('cantidad_reservada', $cantidad);
+                    // cantidad_disponible se mantiene igual (ya estaba descontada en reserva)
+
+                    // ✅ Capturar DESPUÉS de actualizar
+                    $stock->refresh();
+                    $cantidadTotalDespues = (float) $stock->cantidad;
+                    $cantidadDisponibleDespues = (float) $stock->cantidad_disponible;
+                    $cantidadReservadaDespues = (float) $stock->cantidad_reservada;
+
+                    // Guardar detalle por lote
+                    $detallesLotes[] = [
+                        'stock_producto_id' => $stock->id,
+                        'lote' => $stock->lote,
+                        'cantidad' => -$cantidad,  // Negativo: consumo (salida)
+                        'cantidad_total_anterior' => $cantidadTotalAntes,
+                        'cantidad_total_posterior' => $cantidadTotalDespues,
+                        'cantidad_disponible_anterior' => $cantidadDisponibleAntes,
+                        'cantidad_disponible_posterior' => $cantidadDisponibleDespues,
+                        'cantidad_reservada_anterior' => $cantidadReservadaAntes,
+                        'cantidad_reservada_posterior' => $cantidadReservadaDespues,
+                    ];
+
+                    // Marcar reserva como consumida
+                    $reserva->update(['estado' => ReservaProforma::CONSUMIDA]);
+
+                    $cantidad_consumida += $cantidad;
+                    $cantidad_total_producto += $cantidad;
+                    $reservas_consumidas++;
+
+                    Log::debug('📦 [ReservaDistribucionService] Lote consumido', [
+                        'reserva_id' => $reserva->id,
+                        'proforma_id' => $proforma->id,
+                        'stock_producto_id' => $stock->id,
+                        'cantidad_consumida' => $cantidad,
+                        'numero_venta' => $numeroVenta,
+                    ]);
+                }
+
+                // ✅ NUEVO (2026-03-27): Registrar UN SOLO movimiento AGRUPADO con detalles por lote
+                if ($cantidad_total_producto > 0 && $producto && $almacen_id) {
+                    $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                    $movimiento = $movimientoService->registrarMovimientoAgrupado(
+                        $producto->id,
+                        $almacen_id,
+                        MovimientoInventario::TIPO_CONSUMO_RESERVA,
+                        -$cantidad_total_producto,  // Negativo: consumo (salida)
+                        $numeroVenta,
+                        $detallesLotes,
+                        [
+                            'referencia_tipo' => 'proforma',
+                            'referencia_id' => $proforma->id,
+                            'observacion_extra' => [
+                                'proforma_numero' => $proforma->numero,
+                                'venta_numero' => $numeroVenta,
+                                'motivo' => 'Consumo de reserva - Convertida a Venta',
+                            ]
+                        ]
+                    );
+
+                    Log::info('✅ [ReservaDistribucionService] Movimiento agrupado registrado', [
+                        'proforma_id' => $proforma->id,
+                        'numero_venta' => $numeroVenta,
+                        'producto_id' => $producto->id,
+                        'movimiento_id' => $movimiento->id,
+                        'cantidad_lotes' => count($detallesLotes),
+                        'cantidad_total' => $cantidad_total_producto,
+                    ]);
+                }
+            }
+
+            Log::info('✅ [ReservaDistribucionService::consumirReservasAgrupadas] Consumo de reservas completado', [
+                'proforma_id' => $proforma->id,
+                'numero_venta' => $numeroVenta,
+                'cantidad_total_consumida' => $cantidad_consumida,
+                'reservas_consumidas' => $reservas_consumidas,
+            ]);
+
+            return [
+                'success' => true,
+                'cantidad_consumida' => $cantidad_consumida,
+                'reservas_consumidas' => $reservas_consumidas,
+                'error' => null,
+            ];
 
         } catch (\Exception $e) {
             Log::error('❌ [ReservaDistribucionService::consumirReservasAgrupadas] Error al consumir reservas', [

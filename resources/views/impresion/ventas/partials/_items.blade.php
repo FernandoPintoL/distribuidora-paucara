@@ -18,7 +18,7 @@
                 <th style="width: 10%;">Cant.</th>
                 <th style="width: 12%;">P. Unit.</th>
                 <th style="width: 10%;">Desc.</th>
-                <th style="width: 18%;" class="text-right">Subtotal</th>
+                <th style="width: 18%;" class="text-right">Subt.</th>
             </tr>
         </thead>
         <tbody>
@@ -47,10 +47,13 @@
                                         ->flatMap(fn($d) => $d->producto->comboItems ?? [])
                                         ->firstWhere('producto_id', $item['producto_id'])
                                         ?->producto;
+
+                                    // ✅ NUEVO: Calcular cantidad total = combo cantidad × item cantidad base
+                                    $cantidadTotal = ($item['cantidad'] ?? 0) * ($detalle->cantidad ?? 1);
                                 @endphp
                                 └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
                                 @if($item['cantidad'] ?? false)
-                                    ({{ $item['cantidad'] }} u)
+                                    ({{ number_format($cantidadTotal, 0) }} u)
                                 @endif
                                 <br>
                             @endforeach
@@ -75,7 +78,7 @@
                 <th style="width: 12%; text-align: center; padding: 2px 0;">CANT.</th>
                 <th style="width: 50%; text-align: left; padding: 2px 4px;">NOMBRE</th>
                 <th style="width: 18%; text-align: right; padding: 2px 0;">P.UNIT.</th>
-                <th style="width: 20%; text-align: right; padding: 2px 2px;">SUBTOTAL</th>
+                <th style="width: 20%; text-align: right; padding: 2px 2px;">SUB.</th>
             </tr>
         </thead>
 
@@ -95,7 +98,7 @@
                     {{ number_format($detalle->cantidad, 0) }}
                 </td>
                 <td style="width: 50%; text-align: left; padding: 2px 4px; font-size: 12px;">
-                    <strong>@if($esCombo) 📦 @endif {{ $detalle->producto->nombre }}</strong>
+                    <strong>{{ $detalle->producto->nombre }}</strong>
                     @if($detalle->producto->codigo)
                         <br><small style="color: #999; font-size: 8px;">{{ $detalle->producto->codigo }}</small>
                     @endif
@@ -110,27 +113,28 @@
 
             {{-- ITEMS DEL COMBO SI EXISTEN --}}
             @if($esCombo && count($itemsSeleccionados) > 0)
-                <tr>
-                    <td colspan="4" style="padding: 2px 4px; font-size: 12px;">
-                        <strong>Componentes ({{ count($itemsSeleccionados) }}):</strong>
-                    </td>
-                </tr>
                 @foreach($itemsSeleccionados as $item)
                     @php
                         $itemProducto = $documento->detalles
                             ->flatMap(fn($d) => $d->producto->comboItems ?? [])
                             ->firstWhere('producto_id', $item['producto_id'])
                             ?->producto;
+
+                        // ✅ NUEVO: Calcular cantidad total = combo cantidad × item cantidad base
+                        $cantidadTotal = ($item['cantidad'] ?? 0) * ($detalle->cantidad ?? 1);
                     @endphp
                     <tr>
-                        <td colspan="4" style="padding: 1px 12px; font-size: 12px;">
-                            └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
+                        <td style="width: 12%; text-align: center; padding: 2px 0; font-size: 12px;">
                             @if($item['cantidad'] ?? false)
-                                ({{ $item['cantidad'] }} u)
+                                {{ number_format($cantidadTotal, 0) }}
                             @endif
+                        </td>
+                        <td style="width: 50%; text-align: left; padding: 2px 4px; font-size: 12px;">
+                            <strong>{{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}</strong>
                         </td>
                     </tr>
                 @endforeach
+                
             @endif
 
             @endforeach

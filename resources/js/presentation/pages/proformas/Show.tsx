@@ -470,6 +470,9 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
 
             return {
                 ...d,
+                // ✅ NUEVO: Preservar unidad_medida_nombre desde el detalle
+                unidad_medida_id: d.unidad_medida_id || (d.producto as any)?.unidad_medida_id,
+                unidad_medida_nombre: d.unidad_medida_nombre || (d.producto as any)?.unidad_medida_nombre,
                 // ✅ Convertir cantidad de string a number si es necesario
                 cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad) : (d.cantidad || 1),
                 // ✅ Asegurar que precio_unitario es número
@@ -495,6 +498,8 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     precio_costo: d.precio_unitario || 0,
                     categoria: d.categoria || null,
                     limite_venta: d.limite_venta || null,
+                    unidad_medida_id: d.unidad_medida_id || null,
+                    unidad_medida_nombre: d.unidad_medida_nombre || null,
                     precios: Array.isArray(d.precios) ? d.precios : [],
                 }
             };

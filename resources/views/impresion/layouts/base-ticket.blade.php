@@ -202,7 +202,7 @@
         /* ✅ Espacio en blanco para corte (5cm) */
         .espacio-corte {
             height: 5cm;
-            margin-top: 10px;
+            margin-top: 15px !important;
             page-break-after: avoid;
         }
 
@@ -242,7 +242,7 @@
         {{-- Header compacto --}}
         <div class="header">
             @if(!empty($logo_principal_base64))
-            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 390px; max-height: 130px; object-fit: contain;">
+            <img src="{{ $logo_principal_base64 }}" class="logo" alt="{{ $empresa->nombre_comercial }}" style="max-width: 280px; max-height: 100px; object-fit: contain;">
             @endif
             <div class="empresa-nombre">{{ $empresa->nombre_comercial }}</div>
             <div class="empresa-info">{{ $empresa->direccion }}</div>
@@ -260,7 +260,7 @@
 
     {{-- ✅ FIRMAS DEL CLIENTE - Solo para distribuidores (no farmacias) --}}
     @if(!$empresa->es_farmacia)
-    <div style="margin-top: 130px !important;">
+    <div style="margin-top: 80px !important;">
         <div style="margin-bottom: 35px !important; padding-bottom: 35px !important; font-size: 12px;">
             <div style="height: 0; border-bottom: 1px solid #000; margin-bottom: 5px !important;"></div>
             <p style="text-align: center; margin: 2px 0 !important;">Firma / Sello</p>

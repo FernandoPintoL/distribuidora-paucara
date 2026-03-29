@@ -333,6 +333,12 @@ class VentaService
                 // ✅ NUEVO: Preparar combo_items_seleccionados si existen
                 $comboItemsSeleccionados = null;
                 if (isset($detalle['combo_items_seleccionados']) && is_array($detalle['combo_items_seleccionados'])) {
+                    // ✅ DEBUG: Ver qué llega del frontend
+                    Log::debug('📦 [VentaService::crear] combo_items_seleccionados recibidos del frontend', [
+                        'producto_id' => $detalle['producto_id'],
+                        'items_recibidos' => $detalle['combo_items_seleccionados'],
+                    ]);
+
                     // Filtrar solo items que están incluidos (incluido = true)
                     $comboItemsSeleccionados = array_filter($detalle['combo_items_seleccionados'], function($item) {
                         return ($item['incluido'] ?? false) === true;
@@ -344,6 +350,7 @@ class VentaService
                         'producto_id' => $detalle['producto_id'],
                         'cantidad_items_seleccionados' => count($comboItemsSeleccionados),
                         'total_items' => count($detalle['combo_items_seleccionados']),
+                        'items_después_filtro' => $comboItemsSeleccionados,
                     ]);
                 }
 
@@ -360,6 +367,7 @@ class VentaService
                         return [
                             'combo_item_id' => $item['combo_item_id'] ?? null,
                             'producto_id' => $item['producto_id'] ?? null,
+                            'cantidad' => $item['cantidad'] ?? 0, // ✅ NUEVO (2026-03-28): Incluir cantidad para impresión
                             'incluido' => $item['incluido'] ?? false,
                         ];
                     }, $comboItemsSeleccionados) : null, // ✅ NUEVO: Items del combo seleccionados
@@ -385,10 +393,34 @@ class VentaService
                 permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
             );
 
+            // ✅ NUEVO (2026-03-28): Validar que se registraron movimientos para TODOS los productos
+            // Esto evita que quedenventas sin movimientos de inventario
+            $cantidadProductosUnicos = collect($detallesParaStock)
+                ->pluck('producto_id')
+                ->unique()
+                ->count();
+
+            if (count($movimientosStock) != $cantidadProductosUnicos) {
+                Log::error('❌ [VentaService::crear] Discrepancia de movimientos', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'productos_esperados' => $cantidadProductosUnicos,
+                    'movimientos_creados' => count($movimientosStock),
+                    'detalles' => $detallesParaStock,
+                ]);
+
+                throw new \Exception(
+                    "Error crítico: Se esperaban {$cantidadProductosUnicos} movimientos de inventario " .
+                    "pero solo se registraron " . count($movimientosStock) . ". " .
+                    "Venta {$venta->numero} requiere revisión manual."
+                );
+            }
+
             Log::info('✅ [VentaService::crear] Stock procesado exitosamente con VentaDistribucionService', [
                 'venta_id' => $venta->id,
                 'venta_numero' => $venta->numero,
                 'movimientos_creados' => count($movimientosStock),
+                'productos_procesados' => $cantidadProductosUnicos,
                 'politica_pago' => $dto->politica_pago,
             ]);
 

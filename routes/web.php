@@ -823,6 +823,10 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             // GET /logistica/entregas/ventas/search?q=...&fecha_desde=...&fecha_hasta=...
             Route::get('ventas/search', [\App\Http\Controllers\EntregaController::class, 'searchVentas'])->name('ventas.search');
 
+            // ✅ NUEVO: Búsqueda de entregas por ID, número, chofer o vehículo (para EntregaSearchSelector)
+            // GET /logistica/entregas/search?q=...
+            Route::get('search', [\App\Http\Controllers\EntregaController::class, 'searchEntregas'])->name('search');
+
             // ⚠️ DEPRECATED: /crear-lote → Usar /create en su lugar
             // FASE UNIFICADA ha consolidado ambos flujos en una sola interfaz.
             // Esta ruta será eliminada en próximo sprint.

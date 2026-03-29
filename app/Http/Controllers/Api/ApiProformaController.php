@@ -3018,6 +3018,7 @@ class ApiProformaController extends Controller
                             return [
                                 'combo_item_id' => $item['combo_item_id'] ?? null,
                                 'producto_id'   => $item['producto_id'] ?? null,
+                                'cantidad'      => $item['cantidad'] ?? 0, // ✅ NUEVO (2026-03-28): Incluir cantidad para impresión
                                 'incluido'      => $item['incluido'] ?? false,
                             ];
                         }, $detalleProforma->combo_items_seleccionados);

@@ -17,8 +17,11 @@
 <div class="separador"></div>
 
 {{-- ==================== INFO DEL CLIENTE ==================== --}}
-<div class="documento-info" style="font-size:13px;">
+<div class="documento-info" style="font-size:12px;">
     <p><strong>Cliente:</strong> {{ $documento->cliente->nombre }}</p>
+    @if($documento->cliente->razon_social)
+    <p><strong>Razon Social:</strong> {{ $documento->cliente->razon_social }}</p>
+    @endif
     <p><strong>Cód. Cliente:</strong> #{{ $documento->cliente->id }} | {{ $documento->cliente->codigo_cliente }}</p>
     @if($documento->cliente->nit)
     <p><strong>NIT/CI:</strong> {{ $documento->cliente->nit }}</p>
@@ -34,9 +37,16 @@
     @if($documento->direccionCliente)
     <p style="center"><strong>Dir:</strong> {{ $documento->direccionCliente->observaciones ?? 'Sin direccion' }}</p>
     @endif
-    @if($documento->usuario)
-    <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>
-    @endif
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            @if($documento->usuario)
+            <td style="width: 50%; padding: 2px 5px 2px 0;"><strong>Vendedor:</strong> {{ $documento->usuario->name }}</td>
+            @endif
+            @if($documento->movimientoCaja && $documento->movimientoCaja->caja)
+            <td style="width: 50%; padding: 2px 0;"><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</td>
+            @endif
+        </tr>
+    </table>
     {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
     @php
     $usuarioCreadorProforma = null;
@@ -49,53 +59,9 @@
     @endif
 </div>
 
-<div class="separador"></div>
-
-{{-- ==================== ITEMS ==================== --}}
-@include('impresion.ventas.partials._items', ['formato' => 'ticket-80'])
-
-<div class="separador-doble"></div>
-
-{{-- ==================== TOTALES ==================== --}}
-@include('impresion.ventas.partials._totales')
-
-<div class="separador-doble"></div>
-
-{{-- ==================== INFORMACIÓN DE PAGO ==================== --}}
-<div class="center bold" style="font-size: 12px;">
-    Politica Pago: {{ $documento->politica_pago ?? 'CONTRA_ENTREGA' }}
-</div>
-
-<div class="center" style="margin-top: 5px; font-weight: bold; font-size: 13px;">
-    @if($documento->estado_pago === 'PAGADA')
-    <span>PAGADA</span>
-    @elseif($documento->estado_pago === 'PARCIAL')
-    <span>PAGO PARCIAL</span><br>
-    <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? 0, 2) }}</span>
-    @elseif($documento->estado_pago === 'PENDIENTE')
-    <span>PENDIENTE PAGO</span><br>
-    <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? $documento->subtotal, 2) }}</span>
-    @else
-    <span>{{ $documento->estado_pago ?? 'SIN ESTADO' }}</span>
-    @endif
-</div>
-
-{{-- ==================== OBSERVACIONES ==================== --}}
-@if($documento->observaciones)
-<div class="observaciones">
-    <strong>Obs:</strong>
-    {{ Str::limit($documento->observaciones, 100) }}
-</div>
-@endif
-
-<div class="separador"></div>
-
-{{-- ==================== INFORMACIÓN DE CAJA Y ALMACÉN ==================== --}}
 @if($documento->movimientoCaja)
 <div class="documento-info" style="font-size:13px;">
-    @if($documento->movimientoCaja->caja)
-    <p><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</p>
-    @endif
+    
     @if($documento->detalles && $documento->detalles->first())
     @php
     $primeraLinea = $documento->detalles->first();
@@ -116,12 +82,14 @@
 
 <div class="separador"></div>
 
-{{-- ==================== QR CODE - Solo para distribuidores (no farmacias) ==================== --}}
-@if(!$empresa->es_farmacia)
-<div class="center">
-    @include('impresion.ventas.partials._qr')
-</div>
-@endif
+{{-- ==================== ITEMS ==================== --}}
+@include('impresion.ventas.partials._items', ['formato' => 'ticket-80'])
+
+<div class="separador-doble"></div>
+
+{{-- ==================== TOTALES ==================== --}}
+@include('impresion.ventas.partials._totales')
+
 
 <div class="separador"></div>
 

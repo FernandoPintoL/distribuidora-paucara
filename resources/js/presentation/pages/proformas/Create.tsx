@@ -212,6 +212,9 @@ export default function ProformasCreate({
             peso: d.peso || d.producto?.peso || 0,
             categoria: d.categoria || d.producto?.categoria || null,
             limite_venta: d.limite_venta || d.producto?.limite_venta || null,
+            // ✅ NUEVO (2026-03-28): Preservar unidad_medida información
+            unidad_medida_id: d.unidad_medida_id || d.producto?.unidad_medida_id || d.producto?.unidad_id || null,
+            unidad_medida_nombre: d.unidad_medida_nombre || d.producto?.unidad_medida_nombre || d.producto?.unidad_nombre || null,
             // ✅ NUEVO (2026-02-20): Propiedades necesarias para combos en ProductosTable
             es_combo: d.es_combo || (d.producto?.es_combo ?? false),
             combo_items: d.combo_items || [],
@@ -664,159 +667,80 @@ export default function ProformasCreate({
                         </div>
                     </div>
 
-                    {/* NUEVO: Sección Estado y Preventista */}
+                    {/* ✅ NUEVO: Sección con 4 selectores en una línea responsiva */}
                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             {/* Estado Inicial */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    📝 Estado Inicial
-                                </label>
-                                <div className="space-y-2">
-                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition">
-                                        <input
-                                            type="radio"
-                                            name="estado_inicial"
-                                            value="BORRADOR"
-                                            checked={estadoInicial === 'BORRADOR'}
-                                            onChange={(e) => setEstadoInicial(e.target.value as 'BORRADOR' | 'PENDIENTE')}
-                                            className="h-4 w-4 text-gray-600 focus:ring-gray-500"
-                                        />
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Borrador
-                                            </p>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                Sin reservar stock, editable
-                                            </p>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-green-100 dark:hover:bg-green-900/20 cursor-pointer transition">
-                                        <input
-                                            type="radio"
-                                            name="estado_inicial"
-                                            value="PENDIENTE"
-                                            checked={estadoInicial === 'PENDIENTE'}
-                                            onChange={(e) => setEstadoInicial(e.target.value as 'BORRADOR' | 'PENDIENTE')}
-                                            className="h-4 w-4 text-green-600 focus:ring-green-500"
-                                        />
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Pendiente
-                                            </p>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                Reserva stock inmediatamente
-                                            </p>
-                                        </div>
-                                    </label>
-                                </div>
+                                <Label htmlFor="estado-inicial" className="text-sm">📝 Estado Inicial</Label>
+                                <Select value={estadoInicial} onValueChange={(v) => setEstadoInicial(v as 'BORRADOR' | 'PENDIENTE')}>
+                                    <SelectTrigger id="estado-inicial">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="BORRADOR">Borrador</SelectItem>
+                                        <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             {/* Preventista */}
                             <div>
-                                <label htmlFor="preventista" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <Label htmlFor="preventista" className="text-sm">
                                     👤 Preventista (Opcional)
-                                </label>
+                                </Label>
                                 <select
                                     id="preventista"
                                     value={preventistaId || ''}
                                     onChange={(e) => setPreventistaId(e.target.value ? parseInt(e.target.value) : null)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                    className="w-full px-1 py-1 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                                 >
                                     <option value="">-- Seleccionar preventista --</option>
                                     {preventistas && preventistas.map((preventista: any) => (
                                         <option key={preventista.id} value={preventista.id}>
-                                            {preventista.name} ({preventista.email})
+                                            {preventista.name}
                                         </option>
                                     ))}
                                 </select>
                             </div>
+
+                            {/* Política de Pago */}
+                            <div>
+                                <Label htmlFor="politica-pago" className="text-sm">💳 Política de Pago</Label>
+                                <Select value={politicaPago} onValueChange={(v) => setPoliticaPago(v as any)}>
+                                    <SelectTrigger id="politica-pago">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CONTRA_ENTREGA">Contra Entrega</SelectItem>
+                                        <SelectItem value="ANTICIPADO_100">Anticipado 100%</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Tipo Entrega */}
+                            <div>
+                                <Label htmlFor="tipo-entrega" className="text-sm">🚚 Tipo Entrega</Label>
+                                <Select value={tipoEntrega} onValueChange={(v) => setTipoEntrega(v as any)}>
+                                    <SelectTrigger id="tipo-entrega">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="DELIVERY">Delivery</SelectItem>
+                                        <SelectItem value="PICKUP">Pickup</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Sección de Envío - SIEMPRE VISIBLE */}
-                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        {/* Campos de envío - mostrar solo si requiere_envio es true */}
-                        {requiereEnvio && (
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
-                                {/* Política de Pago */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        💳 Política de Pago
-                                    </label>
-                                    <div className="space-y-2">
-                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                            <input
-                                                type="radio"
-                                                name="politica_pago"
-                                                value="CONTRA_ENTREGA"
-                                                checked={politicaPago === 'CONTRA_ENTREGA'}
-                                                onChange={(e) => setPoliticaPago(e.target.value as any)}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Contra Entrega
-                                                </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    El cliente paga al recibir el pedido
-                                                </p>
-                                            </div>
-                                        </label>
-                                        <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                            <input
-                                                type="radio"
-                                                name="politica_pago"
-                                                value="ANTICIPADO_100"
-                                                checked={politicaPago === 'ANTICIPADO_100'}
-                                                onChange={(e) => setPoliticaPago(e.target.value as any)}
-                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Anticipado 100%
-                                                </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    El cliente paga antes de enviar
-                                                </p>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="fecha-entrega" className="text-sm">Fecha Entrega Solicitada</Label>
-                                        <Input
-                                            id="fecha-entrega"
-                                            type="date"
-                                            value={fechaEntregaSolicitada}
-                                            onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
-                                            required={requiereEnvio}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="tipo-entrega" className="text-sm">Tipo Entrega</Label>
-                                        <Select value={tipoEntrega} onValueChange={(v) => setTipoEntrega(v as any)}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="DELIVERY">Delivery</SelectItem>
-                                                <SelectItem value="PICKUP">Pickup</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Información adicional */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4 space-y-4 mb-2 mt-4">
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {/* ✅ NUEVO: Grid responsivo de fechas en 3 columnas */}
+                    <div className="mt-6">
+                        {/* Fechas en 3 columnas responsivas */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Fecha */}
                             <div>
-                                <Label htmlFor="fecha" className="text-sm">Fecha</Label>
+                                <Label htmlFor="fecha" className="text-sm">📅 Fecha Creación</Label>
                                 <Input
                                     id="fecha"
                                     type="date"
@@ -825,8 +749,24 @@ export default function ProformasCreate({
                                     required
                                 />
                             </div>
+                            
+                            {/* Fecha Entrega Solicitada - solo si requiere_envio */}
+                            {requiereEnvio && (
+                                <div>
+                                    <Label htmlFor="fecha-entrega" className="text-sm">📅 Fecha Entrega Solicitada</Label>
+                                    <Input
+                                        id="fecha-entrega"
+                                        type="date"
+                                        value={fechaEntregaSolicitada}
+                                        onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
+                                        required={requiereEnvio}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Fecha Vencimiento */}
                             <div>
-                                <Label htmlFor="fecha-vencimiento" className="text-sm">Fecha Vencimiento</Label>
+                                <Label htmlFor="fecha-vencimiento" className="text-sm">📅 Fecha Vencimiento</Label>
                                 <Input
                                     id="fecha-vencimiento"
                                     type="date"
@@ -837,8 +777,9 @@ export default function ProformasCreate({
                             </div>
                         </div>
 
-                        <div className='mb-2'>
-                            <Label htmlFor="observaciones" className="text-sm">Observaciones</Label>
+                        {/* Observaciones */}
+                        <div>
+                            <Label htmlFor="observaciones" className="text-sm">📝 Observaciones</Label>
                             <Textarea
                                 id="observaciones"
                                 placeholder="Notas adicionales..."
@@ -850,7 +791,7 @@ export default function ProformasCreate({
                     </div>
 
                     {/* Card Productos - ProductosTable */}
-                    <Card>
+                    <Card className="mt-2">
                         <CardHeader>
                             <CardTitle className="text-lg">🛒 Productos</CardTitle>
                         </CardHeader>
@@ -880,10 +821,7 @@ export default function ProformasCreate({
                     {/* Card Resumen */}
                     {detalles.length > 0 && (
                         <Card className="bg-gradient-to-br from-primary/5 to-primary/10 mt-2">
-                            <CardHeader>
-                                <CardTitle className="text-lg">📊 Resumen</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">Subtotal:</span>
                                     <span className="font-semibold">Bs. {totales.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>

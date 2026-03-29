@@ -1979,11 +1979,15 @@ class ProductoController extends Controller
                     $q->select('id', 'producto_id', 'almacen_id', 'cantidad', 'cantidad_disponible', 'cantidad_reservada')
                         ->with('almacen:id,nombre');
                 },
-                'comboItems' => function ($q) {
+                'comboItems' => function ($q) use ($almacenId) {
                     $q->select('id', 'combo_id', 'producto_id', 'cantidad', 'precio_unitario', 'tipo_precio_id', 'es_obligatorio') // ✅ AGREGADO: es_obligatorio
                         ->with([
-                            'producto' => function ($pq) {
-                                $pq->select('id', 'nombre', 'sku', 'codigo_barras', 'precio_venta', 'unidad_medida_id');
+                            'producto' => function ($pq) use ($almacenId) {
+                                $pq->select('id', 'nombre', 'sku', 'codigo_barras', 'precio_venta', 'unidad_medida_id')
+                                    ->with(['stock' => function ($sq) use ($almacenId) {
+                                        // ✅ MEJORADO: Filtrar stock por almacén durante la carga
+                                        $sq->where('almacen_id', $almacenId);
+                                    }]);
                             },
                             'producto.unidad:id,nombre,codigo',
                             'tipoPrecio:id,nombre,codigo'
@@ -2196,14 +2200,33 @@ class ProductoController extends Controller
                     $capacidadInfo = \App\Services\ComboStockService::calcularCapacidadConDetalles($producto->id, $almacenId);
 
                     $comboItems = $producto->comboItems
-                        ->map(function($item) use ($capacidadInfo, $almacenId) {
-                            // ✅ Obtener stock del almacén específico usando StockProducto
-                            $stockAlmacen = $item->producto?->stock()
-                                ->where('almacen_id', $almacenId)
-                                ->first();
+                        ->map(function($item) use ($capacidadInfo, $almacenId, $producto) {
+                            // ✅ MEJORADO: Sumar stock de TODOS los lotes del almacén (no solo el primero)
+                            // Puede haber múltiples registros por lote/fecha_vencimiento
+                            $stockParaAlmacen = $item->producto?->stock
+                                ? collect($item->producto->stock)->where('almacen_id', $almacenId)
+                                : collect();
 
-                            $stockDisponible = $stockAlmacen?->cantidad_disponible ?? 0;
-                            $stockTotal = $stockAlmacen?->cantidad ?? 0;
+                            $stockDisponible = (int) $stockParaAlmacen->sum('cantidad_disponible');
+                            $stockTotal = (int) $stockParaAlmacen->sum('cantidad');
+
+                            // ✅ DEBUG: Log detallado del stock de cada item
+                            Log::debug('📦 [mapearProductos] Stock de item del combo', [
+                                'combo_id' => $producto->id,
+                                'item_id' => $item->id,
+                                'producto_id' => $item->producto_id,
+                                'producto_nombre' => $item->producto?->nombre,
+                                'almacen_id' => $almacenId,
+                                'stock_relationship_loaded' => $item->producto?->stock !== null,
+                                'stock_records_para_almacen' => $stockParaAlmacen->count(),
+                                'stock_details' => $stockParaAlmacen->map(fn($s) => [
+                                    'almacen_id' => $s->almacen_id,
+                                    'cantidad' => $s->cantidad,
+                                    'cantidad_disponible' => $s->cantidad_disponible,
+                                ])->all(),
+                                'stock_disponible_calculado' => $stockDisponible,
+                                'stock_total_calculado' => $stockTotal,
+                            ]);
 
                             // Obtener información del detalle de capacidad (incluye cuello de botella)
                             $detalle = collect($capacidadInfo['detalles'])
@@ -2231,6 +2254,14 @@ class ProductoController extends Controller
                         })
                         ->values()
                         ->all();
+
+                    // ✅ DEBUG: Log detallado del combo
+                    Log::info('📦 [mapearProductos] Combo cargado', [
+                        'combo_id' => $producto->id,
+                        'combo_nombre' => $producto->nombre,
+                        'cantidad_items' => count($comboItems),
+                        'items_detalle' => $comboItems
+                    ]);
                 }
 
                 return [

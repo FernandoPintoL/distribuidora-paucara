@@ -1203,12 +1203,13 @@ class CompraController extends Controller
     }
 
     /**
-     * Registrar entrada de inventario por compra
+     * ✅ REFACTORIZADO (2026-03-28): Registrar entrada de inventario usando servicio centralizado
+     *
+     * Ahora usa CompraDistribucionService::registrarEntradaCompra() para mantener
+     * consistencia con las entradas de compra normales (movimientos AGRUPADOS por producto)
      */
     private function registrarEntradaInventario(DetalleCompra $detalle, Compra $compra, ?int $almacenId = null): void
     {
-        $producto = $detalle->producto;
-
         // Usar almacén especificado o buscar el primero disponible
         $almacen = null;
         if ($almacenId) {
@@ -1222,65 +1223,51 @@ class CompraController extends Controller
         if (! $almacen) {
             Log::warning('No hay almacén disponible para registrar entrada de inventario', [
                 'compra_id'   => $compra->id,
-                'producto_id' => $producto->id,
+                'producto_id' => $detalle->producto_id,
             ]);
 
             return;
         }
 
         try {
-            // ✅ DEBUG: Verificar cantidad antes de procesar
-            // ✅ IMPORTANTE: Usar floatval para manejar correctamente decimales y strings
-            $cantidadFloat = floatval($detalle->cantidad);
-            $cantidadInt = intval($cantidadFloat); // Después convertir a int si es necesario
-
-            Log::info('🔍 registrarEntradaInventario - DEBUG cantidad', [
-                'compra_id'   => $compra->id,
-                'producto_id' => $producto->id,
-                'detalle_cantidad_raw' => $detalle->cantidad,
-                'detalle_cantidad_tipo' => gettype($detalle->cantidad),
-                'cantidad_float' => $cantidadFloat,
-                'cantidad_int' => $cantidadInt,
-            ]);
-
-            Log::info('📞 LLAMANDO registrarMovimiento()', [
-                'producto_id' => $producto->id,
+            Log::info('🔄 [registrarEntradaInventario] Registrando entrada usando CompraDistribucionService', [
+                'compra_numero' => $compra->numero,
+                'producto_id' => $detalle->producto_id,
+                'cantidad' => $detalle->cantidad,
+                'lote' => $detalle->lote,
                 'almacen_id' => $almacen->id,
-                'cantidad' => $cantidadInt,
-                'lote' => $detalle->lote ?? 'NULL',
-                'fecha_vencimiento' => $detalle->fecha_vencimiento ?? 'NULL',
             ]);
 
-            $movimiento = $producto->registrarMovimiento(
+            // ✅ REFACTORIZADO (2026-03-28): Usar servicio centralizado
+            // Prepara los detalles en el formato esperado por registrarEntradaCompra()
+            $detallesParaInventario = [
+                [
+                    'producto_id' => $detalle->producto_id,
+                    'cantidad' => (float) $detalle->cantidad,
+                    'lote' => $detalle->lote,
+                    'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                ]
+            ];
+
+            $movimientosStock = $this->compraDistribucionService->registrarEntradaCompra(
+                detalles: $detallesParaInventario,
+                numeroCompra: $compra->numero,
                 almacenId: $almacen->id,
-                cantidad: $cantidadInt,
-                tipo: MovimientoInventario::TIPO_ENTRADA_COMPRA,
-                observacion: "Entrada por compra #{$compra->numero}",
-                numeroDocumento: $compra->numero,
-                lote: $detalle->lote,
-                fechaVencimiento: $detalle->fecha_vencimiento ?
-                \Carbon\Carbon::parse($detalle->fecha_vencimiento) : null,
-                userId: $compra->usuario_id
+                usuarioId: $compra->usuario_id ?? Auth::id() ?? 1
             );
 
-            Log::info('✅ Movimiento de inventario registrado exitosamente', [
-                'compra_id'   => $compra->id,
-                'movimiento_id' => $movimiento->id,
-                'producto_id' => $producto->id,
-                'cantidad'    => $detalle->cantidad,
-                'cantidad_int' => $cantidadInt,
-                'almacen_id'  => $almacen->id,
-                'stock_producto_id' => $movimiento->stock_producto_id,
+            Log::info('✅ [registrarEntradaInventario] Entrada registrada exitosamente con CompraDistribucionService', [
+                'compra_numero' => $compra->numero,
+                'producto_id' => $detalle->producto_id,
+                'movimientos_creados' => count($movimientosStock),
+                'nota' => 'Movimiento AGRUPADO por producto (consistente con entradas normales)',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('❌ Error al registrar movimiento de inventario por compra', [
+            Log::error('❌ Error al registrar entrada de inventario', [
                 'compra_id'   => $compra->id,
-                'producto_id' => $producto->id,
+                'producto_id' => $detalle->producto_id,
                 'error'       => $e->getMessage(),
-                'file'        => $e->getFile(),
-                'line'        => $e->getLine(),
-                'trace'       => substr($e->getTraceAsString(), 0, 500),
             ]);
 
             // No detener la transacción, solo registrar el error
@@ -1443,36 +1430,45 @@ class CompraController extends Controller
     }
 
     /**
-     * Revertir movimientos de inventario al eliminar compra
+     * ✅ REFACTORIZADO (2026-03-28): Revertir movimientos usando servicio centralizado
+     *
+     * Ahora usa CompraDistribucionService::revertirEntradaCompra() para mantener
+     * consistencia con el registro de entrada (movimientos AGRUPADOS por producto)
+     *
+     * Diferencia antes vs después:
+     * - ANTES: 1 movimiento por lote (no agrupado)
+     * - DESPUÉS: 1 movimiento por producto con detalles de lotes en JSON
      */
     private function revertirMovimientosInventario(Compra $compra): void
     {
-        foreach ($compra->detalles as $detalle) {
-            $producto         = $detalle->producto;
-            $almacenPrincipal = \App\Models\Almacen::where('activo', true)->first();
+        try {
+            Log::info('🔄 [revertirMovimientosInventario] Iniciando reversión de entrada', [
+                'compra_numero' => $compra->numero,
+                'detalles_count' => $compra->detalles->count(),
+            ]);
 
-            if (! $almacenPrincipal) {
-                continue;
-            }
+            // ✅ REFACTORIZADO (2026-03-28): Usar servicio centralizado
+            $resultado = $this->compraDistribucionService->revertirEntradaCompra($compra->numero);
 
-            try {
-                // Registrar salida para revertir la entrada original
-                $producto->registrarMovimiento(
-                    almacenId: $almacenPrincipal->id,
-                    cantidad: -(int) $detalle->cantidad, // Negativo para salida
-                    tipo: MovimientoInventario::TIPO_SALIDA_AJUSTE,
-                    observacion: "Reversión por eliminación de compra #{$compra->numero}",
-                    numeroDocumento: $compra->numero_factura,
-                    userId: Auth::id()
-                );
-
-            } catch (\Exception $e) {
-                Log::error('Error al revertir movimiento de inventario', [
-                    'compra_id'   => $compra->id,
-                    'producto_id' => $producto->id,
-                    'error'       => $e->getMessage(),
+            if ($resultado['success']) {
+                Log::info('✅ [revertirMovimientosInventario] Reversión completada exitosamente', [
+                    'compra_numero' => $compra->numero,
+                    'cantidad_revertida' => $resultado['cantidad_revertida'],
+                    'movimientos_creados' => $resultado['movimientos'],
+                    'nota' => 'Movimientos AGRUPADOS por producto (consistente con entrada)',
+                ]);
+            } else {
+                Log::warning('⚠️ [revertirMovimientosInventario] Reversión sin movimientos', [
+                    'compra_numero' => $compra->numero,
+                    'error' => $resultado['error'],
                 ]);
             }
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error al revertir movimientos de inventario', [
+                'compra_numero' => $compra->numero,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -524,58 +524,98 @@ export default function VentaShow() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
-                                    {venta.detalles.map((detalle) => (
-                                        <tr key={detalle.id}>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {detalle.producto.nombre}
-                                                </div>
-                                                <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-                                                    {(detalle.producto as any).sku && (
-                                                        <div>
-                                                            <span className="font-semibold">Código:</span> {(detalle.producto as any).sku}
+                                    {venta.detalles.map((detalle) => {
+                                        // ✅ NUEVO: Detectar si es combo y tiene items
+                                        const esCombo = (detalle.producto as any)?.es_combo === true;
+                                        const comboItems = detalle.combo_items_seleccionados?.filter((item: any) => item.incluido !== false) || [];
+
+                                        return (
+                                            <>
+                                                <tr key={detalle.id}>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                            {esCombo && <span className="mr-2">📦</span>}
+                                                            {detalle.producto.nombre}
                                                         </div>
-                                                    )}
-                                                    {(detalle.producto as any).marca && (
-                                                        <div>
-                                                            <span className="font-semibold">Marca:</span> {(detalle.producto as any).marca.nombre}
+                                                        <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                                            {(detalle.producto as any).sku && (
+                                                                <div>
+                                                                    <span className="font-semibold">Código:</span> {(detalle.producto as any).sku}
+                                                                </div>
+                                                            )}
+                                                            {(detalle.producto as any).marca && (
+                                                                <div>
+                                                                    <span className="font-semibold">Marca:</span> {(detalle.producto as any).marca.nombre}
+                                                                </div>
+                                                            )}
+                                                            {(detalle.producto as any).categoria && (
+                                                                <div>
+                                                                    <span className="font-semibold">Categoría:</span> {(detalle.producto as any).categoria.nombre}
+                                                                </div>
+                                                            )}
+                                                            {(detalle.producto as any).unidad && (
+                                                                <div>
+                                                                    <span className="font-semibold">Unidad:</span> {(detalle.producto as any).unidad.nombre} ({(detalle.producto as any).unidad.simbolo})
+                                                                </div>
+                                                            )}
+                                                            {(detalle.producto as any).codigos_barra && (detalle.producto as any).codigos_barra.length > 0 && (
+                                                                <div>
+                                                                    <span className="font-semibold">Códigos:</span>{' '}
+                                                                    {(detalle.producto as any).codigos_barra.map((cb: any) => (
+                                                                        <span key={cb.id} className="inline-block mr-2">
+                                                                            <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs">
+                                                                                {cb.codigo} {cb.es_principal && <span className="text-green-600 dark:text-green-400">★</span>}
+                                                                            </code>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    {(detalle.producto as any).categoria && (
-                                                        <div>
-                                                            <span className="font-semibold">Categoría:</span> {(detalle.producto as any).categoria.nombre}
-                                                        </div>
-                                                    )}
-                                                    {(detalle.producto as any).unidad && (
-                                                        <div>
-                                                            <span className="font-semibold">Unidad:</span> {(detalle.producto as any).unidad.nombre} ({(detalle.producto as any).unidad.simbolo})
-                                                        </div>
-                                                    )}
-                                                    {(detalle.producto as any).codigos_barra && (detalle.producto as any).codigos_barra.length > 0 && (
-                                                        <div>
-                                                            <span className="font-semibold">Códigos:</span>{' '}
-                                                            {(detalle.producto as any).codigos_barra.map((cb: any) => (
-                                                                <span key={cb.id} className="inline-block mr-2">
-                                                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs">
-                                                                        {cb.codigo} {cb.es_principal && <span className="text-green-600 dark:text-green-400">★</span>}
-                                                                    </code>
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                                {formatCurrencyWith2Decimals(detalle.cantidad)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                                {formatCurrencyWith2Decimals(detalle.precio_unitario, venta.moneda.codigo)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                {formatCurrencyWith2Decimals(detalle.subtotal, venta.moneda.codigo)}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                        {formatCurrencyWith2Decimals(detalle.cantidad)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                        {formatCurrencyWith2Decimals(detalle.precio_unitario, venta.moneda.codigo)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                                        {formatCurrencyWith2Decimals(detalle.subtotal, venta.moneda.codigo)}
+                                                    </td>
+                                                </tr>
+
+                                                {/* ✅ NUEVO: Mostrar items del combo si existen */}
+                                                {esCombo && comboItems.length > 0 && (
+                                                    <>
+                                                        <tr className="bg-gray-50 dark:bg-zinc-800">
+                                                            <td colSpan={4} className="px-6 py-3">
+                                                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                                                                    Componentes del combo ({comboItems.length})
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {comboItems.map((item: any, idx: number) => {
+                                                            const cantidadTotal = (item.cantidad || 0) * (detalle.cantidad || 1);
+                                                            return (
+                                                                <tr key={`${detalle.id}-item-${idx}`} className="bg-gray-50 dark:bg-zinc-800">
+                                                                    <td className="px-6 py-3 pl-12">
+                                                                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                                                                            └─ Producto #{item.producto_id}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                        {formatCurrencyWith2Decimals(cantidadTotal)}
+                                                                    </td>
+                                                                    <td colSpan={2} className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                                                        (cantidad base: {item.cantidad})
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
+                                            </>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

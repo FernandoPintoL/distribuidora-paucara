@@ -58,7 +58,8 @@ class MovimientoInventarioService
             // Obtener producto
             $producto = Producto::findOrFail($producto_id);
 
-            // Calcular totales sumando todos los lotes
+            // ✅ CORREGIDO (2026-03-28): Usar totales GENERALES si se proporcionan en opciones
+            // Si no, calcular sumando detalles de lotes (fallback para compatibilidad)
             $cantidadTotalAnterior = 0;
             $cantidadTotalPosterior = 0;
             $cantidadDisponibleAnterior = 0;
@@ -66,8 +67,27 @@ class MovimientoInventarioService
             $cantidadReservadaAnterior = 0;
             $cantidadReservadaPosterior = 0;
 
-            // Si hay detalles por lote, sumar
-            if (!empty($detallesLotes)) {
+            // Primero, intentar usar totales proporcionados en opciones (tienen prioridad)
+            if (!empty($opciones['totales_previos'])) {
+                $cantidadTotalAnterior = $opciones['totales_previos']['cantidad_total_anterior'] ?? 0;
+                $cantidadDisponibleAnterior = $opciones['totales_previos']['cantidad_disponible_anterior'] ?? 0;
+                $cantidadReservadaAnterior = $opciones['totales_previos']['cantidad_reservada_anterior'] ?? 0;
+            }
+
+            if (!empty($opciones['totales_posteriores'])) {
+                $cantidadTotalPosterior = $opciones['totales_posteriores']['cantidad_total_posterior'] ?? 0;
+                $cantidadDisponiblePosterior = $opciones['totales_posteriores']['cantidad_disponible_posterior'] ?? 0;
+                $cantidadReservadaPosterior = $opciones['totales_posteriores']['cantidad_reservada_posterior'] ?? 0;
+            } else if (!empty($detallesLotes) && !empty($opciones['totales_previos'])) {
+                // Si tenemos totales anteriores pero no posteriores, calcular posteriores
+                $cantidadTotalPosterior = $cantidadTotalAnterior + $cantidad;
+                // Para disponible y reservada, usar detalles de lotes como fallback
+                foreach ($detallesLotes as $detalle) {
+                    $cantidadDisponiblePosterior += $detalle['cantidad_disponible_posterior'] ?? 0;
+                    $cantidadReservadaPosterior += $detalle['cantidad_reservada_posterior'] ?? 0;
+                }
+            } else if (!empty($detallesLotes)) {
+                // FALLBACK: Si no hay opciones, sumar detalles de lotes (para compatibilidad)
                 foreach ($detallesLotes as $detalle) {
                     $cantidadTotalAnterior += $detalle['cantidad_total_anterior'] ?? $detalle['cantidad_anterior'] ?? 0;
                     $cantidadTotalPosterior += $detalle['cantidad_total_posterior'] ?? $detalle['cantidad_posterior'] ?? 0;
@@ -77,13 +97,13 @@ class MovimientoInventarioService
                     $cantidadReservadaPosterior += $detalle['cantidad_reservada_posterior'] ?? 0;
                 }
             } else {
-                // Si no hay detalles, obtener del stock actual (fallback)
+                // FALLBACK: Si no hay detalles, obtener del stock actual
                 $stockTotal = StockProducto::where('producto_id', $producto_id)
                     ->where('almacen_id', $almacen_id)
                     ->sum('cantidad');
 
                 $cantidadTotalAnterior = $stockTotal;
-                $cantidadTotalPosterior = $stockTotal + $cantidad; // Aproximación
+                $cantidadTotalPosterior = $stockTotal + $cantidad;
 
                 $cantidadDisponibleAnterior = StockProducto::where('producto_id', $producto_id)
                     ->where('almacen_id', $almacen_id)

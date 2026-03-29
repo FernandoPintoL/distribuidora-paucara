@@ -31,7 +31,7 @@
         {{-- MONTO PAGADO --}}
         <tr style="font-size:12px;">
             <td><strong>Monto Pagado:</strong></td>
-            <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pagado ?? 0, 2) }}</td>
+            <td class="text-left">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pagado ?? 0, 2) }}</td>
         </tr>
         {{-- CAMBIO --}}
         @php
@@ -46,5 +46,5 @@
 
 {{-- TOTAL EN LETRAS --}}
 <div style="margin-top: 10px; padding: 8px; background-color: #f9f9f9; border-radius: 4px; text-align: center; font-size: 10px; font-weight: bold;">
-    {{ \App\Helpers\FormatHelper::numeroALetras($documento->subtotal, 'Bolivianos') }} 00/100 Bolivianos
+    {{ \App\Helpers\FormatHelper::numeroALetras($documento->total, 'Bolivianos') }} 00/100 Bolivianos
 </div>

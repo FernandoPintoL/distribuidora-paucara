@@ -586,6 +586,52 @@ class VentaDistribucionService
                     'stock_disponible' => $stockTotal,
                 ]);
             }
+
+            // ✅ NUEVO (2026-03-28): Validar también items del combo si es_combo
+            if ($producto->es_combo && !empty($item['combo_items_seleccionados'])) {
+                foreach ($item['combo_items_seleccionados'] as $comboItem) {
+                    // Si el item no está incluido, no validar
+                    if (!($comboItem['incluido'] ?? true)) {
+                        continue;
+                    }
+
+                    $itemProductoId = $comboItem['producto_id'] ?? null;
+                    $itemCantidad = (float) ($comboItem['cantidad'] ?? 0);
+
+                    if (!$itemProductoId || $itemCantidad <= 0) {
+                        continue;
+                    }
+
+                    // Calcular cantidad total necesaria: cantidad de combos × cantidad por combo
+                    $cantidadTotalNecesaria = $cantidad * $itemCantidad;
+
+                    // Validar stock disponible para el item del combo
+                    $itemStockTotal = StockProducto::where('producto_id', $itemProductoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_disponible');
+
+                    if ($itemStockTotal < $cantidadTotalNecesaria) {
+                        $itemProducto = Producto::find($itemProductoId);
+                        $errores[] = [
+                            'producto_id' => $itemProductoId,
+                            'producto_nombre' => $itemProducto?->nombre ?? "Producto #{$itemProductoId}",
+                            'cantidad_necesaria' => $cantidadTotalNecesaria,
+                            'stock_disponible' => $itemStockTotal,
+                            'es_componente_combo' => true,
+                            'combo_producto_id' => $productoId,
+                        ];
+
+                        Log::warning('⚠️ [VentaDistribucionService] Stock insuficiente en componente de combo', [
+                            'combo_producto_id' => $productoId,
+                            'combo_cantidad' => $cantidad,
+                            'item_producto_id' => $itemProductoId,
+                            'item_cantidad_base' => $itemCantidad,
+                            'cantidad_necesaria' => $cantidadTotalNecesaria,
+                            'stock_disponible' => $itemStockTotal,
+                        ]);
+                    }
+                }
+            }
         }
 
         $valido = empty($errores);

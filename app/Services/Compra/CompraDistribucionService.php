@@ -94,11 +94,29 @@ class CompraDistribucionService
                     'cantidad_lotes' => count($detallesProducto),
                 ]);
 
+                // ✅ CORREGIDO (2026-03-28): Obtener totales GENERALES del producto ANTES de procesar lotes
+                // Esto incluye TODOS los lotes existentes, no solo los que se procesan en esta compra
+                $cantidadTotalAnterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $cantidadDisponibleAnterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $cantidadReservadaAnterior_acumulada = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
+
+                Log::debug('📊 [CompraDistribucionService] Totales ANTES del producto', [
+                    'producto_id' => $productoId,
+                    'cantidad_total_anterior' => $cantidadTotalAnterior_acumulada,
+                    'cantidad_disponible_anterior' => $cantidadDisponibleAnterior_acumulada,
+                    'cantidad_reservada_anterior' => $cantidadReservadaAnterior_acumulada,
+                ]);
+
                 $cantidadTotalAñadida = 0;
                 $detallesLotes = [];
-                $cantidadTotalAnterior_acumulada = 0;
-                $cantidadDisponibleAnterior_acumulada = 0;
-                $cantidadReservadaAnterior_acumulada = 0;
 
                 // Procesar cada lote del producto
                 foreach ($detallesProducto as $detalle) {
@@ -161,10 +179,8 @@ class CompraDistribucionService
                     $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
                     $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
 
-                    // ✅ ACUMULAR valores para obtener totales del producto
-                    $cantidadTotalAnterior_acumulada += $cantidadAnterior;
-                    $cantidadDisponibleAnterior_acumulada += $cantidadDisponibleAnterior;
-                    $cantidadReservadaAnterior_acumulada += $cantidadReservadaAnterior;
+                    // ✅ NO acumular aquí - ya tenemos los totales GENERALES correctos (línea 99-109)
+                    // Solo recolectamos detalles por lote para el JSON
 
                     // Recolectar detalle de este lote
                     $detallesLotes[] = [
@@ -203,7 +219,9 @@ class CompraDistribucionService
                     ->where('almacen_id', $almacenId)
                     ->sum('cantidad_reservada');
 
-                // Crear UN SOLO movimiento agrupado para este producto
+                // ✅ CORREGIDO (2026-03-28): Pasar totales GENERALES correctos
+                // Los detallesLotes solo contienen los lotes procesados en ESTA compra
+                // Pero necesitamos los totales generales del producto (incluyendo otros lotes no procesados)
                 $movimiento = $this->movimientoService->registrarMovimientoAgrupado(
                     producto_id: $productoId,
                     almacen_id: $almacenId,
@@ -213,7 +231,18 @@ class CompraDistribucionService
                     detallesLotes: $detallesLotes,
                     opciones: [
                         'referencia_tipo' => 'compra',
-                        'referencia_id' => null,  // Se establecerá con el compra_id si es necesario
+                        'referencia_id' => null,
+                        // ✅ Pasar totales GENERALES obtenidos antes (línea 99-109)
+                        'totales_previos' => [
+                            'cantidad_total_anterior' => $cantidadTotalAnterior_acumulada,
+                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior_acumulada,
+                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior_acumulada,
+                        ],
+                        'totales_posteriores' => [
+                            'cantidad_total_posterior' => $cantidadTotalPosterior_acumulada,
+                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior_acumulada,
+                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior_acumulada,
+                        ]
                     ]
                 );
 

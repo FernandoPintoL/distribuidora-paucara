@@ -1,13 +1,11 @@
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useCajaWarning } from '@/application/hooks/use-caja-warning';
 import { AlertSinCaja } from '@/presentation/components/cajas/alert-sin-caja';
 import VentaPreviewModal from '@/presentation/components/VentaPreviewModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
-import StockManager from '@/presentation/components/ventas/stock-manager';
-
 // Importar componentes y hooks adicionales
 import InputSearch from '@/presentation/components/ui/input-search';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
@@ -15,6 +13,7 @@ import { SearchableSelect } from '@/presentation/components/ui/searchable-select
 import { useClienteSearch } from '@/infrastructure/hooks/use-api-search';
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente';
 import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable';
+import EntregaSearchSelector from '@/presentation/components/entregas/EntregaSearchSelector';
 
 // Importar servicios adicionales
 import { NotificationService } from '@/infrastructure/services/notification.service';
@@ -33,7 +32,7 @@ import type { TipoDocumento } from '@/domain/entities/tipos-documento';
 import type { Cliente } from '@/domain/entities/clientes';
 
 import ventasService from '@/infrastructure/services/ventas.service';
-import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
+import { formatCurrencyWith2Decimals } from '@/lib/utils';
 
 interface TipoPrecio {
     id: number;
@@ -128,20 +127,6 @@ export default function VentaForm() {
         })), [tiposPagoSeguro]
     );
 
-    const tiposDocumentoOptions: SelectOption[] = useMemo(() =>
-        tiposDocumentoSeguro.map(tipo => ({
-            value: tipo.id,
-            label: tipo.nombre,
-            description: tipo.codigo
-        })), [tiposDocumentoSeguro]
-    );
-
-    const canalOrigenOptions: SelectOption[] = useMemo(() => [
-        { value: 'PRESENCIAL', label: 'Presencial', description: 'Venta en tienda física' },
-        { value: 'WEB', label: 'Web', description: 'Venta a través del sitio web' },
-        { value: 'APP_EXTERNA', label: 'App Externa', description: 'Venta desde aplicación externa' }
-    ], []);
-
     const [detallesWithProducts, setDetallesWithProducts] = useState<DetalleProducto[]>([]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [stockValido, setStockValido] = useState(true);
@@ -172,8 +157,6 @@ export default function VentaForm() {
         chofer?: { name: string };
         vehiculo?: { placa: string };
     }
-    const [entregas, setEntregas] = useState<Entrega[]>([]);
-    const [cargandoEntregas, setCargandoEntregas] = useState(false);
 
     // Estados para validación de caja abierta
     interface CajaInfo {
@@ -244,31 +227,7 @@ export default function VentaForm() {
         cargarPrevenstitas();
     }, []);
 
-    // ✅ NUEVO: Cargar entregas disponibles
-    useEffect(() => {
-        const cargarEntregas = async () => {
-            try {
-                setCargandoEntregas(true);
-                const response = await fetch('/api/chofer/entregas/1/entregas-disponibles');
-                const data = await response.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setEntregas(data.data);
-                } else {
-                    console.warn('⚠️ Respuesta de entregas inválida:', data);
-                    setEntregas([]);
-                }
-            } catch (error) {
-                console.error('❌ Error al cargar entregas:', error);
-                setEntregas([]);
-            } finally {
-                setCargandoEntregas(false);
-            }
-        };
-
-        if (logistica_envios) {
-            cargarEntregas();
-        }
-    }, [logistica_envios]);
+    // ✅ NUEVO: Entrega search is now handled by EntregaSearchSelector component (backend search)
 
     // Hook para calcular carrito con precios por rango
     const precioRango = usePrecioRangoCarrito(500); // Debounce de 500ms
@@ -340,6 +299,20 @@ export default function VentaForm() {
             data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
         );
     }, [data.monto_pagado_inicial]);
+
+    // ✅ NUEVO: Auto-seleccionar Fernando Santander cuando preventistas se cargan
+    useEffect(() => {
+        if (!isEditing && preventistas.length > 0 && !data.preventista_id) {
+            const fernando = preventistas.find((p: Preventista) =>
+                p.name.toLowerCase().includes('fernando') &&
+                p.name.toLowerCase().includes('santander')
+            );
+            if (fernando) {
+                setData('preventista_id', fernando.id);
+                console.log('✅ Preventista "Fernando Santander" auto-seleccionado:', fernando);
+            }
+        }
+    }, [preventistas, isEditing, data.preventista_id]);
 
     // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -418,7 +391,7 @@ export default function VentaForm() {
         }
     }, []); // Solo ejecutar al montar el componente
 
-    // Inicializar detalles con productos
+    // Inicializar detalles con productos y combo items map
     useEffect(() => {
         if (venta?.detalles) {
             setDetallesWithProducts(venta.detalles.map((d) => ({
@@ -430,6 +403,30 @@ export default function VentaForm() {
                 subtotal: d.subtotal,
                 producto: d.producto
             })));
+
+            // ✅ NUEVO: Inicializar comboItemsMap desde combo_items_seleccionados guardados
+            const nuevoComboMap: Record<number, any[]> = {};
+            venta.detalles.forEach((d, index) => {
+                if ((d.producto as any)?.es_combo && d.combo_items_seleccionados?.length) {
+                    // Convertir combo_items_seleccionados de vuelta al formato de combo_items para el mapa
+                    const comboItemsDelDB = d.combo_items_seleccionados.map((item: any) => ({
+                        id: item.combo_item_id,
+                        producto_id: item.producto_id,
+                        cantidad: item.cantidad,
+                        incluido: item.incluido !== false
+                    }));
+                    nuevoComboMap[index] = comboItemsDelDB;
+
+                    console.log(`📦 [Inicializar venta] Combo desde DB (index ${index}):`, {
+                        producto_id: d.producto_id,
+                        items: comboItemsDelDB
+                    });
+                }
+            });
+
+            if (Object.keys(nuevoComboMap).length > 0) {
+                setComboItemsMap(nuevoComboMap);
+            }
         }
     }, [venta]);
 
@@ -732,7 +729,8 @@ export default function VentaForm() {
             tipo_precio_nombre_recomendado: (producto as any).tipo_precio_nombre_recomendado
         };
 
-        const newDetalles = [...detallesWithProducts, newDetail];
+        // ✅ MODIFICADO: Agregar el producto al INICIO de la lista, no al final
+        const newDetalles = [newDetail, ...detallesWithProducts];
         setDetallesWithProducts(newDetalles);
 
         // 🔑 NUEVO: Calcular precios según rangos
@@ -871,6 +869,27 @@ export default function VentaForm() {
         calculateTotals(updatedDetalles);
         calculatePeso(updatedDetalles);
     };
+
+    // ✅ MEMOIZADO: Callbacks para ProductosTable (evitar re-renders infinitos)
+    const handleManualTipoPrecioChange = useCallback((index: number) => {
+        setManuallySelectedTipoPrecio(prev => ({
+            ...prev,
+            [index]: true
+        }));
+    }, []);
+
+    const handleComboItemsChange = useCallback((detailIndex: number, items: any[]) => {
+        setComboItemsMap(prev => ({
+            ...prev,
+            [detailIndex]: items
+        }));
+        console.log(`🔄 [create.tsx] Items del combo actualizado (índice ${detailIndex}):`, items);
+    }, []);
+
+    const handleDetallesActualizados = useCallback((nuevosDetalles: DetalleProducto[]) => {
+        console.log('🔄 [create.tsx] ProductosTable notificó cambios en detalles por rangos');
+        setDetallesWithProducts(nuevosDetalles);
+    }, []);
 
     const calculateTotals = (detalles: DetalleProducto[]) => {
         // ✅ SIMPLIFICADO: Usar directamente el subtotal ya calculado en cada detalle
@@ -1018,16 +1037,26 @@ export default function VentaForm() {
                 // ✅ NUEVO: Si es combo, agregar items seleccionados
                 if ((d.producto as any)?.es_combo) {
                     const comboItems = comboItemsMap[detailIndex] || ((d.producto as any).combo_items || []);
+                    // ✅ IMPORTANTE: Incluir cantidad de cada item para que aparezca en impresión
                     detalle.combo_items_seleccionados = comboItems.map((item: any) => ({
                         combo_item_id: item.id,
                         producto_id: item.producto_id,
+                        cantidad: item.cantidad || 0, // ✅ NUEVO: Incluir cantidad del item
                         incluido: item.incluido !== false // true si está incluido, false si está excluido
                     }));
 
                     console.log(`📦 [handleConfirmSubmit] Combo ${d.producto?.nombre}:`, {
+                        producto_id: d.producto_id,
+                        cantidad_combo: d.cantidad,
                         total_items: comboItems.length,
                         items_incluidos: comboItems.filter((i: any) => i.incluido !== false).length,
-                        detalles: detalle.combo_items_seleccionados
+                        items_almacenados: comboItems.map((i: any) => ({
+                            id: i.id,
+                            producto_id: i.producto_id,
+                            cantidad: i.cantidad,
+                            incluido: i.incluido
+                        })),
+                        detalles_enviados: detalle.combo_items_seleccionados
                     });
                 }
 
@@ -1347,8 +1376,8 @@ export default function VentaForm() {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             💳 Política de Pago
                                         </label>
-                                        <div className="space-y-2">
-                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition h-full">
                                                 <input
                                                     type="radio"
                                                     name="politica_pago"
@@ -1366,7 +1395,7 @@ export default function VentaForm() {
                                                     </p>
                                                 </div>
                                             </label>
-                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition h-full">
                                                 <input
                                                     type="radio"
                                                     name="politica_pago"
@@ -1446,14 +1475,8 @@ export default function VentaForm() {
                                     {/* ✅ NUEVO: Campo de Logística de Envíos - mostrar solo si logistica_envios (prop global) = true */}
                                     {(() => {
                                         const mostrar = logistica_envios;
-                                        console.log(`🔍 [Render] Evaluando condición logistica_envios:`, {
-                                            logistica_envios,
-                                            tipo: typeof logistica_envios,
-                                            estaVacio: !logistica_envios,
-                                            mostrar
-                                        });
                                         return mostrar && (
-                                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
+                                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {/* ✅ NUEVO: Selector de Preventista */}
                                                 <div className="border-t border-green-200 dark:border-green-800 pt-3">
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1492,45 +1515,10 @@ export default function VentaForm() {
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                         🚚 Asignar a Entrega (Opcional)
                                                     </label>
-                                                    {cargandoEntregas ? (
-                                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                                            <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
-                                                            <span className="text-sm">Cargando entregas...</span>
-                                                        </div>
-                                                    ) : entregas && entregas.length > 0 ? (
-                                                        <div>
-                                                            <SearchableSelect
-                                                                value={data.entrega_id ? String(data.entrega_id) : ''}
-                                                                onValueChange={(value) => setData('entrega_id', value ? Number(value) : null)}
-                                                                items={entregas}
-                                                                placeholder="Selecciona una entrega..."
-                                                                searchPlaceholder="Busca por ID, chofer, vehículo, estado..."
-                                                                searchFields={['numero_entrega', 'id', 'chofer.name', 'vehiculo.placa', 'estado']}
-                                                                renderOption={(entrega) => (
-                                                                    <div className="flex items-center gap-2 w-full">
-                                                                        <span className="font-medium">#{entrega.numero_entrega}</span>
-                                                                        <span className="text-gray-400">•</span>
-                                                                        <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
-                                                                            {entrega.estado || 'N/A'}
-                                                                        </span>
-                                                                        <span className="text-gray-400">•</span>
-                                                                        <span className="text-sm">{entrega.chofer?.name || 'Sin chofer'}</span>
-                                                                        <span className="text-gray-400">/</span>
-                                                                        <span className="text-sm">{entrega.vehiculo?.placa || 'Sin vehículo'}</span>
-                                                                    </div>
-                                                                )}
-                                                            />
-                                                            {data.entrega_id && (
-                                                                <p className="text-xs text-green-700 dark:text-green-300 mt-2">
-                                                                    ✓ Venta será asignada a la entrega seleccionada
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-sm text-amber-600 dark:text-amber-400">
-                                                            ℹ️ No hay entregas disponibles. Crea una entrega primero o desactiva esta opción.
-                                                        </p>
-                                                    )}
+                                                    <EntregaSearchSelector
+                                                        value={data.entrega_id}
+                                                        onValueChange={(value) => setData('entrega_id', value ? Number(value) : null)}
+                                                    />
                                                     <p className="text-xs text-green-700 dark:text-green-300 mt-2">
                                                         ℹ️ Asigna esta venta a una entrega existente (opcional)
                                                     </p>
@@ -1570,27 +1558,10 @@ export default function VentaForm() {
                         manuallySelectedTipoPrecio={manuallySelectedTipoPrecio} // ✅ NUEVO: Pasar estado de selecciones manuales
                         isCalculatingPrices={precioRango.loading} // ✅ NUEVO: Mostrar indicador de carga
                         onUpdateDetailUnidadConPrecio={updateDetailUnidadConPrecio} // ✅ NUEVO: Actualizar unidad y precio juntos
-                        onManualTipoPrecioChange={(index) => {
-                            // ✅ NUEVO: Marcar que el usuario ha seleccionado manualmente este tipo de precio
-                            setManuallySelectedTipoPrecio(prev => ({
-                                ...prev,
-                                [index]: true
-                            }));
-                        }} // ✅ NUEVO: Notificar cuando usuario selecciona manualmente un tipo de precio
-                        onComboItemsChange={(detailIndex, items) => {
-                            // ✅ NUEVO: Actualizar el estado de items opcionales cuando el usuario los selecciona/deselecciona
-                            setComboItemsMap(prev => ({
-                                ...prev,
-                                [detailIndex]: items
-                            }));
-                            console.log(`🔄 [create.tsx] Items del combo actualizado (índice ${detailIndex}):`, items);
-                        }} // ✅ NUEVO: Notificar cambios en items opcionales
+                        onManualTipoPrecioChange={handleManualTipoPrecioChange} // ✅ MEMOIZADO
+                        onComboItemsChange={handleComboItemsChange} // ✅ MEMOIZADO
                         carritoCalculado={precioRango.carritoCalculado} // ✅ NUEVO (2026-02-17): Pasar datos de rangos al componente
-                        onDetallesActualizados={(nuevosDetalles) => {
-                            // ✅ NUEVO (2026-02-17): Callback cuando ProductosTable actualiza detalles por cambios de rangos
-                            console.log('🔄 [create.tsx] ProductosTable notificó cambios en detalles por rangos');
-                            setDetallesWithProducts(nuevosDetalles);
-                        }} // ✅ NUEVO (2026-02-17): Notificar cuando rangos hacen cambios automáticos
+                        onDetallesActualizados={handleDetallesActualizados} // ✅ MEMOIZADO
                         es_farmacia={es_farmacia} // ✅ NUEVO: Indicador para mostrar/ocultar campos de medicamentos
                     />
                 </div>
