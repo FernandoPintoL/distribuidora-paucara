@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import AppLayout from '@/layouts/app-layout';
@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/presentation/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/presentation/components/ui/dialog';
 import { Alert, AlertDescription } from '@/presentation/components/ui/alert';
 import SearchSelect from '@/presentation/components/ui/search-select'; // ✅ NUEVO
-import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer, Calendar, AlertCircle, CheckCircle2, Clock, XCircle, CheckCheck } from 'lucide-react';
+import { Eye, CreditCard, AlertTriangle, Plus, ChevronDown, ChevronUp, Trash2, Printer, Calendar, AlertCircle, CheckCircle2, Clock, XCircle, CheckCheck, MoreVertical } from 'lucide-react';
 import RegistrarPagoModal from '@/presentation/components/clientes/RegistrarPagoModal';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import { toast } from 'react-toastify';
@@ -131,6 +131,26 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         }
         setExpandedRows(newExpandedRows);
     };
+
+    // ✅ NUEVO: Estado para controlar el menú popup
+    const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // ✅ NUEVO: Cerrar menú al hacer click fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setMenuAbiertoId(null);
+            }
+        };
+
+        if (menuAbiertoId !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [menuAbiertoId]);
 
     // Estados para anular pagos
     const [pagoAAnular, setPagoAAnular] = useState<{ id: number; monto: number; cuenta_id: number } | null>(null);
@@ -408,7 +428,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         const estadoDisplay = (estado || '').toUpperCase();
 
         return (
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+            <span className={`inline-flex items-center gap-2 px-2 py-1 mb-1 font-medium text-sm ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
                 <IconComponent className="w-4 h-4" />
                 <span>{estadoDisplay}</span>
             </span>
@@ -463,7 +483,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         const IconComponent = info.icon;
 
         return (
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+            <span className={`inline-flex items-center gap-2 px-2 py-1 text-sm font-medium ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
                 <IconComponent className="w-4 h-4" />
                 <span>{info.label}</span>
             </span>
@@ -530,7 +550,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
         const IconComponent = info.icon;
 
         return (
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
+            <span className={`inline-flex items-center gap-2 px-1 py-1 rounded-full border ${info.bgColor} ${info.textColor} ${info.borderColor}`}>
                 <IconComponent className="w-4 h-4" />
                 <span>{estado}</span>
             </span>
@@ -597,9 +617,9 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                 {/* Estadísticas Rápidas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <Card>
-                        <CardContent className="p-6">
+                        <CardContent className="p-1">
                             <div className="flex items-center">
-                                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                <div className="p-1 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                                     <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="ml-4">
@@ -613,9 +633,9 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                     </Card>
 
                     <Card>
-                        <CardContent className="p-6">
+                        <CardContent className="p-1">
                             <div className="flex items-center">
-                                <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                                <div className="p-1 bg-red-100 dark:bg-red-900/20 rounded-lg">
                                     <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
                                 </div>
                                 <div className="ml-4">
@@ -629,9 +649,9 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                     </Card>
 
                     <Card>
-                        <CardContent className="p-6">
+                        <CardContent className="p-1">
                             <div className="flex items-center">
-                                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                                <div className="p-1 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                                     <CreditCard className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                                 </div>
                                 <div className="ml-4">
@@ -645,9 +665,9 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                     </Card>
 
                     <Card>
-                        <CardContent className="p-6">
+                        <CardContent className="p-1">
                             <div className="flex items-center">
-                                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                                <div className="p-1 bg-green-100 dark:bg-green-900/20 rounded-lg">
                                     <CreditCard className="w-6 h-6 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div className="ml-4">
@@ -663,7 +683,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
 
                 {/* Filtros */}
                 <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-2">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             {/* ✅ ACTUALIZADO: SearchSelect para cliente */}
                             <div className="space-y-2">
@@ -686,24 +706,15 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Buscar</label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={searchInput}
-                                        onChange={(e) => setSearchInput(e.target.value)}
-                                        onKeyPress={handleBusquedaEnter}
-                                        placeholder="ID cuenta, ID venta, referencia, número, cliente, usuario..."
-                                        className="dark:bg-gray-800 dark:border-gray-600 dark:text-white flex-1"
-                                    />
-                                    <Button
-                                        onClick={handleBusqueda}
-                                        size="sm"
-                                        className="whitespace-nowrap"
-                                    >
-                                        🔍 Buscar
-                                    </Button>
-                                </div>
+                                <Input
+                                    value={searchInput}
+                                    onChange={(e) => setSearchInput(e.target.value)}
+                                    onKeyPress={handleBusquedaEnter}
+                                    placeholder="ID cuenta, ID venta, referencia, número, cliente, usuario..."
+                                    className="dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                />
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Presiona <kbd className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">Enter</kbd> o toca el botón para buscar
+                                    Presiona <kbd className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">Enter</kbd> para buscar rápidamente
                                 </p>
                             </div>
                             <div className="space-y-2">
@@ -712,11 +723,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                     {/* Opción: Todos */}
                                     <button
                                         onClick={() => handleFiltroChange('estado', '')}
-                                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${
-                                            !filtros.estado
-                                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white ring-2 ring-gray-400'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                        }`}
+                                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${!filtros.estado
+                                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white ring-2 ring-gray-400'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            }`}
                                     >
                                         Todos
                                     </button>
@@ -728,11 +738,10 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                             <button
                                                 key={estado.valor}
                                                 onClick={() => handleFiltroChange('estado', estado.valor)}
-                                                className={`px-3 py-2 rounded-lg font-medium text-sm transition-all border-2 ${
-                                                    filtros.estado === estado.valor
-                                                        ? `${info.bgColor} ${info.textColor} ${info.borderColor} ring-2 ring-offset-1 dark:ring-offset-0`
-                                                        : `${info.bgColor} ${info.textColor} ${info.borderColor} hover:opacity-80`
-                                                }`}
+                                                className={`px-3 py-2 rounded-lg font-medium text-sm transition-all border-2 ${filtros.estado === estado.valor
+                                                    ? `${info.bgColor} ${info.textColor} ${info.borderColor} ring-2 ring-offset-1 dark:ring-offset-0`
+                                                    : `${info.bgColor} ${info.textColor} ${info.borderColor} hover:opacity-80`
+                                                    }`}
                                             >
                                                 {estado.etiqueta}
                                             </button>
@@ -831,12 +840,18 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                             )}
                         </div>
 
-                        <div className="flex justify-end mt-4">
+                        <div className="flex justify-between gap-3 mt-6">
                             <Button
                                 onClick={limpiarFiltros}
                                 variant="outline"
                             >
-                                Limpiar Filtros
+                                🔄 Limpiar Filtros
+                            </Button>
+                            <Button
+                                onClick={handleBusqueda}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                            >
+                                🔍 Buscar
                             </Button>
                         </div>
                     </CardContent>
@@ -844,23 +859,32 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
 
                 {/* Tabla de Cuentas por Cobrar */}
                 <Card>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-800">
+                            <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 z-10">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Venta
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Cliente
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Monto Original
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Creación
+                                    </th>
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Vencimiento
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Días Retraso
+                                    </th>
+                                    <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        Estado
+                                    </th>
+                                    <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Acciones
                                     </th>
                                 </tr>
@@ -869,42 +893,72 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                 {cuentasPorCobrar.cuentas_por_cobrar.data.map((cuenta) => (
                                     <React.Fragment key={cuenta.id}>
                                         <tr className={`${getRowColorClass(cuenta.dias_vencido, cuenta.estado)} transition-colors duration-200`}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-2 py-2 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-white">
-                                                    <p>Folio Cuenta por Cobrar:  #{cuenta.id}</p>
+                                                    <p>Folio CxC:  #{cuenta.id}</p>
                                                     {cuenta.venta && (
                                                         <p>Folio Venta: {cuenta.venta?.id}</p>
                                                     )}
-                                                    <p>{cuenta.venta?.numero || `${cuenta.referencia_documento}`}</p>
+                                                    <p>{cuenta?.referencia_documento}</p>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-2 py-2 whitespace-nowrap">
                                                 <div className="text-sm text-gray-900 dark:text-white">
                                                     {/* ✅ CORREGIDO: Mostrar cliente directo o cliente de venta */}
                                                     {cuenta.cliente?.nombre || cuenta.venta?.cliente?.nombre || 'Sin cliente'}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-2 py-2 whitespace-nowrap">
                                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    Mont. Org.: {formatCurrency(cuenta.monto_original)}
+                                                    Mnt. Org.: {formatCurrency(cuenta.monto_original)}
                                                 </p>
                                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                                                     Saldo: {formatCurrency(cuenta.saldo_pendiente)}
                                                 </p>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-2 py-2 whitespace-nowrap">
+                                                <p className="text-sm text-gray-900 dark:text-white">
+                                                    {formatDate(cuenta.created_at)}
+                                                </p>
+                                            </td>
+                                            <td className="px-2 py-2 whitespace-nowrap">
                                                 <p className="text-sm text-gray-900 dark:text-white">
                                                     {formatDate(cuenta.fecha_vencimiento)}
                                                 </p>
-                                                <p>
-                                                    <EstadoBadgeComponent estado={cuenta.estado} />
-                                                </p>
-                                                <p>
-                                                    <UrgenciaBadgeComponent diasVencido={cuenta.dias_vencido} />
-                                                </p>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex justify-end space-x-2">
+                                            <td className="px-2 py-2 whitespace-nowrap">
+                                                <div className="text-xs">
+                                                    <UrgenciaBadgeComponent diasVencido={cuenta.dias_vencido} />
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-2 whitespace-nowrap">
+                                                <div className="text-xs">
+                                                    <EstadoBadgeComponent estado={cuenta.estado} />
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+                                                <div className="flex justify-end space-x-1">
+                                                    {cuenta.estado !== 'PAGADO' && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleAbrirModalPago(cuenta)}
+                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                        >
+                                                            Cobrar 💵
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setCuentaAImprimir(cuenta);
+                                                            setModalImpresionOpen(true);
+                                                        }}
+                                                        title="Imprimir"
+                                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </Button>
                                                     {cuenta.pagos && cuenta.pagos.length > 0 && (
                                                         <Button
                                                             size="sm"
@@ -919,65 +973,71 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                             )}
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => setModalDetalle({ isOpen: true, cuenta })}
-                                                        title="Ver detalles"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setCuentaAImprimir(cuenta);
-                                                            setModalImpresionOpen(true);
-                                                        }}
-                                                        title="Imprimir"
-                                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                    >
-                                                        <Printer className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setCuentaEditarFecha(cuenta);
-                                                            setNuevaFechaVencimiento(cuenta.fecha_vencimiento);
-                                                            setModalEditarFechaOpen(true);
-                                                        }}
-                                                        title="Editar fecha de vencimiento"
-                                                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                                                    >
-                                                        <Calendar className="w-4 h-4" />
-                                                    </Button>
-                                                    {cuenta.estado !== 'PAGADO' && (
+
+                                                    {/* ✅ NUEVO: Menú popup con opciones adicionales */}
+                                                    <div className="relative" ref={menuAbiertoId === cuenta.id ? menuRef : null}>
                                                         <Button
                                                             size="sm"
-                                                            onClick={() => handleAbrirModalPago(cuenta)}
-                                                            className="bg-green-600 hover:bg-green-700"
+                                                            variant="outline"
+                                                            onClick={() => setMenuAbiertoId(menuAbiertoId === cuenta.id ? null : cuenta.id)}
+                                                            title="Más opciones"
                                                         >
-                                                            Cobrar
+                                                            <MoreVertical className="w-4 h-4" />
                                                         </Button>
-                                                    )}
-                                                    {cuenta.estado !== 'ANULADO' && (
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => setCuentaAAnular(cuenta)}
-                                                            variant="destructive"
-                                                            title="Anular cuenta por cobrar"
-                                                        >
-                                                            <XCircle className="w-4 h-4 mr-2" />
-                                                            Anular
-                                                        </Button>
-                                                    )}
+
+                                                        {/* Menú Popup */}
+                                                        {menuAbiertoId === cuenta.id && (
+                                                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                                                                <div className="py-1">
+                                                                    {/* Opción: Ver Detalles */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setModalDetalle({ isOpen: true, cuenta });
+                                                                            setMenuAbiertoId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                    >
+                                                                        <Eye className="w-4 h-4" />
+                                                                        Ver Detalles
+                                                                    </button>
+
+                                                                    {/* Opción: Cambiar Fecha */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setCuentaEditarFecha(cuenta);
+                                                                            setNuevaFechaVencimiento(cuenta.fecha_vencimiento);
+                                                                            setModalEditarFechaOpen(true);
+                                                                            setMenuAbiertoId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-2"
+                                                                    >
+                                                                        <Calendar className="w-4 h-4" />
+                                                                        Cambiar Fecha Vencimiento
+                                                                    </button>
+
+                                                                    {/* Opción: Anular - Condicional */}
+                                                                    {cuenta.estado !== 'ANULADO' && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setCuentaAAnular(cuenta);
+                                                                                setMenuAbiertoId(null);
+                                                                            }}
+                                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
+                                                                        >
+                                                                            <XCircle className="w-4 h-4" />
+                                                                            Anular Cuenta
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                         {expandedRows.has(cuenta.id) && cuenta.pagos && cuenta.pagos.length > 0 && (
                                             <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                                <td colSpan={8} className="px-6 py-4">
+                                                <td colSpan={10} className="px-6 py-4">
                                                     <div className="space-y-2">
                                                         <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Historial de Cobros</h4>
                                                         <div className="space-y-2">
@@ -1022,7 +1082,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                                                             variant="ghost"
                                                                             onClick={() => setPagoAAnular({ id: pago.id, monto: pago.monto, cuenta_id: cuenta.id })}
                                                                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                                            title="Anular pago"
+                                                                            title=""
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
                                                                         </Button>
@@ -1063,7 +1123,7 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                 <span className="font-semibold text-gray-900 dark:text-white">
                                     {Math.min(
                                         cuentasPorCobrar.cuentas_por_cobrar.current_page *
-                                            cuentasPorCobrar.cuentas_por_cobrar.per_page,
+                                        cuentasPorCobrar.cuentas_por_cobrar.per_page,
                                         cuentasPorCobrar.cuentas_por_cobrar.total
                                     )}
                                 </span>
@@ -1148,8 +1208,8 @@ const CuentasPorCobrarIndex: React.FC<Props> = ({ cuentasPorCobrar }) => {
                                             key={pageNum}
                                             variant={
                                                 pageNum ===
-                                                cuentasPorCobrar.cuentas_por_cobrar
-                                                    .current_page
+                                                    cuentasPorCobrar.cuentas_por_cobrar
+                                                        .current_page
                                                     ? 'default'
                                                     : 'outline'
                                             }

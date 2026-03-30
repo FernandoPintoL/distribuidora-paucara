@@ -27,7 +27,8 @@ class CuentaPorCobrarController extends Controller
         // ✅ CORREGIDO: Cargar cliente directamente + cliente de venta + usuario creador para mostrar ambos tipos
         $query = CuentaPorCobrar::with(['cliente', 'venta.cliente', 'pagos.tipoPago', 'usuario'])
             ->when($request->estado, function ($q) use ($request) {
-                $q->where('estado', $request->estado);
+                // ✅ CORREGIDO (2026-03-30): Filtro case-insensitive para estado
+                $q->whereRaw('LOWER(estado) = ?', [strtolower($request->estado)]);
             })
             ->when($request->cliente_id, function ($q) use ($request) {
                 $q->where('cliente_id', $request->cliente_id);
