@@ -71,7 +71,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {entities.data.map(entity => (
-          <div key={entity.id}>{config.cardRenderer!(entity, { onEdit: navigateToEdit, onDelete: handleDelete })}</div>
+          <div key={entity.id}>{config.cardRenderer!(entity, { onEdit: navigateToEdit, onDelete: handleDelete }, extraData)}</div>
         ))}
       </div>
     );
@@ -159,6 +159,8 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                   onDelete={handleDelete}
                   entityName={config.singularName}
                   isLoading={isLoading}
+                  puedeEditar={(extraData as any)?.puedeEditar ?? true}
+                  puedeEliminar={(extraData as any)?.puedeEliminar ?? true}
                 />
               )}
 

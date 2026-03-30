@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';
 import { Package } from 'lucide-react';
+import { useAuth } from '@/application/hooks/use-auth';
 
 const currency = (n?: number | null) => {
   if (n === undefined || n === null) return '-';
@@ -13,6 +14,34 @@ const currency = (n?: number | null) => {
   }
 };
 
+// ✅ NUEVO: Componente para celda de precio de costo con validación de permiso
+const PrecioCostoCell: React.FC<{ entity: Producto }> = ({ entity }) => {
+  const { can } = useAuth();
+
+  // Si no tiene permiso, no mostrar nada
+  if (!can('ver_precio_costo')) {
+    return (
+      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-900/40 border-2 border-gray-200 dark:border-gray-700">
+        <span className="text-xs text-gray-500 dark:text-gray-400">🔒 Restringido</span>
+      </span>
+    );
+  }
+
+  // Extraer precio de costo del array precios
+  const preciosArray = (entity as any).precios || [];
+  const precioCosto = preciosArray.find((pr: any) =>
+    pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 1
+  )?.monto || 0;
+
+  return precioCosto > 0 ? (
+    <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-200 dark:border-blue-700">
+      <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-200">{currency(precioCosto)}</span>
+    </span>
+  ) : (
+    <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+  );
+};
+
 // ✅ Componente de tarjeta de producto (puede usar hooks)
 const ProductCard: React.FC<{
   p: Producto;
@@ -20,16 +49,23 @@ const ProductCard: React.FC<{
   precioVenta: number;
   onEdit: (p: Producto) => void;
   onDelete: (p: Producto) => void;
-}> = ({ p, precioCosto, precioVenta, onEdit, onDelete }) => {
+  puedeEditar?: boolean;
+  puedeEliminar?: boolean;
+}> = ({ p, precioCosto, precioVenta, onEdit, onDelete, puedeEditar = true, puedeEliminar = true }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { can } = useAuth(); // ✅ Obtener permisos
 
   return (
     <div className="group relative flex flex-col border border-border bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <button
         type="button"
-        onClick={() => onEdit(p)}
-        className="aspect-[4/3] w-full bg-secondary/40 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-secondary/60 transition-colors"
-        title="Click para editar producto"
+        onClick={() => {
+          console.log(`🖼️ [ProductCard] Click en imagen - Producto ${p.id}, puedeEditar: ${puedeEditar}`);
+          puedeEditar ? onEdit(p) : null;
+        }}
+        disabled={!puedeEditar}
+        className={`aspect-[4/3] w-full bg-secondary/40 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-secondary/60 transition-colors ${!puedeEditar ? 'opacity-50 cursor-not-allowed' : ''}`}
+        title={puedeEditar ? "Click para editar producto" : "No tienes permiso para editar"}
       >
         {p.perfil?.url ? (
           <img src={p.perfil.url} alt={p.nombre} loading="lazy" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
@@ -73,15 +109,18 @@ const ProductCard: React.FC<{
         </div>
         <div className="flex items-end justify-between mt-auto">
           <div className="text-xs text-muted-foreground space-y-1 flex-1">
-            <div className="grid grid-cols-2 gap-12 mb-2">
+            <div className={`grid ${can('ver_precio_costo') ? 'grid-cols-2' : 'grid-cols-1'} gap-12 mb-2`}>
               <div>
                 <span className="block text-[9px] uppercase tracking-wide text-green-600 dark:text-green-400 font-semibold">Venta</span>
                 <span className="font-bold text-xs text-green-700 dark:text-green-200">{currency(precioVenta)}</span>
               </div>
-              <div>
-                <span className="block text-[9px] uppercase tracking-wide text-purple-600 dark:text-purple-400 font-semibold">Base</span>
-                <span className="font-bold text-xs text-purple-700 dark:text-purple-200">{currency(p.precio_base)}</span>
-              </div>
+              {/* ✅ NUEVO: Ocultar precio base si no tiene permiso */}
+              {can('ver_precio_costo') && (
+                <div>
+                  <span className="block text-[9px] uppercase tracking-wide text-purple-600 dark:text-purple-400 font-semibold">Costo</span>
+                  <span className="font-bold text-xs text-purple-700 dark:text-purple-200">{currency(p.precio_base)}</span>
+                </div>
+              )}
             </div>
 
             {p.es_combo ? (
@@ -104,51 +143,57 @@ const ProductCard: React.FC<{
             )}
           </div>
 
-          {/* Mobile: Menú popup con 3 puntos */}
-          <div className="md:hidden relative">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white rounded p-1.5 text-xs font-medium"
-              title="Más opciones"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 8c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2zm0 2c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2zm0 6c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2z" />
-              </svg>
-            </button>
+          {/* Mobile: Menú popup con 3 puntos - Solo si tiene permisos */}
+          {(puedeEditar || puedeEliminar) && (
+            <div className="md:hidden relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="inline-flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white rounded p-1.5 text-xs font-medium"
+                title="Más opciones"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 8c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2zm0 2c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2zm0 6c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2z" />
+                </svg>
+              </button>
 
-            {isMenuOpen && (
-              <div className="absolute right-0 bottom-full mb-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                <a
-                  href={`/codigos-barra?producto_id=${p.id}`}
-                  className="flex items-center gap-2 px-3 py-2 text-xs text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-gray-700"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  Códigos
-                </a>
-                <button
-                  onClick={() => {
-                    onEdit(p);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  Editar
-                </button>
-                <button
-                  onClick={() => {
-                    onDelete(p);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Borrar
-                </button>
-              </div>
-            )}
-          </div>
+              {isMenuOpen && (
+                <div className="absolute right-0 bottom-full mb-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                  <a
+                    href={`/codigos-barra?producto_id=${p.id}`}
+                    className="flex items-center gap-2 px-3 py-2 text-xs text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-gray-700"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Códigos
+                  </a>
+                  {puedeEditar && (
+                    <button
+                      onClick={() => {
+                        onEdit(p);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Editar
+                    </button>
+                  )}
+                  {puedeEliminar && (
+                    <button
+                      onClick={() => {
+                        onDelete(p);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      Borrar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -260,31 +305,8 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       label: 'Precio Costo',
       type: 'custom',
       sortable: true,
-      render: (v, entity) => {
-        // Extraer precio de costo del array precios
-        const preciosArray = (entity as any).precios || [];
-        const precioCosto = preciosArray.find((pr: any) =>
-          pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 1
-        )?.monto || 0;
-
-        console.log('💰 [Tabla Productos] Precio Costo - Producto:', {
-          nombre: (entity as any).nombre,
-          precioCosto,
-          preciosArray: preciosArray.map((p: any) => ({
-            nombre: p.nombre,
-            tipo_precio_id: p.tipo_precio_id,
-            monto: p.monto
-          }))
-        });
-
-        return precioCosto > 0 ? (
-          <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-200 dark:border-blue-700">
-            <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-200">{currency(precioCosto)}</span>
-          </span>
-        ) : (
-          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-        );
-      }
+      // ✅ NUEVO: Usar componente con validación de permiso
+      render: (v, entity) => <PrecioCostoCell entity={entity} />
     },
     {
       key: 'precio_venta',
@@ -580,7 +602,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
 
   // Enhanced visualization
   enableCardView: true,
-  cardRenderer: (p, { onEdit, onDelete }) => {
+  cardRenderer: (p, { onEdit, onDelete }, extraData) => {
     // 📊 Extraer precio de costo y venta del array precios
     const preciosArray = (p as any).precios || [];
     const precioCosto = preciosArray.find((pr: any) =>
@@ -590,7 +612,28 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       pr.nombre?.toLowerCase().includes('venta') && !pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 5
     )?.monto || 0;
 
-    // ✅ Usar el componente ProductCard en lugar de JSX inline
-    return <ProductCard p={p} precioCosto={precioCosto} precioVenta={precioVenta} onEdit={onEdit} onDelete={onDelete} />;
+    // ✅ Usar el componente ProductCard con permisos
+    const puedeEditar = (extraData as any)?.puedeEditar ?? true;
+    const puedeEliminar = (extraData as any)?.puedeEliminar ?? true;
+
+    // 📊 LOG: Ver permisos en el cardRenderer
+    console.log(`📇 [CardRenderer] Producto ${p.id} - ${p.nombre}:`, {
+      puedeEditar,
+      puedeEliminar,
+      extraDataKeys: Object.keys((extraData as any) || {}),
+      extraData
+    });
+
+    return (
+      <ProductCard
+        p={p}
+        precioCosto={precioCosto}
+        precioVenta={precioVenta}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        puedeEditar={puedeEditar}
+        puedeEliminar={puedeEliminar}
+      />
+    );
   }
 };

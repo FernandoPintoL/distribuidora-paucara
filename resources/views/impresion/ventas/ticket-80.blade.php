@@ -90,6 +90,33 @@
 {{-- ==================== TOTALES ==================== --}}
 @include('impresion.ventas.partials._totales')
 
+<div class="separador"></div>
+@if($documento->tipoPago)
+<div class="center bold" style="font-size: 12px; margin-top: 2px;">
+    Tipo Pago: <strong>{{ $documento->tipoPago->nombre }}</strong>
+</div>
+@endif
+
+{{-- ==================== INFORMACIÓN DE PAGO ==================== --}}
+<div class="center bold" style="font-size: 12px;">
+    Politica Pago: {{ $documento->politica_pago ?? 'CONTRA_ENTREGA' }}
+</div>
+
+{{-- ✅ NUEVO: Tipo de Pago --}}
+
+<div class="center" style="margin-top: 5px; font-weight: bold; font-size: 13px;">
+    @if($documento->estado_pago === 'PAGADA')
+    <span>PAGADA</span>
+    @elseif($documento->estado_pago === 'PARCIAL')
+    <span>PAGO PARCIAL</span><br>
+    <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? 0, 2) }}</span>
+    @elseif($documento->estado_pago === 'PENDIENTE')
+    <span>PENDIENTE PAGO</span><br>
+    <span>Pendiente: {{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->monto_pendiente ?? $documento->subtotal, 2) }}</span>
+    @else
+    <span>{{ $documento->estado_pago ?? 'SIN ESTADO' }}</span>
+    @endif
+</div>
 
 <div class="separador"></div>
 

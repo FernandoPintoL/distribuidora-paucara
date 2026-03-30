@@ -31,6 +31,8 @@ interface GenericTableProps<T extends BaseEntity> {
   onDelete: (entity: T) => void;
   entityName: string;
   isLoading?: boolean;
+  puedeEditar?: boolean;
+  puedeEliminar?: boolean;
 }
 
 /**
@@ -57,7 +59,9 @@ export default function GenericTable<T extends BaseEntity>({
   onEdit,
   onDelete,
   entityName,
-  isLoading = false
+  isLoading = false,
+  puedeEditar = true,
+  puedeEliminar = true
 }: GenericTableProps<T>) {
   const [historialModal, setHistorialModal] = useState<{ entity: ProductoLike } | null>(null);
   const [quickPrecioModal, setQuickPrecioModal] = useState<{ entity: ProductoLike } | null>(null);
@@ -327,22 +331,24 @@ export default function GenericTable<T extends BaseEntity>({
                           </TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onEdit(entity)}
-                              disabled={isLoading}
-                              className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 transition-all"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Editar {entityName}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        {puedeEditar && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => onEdit(entity)}
+                                disabled={isLoading}
+                                className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 transition-all"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Editar {entityName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
                         {'precios' in (entity as unknown as Record<string, unknown>) && (
                           <Tooltip>
@@ -380,22 +386,24 @@ export default function GenericTable<T extends BaseEntity>({
                           </Tooltip>
                         )}
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onDelete(entity)}
-                              disabled={isLoading}
-                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/40 dark:hover:text-red-300 transition-all"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Eliminar {entityName}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        {puedeEliminar && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => onDelete(entity)}
+                                disabled={isLoading}
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/40 dark:hover:text-red-300 transition-all"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Eliminar {entityName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -581,17 +589,19 @@ export default function GenericTable<T extends BaseEntity>({
               >
                 Cerrar
               </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  closeQuickViewModal();
-                  onEdit(quickViewModal.entity);
-                }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
+              {puedeEditar && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    closeQuickViewModal();
+                    onEdit(quickViewModal.entity);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+              )}
             </div>
           </div>
         </div>

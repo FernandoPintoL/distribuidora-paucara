@@ -202,7 +202,7 @@
         /* ✅ Espacio en blanco para corte (5cm) */
         .espacio-corte {
             height: 5cm;
-            margin-top: 15px !important;
+            margin-top: 25px !important;
             page-break-after: avoid;
         }
 
