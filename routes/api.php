@@ -289,8 +289,9 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
     Route::get('/app/productos/filtros', [ProductoController::class, 'filtros']);  // ✅ NUEVO: Obtener categorías y marcas
-    Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
     Route::get('/app/productos/buscar', [ProductoController::class, 'buscarApi']);
+    Route::get('/app/productos/listar', [ProductoController::class, 'listarApi']); // ✅ NIVEL 2: Listar todos para Fuse.js - DEBE IR ANTES DE {producto}
+    Route::get('/app/productos/{producto}', [ProductoController::class, 'showApi']);
 
     // ==========================================
     // 📦 COMBOS - CAPACIDAD DE MANUFACTURA
@@ -1310,11 +1311,20 @@ Route::middleware(['auth:sanctum'])->prefix('visitas')->group(function () {
 // 📦 STOCK - IMPRESIÓN Y GESTIÓN
 // ==========================================
 Route::middleware(['auth:sanctum'])->prefix('stock')->group(function () {
+    // POST: Preparar datos para impresión (guardan en sesión)
     Route::post('preparar-impresion', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresion']);
     Route::post('preparar-impresion-movimientos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionMovimientos']);
     Route::post('preparar-impresion-ventas', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionVentas']);
     Route::post('preparar-impresion-compras', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionCompras']);
     Route::post('preparar-impresion-productos-vendidos', [\App\Http\Controllers\Api\StockApiController::class, 'prepararImpresionProductosVendidos']);
+
+    // GET: Obtener HTML desde sesión para imprimir
+    Route::get('imprimir-ventas', [\App\Http\Controllers\Api\StockApiController::class, 'imprimirVentasDesdeSession']);
+    Route::get('imprimir-movimientos', [\App\Http\Controllers\Api\StockApiController::class, 'imprimirMovimientosDesdeSession']);
+    Route::get('imprimir-stock', [\App\Http\Controllers\Api\StockApiController::class, 'imprimirStockDesdeSession']);
+    Route::get('imprimir-compras', [\App\Http\Controllers\Api\StockApiController::class, 'imprimirComprasDesdeSession']);
+    Route::get('imprimir-productos-vendidos', [\App\Http\Controllers\Api\StockApiController::class, 'imprimirProductosVendidosDesdeSession']);
+
     Route::delete('productos/{id}', [\App\Http\Controllers\Api\StockApiController::class, 'destroy'])->name('stock-productos.destroy');
 });
 

@@ -46,7 +46,7 @@ export default function VentasIndex() {
         <AppLayout breadcrumbs={[{ title: 'Ventas', href: '/ventas' }]}>
             <Head title="Ventas" />
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-6 p-3">
                 {/* Banner de advertencia - caja sin abrir */}
                 {shouldShowBanner && (
                     <div className="mb-4">
@@ -79,7 +79,7 @@ export default function VentasIndex() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         {ventas.data && ventas.data.length > 0 && (
                             <ImprimirVentasButton
                                 ventas={ventas.data}

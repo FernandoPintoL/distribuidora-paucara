@@ -197,11 +197,10 @@ export default function SearchSelect({
         {label && (
           <label
             htmlFor={id}
-            className={`absolute left-3 transition-all duration-200 pointer-events-none ${
-              selectedOption || isOpen
+            className={`absolute left-3 transition-all duration-200 pointer-events-none ${selectedOption || isOpen
                 ? 'top-[-6px] text-xs font-medium text-primary'
                 : 'top-1/2 -translate-y-1/2 text-sm text-muted-foreground'
-            }`}
+              }`}
           >
             {label} {required && <span className="text-destructive">*</span>}
           </label>
@@ -242,75 +241,75 @@ export default function SearchSelect({
         <>
           {console.log('📂 [SearchSelect] Renderizando dropdown abierto:', { filteredOptions, loading })}
           <div className="absolute z-50 w-full mt-0.5 bg-popover text-popover-foreground border border-border rounded-md shadow-lg">
-          {/* Search Input with Close Button */}
-          <div className="p-1.5 border-b border-border flex gap-1.5 items-center">
-            <Input
-              ref={inputRef}
-              type="text"
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-7 text-xs flex-1"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 hover:bg-muted rounded-md flex-shrink-0"
-              onClick={() => {
-                setIsOpen(false);
-                setSearchQuery('');
-              }}
-              title="Cerrar"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
-          </div>
+            {/* Search Input with Close Button */}
+            <div className="p-1.5 border-b border-border flex gap-1.5 items-center">
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="h-7 text-xs flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-muted rounded-md flex-shrink-0"
+                onClick={() => {
+                  setIsOpen(false);
+                  setSearchQuery('');
+                }}
+                title="Cerrar"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
 
-          {/* Options List */}
-          <div
-            className="overflow-y-auto"
-            style={{ maxHeight: `${maxHeight}px` }}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center py-2">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-xs">Cargando...</span>
+            {/* Options List */}
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: `${maxHeight}px` }}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center py-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-xs">Cargando...</span>
+                  </div>
                 </div>
-              </div>
-            ) : filteredOptions.length === 0 ? (
-              <div className="py-2 text-center text-muted-foreground text-xs">
-                {emptyText}
-              </div>
-            ) : (
-              filteredOptions.map((option, index) => (
-                <div
-                  key={`${option.value}-${index}`}
-                  className={`
+              ) : filteredOptions.length === 0 ? (
+                <div className="py-2 text-center text-muted-foreground text-xs">
+                  {emptyText}
+                </div>
+              ) : (
+                filteredOptions.map((option, index) => (
+                  <div
+                    key={`${option.value}-${index}`}
+                    className={`
                     cursor-pointer transition-colors duration-150
                     ${option.disabled
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:bg-muted'
-                    }
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-muted'
+                      }
                   `}
-                  onClick={() => handleSelect(option)}
-                >
-                  {renderOption
-                    ? renderOption(option, option.value === value)
-                    : defaultRenderOption(option, option.value === value)
-                  }
-                </div>
-              ))
-            )}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {renderOption
+                      ? renderOption(option, option.value === value)
+                      : defaultRenderOption(option, option.value === value)
+                    }
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
         </>
       )}
 

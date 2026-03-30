@@ -1,4 +1,5 @@
 // Configuration: Productos module configuration
+import React, { useState } from 'react';
 import type { ModuleConfig } from '@/domain/entities/generic';
 import type { Producto, ProductoFormData } from '@/domain/entities/productos';
 import { Package } from 'lucide-react';
@@ -10,6 +11,148 @@ const currency = (n?: number | null) => {
   } catch {
     return n.toFixed(2);
   }
+};
+
+// ✅ Componente de tarjeta de producto (puede usar hooks)
+const ProductCard: React.FC<{
+  p: Producto;
+  precioCosto: number;
+  precioVenta: number;
+  onEdit: (p: Producto) => void;
+  onDelete: (p: Producto) => void;
+}> = ({ p, precioCosto, precioVenta, onEdit, onDelete }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  return (
+    <div className="group relative flex flex-col border border-border bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <button
+        type="button"
+        onClick={() => onEdit(p)}
+        className="aspect-[4/3] w-full bg-secondary/40 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-secondary/60 transition-colors"
+        title="Click para editar producto"
+      >
+        {p.perfil?.url ? (
+          <img src={p.perfil.url} alt={p.nombre} loading="lazy" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="text-muted-foreground text-xs italic">Sin imagen - Click para editar</div>
+        )}
+      </button>
+      <span className="absolute top-2 left-2 bg-blue-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full z-10">#{p.id}</span>
+      <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+        {p.activo ? (
+          <span className="bg-emerald-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Activo</span>
+        ) : (
+          <span className="bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
+        )}
+        {p.visible_app ? (
+          <span className="bg-green-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+            <span>👁️</span>
+            <span>Visible</span>
+          </span>
+        ) : (
+          <span className="bg-gray-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+            <span>🚫</span>
+            <span>Oculto</span>
+          </span>
+        )}
+      </div>
+      <div className="p-2 flex flex-col gap-1">
+        <div className="space-y-0.5">
+          <h3 className="font-semibold text-sm leading-tight line-clamp-2">{p.nombre}</h3>
+          <div className="flex flex-wrap gap-1 text-[10px] font-medium text-muted-foreground">
+            {!p.visible_app && (
+              <span className="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                <span>🚫</span>
+                <span>Oculto en App</span>
+              </span>
+            )}
+            {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
+            {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
+            {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}
+          </div>
+        </div>
+        <div className="flex items-end justify-between mt-auto">
+          <div className="text-xs text-muted-foreground space-y-1 flex-1">
+            <div className="grid grid-cols-2 gap-12 mb-2">
+              <div>
+                <span className="block text-[9px] uppercase tracking-wide text-green-600 dark:text-green-400 font-semibold">Venta</span>
+                <span className="font-bold text-xs text-green-700 dark:text-green-200">{currency(precioVenta)}</span>
+              </div>
+              <div>
+                <span className="block text-[9px] uppercase tracking-wide text-purple-600 dark:text-purple-400 font-semibold">Base</span>
+                <span className="font-bold text-xs text-purple-700 dark:text-purple-200">{currency(p.precio_base)}</span>
+              </div>
+            </div>
+
+            {p.es_combo ? (
+              <div>
+                <span className="block text-[10px] uppercase tracking-wide">Capacidad</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
+                  <Package size={12} />
+                  {(p as any).capacidad ?? 0} combos
+                </span>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide">Stock Disponible</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${((p as any).stock_disponible_calc ?? 0) === 0 ? 'bg-red-100 text-red-700' : ((p as any).stock_disponible_calc ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {((p as any).stock_disponible_calc ?? 0)}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mobile: Menú popup con 3 puntos */}
+          <div className="md:hidden relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white rounded p-1.5 text-xs font-medium"
+              title="Más opciones"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8c1.1 0 2-0.9 2-2s-0.9-2-2-2-2 0.9-2 2 0.9 2 2 2zm0 2c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2zm0 6c-1.1 0-2 0.9-2 2s0.9 2 2 2 2-0.9 2-2-0.9-2-2-2z" />
+              </svg>
+            </button>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 bottom-full mb-2 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <a
+                  href={`/codigos-barra?producto_id=${p.id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-xs text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 border-b border-gray-100 dark:border-gray-700"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Códigos
+                </a>
+                <button
+                  onClick={() => {
+                    onEdit(p);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Editar
+                </button>
+                <button
+                  onClick={() => {
+                    onDelete(p);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  Borrar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
@@ -113,23 +256,80 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
     { key: 'categoria', label: 'Categoría', type: 'text' },
     { key: 'proveedor', label: 'Proveedor', type: 'text' },
     {
+      key: 'precio_costo',
+      label: 'Precio Costo',
+      type: 'custom',
+      sortable: true,
+      render: (v, entity) => {
+        // Extraer precio de costo del array precios
+        const preciosArray = (entity as any).precios || [];
+        const precioCosto = preciosArray.find((pr: any) =>
+          pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 1
+        )?.monto || 0;
+
+        console.log('💰 [Tabla Productos] Precio Costo - Producto:', {
+          nombre: (entity as any).nombre,
+          precioCosto,
+          preciosArray: preciosArray.map((p: any) => ({
+            nombre: p.nombre,
+            tipo_precio_id: p.tipo_precio_id,
+            monto: p.monto
+          }))
+        });
+
+        return precioCosto > 0 ? (
+          <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-200 dark:border-blue-700">
+            <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-200">{currency(precioCosto)}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+        );
+      }
+    },
+    {
+      key: 'precio_venta',
+      label: 'Precio Venta',
+      type: 'custom',
+      sortable: true,
+      render: (v, entity) => {
+        // Extraer precio de venta del array precios
+        const preciosArray = (entity as any).precios || [];
+        const precioVenta = preciosArray.find((pr: any) =>
+          (pr.nombre?.toLowerCase().includes('venta') && !pr.nombre?.toLowerCase().includes('costo')) || pr.tipo_precio_id === 5
+        )?.monto || 0;
+
+        console.log('💳 [Tabla Productos] Precio Venta - Producto:', {
+          nombre: (entity as any).nombre,
+          precioVenta,
+          preciosArray: preciosArray.map((p: any) => ({
+            nombre: p.nombre,
+            tipo_precio_id: p.tipo_precio_id,
+            monto: p.monto
+          }))
+        });
+
+        return precioVenta > 0 ? (
+          <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 border-2 border-green-200 dark:border-green-700">
+            <span className="font-mono text-sm font-bold text-green-700 dark:text-green-200">{currency(precioVenta)}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+        );
+      }
+    },
+    /* {
       key: 'precio_base',
-      label: 'Precio',
+      label: 'Precio Base',
       type: 'custom',
       sortable: true,
       render: v => v && v > 0 ? (
-        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 border-2 border-green-200 dark:border-green-700">
-          <span className="font-mono text-sm font-bold text-green-700 dark:text-green-200">{currency(v)}</span>
+        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/40 dark:to-pink-900/40 border-2 border-purple-200 dark:border-purple-700">
+          <span className="font-mono text-sm font-bold text-purple-700 dark:text-purple-200">{currency(v)}</span>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700">
-          <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          <span className="text-xs font-bold text-amber-700 dark:text-amber-200">Sin precio</span>
-        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
       )
-    },
+    }, */
     {
       key: 'stock_disponible_calc',
       label: 'Stock Disponible',
@@ -178,7 +378,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
         );
       }
     },
-    {
+    /* {
       key: 'capacidad',
       label: 'Capacidad',
       type: 'custom',
@@ -203,7 +403,7 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
           </div>
         );
       }
-    },
+    }, */
     { key: 'activo', label: 'Estado', type: 'boolean' },
     {
       key: 'visible_app',
@@ -211,11 +411,10 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
       type: 'custom',
       sortable: true,
       render: (value) => (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-sm border transition-colors ${
-          value
-            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border-green-200 dark:border-green-700'
-            : 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
-        }`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-sm border transition-colors ${value
+          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border-green-200 dark:border-green-700'
+          : 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+          }`}>
           <span className="text-lg">{value ? '👁️' : '🚫'}</span>
           <span>{value ? 'Visible' : 'Oculto'}</span>
         </span>
@@ -304,9 +503,9 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
     }
   ],
 
-  // Search configuration
-  searchableFields: ['nombre', 'codigo_barras', 'sku', 'descripcion'],
-  searchPlaceholder: 'Buscar por nombre, código o SKU...',
+  // Search configuration (prioritized by order: ID > SKU > Códigos de barras > Nombre)
+  searchableFields: ['id', 'sku', 'codigo_barras', 'nombre', 'descripcion'],
+  searchPlaceholder: 'Buscar por ID, SKU, código de barras o nombre...',
 
   // Modern Index filters configuration
   indexFilters: {
@@ -381,116 +580,17 @@ export const productosConfig: ModuleConfig<Producto, ProductoFormData> = {
 
   // Enhanced visualization
   enableCardView: true,
-  cardRenderer: (p, { onEdit, onDelete }) => (
-    <div className="group relative flex flex-col border border-border bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="aspect-[4/3] w-full bg-secondary/40 flex items-center justify-center overflow-hidden">
-        {p.perfil?.url ? (
-          <img src={p.perfil.url} alt={p.nombre} loading="lazy" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="text-muted-foreground text-xs italic">Sin imagen</div>
-        )}
-        <span className="absolute top-2 left-2 bg-blue-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">#{p.id}</span>
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          {p.activo ? (
-            <span className="bg-emerald-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Activo</span>
-          ) : (
-            <span className="bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactivo</span>
-          )}
-          {p.visible_app ? (
-            <span className="bg-green-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <span>👁️</span>
-              <span>Visible</span>
-            </span>
-          ) : (
-            <span className="bg-gray-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <span>🚫</span>
-              <span>Oculto</span>
-            </span>
-          )}
-        </div>
-        {/* {(!p.precio_base || p.precio_base === 0) && (
-          <span className="absolute bottom-2 left-2 bg-amber-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">⚠️ Sin precio</span>
-        )} */}
-      </div>
-      <div className="p-3 flex flex-col gap-2">
-        <div className="space-y-0.5">
-          <h3 className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.25rem]">{p.nombre}</h3>
-          <div className="flex flex-wrap gap-2 text-[10px] font-medium text-muted-foreground">
-            {!p.visible_app && (
-              <span className="bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1">
-                <span>🚫</span>
-                <span>Oculto en App</span>
-              </span>
-            )}
-            {p.sku && <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono font-semibold">{p.sku}</span>}
-            {p.marca?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.marca.nombre}</span>}
-            {p.categoria?.nombre && <span className="bg-secondary px-1.5 py-0.5 rounded">{p.categoria.nombre}</span>}
-            {/* Mostrar códigos de producto */}
-            {Array.isArray(p.codigos) && p.codigos.length > 0 && p.codigos.map((cb: any, idx: number) => (
-              <span key={idx} className={`px-1.5 py-0.5 rounded font-mono font-semibold ${cb.es_principal ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'}`}>
-                {cb.es_principal && <span>★ </span>}{cb.codigo}
-              </span>
-            ))}
-            {typeof p.codigos === 'string' && p.codigos && <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 px-1.5 py-0.5 rounded font-mono font-semibold">★ {p.codigos}</span>}
-          </div>
-        </div>
-        <div className="flex items-end justify-between mt-auto">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>
-              <span className="block text-[10px] uppercase tracking-wide">Precio base</span>
-              <span className="font-bold text-sm">{currency(p.precio_base)}</span>
-            </div>
-            {p.es_combo ? (
-              <div>
-                <span className="block text-[10px] uppercase tracking-wide">Capacidad</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200">
-                  <Package size={12} />
-                  {(p as any).capacidad ?? 0} combos
-                </span>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <span className="block text-[10px] uppercase tracking-wide">Stock Disponible</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${((p as any).stock_disponible_calc ?? 0) === 0 ? 'bg-red-100 text-red-700' : ((p as any).stock_disponible_calc ?? 0) < (p.stock_minimo ?? 0) ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
-                    {((p as any).stock_disponible_calc ?? 0)}
-                  </span>
-                </div>
-                {((p as any).stock_total_calc ?? 0) > 0 && (
-                  <div className="text-[10px] text-muted-foreground">
-                    Total: {((p as any).stock_total_calc ?? 0)}
-                    {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0)) > 0 && (
-                      <span className="ml-1 text-amber-600">Reservado: {(((p as any).stock_total_calc ?? 0) - ((p as any).stock_disponible_calc ?? 0))}</span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
-            <a href={`/codigos-barra?producto_id=${p.id}`} className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1 text-[10px] font-medium">
-              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              Códigos
-            </a>
-            {/* Botón para editar combo si el producto es combo */}
-            {p.es_combo && (
-              <a href={`/combos/${p.id}/edit`} className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white rounded px-2 py-1 text-[10px] font-medium">
-                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 015.646 5.646 9 9 0 1020.354 15.354z" /></svg>
-                Editar Combo
-              </a>
-            )}
-            <button onClick={() => onEdit(p)} className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-[10px] font-medium">
-              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              Editar
-            </button>
-            <button onClick={() => onDelete(p)} className="inline-flex items-center bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1 text-[10px] font-medium">
-              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              Borrar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  cardRenderer: (p, { onEdit, onDelete }) => {
+    // 📊 Extraer precio de costo y venta del array precios
+    const preciosArray = (p as any).precios || [];
+    const precioCosto = preciosArray.find((pr: any) =>
+      pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 1
+    )?.monto || 0;
+    const precioVenta = preciosArray.find((pr: any) =>
+      pr.nombre?.toLowerCase().includes('venta') && !pr.nombre?.toLowerCase().includes('costo') || pr.tipo_precio_id === 5
+    )?.monto || 0;
+
+    // ✅ Usar el componente ProductCard en lugar de JSX inline
+    return <ProductCard p={p} precioCosto={precioCosto} precioVenta={precioVenta} onEdit={onEdit} onDelete={onDelete} />;
+  }
 };

@@ -83,9 +83,9 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
       <div>
         <Card className="shadow-sm">
           <CardHeader className="bg-gradient-to-r from-secondary to-secondary/70 dark:from-secondary/40 dark:to-secondary/20 border-b border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
               <div className="space-y-1">
-                <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-1">
                   <div className="p-2 bg-blue-600 rounded-lg">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -93,7 +93,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
                   </div>
                   {config.displayName}
                 </CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground p-2">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground p-1">
                   <span>{config.description}</span>
                   <div className="flex items-center gap-1">
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800">
@@ -138,7 +138,7 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
           </CardHeader>
 
           <CardContent className="">
-            <div className="space-y-6">
+            <div className="space-y-1">
               {/* Modern Filters */}
               {config.indexFilters && (
                 <ModernFilters
@@ -188,9 +188,9 @@ export default function GenericContainer<T extends BaseEntity, F extends BaseFor
           </CardContent>
 
           {entities.links && entities.total > 0 && (
-            <CardFooter className="bg-secondary border-t border-border py-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <CardFooter className="bg-secondary border-t border-border py-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 w-full">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <span>
                     Mostrando <span className="font-semibold text-foreground">{entities.from}</span> a{' '}
                     <span className="font-semibold text-foreground">{entities.to}</span> de{' '}

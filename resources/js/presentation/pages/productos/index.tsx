@@ -24,14 +24,14 @@ export default function ProductosIndex({ productos, filters, categorias, marcas,
       { title: 'Dashboard', href: productosService.indexUrl() },
       { title: 'Productos', href: productosService.indexUrl() }
     ]}>
-      <div className="mb-4 flex justify-end">
+      {/* <div className="mb-4 flex justify-end">
         <Link href="/combos">
           <Button variant="outline" className="gap-2">
             <Package size={18} />
             Ir a Combos
           </Button>
         </Link>
-      </div>
+      </div> */}
       <GenericContainer<Producto, ProductoFormData>
         entities={productos}
         filters={filters}

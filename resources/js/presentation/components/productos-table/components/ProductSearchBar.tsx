@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrencyWith2Decimals } from '@/lib/utils';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import type { Producto } from '@/domain/entities/ventas';
@@ -8,6 +8,7 @@ interface ProductSearchBarProps {
     tipo: 'compra' | 'venta';
     almacen_id?: number;
     cliente_id?: number | null;
+    isClienteGeneral?: boolean;
     readOnly?: boolean;
     es_farmacia?: boolean;
     onProductSelected: (producto: Producto) => void;
@@ -18,6 +19,7 @@ export default function ProductSearchBar({
     tipo,
     almacen_id,
     cliente_id,
+    isClienteGeneral = false,
     readOnly = false,
     es_farmacia = false,
     onProductSelected,
@@ -25,6 +27,7 @@ export default function ProductSearchBar({
 }: ProductSearchBarProps) {
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(true);
 
     const {
         productSearch,
@@ -41,9 +44,35 @@ export default function ProductSearchBar({
         tipo,
         almacen_id,
         cliente_id,
+        isClienteGeneral,
         readOnly,
         onAddProduct: onProductSelected
     });
+
+    // ✅ Reaabrir sugerencias cuando hay nuevos resultados
+    useEffect(() => {
+        if (productosDisponibles.length > 0 && !showSuggestions) {
+            setShowSuggestions(true);
+        }
+    }, [productosDisponibles.length]);
+
+    // ✅ Logging cuando los productos disponibles cambian
+    useEffect(() => {
+        if (productosDisponibles.length > 0) {
+            const modoDescripcion = tipo === 'compra' ? 'COMPRA (Precio Costo)' : 'VENTA (Precio Venta)';
+            console.log(`📍 [ProductSearchBar] Modo ${modoDescripcion} - Mostrando ${productosDisponibles.length} productos en tabla`);
+            console.log(`🔍 [ProductSearchBar] VERIFICACIÓN tipo='${tipo}' (tipo === 'compra' ? ${tipo === 'compra'} : false)`);
+            console.table(productosDisponibles.slice(0, 3).map(p => ({
+                nombre: p.nombre,
+                código: p.codigo,
+                precio: p.precio_venta,
+                tipoPrecio: tipo === 'compra' ? 'Costo' : (p.tipo_precio_nombre_recomendado || 'Base'),
+                tipo_precio_nombre_recomendado: p.tipo_precio_nombre_recomendado,
+                stock: (p as any).stock,
+                preciosDisponibles: p.precios?.length || 0
+            })));
+        }
+    }, [productosDisponibles, tipo]);
 
     // ✅ Manejadores del modal escáner
     const openScannerModal = () => {
@@ -64,6 +93,12 @@ export default function ProductSearchBar({
     const handleScan = (result: string) => {
         handleScannerResult(result);
         closeScannerModal();
+    };
+
+    // ✅ Cerrar sugerencias cuando se selecciona un producto
+    const handleSelectProducto = (producto: Producto) => {
+        handleAgregarProductoYLimpiar(producto);
+        setShowSuggestions(false);
     };
 
     return (
@@ -121,7 +156,7 @@ export default function ProductSearchBar({
                 </div>
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
-                {(productosDisponibles.length > 0 || searchError || (productSearch && !isLoading && productosDisponibles.length === 0)) && (
+                {showSuggestions && (productosDisponibles.length > 0 || searchError || (productSearch && !isLoading && productosDisponibles.length === 0)) && (
                     <div className="mt-1 max-h-[300px] overflow-y-auto border border-gray-200 dark:border-zinc-600 rounded-md">
                         {/* ✅ ESTADO: Cargando */}
                         {isLoading && (
@@ -137,83 +172,159 @@ export default function ProductSearchBar({
                             </div>
                         )}
 
-                        {/* ✅ ESTADO: Resultados encontrados */}
+                        {/* ✅ ESTADO: Resultados encontrados - TABLA MODERNA */}
                         {!isLoading && productosDisponibles.length > 0 && (
                             <>
-                                {/* ✅ ENCABEZADO: Contador de productos */}
-                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 px-4 py-3 border-b-2 border-green-200 dark:border-green-800">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-sm text-green-900 dark:text-green-200">
-                                            ✨ {productosDisponibles.length} {productosDisponibles.length === 1 ? 'producto encontrado' : 'productos encontrados'}
-                                        </span>
-                                        <span className="text-xs text-green-700 dark:text-green-300">Haz clic para agregar</span>
-                                    </div>
-                                </div>
-
-                                {productosDisponibles.map((producto) => (
-                                    <div
-                                        key={producto.id}
-                                        className="border-b border-gray-100 dark:border-zinc-700 last:border-b-0"
-                                    >
-                                        <button
-                                            type="button"
-                                            disabled={readOnly}
-                                            onClick={() => handleAgregarProductoYLimpiar(producto)}
-                                            className="w-full text-left px-4 py-3.5 hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            {/* ✅ NUEVO: Nombre del producto */}
-                                            <div className="font-semibold text-sm text-gray-900 dark:text-white">
-                                                {producto.nombre}
-                                            </div>
-                                            {/* ✅ NUEVO: Código, precio (redondeado a 2 decimales) y stock */}
-                                            <div className="text-sm text-gray-600 dark:text-gray-300 mt-1.5">
-                                                <span className="font-medium">{producto.codigo}</span>
-                                                <span className="text-green-700 dark:text-green-400 font-bold ml-2">
+                                <table className="w-full border-collapse">
+                                    {/* ✅ ENCABEZADO: Tabla */}
+                                    <thead>
+                                        <tr className={`border-b-2 ${tipo === 'compra'
+                                            ? 'bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/30 dark:to-orange-900/30 border-red-200 dark:border-red-800'
+                                            : 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border-green-200 dark:border-green-800'
+                                        }`}>
+                                            <th colSpan={8} className="px-4 py-3 text-left">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`font-semibold text-sm ${tipo === 'compra'
+                                                            ? 'text-red-900 dark:text-red-200'
+                                                            : 'text-green-900 dark:text-green-200'
+                                                        }`}>
+                                                            ✨ {productosDisponibles.length} {productosDisponibles.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+                                                        </span>
+                                                        <span className={`text-xs ${tipo === 'compra'
+                                                            ? 'text-red-700 dark:text-red-300'
+                                                            : 'text-green-700 dark:text-green-300'
+                                                        }`}>Haz clic en una fila para agregar</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowSuggestions(false)}
+                                                        className={`flex items-center justify-center w-6 h-6 rounded-md transition-colors ${tipo === 'compra'
+                                                            ? 'hover:bg-red-200 dark:hover:bg-red-900/40'
+                                                            : 'hover:bg-green-200 dark:hover:bg-green-900/40'
+                                                        }`}
+                                                        title="Cerrar sugerencias"
+                                                    >
+                                                        <span className={`text-lg font-bold ${tipo === 'compra'
+                                                            ? 'text-red-700 dark:text-red-400'
+                                                            : 'text-green-700 dark:text-green-400'
+                                                        }`}>✕</span>
+                                                    </button>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                        <tr className="border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50">
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Producto</th>
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Código</th>
+                                            <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                {tipo === 'compra' ? 'Precio Costo' : 'Precio Venta'}
+                                            </th>
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                {tipo === 'compra' ? 'Tipo' : 'Tipo Precio'}
+                                            </th>
+                                            <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">Stock</th>
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Unidad</th>
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Marca</th>
+                                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300">Categoría</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {productosDisponibles.map((producto) => (
+                                            <tr
+                                                key={producto.id}
+                                                onClick={() => handleSelectProducto(producto)}
+                                                className={`border-b border-gray-100 dark:border-zinc-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${tipo === 'compra'
+                                                    ? 'hover:bg-red-50 dark:hover:bg-red-900/20'
+                                                    : 'hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                }`}
+                                            >
+                                                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-white">
+                                                    {producto.nombre}
+                                                </td>
+                                                <td className="px-3 py-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                    {producto.codigo}
+                                                </td>
+                                                <td className="px-3 py-3 text-sm font-bold text-right text-green-700 dark:text-green-400">
                                                     {formatCurrencyWith2Decimals(producto.precio_venta || 0)}
-                                                </span>
-                                                {/* ✅ Mostrar stock para compras */}
-                                                {tipo === 'compra' ? (
-                                                    <span className="text-blue-600 dark:text-blue-400 font-medium ml-2">
-                                                        📦 Stock: {(producto as any).stock_disponible ?? (producto as any).stock ?? 0}
+                                                </td>
+                                                <td className="px-3 py-3 text-xs">
+                                                    {(() => {
+                                                        const esCompra = tipo === 'compra';
+                                                        const tieneRecomendado = !!producto.tipo_precio_nombre_recomendado;
+
+                                                        console.log(`🏷️ [ProductSearchBar-Badge] ${producto.nombre} | tipo='${tipo}' esCompra=${esCompra} tieneRecomendado=${tieneRecomendado} valor='${producto.tipo_precio_nombre_recomendado}'`);
+
+                                                        if (esCompra) {
+                                                            return (
+                                                                <span className="inline-block bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2.5 py-1 rounded-full font-medium">
+                                                                    Costo
+                                                                </span>
+                                                            );
+                                                        } else if (tieneRecomendado) {
+                                                            return (
+                                                                <span className="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full font-medium">
+                                                                    {producto.tipo_precio_nombre_recomendado}
+                                                                </span>
+                                                            );
+                                                        } else {
+                                                            return <span className="text-gray-400 text-xs">Base</span>;
+                                                        }
+                                                    })()}
+                                                </td>
+                                                <td className="px-3 py-3 text-sm text-center font-medium">
+                                                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                                        {(producto as any).stock ?? (producto as any).stock_disponible ?? 0}
                                                     </span>
-                                                ) : (
-                                                    (producto as any).stock_disponible && <span className="text-blue-600 dark:text-blue-400 font-medium ml-2">📦 Stock: {(producto as any).stock_disponible}</span>
-                                                )}
-                                            </div>
-                                            {/* ✅ NUEVO: Metadatos del producto (unidad, marca, categoría) */}
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2.5 flex flex-wrap gap-2">
-                                                {producto.unidad && (
-                                                    <span className="bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full text-blue-700 dark:text-blue-300 font-medium">
-                                                        {producto.unidad.nombre}
-                                                    </span>
-                                                )}
-                                                {producto.marca && (
-                                                    <span className="bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full text-purple-700 dark:text-purple-300 font-medium">
-                                                        {producto.marca.nombre}
-                                                    </span>
-                                                )}
-                                                {producto.categoria && (
-                                                    <span className="bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full text-amber-700 dark:text-amber-300 font-medium">
-                                                        {producto.categoria.nombre}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </button>
-                                        {/* ✅ NUEVO: Botón para mostrar info de medicamentos (solo para farmacias) */}
-                                        {(() => {
-                                            const mostrarMedicamentos = es_farmacia && (producto.principio_activo || producto.uso_de_medicacion);
-                                            return mostrarMedicamentos && (
+                                                </td>
+                                                <td className="px-3 py-3 text-xs">
+                                                    {producto.unidad ? (
+                                                        <span className="inline-block bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium">
+                                                            {producto.unidad.nombre}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3 text-xs">
+                                                    {producto.marca ? (
+                                                        <span className="inline-block bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full font-medium">
+                                                            {producto.marca.nombre}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3 text-xs">
+                                                    {producto.categoria ? (
+                                                        <span className="inline-block bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full font-medium">
+                                                            {producto.categoria.nombre}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* ✅ Botón para mostrar info de medicamentos (solo para farmacias) */}
+                                {es_farmacia && productosDisponibles.some(p => p.principio_activo || p.uso_de_medicacion) && (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800 px-4 py-2.5 flex gap-2 flex-wrap">
+                                        {productosDisponibles
+                                            .filter(p => p.principio_activo || p.uso_de_medicacion)
+                                            .map(producto => (
                                                 <button
+                                                    key={`med-${producto.id}`}
                                                     type="button"
                                                     onClick={() => onMedicamentoInfo(producto)}
-                                                    className="w-full text-left px-4 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-t border-gray-100 dark:border-zinc-700 font-semibold flex items-center gap-2"
+                                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold bg-white dark:bg-zinc-800 px-2.5 py-1 rounded border border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 transition"
                                                 >
-                                                    <span>💊 Ver información del medicamento</span>
+                                                    💊 {producto.nombre}
                                                 </button>
-                                            );
-                                        })()}
+                                            ))}
                                     </div>
-                                ))}
+                                )}
                             </>
                         )}
 

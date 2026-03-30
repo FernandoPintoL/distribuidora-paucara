@@ -3,6 +3,9 @@ import { Search, Filter, X, Calendar, DollarSign, Hash, ArrowUpDown } from 'luci
 import type { FiltrosVentas, DatosParaFiltrosVentas } from '@/domain/entities/ventas';
 import ventasService from '@/infrastructure/services/ventas.service';
 import SearchSelect from '@/presentation/components/ui/search-select';
+import FloatingInput from './floating-input';
+import FloatingSelect from './floating-select';
+import FloatingSearchSelect from './floating-search-select';
 
 interface FiltrosVentasProps {
     filtros: FiltrosVentas;
@@ -55,6 +58,16 @@ export default function FiltrosVentasComponent({
 
     const handleFiltroChange = (campo: keyof FiltrosVentas, valor: string | number | null | undefined) => {
         const nuevosFiltros = { ...filtros, [campo]: valor };
+        setFiltros(nuevosFiltros);
+
+        if (onFiltrosChange) {
+            onFiltrosChange(nuevosFiltros);
+        }
+    };
+
+    // ✅ NUEVO: Cambiar múltiples filtros a la vez
+    const handleMultipleFiltros = (cambios: Partial<FiltrosVentas>) => {
+        const nuevosFiltros = { ...filtros, ...cambios };
         setFiltros(nuevosFiltros);
 
         if (onFiltrosChange) {
@@ -190,131 +203,160 @@ export default function FiltrosVentasComponent({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
                 {/* ID de venta o Número de venta (búsqueda combinada) */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        🔍 Búsqueda
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Hash className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="ID o Número"
-                            title="Buscar por ID (58, 100) o Número (VEN20260128-0010)"
-                            value={busquedaCombinada}
-                            onChange={(e) => handleBusquedaCombinada(e.target.value)}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleBusquedaCombinada(busquedaCombinada, true);
-                                }
-                            }}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                        />
-                    </div>
+                <div>
+                    <FloatingInput
+                        id="busqueda"
+                        label="🔍 Búsqueda"
+                        value={busquedaCombinada}
+                        onChange={(e) => handleBusquedaCombinada(e.target.value)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleBusquedaCombinada(busquedaCombinada, true);
+                            }
+                        }}
+                        placeholder="ID o Número"
+                        title="Buscar por ID (58, 100) o Número (VEN20260128-0010)"
+                        icon={<Hash className="h-4 w-4" />}
+                    />
                 </div>
 
                 {/* Rango de IDs - Desde */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        #️⃣ ID Desde
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Hash className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                            type="number"
-                            placeholder="ID desde"
-                            title="ID mínimo de la venta"
-                            value={filtros.id_desde || ''}
-                            onChange={(e) => handleFiltroChange('id_desde', e.target.value ? Number(e.target.value) : null)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                        />
-                    </div>
+                <div>
+                    <FloatingInput
+                        id="id_desde"
+                        label="#️⃣ ID Desde"
+                        type="number"
+                        value={filtros.id_desde || ''}
+                        onChange={(e) => handleFiltroChange('id_desde', e.target.value ? Number(e.target.value) : null)}
+                        placeholder="ID desde"
+                        title="ID mínimo de la venta"
+                        icon={<Hash className="h-4 w-4" />}
+                    />
                 </div>
 
                 {/* Rango de IDs - Hasta */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        #️⃣ ID Hasta
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Hash className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                            type="number"
-                            placeholder="ID hasta"
-                            title="ID máximo de la venta"
-                            value={filtros.id_hasta || ''}
-                            onChange={(e) => handleFiltroChange('id_hasta', e.target.value ? Number(e.target.value) : null)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                        />
-                    </div>
+                <div>
+                    <FloatingInput
+                        id="id_hasta"
+                        label="#️⃣ ID Hasta"
+                        type="number"
+                        value={filtros.id_hasta || ''}
+                        onChange={(e) => handleFiltroChange('id_hasta', e.target.value ? Number(e.target.value) : null)}
+                        placeholder="ID hasta"
+                        title="ID máximo de la venta"
+                        icon={<Hash className="h-4 w-4" />}
+                    />
                 </div>
-
 
                 {/* Cliente - Búsqueda por múltiples campos */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        👥 Cliente
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Cliente (ID, código, nombre, NIT, teléfono)"
-                            title="Buscar por ID, código cliente, nombre, NIT o teléfono"
-                            value={filtros.cliente_id || ''}
-                            onChange={(e) => handleFiltroChange('cliente_id', e.target.value || null)}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    aplicarFiltros();
-                                }
-                            }}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                        />
-                    </div>
+                <div>
+                    <FloatingInput
+                        id="cliente_id"
+                        label="👥 Cliente"
+                        value={filtros.cliente_id || ''}
+                        onChange={(e) => handleFiltroChange('cliente_id', e.target.value || null)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                aplicarFiltros();
+                            }
+                        }}
+                        placeholder="Cliente (ID, código, nombre, NIT, teléfono)"
+                        title="Buscar por ID, código cliente, nombre, NIT o teléfono"
+                        icon={<Search className="h-4 w-4" />}
+                    />
                 </div>
-
-
-
-
             </div>
 
-            {/* ✅ NUEVO: Controles de Ordenamiento */}
+            {/* ✅ NUEVO: Ordenamiento + Filtros rápidos en 2 columnas responsivas */}
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <ArrowUpDown className="h-4 w-4" />
-                        Ordenar por:
-                    </span>
-                    <select
-                        value={filtros.sort_by || 'id'}
-                        onChange={(e) => handleFiltroChange('sort_by', e.target.value || 'id')}
-                        className="px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    >
-                        <option value="id">ID (predeterminado)</option>
-                        <option value="created_at">Fecha de creación</option>
-                        <option value="updated_at">Fecha de actualización</option>
-                        <option value="fecha">Fecha de emisión</option>
-                        <option value="numero">Número de venta</option>
-                        <option value="total">Total</option>
-                        <option value="estado">Estado</option>
-                    </select>
-                    <select
-                        value={filtros.sort_order || 'desc'}
-                        onChange={(e) => handleFiltroChange('sort_order', (e.target.value as 'asc' | 'desc') || 'desc')}
-                        className="px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                    >
-                        <option value="desc">↓ Descendente (más reciente)</option>
-                        <option value="asc">↑ Ascendente (más antiguo)</option>
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {/* Controles de Ordenamiento - Columna 1 */}
+                    <div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                <ArrowUpDown className="h-3 w-3" />
+                                Ordenar por
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                                <select
+                                    value={filtros.sort_by || 'id'}
+                                    onChange={(e) => handleFiltroChange('sort_by', e.target.value || 'id')}
+                                    className="w-full px-1 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                >
+                                    <option value="id">Folio</option>
+                                    <option value="created_at">Fecha de creación</option>
+                                    <option value="updated_at">Fecha de actualización</option>
+                                    <option value="fecha">Fecha de emisión</option>
+                                    <option value="numero">Número de venta</option>
+                                    <option value="total">Total</option>
+                                    <option value="estado">Estado</option>
+                                </select>
+                                <select
+                                    value={filtros.sort_order || 'desc'}
+                                    onChange={(e) => handleFiltroChange('sort_order', (e.target.value as 'asc' | 'desc') || 'desc')}
+                                    className="w-full px-1 py-1 text-sm border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
+                                >
+                                    <option value="desc">↓ Descendente (más reciente)</option>
+                                    <option value="asc">↑ Ascendente (más antiguo)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filtros rápidos - Columna 2 */}
+                    <div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Filtros rápidos
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        handleMultipleFiltros({ fecha_desde: today, fecha_hasta: today });
+                                    }}
+                                    className={`w-full px-1 py-1 text-sm font-medium rounded-md transition-colors ${filtros.fecha_desde === filtros.fecha_hasta && filtros.fecha_desde
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                                        }`}
+                                >
+                                    📅 Hoy
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleFiltroChange('estado_documento_id', 3)} // ID de APROBADO
+                                    className={`w-full px-1 py-1 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 3
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                        }`}
+                                >
+                                    ✓ Aprobadas
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleFiltroChange('estado_documento_id', 5)} // ID de ANULADO
+                                    className={`w-full px-1 py-1 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 5
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                                        }`}
+                                >
+                                    ✗ Anuladas
+                                </button>
+                                {filtros.estado_documento_id && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleFiltroChange('estado_documento_id', null)}
+                                        className="w-full px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-700"
+                                    >
+                                        ↻ Limpiar
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -323,50 +365,36 @@ export default function FiltrosVentasComponent({
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {/* Rango de fechas */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Fecha desde
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <input
-                                    type="date"
-                                    value={filtros.fecha_desde || ''}
-                                    onChange={(e) => handleFiltroChange('fecha_desde', e.target.value || undefined)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                />
-                            </div>
+                        <div>
+                            <FloatingInput
+                                id="fecha_desde"
+                                label="📅 Fecha desde"
+                                type="date"
+                                value={filtros.fecha_desde || ''}
+                                onChange={(e) => handleFiltroChange('fecha_desde', e.target.value || undefined)}
+                                icon={<Calendar className="h-4 w-4" />}
+                            />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Fecha hasta
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <input
-                                    type="date"
-                                    value={filtros.fecha_hasta || ''}
-                                    onChange={(e) => handleFiltroChange('fecha_hasta', e.target.value || undefined)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                />
-                            </div>
+                        <div>
+                            <FloatingInput
+                                id="fecha_hasta"
+                                label="📅 Fecha hasta"
+                                type="date"
+                                value={filtros.fecha_hasta || ''}
+                                onChange={(e) => handleFiltroChange('fecha_hasta', e.target.value || undefined)}
+                                icon={<Calendar className="h-4 w-4" />}
+                            />
                         </div>
 
 
                         {/* Tipo de Pago */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Tipo de Pago
-                            </label>
-                            <select
+                        <div>
+                            <FloatingSelect
+                                id="tipo_pago_id"
+                                label="💳 Tipo de Pago"
                                 value={filtros.tipo_pago_id || ''}
                                 onChange={(e) => handleFiltroChange('tipo_pago_id', e.target.value ? Number(e.target.value) : null)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
                             >
                                 <option value="">Todos los tipos</option>
                                 {datosSeguros.tipos_pago.map((tipo) => (
@@ -374,90 +402,69 @@ export default function FiltrosVentasComponent({
                                         {tipo.nombre}
                                     </option>
                                 ))}
-                            </select>
+                            </FloatingSelect>
                         </div>
                         {/* Estado */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                📋 Estado
-                            </label>
-                            <div>
-                                <select
-                                    value={filtros.estado_documento_id || ''}
-                                    onChange={(e) => handleFiltroChange('estado_documento_id', e.target.value ? Number(e.target.value) : null)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                >
-                                    <option value="">Todos los estados</option>
-                                    {datosSeguros.estados_documento.map((estado) => (
-                                        <option key={estado.id} value={estado.id}>
-                                            {estado.nombre}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                        <div>
+                            <FloatingSelect
+                                id="estado_documento_id"
+                                label="📋 Estado"
+                                value={filtros.estado_documento_id || ''}
+                                onChange={(e) => handleFiltroChange('estado_documento_id', e.target.value ? Number(e.target.value) : null)}
+                            >
+                                <option value="">Todos los estados</option>
+                                {datosSeguros.estados_documento.map((estado) => (
+                                    <option key={estado.id} value={estado.id}>
+                                        {estado.nombre}
+                                    </option>
+                                ))}
+                            </FloatingSelect>
                         </div>
                         {/* Rango de montos */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Monto mínimo
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <DollarSign className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={filtros.monto_min || ''}
-                                    onChange={(e) => handleFiltroChange('monto_min', e.target.value ? Number(e.target.value) : undefined)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                />
-                            </div>
+                        <div>
+                            <FloatingInput
+                                id="monto_min"
+                                label="💰 Monto mínimo"
+                                type="number"
+                                value={filtros.monto_min || ''}
+                                onChange={(e) => handleFiltroChange('monto_min', e.target.value ? Number(e.target.value) : undefined)}
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                                icon={<DollarSign className="h-4 w-4" />}
+                            />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Monto máximo
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <DollarSign className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={filtros.monto_max || ''}
-                                    onChange={(e) => handleFiltroChange('monto_max', e.target.value ? Number(e.target.value) : undefined)}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                />
-                            </div>
+                        <div>
+                            <FloatingInput
+                                id="monto_max"
+                                label="💰 Monto máximo"
+                                type="number"
+                                value={filtros.monto_max || ''}
+                                onChange={(e) => handleFiltroChange('monto_max', e.target.value ? Number(e.target.value) : undefined)}
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                                icon={<DollarSign className="h-4 w-4" />}
+                            />
                         </div>
                         {/* Tipo de Venta */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                🏪 Tipo de Venta
-                            </label>
-                            <div>
-                                <select
-                                    value={filtros.tipo_venta || ''}
-                                    onChange={(e) => handleFiltroChange('tipo_venta', e.target.value || null)}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                >
-                                    <option value="">Todos los tipos</option>
-                                    <option value="presencial">🏪 Presencial</option>
-                                    <option value="delivery">🚚 Delivery</option>
-                                </select>
-                            </div>
+                        <div>
+                            <FloatingSelect
+                                id="tipo_venta"
+                                label="🏪 Tipo de Venta"
+                                value={filtros.tipo_venta || ''}
+                                onChange={(e) => handleFiltroChange('tipo_venta', e.target.value || null)}
+                            >
+                                <option value="">Todos los tipos</option>
+                                <option value="presencial">🏪 Presencial</option>
+                                <option value="delivery">🚚 Delivery</option>
+                            </FloatingSelect>
                         </div>
                         {/* Usuario */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Usuario Creador
-                            </label>
-                            <SearchSelect
+                        <div className='w-full'>
+                            <FloatingSearchSelect
+                                id="usuario_id"
+                                label="👤 Usuario Creador"
                                 placeholder="Seleccionar usuario..."
                                 value={filtros.usuario_id || ''}
                                 options={datosSeguros.usuarios.map((usuario) => ({
@@ -466,15 +473,13 @@ export default function FiltrosVentasComponent({
                                 }))}
                                 onChange={(value) => handleFiltroChange('usuario_id', value ? Number(value) : null)}
                                 allowClear={true}
-                                className="w-full"
                             />
                         </div>
                         {/* ✅ NUEVO (2026-03-01): Preventista */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                👤 Preventista
-                            </label>
-                            <SearchSelect
+                        <div>
+                            <FloatingSearchSelect
+                                id="preventista_id"
+                                label="👤 Preventista"
                                 placeholder="Seleccionar preventista..."
                                 value={filtros.preventista_id || ''}
                                 options={datosSeguros.preventistas.map((preventista) => ({
@@ -483,64 +488,12 @@ export default function FiltrosVentasComponent({
                                 }))}
                                 onChange={(value) => handleFiltroChange('preventista_id', value ? Number(value) : null)}
                                 allowClear={true}
-                                className="w-full"
                             />
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ✅ NUEVO: Filtros rápidos por Estado */}
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Filtros rápidos:
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            const today = new Date().toISOString().split('T')[0];
-                            handleFiltroChange('fecha_desde', today);
-                            handleFiltroChange('fecha_hasta', today);
-                        }}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.fecha_desde === filtros.fecha_hasta && filtros.fecha_desde
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50'
-                            }`}
-                    >
-                        📅 Hoy
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleFiltroChange('estado_documento_id', 3)} // ID de APROBADO
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 3
-                            ? 'bg-green-600 text-white'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
-                            }`}
-                    >
-                        ✓ Aprobadas
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleFiltroChange('estado_documento_id', 5)} // ID de ANULADO
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filtros.estado_documento_id === 5
-                            ? 'bg-red-600 text-white'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
-                            }`}
-                    >
-                        ✗ Anuladas
-                    </button>
-                    {filtros.estado_documento_id && (
-                        <button
-                            type="button"
-                            onClick={() => handleFiltroChange('estado_documento_id', null)}
-                            className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-700"
-                        >
-                            ↻ Limpiar
-                        </button>
-                    )}
-                </div>
-            </div>
 
             {/* ✅ NUEVO: Mostrar filtros seleccionados activos */}
             {obtenerFiltrosActivos().length > 0 && (

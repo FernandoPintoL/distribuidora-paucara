@@ -23,6 +23,27 @@ export function formatCurrencyWith2Decimals(amount: number, currency = 'BOB'): s
     }).format(amount);
 }
 
+// ✅ NUEVO: Formatear moneda mostrando solo decimales necesarios
+export function formatCurrencyMinimalDecimals(amount: number, currency = 'BOB'): string {
+    // Determinar cuántos decimales son necesarios
+    const decimalPart = amount % 1;
+    let minDecimals = 0;
+    let maxDecimals = 2;
+
+    if (decimalPart !== 0) {
+        // Si tiene decimales, mostrar hasta 2
+        const decimalStr = Math.abs(decimalPart).toFixed(2).substring(2);
+        minDecimals = decimalStr.length;
+    }
+
+    return new Intl.NumberFormat('es-BO', {
+        style: 'currency',
+        currency: currency === 'USD' ? 'USD' : 'BOB',
+        minimumFractionDigits: minDecimals,
+        maximumFractionDigits: maxDecimals,
+    }).format(amount);
+}
+
 export function formatDate(date: string | Date): string {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('es-BO', {

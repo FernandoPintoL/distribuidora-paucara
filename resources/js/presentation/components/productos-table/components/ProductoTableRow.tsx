@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react';
-import { formatCurrency, formatCurrencyWith2Decimals } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWith2Decimals, formatCurrencyMinimalDecimals } from '@/lib/utils';
 import type { DetalleProducto } from '../types';
 import ComboExpandedRows from './ComboExpandedRows';
 
@@ -74,26 +74,32 @@ export default function ProductoTableRow({
                 : ''
             }`}>
             {/* Producto Info */}
-            <td className="py-1 whitespace-nowrap">
-                <div className="text-gray-900 dark:text-white">
+            <td className="py-2 whitespace-nowrap">
+                <div className="text-gray-900 dark:text-white font-medium">
                     {productoInfo?.nombre || 'Producto no encontrado'}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 text-left">
-                    {productoInfo?.sku && (
-                        <div>SKU: {productoInfo.sku}</div>
-                    )}
-                    {productoInfo?.codigo && productoInfo.codigo !== productoInfo.sku && (
-                        <div>Código: {productoInfo.codigo}</div>
-                    )}
+                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 text-left mt-1">
+                    {/* SKU y Marca */}
+                    <div className="flex items-center gap-2">
+                        {(productoInfo?.sku || productoInfo?.codigo) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+                                🏷️ {productoInfo.sku || productoInfo.codigo}
+                            </span>
+                        )}
+                        {(productoInfo?.marca || productoInfo?.marca?.nombre) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium">
+                                🏢 {typeof productoInfo.marca === 'string' ? productoInfo.marca : productoInfo.marca?.nombre}
+                            </span>
+                        )}
+                        {/* categoria */}
+                        {(productoInfo?.categoria || productoInfo?.categoria?.nombre) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium">
+                                🏢 {typeof productoInfo.categoria === 'string' ? productoInfo.categoria : productoInfo.categoria?.nombre}
+                            </span>
+                        )}
+                    </div>
                     {productoInfo?.codigo_barras && productoInfo.codigo_barras !== productoInfo.sku && (
-                        <div>Código Barras: {productoInfo.codigo_barras}</div>
-                    )}
-                    {((productoInfo as any)?.marca || (productoInfo as any)?.unidad) && (
-                        <div className="text-gray-600 dark:text-gray-500">
-                            {(productoInfo as any)?.marca?.nombre && `Marca: ${(productoInfo as any).marca.nombre}`}
-                            {(productoInfo as any)?.marca?.nombre && (productoInfo as any)?.unidad?.codigo && ' | '}
-                            {(productoInfo as any)?.unidad?.codigo && `Unidad: ${(productoInfo as any).unidad.codigo}`}
-                        </div>
+                        <div>Cod Barras: {productoInfo.codigo_barras}</div>
                     )}
                     {(() => {
                         const tieneDataMedicamentos = (productoInfo as any)?.principio_activo || (productoInfo as any)?.uso_de_medicacion;
@@ -150,13 +156,13 @@ export default function ProductoTableRow({
                                     stockDisponible < 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200' :
                                         'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 text-xs'
                                     }`}>
-                                    Disponible: {stockDisponible}
+                                    Disp.: {stockDisponible} / {stockTotal}
                                 </span>
-                                {stockTotal > stockDisponible && (
+                                {/* {stockTotal > stockDisponible && (
                                     <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
                                         Total: {stockTotal}
                                     </div>
-                                )}
+                                )} */}
                                 {limiteVenta !== null && limiteVenta !== undefined && (
                                     <div className="text-[12px] text-orange-600 dark:text-orange-400 mt-1 font-semibold">
                                         Límite Venta: {limiteVenta}
@@ -174,7 +180,7 @@ export default function ProductoTableRow({
             </td>
 
             {/* Cantidad */}
-            <td className="whitespace-nowrap">
+            <td className="whitespace-nowrap py-3">
                 <input
                     type="text"
                     inputMode="decimal"
@@ -208,53 +214,55 @@ export default function ProductoTableRow({
                     className="w-32 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed font-mono"
                 />
                 <div>
-                    {tipo === 'venta' && (
-                        <div className="whitespace-nowrap">
-                            {(() => {
-                                if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
-                                    const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
+                    {/* {tipo === 'venta' && (
+                        
+                    )} */}
+                    <div className="whitespace-nowrap">
+                        {(() => {
+                            if (detalle.es_fraccionado && detalle.conversiones && detalle.conversiones.length > 0) {
+                                const unidadInicial = detalle.unidad_venta_id || detalle.conversiones[0].unidad_destino_id;
 
-                                    return (
-                                        <select
-                                            disabled={readOnly}
-                                            value={unidadInicial || ''}
-                                            onChange={(e) => {
-                                                const unidadSeleccionada = Number(e.target.value);
-                                                const nuevoPrecio = calcularPrecioPorUnidad(
-                                                    detalle.producto?.precio_venta || 0,
-                                                    unidadSeleccionada,
-                                                    detalle.conversiones
-                                                );
+                                return (
+                                    <select
+                                        disabled={readOnly}
+                                        value={unidadInicial || ''}
+                                        onChange={(e) => {
+                                            const unidadSeleccionada = Number(e.target.value);
+                                            const nuevoPrecio = calcularPrecioPorUnidad(
+                                                detalle.producto?.precio_venta || 0,
+                                                unidadSeleccionada,
+                                                detalle.conversiones
+                                            );
 
-                                                if (onUpdateDetailUnidadConPrecio) {
-                                                    onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
-                                                } else {
-                                                    onUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
-                                                    onUpdateDetail(index, 'precio_unitario', nuevoPrecio);
-                                                }
-                                            }}
-                                            className="w-28 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <option value={detalle.unidad_medida_id || ''}>
-                                                {detalle.unidad_medida_nombre || 'Unidad Base'}
+                                            if (onUpdateDetailUnidadConPrecio) {
+                                                onUpdateDetailUnidadConPrecio(index, unidadSeleccionada, nuevoPrecio);
+                                            } else {
+                                                onUpdateDetail(index, 'unidad_venta_id', unidadSeleccionada);
+                                                onUpdateDetail(index, 'precio_unitario', nuevoPrecio);
+                                            }
+                                        }}
+                                        className="w-28 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <option value={detalle.unidad_medida_id || ''}>
+                                            {detalle.unidad_medida_nombre || 'Unidad Base'}
+                                        </option>
+                                        {detalle.conversiones.map((conv) => (
+                                            <option key={conv.unidad_destino_id} value={conv.unidad_destino_id}>
+                                                {conv.unidad_destino_nombre || `Unidad ${conv.unidad_destino_id}`}
                                             </option>
-                                            {detalle.conversiones.map((conv) => (
-                                                <option key={conv.unidad_destino_id} value={conv.unidad_destino_id}>
-                                                    {conv.unidad_destino_nombre || `Unidad ${conv.unidad_destino_id}`}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    );
-                                } else {
-                                    return (
-                                        <div className="text-gray-500 dark:text-gray-400">
-                                            {detalle.unidad_medida_nombre || 'N/A'}
-                                        </div>
-                                    );
-                                }
-                            })()}
+                                        ))}
+                                    </select>
+                                );
+                            } else {
+                                return (
+                                    <div></div>
+                                );
+                            }
+                        })()}
+                        <div className="text-gray-500 dark:text-gray-400">
+                            {detalle.unidad_medida_nombre || 'N/A'}
                         </div>
-                    )}
+                    </div>
                 </div>
             </td>
 
@@ -344,7 +352,7 @@ export default function ProductoTableRow({
                     </td>
 
                     {/* Lote */}
-                    <td className="px-4 py-2 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                         <input
                             type="text"
                             disabled={readOnly}
@@ -358,7 +366,7 @@ export default function ProductoTableRow({
                     </td>
 
                     {/* Fecha Vencimiento */}
-                    <td className="px-4 py-2 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                         <input
                             type="date"
                             disabled={readOnly}
@@ -487,9 +495,7 @@ export default function ProductoTableRow({
 
             {/* Subtotal */}
             <td className="text-gray-900 dark:text-white">
-                {tipo === 'venta'
-                    ? formatCurrencyWith2Decimals(detalle.subtotal)
-                    : formatCurrency(detalle.subtotal)}
+                {formatCurrencyMinimalDecimals(detalle.subtotal)}
             </td>
 
             {/* Acciones */}

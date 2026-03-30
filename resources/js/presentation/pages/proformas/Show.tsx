@@ -26,13 +26,6 @@ import {
 import { Textarea } from '@/presentation/components/ui/textarea'
 import { Label } from '@/presentation/components/ui/label'
 import { Input } from '@/presentation/components/ui/input'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/presentation/components/ui/select'
 import { Package, MapPin, Check, X, ChevronUp, ChevronDown, ShoppingCart, MessageCircle, AlertCircle, ChevronRight, Search, RefreshCw, FileText, Pencil } from 'lucide-react'
 import MapViewWithFallback from '@/presentation/components/maps/MapViewWithFallback'
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal'
@@ -430,6 +423,8 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
     const [showMapaEntrega, setShowMapaEntrega] = useState(false)
     // ✅ Estado para mostrar/ocultar card de dirección (inicia OCULTO)
     const [showDireccionCard, setShowDireccionCard] = useState(false)
+    const [showMapaResumen, setShowMapaResumen] = useState(false)
+    const [direccionMapaResumen, setDireccionMapaResumen] = useState<'solicitada' | 'confirmada' | null>(null)
     const [convertErrorState, setConvertErrorState] = useState<{ code?: string; message?: string; reservasExpiradas?: number } | null>(null)
     // ✅ NUEVO: Estado para error de caja no disponible
     const [showCajaErrorDialog, setShowCajaErrorDialog] = useState(false)
@@ -485,23 +480,23 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 producto: d.producto && typeof d.producto === 'object'
                     ? d.producto  // ← USAR DIRECTAMENTE: tiene sku, es_combo, combo_items, etc.
                     : {
-                    // FALLBACK: Por si no viniera producto del backend (compatibilidad)
-                    id: d.producto_id,
-                    nombre: d.producto_nombre,
-                    sku: d.sku || null,
-                    codigo: d.sku || null,
-                    peso: d.peso || 0,
-                    stock_disponible: d.stock_disponible || 0,
-                    stock_total: d.stock_total || 0,
-                    stock_reservado: d.stock_reservado || 0,
-                    precio_venta: d.precio_unitario || 0,
-                    precio_costo: d.precio_unitario || 0,
-                    categoria: d.categoria || null,
-                    limite_venta: d.limite_venta || null,
-                    unidad_medida_id: d.unidad_medida_id || null,
-                    unidad_medida_nombre: d.unidad_medida_nombre || null,
-                    precios: Array.isArray(d.precios) ? d.precios : [],
-                }
+                        // FALLBACK: Por si no viniera producto del backend (compatibilidad)
+                        id: d.producto_id,
+                        nombre: d.producto_nombre,
+                        sku: d.sku || null,
+                        codigo: d.sku || null,
+                        peso: d.peso || 0,
+                        stock_disponible: d.stock_disponible || 0,
+                        stock_total: d.stock_total || 0,
+                        stock_reservado: d.stock_reservado || 0,
+                        precio_venta: d.precio_unitario || 0,
+                        precio_costo: d.precio_unitario || 0,
+                        categoria: d.categoria || null,
+                        limite_venta: d.limite_venta || null,
+                        unidad_medida_id: d.unidad_medida_id || null,
+                        unidad_medida_nombre: d.unidad_medida_nombre || null,
+                        precios: Array.isArray(d.precios) ? d.precios : [],
+                    }
             };
         })
     )
@@ -1562,275 +1557,347 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     </div>
                 )}
 
-                {/* Header */}
-                <div className="flex flex-col gap-[var(--space-lg)] md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-[var(--space-md)]">
-                        <div>
-                            <h1 className="text-[var(--text-3xl)] font-bold tracking-tight">
-                                Proforma {proforma.numero}
+                {/* Header - Similar a ventas: 1/3 título + 2/3 datos */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-3">
+                    <div className="grid grid-cols-3 gap-6 mb-6">
+                        {/* Columna 1: Título (1/3) */}
+                        <div className="flex items-center">
+                            <h1 className="text-lg font-medium text-gray-900 dark:text-white">
+                                Información de la Proforma
                             </h1>
-                            <div className="space-y-2 mt-3">
-                                {/* 📦 Información de Entrega Solicitada */}
-                                {(proforma.fecha_entrega_solicitada || proforma.hora_entrega_solicitada) && (
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
-                                            📦 Entrega Solicitada
-                                        </p>
-                                        <div className="flex flex-wrap gap-4 text-sm text-blue-800 dark:text-blue-300">
-                                            {proforma.fecha_entrega_solicitada && (
-                                                <p>
-                                                    📅 Fecha: <span className="font-semibold">{proforma.fecha_entrega_solicitada.split('T')[0].split('-').reverse().join('-')}</span>
-                                                </p>
-                                            )}
-                                            {proforma.hora_entrega_solicitada && (
-                                                <p>
-                                                    🕐 Hora: <span className="font-semibold">{proforma.hora_entrega_solicitada}</span>
-                                                    {proforma.hora_entrega_solicitada_fin && <span> - {proforma.hora_entrega_solicitada_fin}</span>}
-                                                </p>
-                                            )}
+                        </div>
+
+                        {/* Columnas 2-3: Datos secundarios (2/3) */}
+                        <div className="col-span-2 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-lg p-1 border border-slate-200 dark:border-zinc-700">
+                            <div className="grid grid-cols-6 gap-2">
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-shrink-0">
+                                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                                            <span className="text-sm">📄</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Folio</p>
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{proforma.id}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-shrink-0">
+                                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                            <span className="text-sm">📅</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Creada</p>
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{new Date(proforma.created_at).toLocaleDateString('es-ES')}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-shrink-0">
+                                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                                            <span className="text-sm">✏️</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Actualizada</p>
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{new Date(proforma.updated_at).toLocaleDateString('es-ES')}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <div className="flex-shrink-0">
+                                        <div className={`flex items-center justify-center h-6 w-6 rounded-full ${proforma.estado === 'APROBADA' || proforma.estado === 'CONVERTIDA'
+                                            ? 'bg-green-100 dark:bg-green-900/30'
+                                            : proforma.estado === 'RECHAZADA'
+                                                ? 'bg-red-100 dark:bg-red-900/30'
+                                                : 'bg-yellow-100 dark:bg-yellow-900/30'
+                                            }`}>
+                                            <span className="text-sm">{proforma.estado === 'APROBADA' || proforma.estado === 'CONVERTIDA' ? '✅' : proforma.estado === 'RECHAZADA' ? '❌' : '⏳'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        {/* <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Estado</p> */}
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{proforma.estado}</p>
+                                        {proforma.venta ? (
+                                            <a
+                                                href={`/ventas/${proforma.venta.id}`}
+                                                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block"
+                                            >
+                                                F. Venta: {proforma.venta.id} →
+                                            </a>
+                                        ) : (
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">F. Venta: Pendiente</p>
+                                        )}
+                                    </div>
+
+                                </div>
+
+                                {/* Fecha Entrega Solicitada */}
+                                {proforma.fecha_entrega_solicitada && (
+                                    <div className="flex items-center space-x-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-1 border border-yellow-200 dark:border-yellow-700">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                                                <span className="text-sm">📦</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Entrega Sol.</p>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                                {proforma.fecha_entrega_solicitada.split('T')[0].split('-').reverse().join('-')}
+                                            </p>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{proforma.hora_entrega_solicitada}</p>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="flex flex-wrap gap-4 text-[var(--text-sm)] text-muted-foreground">
-                                    <p>
-                                        📅 Creada: {new Date(proforma.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                    <p>
-                                        ✏️ Actualizada: {new Date(proforma.updated_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })} {new Date(proforma.updated_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
-
-                                {/* ✅ MEJORADO: Mostrar estado_logistica con icono + nombre (como en Index) */}
-                                {proforma.estado_logistica ? (
-                                    <div className="w-fit flex items-center gap-2 px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800">
-                                        <span className="text-lg">{proforma.estado_logistica.icono}</span>
-                                        <span className="text-sm font-medium">{proforma.estado_logistica.nombre}</span>
-                                    </div>
-                                ) : (
-                                    <ProformaEstadoBadge estado={proforma.estado} className="text-sm px-3 py-1" />
-                                )}
-
-                                <div className="flex flex-col md:flex-row gap-[var(--space-sm)] flex-wrap items-center">
-
-                                    {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
-                                    {puedeSerEditada(proforma.estado) && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => actualizarDetallesProforma(true)}
-                                            className="border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                                            title="Guardar los cambios realizados en los detalles sin aprobar la proforma"
-                                        >
-                                            <RefreshCw className="mr-2 h-4 w-4" />
-                                            Guardar Cambios
-                                        </Button>
-                                    )}
-
-                                    {puedeAprobar && (
-                                        <Button
-                                            variant="default"
-                                            onClick={() => setShowAprobarDialog(true)}
-                                            className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
-                                        >
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Aprobar
-                                        </Button>
-                                    )}
-
-                                    {puedeRechazar && (
-                                        <Button
-                                            variant="destructive"
-                                            onClick={() => setShowRechazarDialog(true)}
-                                        >
-                                            <X className="mr-2 h-4 w-4" />
-                                            Rechazar
-                                        </Button>
-                                    )}
-
-                                    {/* ✅ NUEVO: Botón para editar la proforma (solo disponible en estado PENDIENTE) */}
-                                    {proforma.estado === 'PENDIENTE' && (
-                                        <Button
-                                            onClick={() => window.location.href = `/proformas/${proforma.id}/edit`}
-                                            variant="outline"
-                                        >
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            Editar
-                                        </Button>
-                                    )}
-
-                                    {puedeConvertir && (
-                                        <Button
-                                            onClick={() => setShowAprobarDialog(true)}
-                                            className="bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] text-white"
-                                        >
-                                            <ShoppingCart className="mr-2 h-4 w-4" />
-                                            Convertir a Venta
-                                        </Button>
-                                    )}
-
-                                    {/* ✅ NUEVO: Botón para abrir modal de selección de salida (impresión/descarga) */}
-                                    <Button
-                                        onClick={() => setShowProformaOutputSelection(true)}
-                                        variant="outline"
-                                    >
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Exportar
-                                    </Button>
-                                </div>
-
-                                {/* ✅ NUEVO: Mostrar información de venta cuando está convertida */}
-                                {proforma.estado === 'CONVERTIDA' && proforma.venta && (
-                                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                        <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">
-                                            ✅ Convertida a Venta
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Folio: </span>
-                                                <span className="font-semibold text-green-900 dark:text-green-100">{proforma.venta.id}</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">Número Venta</span>
-                                                <span className="font-semibold text-green-900 dark:text-green-100">{proforma.venta.numero}</span>
+                                {/* Fecha Vencimiento */}
+                                {proforma.fecha_vencimiento && (
+                                    <div className="flex items-center space-x-2">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-red-100 dark:bg-red-900/30">
+                                                <span className="text-sm">⏰</span>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-
-                                {/* Información adicional - Horizontal en una sola línea */}
-                                <div className="flex flex-wrap gap-4 mt-3 text-sm">
-                                    {/* Origen */}
-                                    {proforma.canal_origen && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Origen</span>
-                                            <span className="font-medium text-foreground capitalize">{(proforma.canal_origen as string).replace(/_/g, ' ')}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">Vencimiento</p>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                                {proforma.fecha_vencimiento.split('T')[0].split('-').reverse().join('-')}
+                                            </p>
                                         </div>
-                                    )}
-
-                                    {/* Tipo de Entrega */}
-                                    {proforma.tipo_entrega && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Tipo de Entrega</span>
-                                            <span className="font-medium text-foreground capitalize">{proforma.tipo_entrega}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Política de Pago */}
-                                    {proforma.politica_pago && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Política de Pago</span>
-                                            <span className="font-medium text-foreground capitalize">{(proforma.politica_pago as string).replace(/_/g, ' ')}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Fecha de Vencimiento */}
-                                    {proforma.fecha_vencimiento && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Vencimiento</span>
-                                            <span className="font-medium text-foreground">{proforma.fecha_vencimiento.split('T')[0].split('-').reverse().join('-')}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Moneda */}
-                                    {proforma.moneda && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Moneda</span>
-                                            <span className="font-medium text-foreground">{proforma.moneda.codigo}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Items */}
-                                    {(proforma.items_count ?? 0) > 0 && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Items</span>
-                                            <span className="font-medium text-foreground">{proforma.items_count} producto{(proforma.items_count ?? 0) !== 1 ? 's' : ''}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Información del Cliente - Horizontal */}
-                                <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-border/30 text-sm">
-                                    {/* Nombre del Cliente */}
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-muted-foreground font-medium">Cliente</span>
-                                        <span className="font-medium text-foreground">{proforma.cliente.nombre}</span>
-                                    </div>
-
-                                    {/* Email */}
-                                    {proforma.cliente.email && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Email</span>
-                                            <span className="font-medium text-foreground truncate">{proforma.cliente.email}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Teléfono */}
-                                    {proforma.cliente.telefono && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Teléfono</span>
-                                            <div className="flex items-center gap-1">
-                                                <span className="font-medium text-foreground">{proforma.cliente.telefono}</span>
-                                                <a
-                                                    href={`https://wa.me/${proforma.cliente.telefono.replace(/\D/g, '')}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    title="Abrir en WhatsApp"
-                                                    className="inline-flex items-center justify-center h-5 w-5 rounded bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
-                                                >
-                                                    <MessageCircle className="h-3 w-3" />
-                                                </a>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Usuario Creador */}
-                                    {proforma.usuario_creador && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">Creado por</span>
-                                            <span className="font-medium text-foreground">{proforma.usuario_creador.name}</span>
-                                        </div>
-                                    )}
-
-                                    {/* ✅ Dirección de Entrega (Solicitada o Confirmada) */}
-                                    {(proforma.direccion_solicitada || proforma.direccion_confirmada) && (
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-muted-foreground font-medium">
-                                                {proforma.direccion_confirmada ? 'Dirección Confirmada' : 'Dirección Solicitada'}
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-foreground truncate max-w-xs">
-                                                    {(proforma.direccion_confirmada || proforma.direccion_solicitada)?.direccion}
-                                                </span>
-                                                {/* ✅ Botón toggle para mostrar/ocultar card de dirección de entrega */}
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => setShowDireccionCard(!showDireccionCard)}
-                                                    title={showDireccionCard ? 'Ocultar detalles de entrega' : 'Mostrar detalles de entrega'}
-                                                    className="h-5 w-5 p-0 flex-shrink-0"
-                                                >
-                                                    <MapPin className="h-4 w-4 text-[var(--brand-primary)]" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Mostrar límite de crédito si la política es CREDITO */}
-                                {proforma.politica_pago === 'CREDITO' && proforma.cliente?.puede_tener_credito && (
-                                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-sm">
-                                        <p className="text-muted-foreground">
-                                            Límite de Crédito: <span className="font-medium text-foreground">
-                                                {proforma.moneda?.simbolo || 'Bs.'} {proforma.cliente.limite_credito?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
+                    {/* Botones de acción */}
+                    <div className="flex flex-col md:flex-row gap-2 flex-wrap items-center">
+                        {/* ✅ NUEVO: Botón para guardar cambios en detalles sin aprobar */}
+                        {puedeSerEditada(proforma.estado) && (
+                            <Button
+                                variant="outline"
+                                onClick={() => actualizarDetallesProforma(true)}
+                                className="border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                title="Guardar los cambios realizados en los detalles sin aprobar la proforma"
+                            >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Guardar Cambios
+                            </Button>
+                        )}
+
+                        {puedeAprobar && (
+                            <Button
+                                variant="default"
+                                onClick={() => setShowAprobarDialog(true)}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                <Check className="mr-2 h-4 w-4" />
+                                Aprobar
+                            </Button>
+                        )}
+
+                        {puedeRechazar && (
+                            <Button
+                                variant="destructive"
+                                onClick={() => setShowRechazarDialog(true)}
+                            >
+                                <X className="mr-2 h-4 w-4" />
+                                Rechazar
+                            </Button>
+                        )}
+
+                        {/* ✅ NUEVO: Botón para editar la proforma (solo disponible en estado PENDIENTE) */}
+                        {proforma.estado === 'PENDIENTE' && (
+                            <Button
+                                onClick={() => window.location.href = `/proformas/${proforma.id}/edit`}
+                                variant="outline"
+                            >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                            </Button>
+                        )}
+
+                        {puedeConvertir && (
+                            <Button
+                                onClick={() => setShowAprobarDialog(true)}
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                Convertir a Venta
+                            </Button>
+                        )}
+
+                        {/* ✅ NUEVO: Botón para abrir modal de selección de salida (impresión/descarga) */}
+                        <Button
+                            onClick={() => setShowProformaOutputSelection(true)}
+                            variant="outline"
+                        >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Exportar
+                        </Button>
+                    </div>
                 </div>
+
+                {/* Información adicional */}
+                {((proforma.fecha_entrega_solicitada || proforma.hora_entrega_solicitada) || proforma.estado === 'CONVERTIDA' || proforma.canal_origen) && (
+                    <div className="space-y-4">
+                        {/* Información Adicional */}
+                        <div className="space-y-4">
+                            {/* Row: Información General + Cliente */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Card: Información General */}
+                                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">📋 Información General</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Origen */}
+                                        {proforma.canal_origen && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Origen</span>
+                                                <span className="text-sm font-medium text-foreground capitalize">{(proforma.canal_origen as string).replace(/_/g, ' ')}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Tipo de Entrega */}
+                                        {proforma.tipo_entrega && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Tipo Entrega</span>
+                                                <span className="text-sm font-medium text-foreground capitalize">{proforma.tipo_entrega}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Política de Pago */}
+                                        {proforma.politica_pago && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Política Pago</span>
+                                                <span className="text-sm font-medium text-foreground capitalize">{(proforma.politica_pago as string).replace(/_/g, ' ')}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Card: Información del Cliente */}
+                                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">👤 Cliente</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Nombre del Cliente */}
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-muted-foreground font-medium mb-1">Nombre</span>
+                                            <span className="text-sm font-medium text-foreground">{proforma.cliente.nombre}</span>
+                                        </div>
+
+                                        {/* Razón Social */}
+                                        {(proforma.cliente as any).razon_social && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Razón Social</span>
+                                                <span className="text-sm font-medium text-foreground">{(proforma.cliente as any).razon_social}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Email */}
+                                        {proforma.cliente.email && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Email</span>
+                                                <span className="text-sm font-medium text-foreground truncate">{proforma.cliente.email}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Teléfono */}
+                                        {proforma.cliente.telefono && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Teléfono</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-foreground">{proforma.cliente.telefono}</span>
+                                                    <a
+                                                        href={`https://wa.me/${proforma.cliente.telefono.replace(/\D/g, '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title="Abrir en WhatsApp"
+                                                        className="inline-flex items-center justify-center h-6 w-6 rounded bg-green-100 text-green-600 hover:bg-green-200 transition-colors flex-shrink-0"
+                                                    >
+                                                        <MessageCircle className="h-3.5 w-3.5" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Usuario Creador */}
+                                        {proforma.usuario_creador && (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground font-medium mb-1">Creado por</span>
+                                                <span className="text-sm font-medium text-foreground">{proforma.usuario_creador.name}</span>
+                                            </div>
+                                        )}
+                                        {/* Direccion solicitada */}
+                                        {proforma.direccion_solicitada && (
+                                            <button
+                                                onClick={() => {
+                                                    if (proforma.direccion_solicitada?.latitud && proforma.direccion_solicitada?.longitud) {
+                                                        setDireccionMapaResumen('solicitada')
+                                                        setShowMapaResumen(true)
+                                                    }
+                                                }}
+                                                className={`flex flex-col text-left hover:opacity-75 transition-all cursor-pointer rounded-lg p-3 border ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'
+                                                    : 'bg-transparent border-transparent'
+                                                    }`}
+                                                disabled={!proforma.direccion_solicitada?.latitud || !proforma.direccion_solicitada?.longitud}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-xs font-medium mb-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                        ? 'text-amber-700 dark:text-amber-300'
+                                                        : 'text-muted-foreground'
+                                                        }`}>Dirección Solicitada</span>
+                                                    {proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion && (
+                                                        <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
+                                                            ✅ Igual
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className={`text-sm font-medium mb-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                    ? 'text-amber-700 dark:text-amber-400'
+                                                    : 'text-foreground'
+                                                    }`}>
+                                                    📍 {proforma.direccion_solicitada.direccion}
+                                                </span>
+                                                {proforma.direccion_solicitada.observaciones && (
+                                                    <span className={`text-xs italic ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                        ? 'text-amber-600 dark:text-amber-400'
+                                                        : 'text-muted-foreground'
+                                                        }`}>📝 {proforma.direccion_solicitada.observaciones}</span>
+                                                )}
+                                                {proforma.direccion_solicitada?.latitud && proforma.direccion_solicitada?.longitud && (
+                                                    <span className={`text-xs font-medium mt-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                        ? 'text-amber-600 dark:text-amber-400'
+                                                        : 'text-blue-600 dark:text-blue-400'
+                                                        }`}>
+                                                        🗺️ Ver en mapa
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card: Límite de Crédito */}
+                            {proforma.politica_pago === 'CREDITO' && proforma.cliente?.puede_tener_credito && (
+                                <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-800 p-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">💳</span>
+                                        <div>
+                                            <p className="text-xs font-semibold text-purple-900 dark:text-purple-200 uppercase">Límite de Crédito</p>
+                                            <p className="text-lg font-bold text-purple-800 dark:text-purple-100">
+                                                {proforma.moneda?.simbolo || 'Bs.'} {proforma.cliente.limite_credito?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid gap-[var(--space-lg)]">
                     {/* Información principal */}
@@ -1851,19 +1918,8 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="flex items-center gap-2">
                                     <Package className="h-5 w-5" />
-                                    Detalles de la Proforma
+                                    Detalles de la Proforma ({proforma.items_count} {(proforma.items_count ?? 0) !== 1 ? 'productos' : 'producto'})
                                 </CardTitle>
-                                {/* {puedeSerEditada(proforma.estado) && (
-                                    <Button
-                                        size="sm"
-                                        variant="default"
-                                        onClick={() => setShowAgregarProductoDialog(true)}
-                                        className="text-xs bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white"
-                                    >
-                                        <ShoppingCart className="h-4 w-4 mr-1" />
-                                        + Agregar Producto
-                                    </Button>
-                                )} */}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <Separator />
@@ -1956,6 +2012,15 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                         </div>
                                     </div>
 
+                                    {proforma.direccion_solicitada.observaciones && (
+                                        <div>
+                                            <div className="text-[var(--text-xs)] font-medium text-muted-foreground uppercase">Observaciones</div>
+                                            <div className="text-[var(--text-sm)] mt-2 text-muted-foreground italic">
+                                                📝 {proforma.direccion_solicitada.observaciones}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {proforma.direccion_solicitada.latitud && proforma.direccion_solicitada.longitud ? (
                                         <>
                                             {/* Mostrar coordenadas */}
@@ -2034,233 +2099,6 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                                     )}
                                 </div>
                             </ProformaCard>
-                        )}
-                        {/* Coordinación de Entrega - Mostrar cuando está PENDIENTE */}
-                        {puedeSerEditada(proforma.estado) && (
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowCoordinacionForm(!showCoordinacionForm)}>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <MapPin className="h-5 w-5" />
-                                            Coordinación de Entrega
-                                        </CardTitle>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setShowCoordinacionForm(!showCoordinacionForm)
-                                            }}
-                                        >
-                                            {showCoordinacionForm ? (
-                                                <ChevronUp className="h-4 w-4" />
-                                            ) : (
-                                                <ChevronDown className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                </CardHeader>
-                                {showCoordinacionForm && (
-                                    <CardContent className="space-y-[var(--space-lg)]">
-                                        <div className="grid md:grid-cols-3 gap-[var(--space-md)]">
-                                            {/* Fecha de entrega confirmada */}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="fecha_confirmada">
-                                                    Fecha de Entrega Confirmada
-                                                </Label>
-                                                <Input
-                                                    id="fecha_confirmada"
-                                                    type="date"
-                                                    value={coordinacion.fecha_entrega_confirmada}
-                                                    onChange={(e) =>
-                                                        setCoordinacion({
-                                                            ...coordinacion,
-                                                            fecha_entrega_confirmada: e.target.value,
-                                                        })
-                                                    }
-                                                    disabled={isGuardandoCoordinacion}
-                                                />
-                                            </div>
-
-                                            {/* Hora de entrega confirmada (inicio) */}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="hora_confirmada">
-                                                    Desde (Hora)
-                                                </Label>
-                                                <Input
-                                                    id="hora_confirmada"
-                                                    type="time"
-                                                    value={coordinacion.hora_entrega_confirmada}
-                                                    onChange={(e) =>
-                                                        setCoordinacion({
-                                                            ...coordinacion,
-                                                            hora_entrega_confirmada: e.target.value,
-                                                        })
-                                                    }
-                                                    disabled={isGuardandoCoordinacion}
-                                                />
-                                            </div>
-
-                                            {/* Hora de entrega confirmada (fin) */}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="hora_confirmada_fin">
-                                                    Hasta (Hora)
-                                                </Label>
-                                                <Input
-                                                    id="hora_confirmada_fin"
-                                                    type="time"
-                                                    value={coordinacion.hora_entrega_confirmada_fin || ''}
-                                                    onChange={(e) =>
-                                                        setCoordinacion({
-                                                            ...coordinacion,
-                                                            hora_entrega_confirmada_fin: e.target.value || undefined,
-                                                        })
-                                                    }
-                                                    disabled={isGuardandoCoordinacion}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Control de Intentos de Contacto */}
-                                        <div className="space-y-[var(--space-md)]">
-                                            <h4 className="font-semibold text-[var(--text-sm)]">Control de Intentos de Contacto</h4>
-                                            <div className="grid md:grid-cols-2 gap-[var(--space-md)]">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="numero_intentos">
-                                                        Número de Intentos
-                                                    </Label>
-                                                    <Input
-                                                        id="numero_intentos"
-                                                        type="number"
-                                                        value={coordinacion.numero_intentos_contacto}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                numero_intentos_contacto: parseInt(e.target.value) || 1,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="resultado_intento">
-                                                        Resultado del Último Intento
-                                                    </Label>
-                                                    <select
-                                                        id="resultado_intento"
-                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                        value={coordinacion.resultado_ultimo_intento ?? 'Aceptado'}
-                                                        onChange={(e) =>
-                                                            setCoordinacion({
-                                                                ...coordinacion,
-                                                                resultado_ultimo_intento: e.target.value,
-                                                            })
-                                                        }
-                                                        disabled={isGuardandoCoordinacion}
-                                                    >
-                                                        <option value="">Seleccionar resultado...</option>
-                                                        <option value="Aceptado">Aceptado</option>
-                                                        <option value="No contactado">No contactado</option>
-                                                        <option value="Rechazado">Rechazado</option>
-                                                        <option value="Reagendar">Reagendar</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Comentario de coordinación */}
-                                        <div className="space-y-2">
-                                            <Label htmlFor="comentario" className='mb-2'>
-                                                Comentario de Coordinación
-                                            </Label>
-                                            <Textarea
-                                                id="comentario"
-                                                placeholder="Notas sobre la coordinación con el cliente..."
-                                                value={coordinacion.comentario_coordinacion}
-                                                onChange={(e) =>
-                                                    setCoordinacion({
-                                                        ...coordinacion,
-                                                        comentario_coordinacion: e.target.value,
-                                                    })
-                                                }
-                                                disabled={isGuardandoCoordinacion}
-                                                rows={3}
-                                                className="resize-none mt-2"
-                                            />
-                                        </div>
-                                        <Separator className="my-[var(--space-md)]" />
-
-                                        {/* Datos de Entrega Realizada - Solo mostrar si ya se entregó */}
-                                        {coordinacion.entregado_en && (
-                                            <>
-                                                <Separator className="my-4" />
-                                                <div className="space-y-4">
-                                                    <h4 className="font-semibold text-sm">Datos de Entrega Realizada</h4>
-                                                    <div className="grid md:grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="entregado_en">
-                                                                Fecha y Hora de Entrega
-                                                            </Label>
-                                                            <Input
-                                                                id="entregado_en"
-                                                                type="datetime-local"
-                                                                value={coordinacion.entregado_en}
-                                                                onChange={(e) =>
-                                                                    setCoordinacion({
-                                                                        ...coordinacion,
-                                                                        entregado_en: e.target.value,
-                                                                    })
-                                                                }
-                                                                disabled={isGuardandoCoordinacion}
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="entregado_a">
-                                                                Entregado a (Nombre)
-                                                            </Label>
-                                                            <Input
-                                                                id="entregado_a"
-                                                                type="text"
-                                                                placeholder="Nombre de quién recibió"
-                                                                value={coordinacion.entregado_a}
-                                                                onChange={(e) =>
-                                                                    setCoordinacion({
-                                                                        ...coordinacion,
-                                                                        entregado_a: e.target.value,
-                                                                    })
-                                                                }
-                                                                disabled={isGuardandoCoordinacion}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="observaciones_entrega">
-                                                            Observaciones de la Entrega
-                                                        </Label>
-                                                        <Textarea
-                                                            id="observaciones_entrega"
-                                                            placeholder="Observaciones sobre cómo fue la entrega, incidencias, etc..."
-                                                            value={coordinacion.observaciones_entrega}
-                                                            onChange={(e) =>
-                                                                setCoordinacion({
-                                                                    ...coordinacion,
-                                                                    observaciones_entrega: e.target.value,
-                                                                })
-                                                            }
-                                                            disabled={isGuardandoCoordinacion}
-                                                            rows={3}
-                                                            className="resize-none"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </CardContent>
-                                )}
-                            </Card>
                         )}
                     </div>
                 </div>
@@ -2483,6 +2321,131 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     monto: proforma.total,
                 }}
             />
+
+            {/* ✅ NUEVO: Modal para ver mapa de dirección en resumen */}
+            <Dialog open={showMapaResumen} onOpenChange={setShowMapaResumen}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    {/* Indicador si direcciones son iguales en modal */}
+                    {proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion && (
+                        <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-300 dark:border-amber-800 p-2 -mt-2 -mx-6 px-6">
+                            <p className="text-sm text-amber-800 dark:text-amber-200">
+                                ⚠️ <strong>Nota:</strong> La dirección confirmada es igual a la solicitada
+                            </p>
+                        </div>
+                    )}
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <MapPin className={`h-5 w-5 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                ? 'text-amber-600'
+                                : 'text-blue-600'
+                                }`} />
+                            <span className={
+                                proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                    ? 'text-amber-700 dark:text-amber-300'
+                                    : ''
+                            }>
+                                {direccionMapaResumen === 'solicitada' ? 'Dirección Solicitada' : 'Dirección Confirmada'} - Mapa
+                            </span>
+                        </DialogTitle>
+                        <DialogDescription>
+                            {direccionMapaResumen === 'solicitada'
+                                ? proforma.direccion_solicitada?.direccion
+                                : proforma.direccion_confirmada?.direccion}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {/* Datos de dirección */}
+                        <div className={`rounded-lg p-4 border ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                            }`}>
+                            <div className="space-y-2">
+                                <div>
+                                    <p className={`text-xs font-medium uppercase mb-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                        ? 'text-amber-600 dark:text-amber-300'
+                                        : 'text-muted-foreground'
+                                        }`}>Dirección</p>
+                                    <p className={`text-sm font-medium ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                        ? 'text-amber-800 dark:text-amber-200'
+                                        : 'text-foreground'
+                                        }`}>
+                                        {direccionMapaResumen === 'solicitada'
+                                            ? proforma.direccion_solicitada?.direccion
+                                            : proforma.direccion_confirmada?.direccion}
+                                    </p>
+                                </div>
+
+                                {(direccionMapaResumen === 'solicitada'
+                                    ? proforma.direccion_solicitada?.observaciones
+                                    : proforma.direccion_confirmada?.observaciones) && (
+                                        <div>
+                                            <p className={`text-xs font-medium uppercase mb-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                ? 'text-amber-600 dark:text-amber-300'
+                                                : 'text-muted-foreground'
+                                                }`}>Observaciones</p>
+                                            <p className={`text-sm italic ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                ? 'text-amber-800 dark:text-amber-200'
+                                                : 'text-foreground'
+                                                }`}>
+                                                📝{' '}
+                                                {direccionMapaResumen === 'solicitada'
+                                                    ? proforma.direccion_solicitada?.observaciones
+                                                    : proforma.direccion_confirmada?.observaciones}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                {(direccionMapaResumen === 'solicitada'
+                                    ? proforma.direccion_solicitada?.latitud && proforma.direccion_solicitada?.longitud
+                                    : proforma.direccion_confirmada?.latitud && proforma.direccion_confirmada?.longitud) && (
+                                        <div>
+                                            <p className={`text-xs font-medium uppercase mb-1 ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                ? 'text-amber-600 dark:text-amber-300'
+                                                : 'text-muted-foreground'
+                                                }`}>Coordenadas</p>
+                                            <p className={`text-sm font-mono ${proforma.direccion_confirmada?.direccion === proforma.direccion_solicitada?.direccion
+                                                ? 'text-amber-700 dark:text-amber-300'
+                                                : 'text-foreground'
+                                                }`}>
+                                                {direccionMapaResumen === 'solicitada'
+                                                    ? `${proforma.direccion_solicitada?.latitud?.toFixed(6)}, ${proforma.direccion_solicitada?.longitud?.toFixed(6)}`
+                                                    : `${proforma.direccion_confirmada?.latitud?.toFixed(6)}, ${proforma.direccion_confirmada?.longitud?.toFixed(6)}`}
+                                            </p>
+                                        </div>
+                                    )}
+                            </div>
+                        </div>
+
+                        {/* Mapa */}
+                        {(direccionMapaResumen === 'solicitada'
+                            ? proforma.direccion_solicitada?.latitud && proforma.direccion_solicitada?.longitud
+                            : proforma.direccion_confirmada?.latitud && proforma.direccion_confirmada?.longitud) && (
+                                <div className="rounded-lg overflow-hidden border border-border/50 h-96">
+                                    <MapViewWithFallback
+                                        latitude={
+                                            direccionMapaResumen === 'solicitada'
+                                                ? proforma.direccion_solicitada!.latitud
+                                                : proforma.direccion_confirmada!.latitud
+                                        }
+                                        longitude={
+                                            direccionMapaResumen === 'solicitada'
+                                                ? proforma.direccion_solicitada!.longitud
+                                                : proforma.direccion_confirmada!.longitud
+                                        }
+                                        height="100%"
+                                        zoom={16}
+                                        markerTitle={
+                                            direccionMapaResumen === 'solicitada'
+                                                ? 'Dirección de entrega solicitada'
+                                                : 'Dirección de entrega confirmada'
+                                        }
+                                    />
+                                </div>
+                            )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     )
 }

@@ -32,6 +32,7 @@ interface InputSearchProps {
     displayValue?: string; // Texto a mostrar cuando el valor cambia desde el exterior
     showSearchButton?: boolean; // Mostrar botón de búsqueda manual
     onSearchButtonClick?: (query: string) => void; // Callback cuando se hace click en el botón de búsqueda
+    isSelected?: boolean; // Indicar si hay una selección válida (para cambiar color del input a verde)
 }
 
 export default function InputSearch({
@@ -55,7 +56,8 @@ export default function InputSearch({
     createIconButtonTitle = "Crear nuevo elemento",
     displayValue,
     showSearchButton = false,
-    onSearchButtonClick
+    onSearchButtonClick,
+    isSelected = false
 }: InputSearchProps) {
     const [query, setQuery] = useState('');
     const [options, setOptions] = useState<SearchOption[]>([]);
@@ -358,6 +360,7 @@ export default function InputSearch({
                             md:text-sm
                             aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
                             ${label ? 'pt-2' : ''}
+                            ${isSelected ? 'border-green-500 dark:border-green-400' : ''}
                         `}
                     />
 

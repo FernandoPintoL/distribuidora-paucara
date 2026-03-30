@@ -45,8 +45,8 @@ export default function ModalCrearCliente({
             else if (/^\d+$/.test(query)) {
                 setData('nit', query);
             }
-            // Si parece un teléfono (contiene números y posiblemente espacios/guiones)
-            else if (/[\d\s\-()+]/.test(query)) {
+            // Si parece un teléfono (SOLO dígitos, espacios, guiones, paréntesis - sin letras)
+            else if (/^[\d\s\-()+]+$/.test(query) && /\d/.test(query)) {
                 setData('telefono', query);
             }
             // Si no parece ninguno de los anteriores, asumimos que es el nombre
@@ -148,7 +148,14 @@ export default function ModalCrearCliente({
                                 id="nombre"
                                 type="text"
                                 value={data.nombre}
-                                onChange={(e) => setData('nombre', e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setData('nombre', value);
+                                  // ✨ Copiar automáticamente a razón social si está vacío
+                                  if (!data.razon_social) {
+                                    setData('razon_social', value);
+                                  }
+                                }}
                                 placeholder="Nombre completo del cliente"
                                 className={errors.nombre ? 'border-red-500' : ''}
                                 required

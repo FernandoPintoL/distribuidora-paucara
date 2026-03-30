@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/application/hooks/use-auth';
 import { Alert, AlertTitle, AlertDescription } from '@/presentation/components/ui/alert';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCurrencyMinimalDecimals } from '@/lib/utils';
 import { NotificationService } from '@/infrastructure/services/notification.service';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
 import InputSearch from '@/presentation/components/ui/input-search';
@@ -1049,7 +1049,7 @@ export default function CompraForm() {
         {isEditing && props.compra?.estadoDocumento ? (() => {
           const estadoDoc = props.compra.estadoDocumento;
           return (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -1073,10 +1073,10 @@ export default function CompraForm() {
         })() : null}
 
         {/* Información general */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-2">
           {/* <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Información General</h3> */}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Campo de número solo se muestra en modo edición */}
             {isEditing && (
               <div>
@@ -1096,17 +1096,22 @@ export default function CompraForm() {
             )}
 
             <div>
-              <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Fecha *
-              </label>
-              <input
-                id="fecha"
-                type="date"
-                disabled={soloLectura}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
-                value={data.fecha}
-                onChange={e => setData('fecha', e.target.value)}
-              />
+              <div className="relative">
+                <label htmlFor="fecha" className={`absolute left-3 transition-all duration-200 pointer-events-none ${data.fecha
+                  ? 'top-[-6px] text-xs font-medium text-blue-600 dark:text-blue-400'
+                  : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+                  }`}>
+                  Fecha *
+                </label>
+                <input
+                  id="fecha"
+                  type="date"
+                  disabled={soloLectura}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-800 dark:disabled:text-gray-400 pt-2"
+                  value={data.fecha}
+                  onChange={e => setData('fecha', e.target.value)}
+                />
+              </div>
               {errors.fecha && <p className="text-red-600 text-xs mt-1">{errors.fecha}</p>}
             </div>
 
@@ -1130,6 +1135,7 @@ export default function CompraForm() {
                 emptyText="No se encontraron proveedores"
                 error={errors.proveedor_id}
                 disabled={soloLectura}
+                isSelected={!!proveedorValue}
                 required={true}
                 allowScanner={false}
                 showCreateButton={true}
@@ -1140,14 +1146,14 @@ export default function CompraForm() {
                 className="w-full"
               />
               {/* ✅ Indicador de proveedor seleccionado */}
-              {proveedorDisplay && (
+              {/* {proveedorDisplay && (
                 <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md flex items-center gap-2">
                   <span className="text-green-600 dark:text-green-400">✅</span>
                   <span className="text-sm text-green-700 dark:text-green-300">
                     Proveedor: <strong>{proveedorDisplay}</strong>
                   </span>
                 </div>
-              )}
+              )} */}
             </div>
 
             <div>
@@ -1196,21 +1202,23 @@ export default function CompraForm() {
                 error={errors.almacen_id}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label htmlFor="numero_factura" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Número de Recibo/Factura
-              </label>
-              <input
-                id="numero_factura"
-                type="text"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                value={data.numero_factura}
-                onChange={e => setData('numero_factura', e.target.value)}
-                placeholder="Número de recibo/factura del proveedor"
-              />
+              <div className="relative">
+                <label htmlFor="numero_factura" className={`absolute left-3 transition-all duration-200 pointer-events-none ${data.numero_factura
+                  ? 'top-[-6px] text-xs font-medium text-blue-600 dark:text-blue-400'
+                  : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+                  }`}>
+                  Número de Recibo/Factura Proveedor
+                </label>
+                <input
+                  id="numero_factura"
+                  type="text"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white pt-2"
+                  value={data.numero_factura}
+                  onChange={e => setData('numero_factura', e.target.value)}
+                />
+              </div>
               {errors.numero_factura && <p className="text-red-600 text-xs mt-1">{errors.numero_factura}</p>}
             </div>
 
@@ -1278,10 +1286,15 @@ export default function CompraForm() {
                   unidad_medida_id: producto.unidad_medida_id,
                   unidad_medida_nombre: producto.unidad_medida_nombre,
                   es_combo: (producto as any).es_combo || false,
-                  capacidad: (producto as any).capacidad || null
+                  capacidad: (producto as any).capacidad || null,
+                  // ✅ NUEVO: Agregar marca, unidad y precios para mostrar en tabla
+                  marca: (producto as any).marca || null,
+                  unidad: (producto as any).unidad || null,
+                  precios: (producto as any).precios || []
                 }
               };
-              const newDetalles = [...data.detalles, newDetalle];
+              // ✅ NUEVO: Agregar producto al PRINCIPIO de la lista (no al final)
+              const newDetalles = [newDetalle, ...data.detalles];
               setData('detalles', newDetalles);
             }}
             onUpdateDetail={(index, field, value) => {
@@ -1299,14 +1312,13 @@ export default function CompraForm() {
         </div>
 
         {/* Resumen financiero */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Resumen</h3>
-
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-2">
+          {/* <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Resumen</h3> */}
           <div className="flex justify-end">
             <div className="w-64 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="font-mono">{formatCurrency(parseFloat(String(formatearNumero(data.subtotal))), selectedMoneda?.simbolo)}</span>
+                <span className="font-mono">{formatCurrencyMinimalDecimals(parseFloat(String(formatearNumero(data.subtotal))), selectedMoneda?.simbolo)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Descuento:</span>
@@ -1327,7 +1339,7 @@ export default function CompraForm() {
                       }
                     }}
                   />
-                  <span className="font-mono">{formatCurrency(parseFloat(String(formatearNumero(data.descuento))), selectedMoneda?.simbolo)}</span>
+                  <span className="font-mono">{formatCurrencyMinimalDecimals(parseFloat(String(formatearNumero(data.descuento))), selectedMoneda?.simbolo)}</span>
                 </div>
               </div>
               {/* <div className="flex justify-between text-sm">
@@ -1347,7 +1359,7 @@ export default function CompraForm() {
               <div className="border-t pt-2">
                 <div className="flex justify-between font-semibold">
                   <span>Total:</span>
-                  <span className="font-mono text-lg">{formatCurrency(parseFloat(String(formatearNumero(data.total))), selectedMoneda?.simbolo)}</span>
+                  <span className="font-mono text-lg">{formatCurrencyMinimalDecimals(parseFloat(String(formatearNumero(data.total))), selectedMoneda?.simbolo)}</span>
                 </div>
               </div>
             </div>

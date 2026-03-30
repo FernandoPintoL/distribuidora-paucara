@@ -344,9 +344,10 @@ class StockApiController extends Controller
                 'formato' => 'nullable|string',
             ]);
 
-            // ✅ IMPORTANTE: Usar today() del servidor, no la fecha del cliente
-            // El cliente puede enviar fecha en UTC, nosotros usamos la fecha local del servidor
-            $fecha = today()->toDateString();
+            // Usar la fecha del cliente si está disponible, de lo contrario usar hoy
+            $fecha = !empty($validated['fecha'])
+                ? \Carbon\Carbon::parse($validated['fecha'])->toDateString()
+                : today()->toDateString();
 
             \Log::info('📦 [prepararImpresionProductosVendidos] Preparando reporte de productos vendidos para:', ['fecha' => $fecha]);
 
@@ -377,6 +378,7 @@ class StockApiController extends Controller
                             'cantidad_total' => 0,
                             'precio_unitario' => $detalle->precio_unitario,
                             'subtotal' => 0,
+                            'venta_ids' => [], // ✅ NUEVO: guardar IDs de ventas
                             'detalles' => [], // Para referencia
                         ];
                     }
@@ -387,6 +389,10 @@ class StockApiController extends Controller
 
                     $productosVendidos[$productoId]['cantidad_total'] += $cantidad;
                     $productosVendidos[$productoId]['subtotal'] += $subtotal;
+                    // ✅ NUEVO: Agregar ID de venta (evitar duplicados)
+                    if (!in_array($venta->id, $productosVendidos[$productoId]['venta_ids'])) {
+                        $productosVendidos[$productoId]['venta_ids'][] = $venta->id;
+                    }
                     $productosVendidos[$productoId]['detalles'][] = $detalle;
                 }
             }
@@ -480,6 +486,150 @@ class StockApiController extends Controller
                 'success' => false,
                 'message' => 'Error al eliminar lote: ' . $e->getMessage(),
             ], 422);
+        }
+    }
+
+    /**
+     * Obtener HTML de impresión de ventas desde sesión
+     */
+    public function imprimirVentasDesdeSession()
+    {
+        try {
+            $ventas = session('ventas_impresion', collect());
+
+            // Allow empty results - just render empty report
+            $html = view('reportes.ventas-para-imprimir', [
+                'ventas' => $ventas,
+                'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'cantidad' => $ventas->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al imprimir ventas desde sesión', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener HTML de impresión de movimientos desde sesión
+     */
+    public function imprimirMovimientosDesdeSession()
+    {
+        try {
+            $movimientos = session('movimientos_impresion', collect());
+
+            // Allow empty results - just render empty report
+            $html = view('reportes.movimientos-para-imprimir', [
+                'movimientos' => $movimientos,
+                'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'cantidad' => $movimientos->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al imprimir movimientos desde sesión', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener HTML de impresión de stock desde sesión
+     */
+    public function imprimirStockDesdeSession()
+    {
+        try {
+            $stock = session('stock_impresion', []);
+
+            // Allow empty results - just render empty report
+            $html = view('reportes.stock-para-imprimir', [
+                'stock' => $stock,
+                'almacen_filtro' => session('almacen_filtro'),
+                'busqueda_filtro' => session('busqueda_filtro'),
+                'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'cantidad' => count($stock),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al imprimir stock desde sesión', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener HTML de impresión de compras desde sesión
+     */
+    public function imprimirComprasDesdeSession()
+    {
+        try {
+            $compras = session('compras_impresion', []);
+
+            // Allow empty results - just render empty report
+            $html = view('reportes.compras-para-imprimir', [
+                'compras' => $compras,
+                'filtros' => session('compras_filtros', []),
+                'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'cantidad' => count($compras),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al imprimir compras desde sesión', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener HTML de impresión de productos vendidos desde sesión
+     */
+    public function imprimirProductosVendidosDesdeSession()
+    {
+        try {
+            $productosVendidos = session('productos_vendidos_impresion', []);
+
+            // Allow empty results - just render empty report instead of error
+            $html = view('reportes.productos-vendidos-para-imprimir', [
+                'productos' => $productosVendidos,
+                'fecha' => session('productos_vendidos_fecha', now()->format('Y-m-d')),
+                'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            ])->render();
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'cantidad' => count($productosVendidos),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al imprimir productos vendidos desde sesión', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

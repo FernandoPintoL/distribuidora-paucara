@@ -240,10 +240,12 @@ class ModuloSidebarSeeder extends Seeder
                     ['titulo' => 'Movimientos', 'ruta' => '/reportes/inventario/movimientos', 'icono' => 'ArrowUpDown', 'orden' => 9, 'permisos' => ['reportes.inventario.movimientos']],
                     ['titulo' => 'Rotación', 'ruta' => '/reportes/inventario/rotacion', 'icono' => 'RotateCcw', 'orden' => 10, 'permisos' => ['reportes.inventario.rotacion']],
                     // ['titulo' => 'Vencimientos', 'ruta' => '/reportes/inventario/vencimientos', 'icono' => 'Calendar', 'orden' => 10, 'permisos' => ['reportes.inventario.vencimientos']],
+                    // ✅ NUEVO: Impresión de Reportes
+                    ['titulo' => 'Impresión de Reportes', 'ruta' => '/reportes/impresion', 'icono' => 'Printer', 'orden' => 11, 'permisos' => ['reportes.view']],
                     // ✅ NUEVO: Productos Dañados
-                    ['titulo' => 'Productos Dañados', 'ruta' => '/admin/reportes-productos-danados', 'icono' => 'AlertCircle', 'orden' => 11, 'permisos' => ['admin']],
+                    ['titulo' => 'Productos Dañados', 'ruta' => '/admin/reportes-productos-danados', 'icono' => 'AlertCircle', 'orden' => 12, 'permisos' => ['admin']],
                     // ✅ NUEVO: Banners Publicitarios
-                    ['titulo' => 'Banners Publicitarios', 'ruta' => '/admin/banners-publicitarios', 'icono' => 'Image', 'orden' => 12, 'permisos' => ['admin']],
+                    ['titulo' => 'Banners Publicitarios', 'ruta' => '/admin/banners-publicitarios', 'icono' => 'Image', 'orden' => 13, 'permisos' => ['admin']],
                 ],
             ],
 

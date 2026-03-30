@@ -108,4 +108,12 @@ class ReporteController extends Controller
             'totalProducto' => $totalProducto,
         ]);
     }
+
+    /**
+     * Pantalla de impresión de reportes con filtros por fecha
+     */
+    public function impresionReportes()
+    {
+        return Inertia::render('reportes/impresion-reportes');
+    }
 }

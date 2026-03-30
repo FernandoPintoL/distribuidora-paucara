@@ -1,5 +1,5 @@
 // Modern Filters Component for Generic Tables
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
@@ -32,6 +32,9 @@ export default function ModernFilters({
     const [mostrarFiltrosAvanzados, setMostrarFiltrosAvanzados] = React.useState(false); // 🆕 Siempre empiezan cerrados
     const [searchQuery, setSearchQuery] = React.useState<string>(String(currentFilters.q || ''));
 
+    // ✅ Debounce para búsqueda en tiempo real
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Prepare SearchSelect data for specific filters
     const categoriasData = React.useMemo(() => {
         return (extraData?.categorias as { id: number; nombre: string }[]) || [];
@@ -55,25 +58,62 @@ export default function ModernFilters({
         setSearchQuery(String(currentFilters.q || ''));
     }, [currentFilters]);
 
-    const handleFilterChange = (key: string, value: string | number | boolean | undefined) => {
+    const handleFilterChange = useCallback((key: string, value: string | number | boolean | undefined) => {
         setFilters(prev => ({
             ...prev,
             [key]: value === 'all' || value === '' ? undefined : value
         }));
-    };
+    }, []);
 
-    const aplicarFiltros = () => {
+    // ✅ Búsqueda en tiempo real con debounce
+    const handleSearchChange = useCallback((query: string) => {
+        setSearchQuery(query);
+
+        // Limpiar timeout anterior
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        // Nuevo timeout con debounce de 300ms
+        searchTimeoutRef.current = setTimeout(() => {
+            console.log('🔍 [ModernFilters] Búsqueda en tiempo real:', {
+                query,
+                filtros_activos: Object.keys(filters).filter(k => filters[k] && k !== 'order_by' && k !== 'order_dir')
+            });
+
+            const filtrosParaBusqueda = {
+                ...Object.fromEntries(
+                    Object.entries(filters).filter(([key, value]) =>
+                        key !== 'q' && value !== '' && value != null
+                    )
+                ),
+                q: query
+            };
+            onApplyFilters(filtrosParaBusqueda);
+        }, 300); // Debounce de 300ms
+    }, [filters, onApplyFilters]);
+
+    // Limpiar timeout al desmontar
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const aplicarFiltros = useCallback(() => {
         const filtrosLimpios = Object.fromEntries(
             Object.entries({ ...filters, q: searchQuery }).filter(([, value]) => value !== '' && value != null)
         );
         onApplyFilters(filtrosLimpios);
-    };
+    }, [filters, searchQuery, onApplyFilters]);
 
-    const limpiarFiltros = () => {
+    const limpiarFiltros = useCallback(() => {
         setFilters({});
         setSearchQuery('');
         onResetFilters();
-    };
+    }, [onResetFilters]);
 
     const busquedaRapida = (e: React.FormEvent) => {
         e.preventDefault();
@@ -242,28 +282,29 @@ export default function ModernFilters({
 
     return (
         <div className={cn('bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-4 shadow-sm', className)}>
-            {/* Búsqueda rápida */}
-            <form onSubmit={busquedaRapida} className="flex gap-3">
+            {/* Búsqueda en tiempo real */}
+            <div className="flex gap-3">
                 <div className="flex-1">
                     <div className="relative group">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 h-4 w-4 transition-colors" />
                         <Input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar en tiempo real..."
                             value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
+                            onChange={e => handleSearchChange(e.target.value)}
                             className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => handleSearchChange('')}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
-                <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
-                >
-                    <Search className="h-4 w-4" />
-                </Button>
                 <Button
                     type="button"
                     variant="outline"
@@ -299,7 +340,7 @@ export default function ModernFilters({
                         Limpiar
                     </Button>
                 )}
-            </form>
+            </div>
 
             {/* Filtros avanzados */}
             {mostrarFiltrosAvanzados && (

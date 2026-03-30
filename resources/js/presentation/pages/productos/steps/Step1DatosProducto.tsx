@@ -198,8 +198,9 @@ function Step1DatosProducto({
         <div className="text-sm font-semibold text-foreground">Paso 1: Datos del producto</div>
         <div className="text-xs text-muted-foreground">Complete la información general del producto</div>
       </div> */}
+      {/* 📱 1 fila con 3 columnas responsivas: Nombre, SKU, Proveedor */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-1">
           <InputSearch
             id="nombre"
             label="Nombre del Producto *"
@@ -226,15 +227,22 @@ function Step1DatosProducto({
             </div>
           )}
         </div>
-        <div className="space-y-1 sm:col-span-1">
-          <Label htmlFor="sku">SKU / Código (opcional)</Label>
-          <Input
-            id="sku"
-            value={data.sku ?? ''}
-            onChange={e => setData('sku', e.target.value)}
-            placeholder="Se genera automáticamente"
-            className={getInputClassName('sku')}
-          />
+        <div className="space-y-1">
+          <div className="relative">
+            <label htmlFor="sku" className={`absolute left-3 transition-all duration-200 pointer-events-none ${data.sku
+              ? 'top-[-6px] text-xs font-medium text-blue-600 dark:text-blue-400'
+              : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+              }`}>
+              SKU / Código (opcional)
+            </label>
+            <Input
+              id="sku"
+              value={data.sku ?? ''}
+              onChange={e => setData('sku', e.target.value)}
+              placeholder=""
+              className={`pt-2 ${getInputClassName('sku')}`}
+            />
+          </div>
           {errors.sku && <div className="text-red-500 text-sm mt-1">⚠️ {errors.sku}</div>}
           <div className="text-xs text-muted-foreground mt-1">
             💡 Si no lo ingresas, se generará automáticamente (ej.: PRO0001)
@@ -387,15 +395,23 @@ function Step1DatosProducto({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
         <div className="space-y-1">
-          <Label htmlFor="peso">Peso (Kg)</Label>
-          <Input
-            id="peso"
-            type="number"
-            step="0.001"
-            value={data.peso ?? ''}
-            onChange={e => setData('peso', e.target.value ? Number(e.target.value) : null)}
-            className={getInputClassName('peso')}
-          />
+          <div className="relative">
+            <label htmlFor="peso" className={`absolute left-3 transition-all duration-200 pointer-events-none ${data.peso
+              ? 'top-[-6px] text-xs font-medium text-blue-600 dark:text-blue-400'
+              : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+              }`}>
+              Peso (Kg) (opcional para entregas)
+            </label>
+            <Input
+              id="peso"
+              type="number"
+              step="0.001"
+              value={data.peso ?? ''}
+              onChange={e => setData('peso', e.target.value ? Number(e.target.value) : null)}
+              placeholder=""
+              className={`pt-2 ${getInputClassName('peso')}`}
+            />
+          </div>
           {errors.peso && <div className="text-red-500 text-sm mt-1">⚠️ {errors.peso}</div>}
         </div>
         {/* 🆕 Campo activo oculto - el valor por defecto (true) se establece en form.tsx */}
@@ -404,13 +420,21 @@ function Step1DatosProducto({
           <Label htmlFor="activo">Activo</Label>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="descripcion">Descripción</Label>
-          <Input
-            id="descripcion"
-            value={data.descripcion ?? ''}
-            onChange={e => setData('descripcion', e.target.value)}
-            className={getInputClassName('descripcion')}
-          />
+          <div className="relative">
+            <label htmlFor="descripcion" className={`absolute left-3 transition-all duration-200 pointer-events-none ${data.descripcion
+              ? 'top-[-6px] text-xs font-medium text-blue-600 dark:text-blue-400'
+              : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+              }`}>
+              Descripción
+            </label>
+            <Input
+              id="descripcion"
+              value={data.descripcion ?? ''}
+              onChange={e => setData('descripcion', e.target.value)}
+              placeholder=""
+              className={`pt-2 ${getInputClassName('descripcion')}`}
+            />
+          </div>
           {errors.descripcion && <div className="text-red-500 text-sm mt-1">⚠️ {errors.descripcion}</div>}
         </div>
       </div>
@@ -424,7 +448,7 @@ function Step1DatosProducto({
             El stock real de cada almacén se gestiona desde <strong>Movimientos de Inventario</strong>.
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
             <Label htmlFor="stock_minimo" className="flex items-center gap-2">
               Stock Mínimo

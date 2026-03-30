@@ -160,342 +160,158 @@ export default function VentaShow() {
                 {/* Información principal */}
                 <div className="space-y-6">
                     {/* Información de la venta + Cliente */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
-                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
-                            Información de la venta
-                        </h2>
-
-                        {/* Foto y datos del cliente */}
-                        <div className="mb-6 pb-6 border-b border-gray-200 dark:border-zinc-700">
-                            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-4">Cliente</h3>
-                            <div className="flex gap-4">
-                                {/* Foto de perfil */}
-                                <div className="flex-shrink-0">
-                                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-zinc-700 flex items-center justify-center bg-gray-100 dark:bg-zinc-800">
-                                        {venta.cliente.foto_perfil && typeof venta.cliente.foto_perfil === 'string' && imagenCargada ? (
-                                            <img
-                                                src={venta.cliente.foto_perfil as string}
-                                                alt={venta.cliente.nombre}
-                                                className="w-full h-full object-cover"
-                                                onError={() => setImagenCargada(false)}
-                                            />
-                                        ) : (
-                                            <User className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Datos del cliente */}
-                                <div className="flex-1 space-y-2">
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nombre</label>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {venta.cliente.nombre}
-                                        </p>
-                                    </div>
-
-                                    {venta.cliente.nit && (
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">NIT</label>
-                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.nit}</p>
-                                        </div>
-                                    )}
-
-                                    {venta.cliente.telefono && (
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Teléfono</label>
-                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.telefono}</p>
-                                        </div>
-                                    )}
-
-                                    {venta.cliente.email && (
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</label>
-                                            <p className="text-sm text-gray-900 dark:text-white">{venta.cliente.email}</p>
-                                        </div>
-                                    )}
-                                </div>
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-3">
+                        <div className="grid grid-cols-3 gap-6">
+                            {/* Título */}
+                            <div className="flex items-center">
+                                <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                                    Información de la venta
+                                </h2>
                             </div>
-                        </div>
-
-                        {/* Datos de la venta - Layout mejorado */}
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-                            {/* Número de venta */}
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                                <label className="block text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
-                                    Número de Venta
-                                </label>
-                                <p className="mt-2 text-lg font-bold text-blue-900 dark:text-blue-100 font-mono">
-                                    {venta.numero}
-                                </p>
-                            </div>
-
-                            {/* Fecha */}
-                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                                <label className="block text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-wide">
-                                    Fecha
-                                </label>
-                                <p className="mt-2 text-sm font-medium text-purple-900 dark:text-purple-100">
-                                    {new Date(venta.fecha).toLocaleDateString('es-ES', {
-                                        weekday: 'short',
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                    })}
-                                </p>
-                            </div>
-
-                            {/* Estado */}
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                                <label className="block text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
-                                    Estado
-                                </label>
-                                <div className="mt-2">
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${getEstadoColor(venta.estado_documento)}`}>
-                                        {venta.estado_documento.nombre}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Total */}
-                            <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
-                                <label className="block text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wide">
-                                    Total
-                                </label>
-                                <p className="mt-2 text-lg font-bold text-orange-900 dark:text-orange-100">
-                                    {formatCurrencyWith2Decimals(venta.total, venta.moneda.codigo)}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Datos secundarios - Card unificado */}
-                        <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-lg p-4 border border-slate-200 dark:border-zinc-700">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {/* Moneda */}
-                                {/* <div className="flex items-center space-x-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                            <span className="text-lg">💰</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Moneda</p>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{venta.moneda.codigo}</p>
-                                    </div>
-                                </div> */}
-
-                                {/* Vendedor */}
-                                <div className="flex items-center space-x-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30">
-                                            <span className="text-lg">👤</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Vendedor</p>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{venta.usuario.name}</p>
-                                    </div>
-                                </div>
-
-                                {/* Creada */}
-                                <div className="flex items-center space-x-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                                            <span className="text-lg">📅</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Creada</p>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                                            {new Date(venta.created_at).toLocaleDateString('es-ES')}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Actualizado */}
-                                <div className="flex items-center space-x-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30">
-                                            <span className="text-lg">🔄</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actualizado</p>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                                            {new Date(venta.updated_at).toLocaleDateString('es-ES')}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {venta.observaciones && (
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-                                    Observaciones
-                                </label>
-                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                    {venta.observaciones}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Información adicional */}
-                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase mb-6 flex items-center">
-                                <span className="flex-shrink-0 h-1 w-1 rounded-full bg-blue-600 mr-2"></span>
-                                Información adicional
-                            </h3>
-
-                            {/* Información compacta en 2 filas */}
-                            <div className="space-y-4">
-                                {/* FILA 1: Pago y Logística lado a lado */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Tarjeta: Pago */}
-                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                                        <h4 className="text-xs font-bold text-blue-900 dark:text-blue-200 uppercase mb-4 flex items-center">
-                                            💳 Pago
-                                        </h4>
-                                        <div className="space-y-3">
-                                            {venta.tipo_pago && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Tipo:</span>
-                                                    <span className="text-sm font-bold text-blue-900 dark:text-blue-100">{venta.tipo_pago.nombre}</span>
-                                                </div>
-                                            )}
-                                            {venta.politica_pago && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Política:</span>
-                                                    <span className="text-sm font-bold text-blue-900 dark:text-blue-100">
-                                                        {venta.politica_pago === 'CONTRA_ENTREGA' && 'Contra Entrega'}
-                                                        {venta.politica_pago === 'ANTICIPADO_100' && 'Anticipado 100%'}
-                                                        {venta.politica_pago === 'MEDIO_MEDIO' && 'Medio Medio'}
-                                                        {venta.politica_pago === 'CREDITO' && 'Crédito'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {venta.estado_pago && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Estado:</span>
-                                                    <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap ${venta.estado_pago === 'PENDIENTE' ? 'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' :
-                                                        venta.estado_pago === 'PAGADO' ? 'bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
-                                                            venta.estado_pago === 'PARCIALMENTE_PAGADO' ? 'bg-orange-200 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' :
-                                                                'bg-gray-200 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300'
-                                                        }`}>
-                                                        {venta.estado_pago === 'PENDIENTE' && '⏳ Pendiente'}
-                                                        {venta.estado_pago === 'PAGADO' && '✅ Pagado'}
-                                                        {venta.estado_pago === 'PARCIALMENTE_PAGADO' && '⚠️ Parcial'}
-                                                        {venta.estado_pago === 'VENCIDO' && '❌ Vencido'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Tarjeta: Logística */}
-                                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                                        <h4 className="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase mb-4 flex items-center">
-                                            🚚 Logística
-                                        </h4>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-purple-700 dark:text-purple-300 font-semibold">Entrega:</span>
-                                                <span className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                                                    {venta.requiere_envio ? '🚚 Delivery' : '🏪 Presencial'}
-                                                </span>
+                            {/* Datos secundarios - Card unificado */}
+                            <div className="col-span-2 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-lg p-4 border border-slate-200 dark:border-zinc-700">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30">
+                                                <span className="text-lg">👤</span>
                                             </div>
-                                            {venta.requiere_envio && venta.estado_logistico && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-purple-700 dark:text-purple-300 font-semibold">Estado:</span>
-                                                    <span className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                                                        {venta.estado_logistico === 'PENDIENTE_ENVIO' && '⏳ Pendiente'}
-                                                        {venta.estado_logistico === 'PREPARANDO' && '📦 Preparando'}
-                                                        {venta.estado_logistico === 'ENVIADO' && '🚚 Enviado'}
-                                                        {venta.estado_logistico === 'ENTREGADO' && '✅ Entregado'}
-                                                        {venta.estado_logistico === 'SIN_ENTREGA' && '🏪 Sin Entrega'}
-                                                    </span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Vendedor</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{venta.usuario.name}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Creada */}
+                                    <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                                                <span className="text-lg">📅</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Creada</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                                                {new Date(venta.created_at).toLocaleDateString('es-ES')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Actualizado */}
+                                    {/* <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                                                <span className="text-lg">🔄</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actualizado</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                                                {new Date(venta.updated_at).toLocaleDateString('es-ES')}
+                                            </p>
+                                        </div>
+                                    </div> */}
+                                    {/* Estado */}
+                                    <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            {/* estado */}
+                                            <div className={`flex items-center justify-center h-10 w-10 rounded-full ${esAprobada
+                                                ? 'bg-green-100 dark:bg-green-900/30'
+                                                : 'bg-orange-100 dark:bg-orange-900/30'
+                                                }`}>
+                                                <span className="text-lg">{esAprobada ? '✅' : '🛑'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Estado</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                                                {venta.estado_documento.nombre}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Foto y datos del cliente + Tipo de Pago y Entrega + Proforma */}
+                        <div className="mb-2 pb-2 border-b border-gray-200 dark:border-zinc-700">
+                            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-2">Cliente</h3>
+                            <div className={`grid gap-6 ${venta.proforma ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                {/* Columna 1: Foto y datos del cliente */}
+                                <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-1 border border-gray-200 dark:border-zinc-700">
+                                    <div className="flex gap-2">
+                                        {/* Foto de perfil */}
+                                        <div className="flex-shrink-0">
+                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 dark:border-zinc-700 flex items-center justify-center bg-gray-100 dark:bg-zinc-700">
+                                                {venta.cliente.foto_perfil && typeof venta.cliente.foto_perfil === 'string' && imagenCargada ? (
+                                                    <img
+                                                        src={venta.cliente.foto_perfil as string}
+                                                        alt={venta.cliente.nombre}
+                                                        className="w-full h-full object-cover"
+                                                        onError={() => setImagenCargada(false)}
+                                                    />
+                                                ) : (
+                                                    <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Datos del cliente */}
+                                        <div className="flex-1 space-y-1">
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nombre</p>
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                    {venta.cliente.nombre}
+                                                </p>
+                                            </div>
+
+                                            {venta.cliente.nit && (
+                                                <div>
+                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">NIT</p>
+                                                    <p className="text-xs text-gray-900 dark:text-white">{venta.cliente.nit}</p>
                                                 </div>
                                             )}
-                                            {venta.canal_origen && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-purple-700 dark:text-purple-300 font-semibold">Canal:</span>
-                                                    <span className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                                                        {venta.canal_origen === 'APP_EXTERNA' && '📱 App'}
-                                                        {venta.canal_origen === 'WEB' && '🌐 Web'}
-                                                        {venta.canal_origen === 'PRESENCIAL' && '🏪 Presencial'}
-                                                    </span>
+
+                                            {venta.cliente.telefono && (
+                                                <div>
+                                                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tel.</p>
+                                                    <p className="text-xs text-gray-900 dark:text-white">{venta.cliente.telefono}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* FILA 2: Auditoría */}
+                                {/* Columna 2: Tipo de Pago */}
+                                {venta.tipo_pago && (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
+                                        <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase mb-2">💳 Tipo de Pago</label>
+                                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">{venta.tipo_pago.nombre}</p>
+                                    </div>
+                                )}
+
+                                {/* Columna 3: Tipo de Entrega */}
+                                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2 border border-orange-200 dark:border-orange-800">
+                                    <label className="block text-xs font-bold text-orange-900 dark:text-orange-200 uppercase mb-2">🚚 Tipo de Entrega</label>
+                                    <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                                        {venta.requiere_envio ? 'Envío a Domicilio' : 'Retiro en Local'}
+                                    </p>
+                                </div>
+
+                                {/* Columna 4: Proforma (si existe) */}
                                 {venta.proforma && (
-                                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-zinc-800/50 dark:to-zinc-900/50 rounded-lg p-4 border border-gray-200 dark:border-zinc-700">
-                                        <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-4 flex items-center">
-                                            📋 Auditoría
-                                        </h4>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Proforma:</span>
-                                            <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {venta.proforma.numero}
-                                            </span>
-                                        </div>
+                                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+                                        <label className="block text-xs font-bold text-purple-900 dark:text-purple-200 uppercase mb-2">📋 Proforma</label>
+                                        <Link
+                                            href={`/proformas/${venta.proforma.id}`}
+                                            className="inline-flex items-center gap-1 text-sm font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
+                                        >
+                                            Folio: {venta.proforma.id}
+                                        </Link>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Dirección de Entrega (si requiere envío) */}
-                            {venta.requiere_envio && venta.direccion_cliente && (
-                                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700">
-                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase mb-4">
-                                        Dirección de Entrega
-                                    </h3>
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                                Dirección
-                                            </label>
-                                            <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                                {venta.direccion_cliente.direccion}
-                                            </p>
-                                        </div>
-                                        {venta.direccion_cliente.referencias && (
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                                    Referencias
-                                                </label>
-                                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                                    {venta.direccion_cliente.referencias}
-                                                </p>
-                                            </div>
-                                        )}
-                                        {venta.direccion_cliente.localidad && (
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                                    Localidad
-                                                </label>
-                                                <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                                                    {venta.direccion_cliente.localidad}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* ✅ NUEVO: Botón para ver confirmación de entrega */}
-                                        {venta.entregaConfirmacion && (
-                                            <div className="border-t border-blue-200 dark:border-blue-700 pt-3">
-                                                <button
-                                                    onClick={() => setConfirmacionEntregaModal({ isOpen: true })}
-                                                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"
-                                                >
-                                                    ✓ Ver Confirmación de Entrega
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -513,6 +329,18 @@ export default function VentaShow() {
                                             Producto
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Código
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Códigos Barra
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Marca
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Unidad
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Cantidad
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -528,6 +356,9 @@ export default function VentaShow() {
                                         // ✅ NUEVO: Detectar si es combo y tiene items
                                         const esCombo = (detalle.producto as any)?.es_combo === true;
                                         const comboItems = detalle.combo_items_seleccionados?.filter((item: any) => item.incluido !== false) || [];
+                                        const codigosBarraStr = (detalle.producto as any).codigos_barra && (detalle.producto as any).codigos_barra.length > 0
+                                            ? (detalle.producto as any).codigos_barra.map((cb: any) => `${cb.codigo}${cb.es_principal ? ' ★' : ''}`).join(', ')
+                                            : '-';
 
                                         return (
                                             <>
@@ -537,40 +368,23 @@ export default function VentaShow() {
                                                             {esCombo && <span className="mr-2">📦</span>}
                                                             {detalle.producto.nombre}
                                                         </div>
-                                                        <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-                                                            {(detalle.producto as any).sku && (
-                                                                <div>
-                                                                    <span className="font-semibold">Código:</span> {(detalle.producto as any).sku}
-                                                                </div>
-                                                            )}
-                                                            {(detalle.producto as any).marca && (
-                                                                <div>
-                                                                    <span className="font-semibold">Marca:</span> {(detalle.producto as any).marca.nombre}
-                                                                </div>
-                                                            )}
-                                                            {(detalle.producto as any).categoria && (
-                                                                <div>
-                                                                    <span className="font-semibold">Categoría:</span> {(detalle.producto as any).categoria.nombre}
-                                                                </div>
-                                                            )}
-                                                            {(detalle.producto as any).unidad && (
-                                                                <div>
-                                                                    <span className="font-semibold">Unidad:</span> {(detalle.producto as any).unidad.nombre} ({(detalle.producto as any).unidad.simbolo})
-                                                                </div>
-                                                            )}
-                                                            {(detalle.producto as any).codigos_barra && (detalle.producto as any).codigos_barra.length > 0 && (
-                                                                <div>
-                                                                    <span className="font-semibold">Códigos:</span>{' '}
-                                                                    {(detalle.producto as any).codigos_barra.map((cb: any) => (
-                                                                        <span key={cb.id} className="inline-block mr-2">
-                                                                            <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs">
-                                                                                {cb.codigo} {cb.es_principal && <span className="text-green-600 dark:text-green-400">★</span>}
-                                                                            </code>
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                                        {(detalle.producto as any).sku || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                                        <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs">
+                                                            {codigosBarraStr}
+                                                        </code>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                                        {(detalle.producto as any).marca?.nombre || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                                        {(detalle.producto as any).unidad
+                                                            ? `${(detalle.producto as any).unidad.nombre}`
+                                                            : '-'
+                                                        }
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                                         {formatCurrencyWith2Decimals(detalle.cantidad)}
@@ -587,7 +401,7 @@ export default function VentaShow() {
                                                 {esCombo && comboItems.length > 0 && (
                                                     <>
                                                         <tr className="bg-gray-50 dark:bg-zinc-800">
-                                                            <td colSpan={4} className="px-6 py-3">
+                                                            <td colSpan={8} className="px-6 py-3">
                                                                 <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                                                                     Componentes del combo ({comboItems.length})
                                                                 </div>
@@ -597,11 +411,10 @@ export default function VentaShow() {
                                                             const cantidadTotal = (item.cantidad || 0) * (detalle.cantidad || 1);
                                                             return (
                                                                 <tr key={`${detalle.id}-item-${idx}`} className="bg-gray-50 dark:bg-zinc-800">
-                                                                    <td className="px-6 py-3 pl-12">
-                                                                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                                                                            └─ Producto #{item.producto_id}
-                                                                        </div>
+                                                                    <td className="px-6 py-3 pl-12 text-sm text-gray-700 dark:text-gray-300">
+                                                                        └─ Producto #{item.producto_id}
                                                                     </td>
+                                                                    <td colSpan={4}></td>
                                                                     <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
                                                                         {formatCurrencyWith2Decimals(cantidadTotal)}
                                                                     </td>

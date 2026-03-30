@@ -122,9 +122,11 @@ class ProductoController extends Controller
             ->when($q, function ($qq) use ($q) {
                 // Convertir búsqueda a minúsculas para hacer búsqueda case-insensitive
                 $searchLower = strtolower($q);
-                $qq->where(function ($sub) use ($searchLower) {
-                    $sub->whereRaw('LOWER(productos.nombre) like ?', ["%$searchLower%"])
+                $qq->where(function ($sub) use ($searchLower, $q) {
+                    // 🔍 Búsqueda con prioridad: ID > SKU > Códigos de barras > Nombre > Descripción
+                    $sub->whereRaw('CAST(productos.id AS CHAR) like ?', ["%$q%"])
                         ->orWhereRaw('LOWER(productos.sku) like ?', ["%$searchLower%"])
+                        ->orWhereRaw('LOWER(productos.nombre) like ?', ["%$searchLower%"])
                         ->orWhereRaw('LOWER(productos.descripcion) like ?', ["%$searchLower%"])
                         ->orWhereHas('codigosBarra', function ($q) use ($searchLower) {
                             $q->whereRaw('LOWER(codigo) like ?', ["%$searchLower%"]);
@@ -132,7 +134,17 @@ class ProductoController extends Controller
                         ->orWhereHas('proveedor', function ($q) use ($searchLower) {
                             $q->whereRaw('LOWER(nombre) like ?', ["%$searchLower%"]);
                         });
-                });
+                })
+                // 📊 Ordenar por prioridad de coincidencia
+                ->orderByRaw("
+                    CASE
+                        WHEN CAST(productos.id AS CHAR) LIKE ? THEN 5
+                        WHEN LOWER(productos.sku) LIKE ? THEN 4
+                        WHEN LOWER(productos.nombre) LIKE ? THEN 3
+                        WHEN LOWER(productos.descripcion) LIKE ? THEN 2
+                        ELSE 1
+                    END DESC
+                ", ["%$q%", "%$searchLower%", "%$searchLower%", "%$searchLower%"]);
             })
             ->when($categoriaId, fn($qq) => $qq->where('productos.categoria_id', $categoriaId))
             ->when($marcaId, fn($qq) => $qq->where('productos.marca_id', $marcaId))
@@ -156,7 +168,8 @@ class ProductoController extends Controller
                 DB::raw('coalesce(stock_totales.stock_total_calc,0) as stock_total_calc'),
                 DB::raw('coalesce(stock_totales.stock_disponible_calc,0) as stock_disponible_calc')
             )
-            ->orderBy($orderColumnRaw === 'precio_base' ? DB::raw('(select precio from precios_producto p where p.producto_id = productos.id and p.activo = true and p.es_precio_base = true limit 1)') : $orderColumnRaw, $orderDir)
+            // 📊 Solo aplicar ordenamiento personalizado si NO hay búsqueda
+            ->when(!$q, fn($qq) => $qq->orderBy($orderColumnRaw === 'precio_base' ? DB::raw('(select precio from precios_producto p where p.producto_id = productos.id and p.activo = true and p.es_precio_base = true limit 1)') : $orderColumnRaw, $orderDir))
             ->paginate(12)
             ->through(function ($producto) {
                 // Perfil y galería
@@ -3646,5 +3659,66 @@ class ProductoController extends Controller
             'stocks' => $stocks,
             'almacen_id' => $almacenId ?: null,
         ]);
+    }
+
+    /**
+     * ✅ NIVEL 2 (Fuse.js): Listar TODOS los productos para búsqueda local
+     * Usado por el frontend para cargar el índice Fuse.js una sola vez
+     * Retorna todos los productos sin filtro de búsqueda
+     */
+    public function listarApi(Request $request): JsonResponse
+    {
+        $limite        = min($request->integer('limite', 2000), 5000); // Max 5000
+        $tipo          = $request->string('tipo', 'venta'); // 'venta' o 'compra'
+        $clienteId     = $request->integer('cliente_id', null);
+
+        // Obtener almacén desde request o empresa del usuario
+        if ($request->has('almacen_id')) {
+            $almacenId = $request->integer('almacen_id');
+        } else {
+            $empresa = $this->obtenerEmpresa($request);
+            $almacenId = $empresa?->almacen_id_principal ?? config('inventario.almacen_principal_id', 1);
+        }
+
+        $userEmpresaId = auth()->user()?->empresa_id;
+
+        Log::info('📥 ProductoController::listarApi - Cargando productos para Fuse.js', [
+            'limite' => $limite,
+            'tipo' => $tipo,
+            'almacen_id' => $almacenId,
+            'cliente_id' => $clienteId ?? 'sin especificar',
+            'empresa_id' => $userEmpresaId
+        ]);
+
+        // ✅ Query base reutilizable
+        $query = Producto::query()
+            ->select([
+                'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
+                'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
+                'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo',
+                'principio_activo', 'uso_de_medicacion'
+            ])
+            ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
+            ->where('activo', true)
+            ->when($tipo === 'venta', function ($q) use ($almacenId) {
+                // ✅ Para ventas: solo productos con stock disponible
+                return $q->whereHas('stock', function ($sq) use ($almacenId) {
+                    $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+                });
+            })
+            ->when($tipo === 'venta', function ($q) use ($clienteId) {
+                // ✅ Filtrar por tipo_precio del cliente
+                return $q->whereHas('precios', function ($pq) use ($clienteId) {
+                    $tipoPrecioCode = ($clienteId == 32) ? 'LICORERIA' : 'VENTA';
+                    $pq->where('activo', true)->whereHas('tipoPrecio', function ($tq) use ($tipoPrecioCode) {
+                        $tq->where('codigo', $tipoPrecioCode);
+                    });
+                });
+            })
+            ->limit($limite)
+            ->get();
+
+        // ✅ Mapear productos con todas las relaciones
+        return $this->mapearProductos($query, $almacenId, $tipo, $clienteId);
     }
 }

@@ -157,6 +157,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('descargar/historial', [\App\Http\Controllers\ReporteCodigosBarraController::class, 'descargarHistorial'])->name('descargar-historial');
     });
 
+    // ✅ NUEVO: Impresión de Reportes (con filtros de fecha)
+    Route::get('reportes/impresion', [\App\Http\Controllers\ReporteController::class, 'impresionReportes'])
+        ->name('reportes.impresion')
+        ->middleware('permission:reportes.view');
+
     Route::resource('unidades', \App\Http\Controllers\UnidadMedidaController::class)->parameters(['unidades' => 'unidad'])->middleware('permission:unidades.manage');
 
     // Rutas para gestión de tipos de precio

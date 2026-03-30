@@ -1,5 +1,83 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+export const impresionReportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: impresionReportes.url(options),
+    method: 'get',
+})
+
+impresionReportes.definition = {
+    methods: ["get","head"],
+    url: '/reportes/impresion',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+impresionReportes.url = (options?: RouteQueryOptions) => {
+    return impresionReportes.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+impresionReportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: impresionReportes.url(options),
+    method: 'get',
+})
+/**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+impresionReportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: impresionReportes.url(options),
+    method: 'head',
+})
+
+    /**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+    const impresionReportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: impresionReportes.url(options),
+        method: 'get',
+    })
+
+            /**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+        impresionReportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: impresionReportes.url(options),
+            method: 'get',
+        })
+            /**
+* @see \App\Http\Controllers\ReporteController::impresionReportes
+ * @see app/Http/Controllers/ReporteController.php:115
+ * @route '/reportes/impresion'
+ */
+        impresionReportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: impresionReportes.url({
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    impresionReportes.form = impresionReportesForm
+/**
 * @see \App\Http\Controllers\ReporteController::ventasPorProducto
  * @see app/Http/Controllers/ReporteController.php:18
  * @route '/ventas/reportes/ventas-por-producto'
@@ -77,6 +155,6 @@ ventasPorProducto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
         })
     
     ventasPorProducto.form = ventasPorProductoForm
-const ReporteController = { ventasPorProducto }
+const ReporteController = { impresionReportes, ventasPorProducto }
 
 export default ReporteController

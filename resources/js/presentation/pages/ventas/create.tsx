@@ -32,7 +32,7 @@ import type { TipoDocumento } from '@/domain/entities/tipos-documento';
 import type { Cliente } from '@/domain/entities/clientes';
 
 import ventasService from '@/infrastructure/services/ventas.service';
-import { formatCurrencyWith2Decimals } from '@/lib/utils';
+import { formatCurrencyWith2Decimals, formatCurrencyMinimalDecimals } from '@/lib/utils';
 
 interface TipoPrecio {
     id: number;
@@ -1277,7 +1277,7 @@ export default function VentaForm() {
 
                 {/* Información básica */}
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-4">
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {/* Campo número oculto - se genera automáticamente */}
                         <input
                             type="hidden"
@@ -1341,78 +1341,84 @@ export default function VentaForm() {
                                 emptyText="No se encontraron tipos de pago"
                             />
                         </div>
+
+                        {/* ✅ NUEVO: Botón de Logística (Requiere Envío) - Toggle moderno */}
+                        {logistica_envios && (
+                            <div className="flex flex-col justify-end">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    🚚 Requiere Envío
+                                </label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('requiere_envio', true)}
+                                        className={`flex-1 px-3 py-1.5 rounded-lg border-2 font-semibold text-xs transition-all ${
+                                            data.requiere_envio
+                                                ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
+                                                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:border-green-300 dark:hover:border-green-700'
+                                        }`}
+                                    >
+                                        ✅ Sí
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('requiere_envio', false)}
+                                        className={`flex-1 px-3 py-1.5 rounded-lg border-2 font-semibold text-xs transition-all ${
+                                            !data.requiere_envio
+                                                ? 'border-red-600 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 shadow-sm'
+                                                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:border-red-300 dark:hover:border-red-700'
+                                        }`}
+                                    >
+                                        ❌ No
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Sección de Envío - Solo visible si logistica_envios = true */}
-                    {logistica_envios && (
+                    {/* Sección de Envío - Solo visible si logistica_envios = true Y requiere_envio = true */}
+                    {logistica_envios && data.requiere_envio && (
                         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-md font-medium text-gray-900 dark:text-white">
-                                    🚚 Información de Envío
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={() => setData('requiere_envio', !data.requiere_envio)}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${data.requiere_envio
-                                        ? 'bg-green-600 dark:bg-green-700'
-                                        : 'bg-gray-300 dark:bg-gray-600'
-                                        } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
-                                >
-                                    <span
-                                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${data.requiere_envio ? 'translate-x-7' : 'translate-x-1'
-                                            }`}
-                                    />
-                                    <span className="ml-2 text-sm font-medium text-white">
-                                        {data.requiere_envio ? 'Sí' : 'No'}
-                                    </span>
-                                </button>
-                            </div>
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                                🚚 Detalles de Envío
+                            </h3>
 
-                            {/* Campos de envío - mostrar solo si requiere_envio es true */}
-                            {data.requiere_envio && (
+                            {/* Campos de envío */}
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800 space-y-4">
-                                    {/* ✅ NUEVO: Selector de política de pago para envíos */}
+                                    {/* ✅ NUEVO: Selector de política de pago para envíos - Moderno */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                             💳 Política de Pago
                                         </label>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition h-full">
-                                                <input
-                                                    type="radio"
-                                                    name="politica_pago"
-                                                    value="CONTRA_ENTREGA"
-                                                    checked={data.politica_pago === 'CONTRA_ENTREGA'}
-                                                    onChange={(e) => setData('politica_pago', e.target.value)}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Contra Entrega
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        El cliente paga al recibir el pedido
-                                                    </p>
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('politica_pago', 'CONTRA_ENTREGA')}
+                                                className={`flex-1 min-w-[150px] px-3 py-2 rounded-lg border-2 transition-all font-medium text-sm ${
+                                                    data.politica_pago === 'CONTRA_ENTREGA'
+                                                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md'
+                                                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500'
+                                                }`}
+                                            >
+                                                <div className="text-left">
+                                                    <p className="font-semibold text-sm">Contra Entrega</p>
+                                                    <p className="text-xs opacity-75">Al recibir</p>
                                                 </div>
-                                            </label>
-                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition h-full">
-                                                <input
-                                                    type="radio"
-                                                    name="politica_pago"
-                                                    value="ANTICIPADO_100"
-                                                    checked={data.politica_pago === 'ANTICIPADO_100'}
-                                                    onChange={(e) => setData('politica_pago', e.target.value)}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Anticipado 100%
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        El cliente paga antes de enviar el pedido
-                                                    </p>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('politica_pago', 'ANTICIPADO_100')}
+                                                className={`flex-1 min-w-[150px] px-3 py-2 rounded-lg border-2 transition-all font-medium text-sm ${
+                                                    data.politica_pago === 'ANTICIPADO_100'
+                                                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md'
+                                                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-500'
+                                                }`}
+                                            >
+                                                <div className="text-left">
+                                                    <p className="font-semibold text-sm">Anticipado 100%</p>
+                                                    <p className="text-xs opacity-75">Antes de enviar</p>
                                                 </div>
-                                            </label>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1430,38 +1436,37 @@ export default function VentaForm() {
                                             ) : direccionesDisponibles.length > 0 ? (
                                                 <div className="space-y-2">
                                                     {direccionesDisponibles.map((dir) => (
-                                                        <label key={dir.id} className="flex items-start gap-3 p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30 cursor-pointer transition">
-                                                            <input
-                                                                type="radio"
-                                                                name="direccion_cliente"
-                                                                value={dir.id}
-                                                                checked={data.direccion_cliente_id === dir.id}
-                                                                onChange={(e) => setData('direccion_cliente_id', Number(e.target.value))}
-                                                                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                                            />
-                                                            <div className="flex-1 min-w-0">
-                                                                {/* ✅ NUEVO (2026-03-03): Observaciones como dato principal */}
-                                                                {dir.observaciones ? (
-                                                                    <>
-                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                                            🏷️ {dir.observaciones}
-                                                                            {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
-                                                                        </p>
-                                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                                            📍 {dir.direccion}
-                                                                        </p>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                            {dir.direccion}
-                                                                            {dir.es_principal && <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Principal</span>}
-                                                                        </p>
-                                                                        {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">📍 {dir.localidad}</p>}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </label>
+                                                        <button
+                                                            key={dir.id}
+                                                            type="button"
+                                                            onClick={() => setData('direccion_cliente_id', dir.id)}
+                                                            className={`w-full text-left px-3 py-2 rounded-lg border-2 transition-all ${
+                                                                data.direccion_cliente_id === dir.id
+                                                                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-sm'
+                                                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-800 hover:border-blue-300 dark:hover:border-blue-700'
+                                                            }`}
+                                                        >
+                                                            {/* ✅ NUEVO (2026-03-03): Observaciones como dato principal */}
+                                                            {dir.observaciones ? (
+                                                                <>
+                                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                        🏷️ {dir.observaciones}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                                                        📍 {dir.direccion}
+                                                                    </p>
+                                                                    {dir.es_principal && <span className="inline-block mt-1 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-0.5 rounded">Principal</span>}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                        {dir.direccion}
+                                                                    </p>
+                                                                    {dir.localidad && <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">📍 {dir.localidad}</p>}
+                                                                    {dir.es_principal && <span className="inline-block mt-1 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-0.5 rounded">Principal</span>}
+                                                                </>
+                                                            )}
+                                                        </button>
                                                     ))}
                                                 </div>
                                             ) : (
@@ -1531,15 +1536,6 @@ export default function VentaForm() {
                                         ℹ️ Los datos del cliente se pre-rellenan automáticamente. Modifica si es necesario.
                                     </p>
                                 </div>
-                            )}
-
-                            {!data.requiere_envio && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Desactiva el envío si la venta es presencial
-                                </p>
-                            )}
-
-                            {errors.requiere_envio && <p className="mt-2 text-sm text-red-600">{errors.requiere_envio}</p>}
                         </div>
                     )}
                     <br />
@@ -1555,6 +1551,7 @@ export default function VentaForm() {
                         showLoteFields={false}
                         almacen_id={almacen_id_empresa} // ✅ MODIFICADO: Pasar almacén de la empresa
                         cliente_id={clienteSeleccionado?.id || null} // ✅ NUEVO: Pasar cliente para filtrar tipos_precio
+                        isClienteGeneral={clienteSeleccionado?.codigo_cliente === 'GENERAL'} // ✅ NUEVO: Indicar si es cliente GENERAL para seleccionar tipo de precio
                         manuallySelectedTipoPrecio={manuallySelectedTipoPrecio} // ✅ NUEVO: Pasar estado de selecciones manuales
                         isCalculatingPrices={precioRango.loading} // ✅ NUEVO: Mostrar indicador de carga
                         onUpdateDetailUnidadConPrecio={updateDetailUnidadConPrecio} // ✅ NUEVO: Actualizar unidad y precio juntos
@@ -1632,11 +1629,11 @@ export default function VentaForm() {
                                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
-                                            <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.subtotal)}</span>
+                                            <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyMinimalDecimals(data.subtotal)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-700 dark:text-gray-300">Descuento:</span>
-                                            <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyWith2Decimals(data.descuento)}</span>
+                                            <span className="text-red-600 dark:text-red-400 font-medium text-right">-{formatCurrencyMinimalDecimals(data.descuento)}</span>
                                         </div>
                                     </div>
                                 </>
@@ -1644,14 +1641,14 @@ export default function VentaForm() {
 
                             <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-200 dark:border-zinc-700">
                                 <span className="text-gray-900 dark:text-white">Total:</span>
-                                <span className="text-gray-900 dark:text-white text-right">{formatCurrencyWith2Decimals(data.total)}</span>
+                                <span className="text-gray-900 dark:text-white text-right">{formatCurrencyMinimalDecimals(data.total)}</span>
                             </div>
 
                             {data.monto_pagado_inicial > 0 && (
                                 <>
                                     <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200 dark:border-zinc-700">
                                         <span className="text-gray-700 dark:text-gray-300">Monto Pagado:</span>
-                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyWith2Decimals(data.monto_pagado_inicial)}</span>
+                                        <span className="text-gray-900 dark:text-white font-medium text-right">{formatCurrencyMinimalDecimals(data.monto_pagado_inicial)}</span>
                                     </div>
 
                                     <div className={`flex justify-between items-center text-sm font-medium ${data.monto_pagado_inicial - data.total < 0
@@ -1659,7 +1656,7 @@ export default function VentaForm() {
                                         : 'text-green-600 dark:text-green-400'
                                         }`}>
                                         <span>Cambio / Vuelto:</span>
-                                        <span className="text-right">{formatCurrencyWith2Decimals(Math.max(0, data.monto_pagado_inicial - data.total))}</span>
+                                        <span className="text-right">{formatCurrencyMinimalDecimals(Math.max(0, data.monto_pagado_inicial - data.total))}</span>
                                     </div>
                                 </>
                             )}

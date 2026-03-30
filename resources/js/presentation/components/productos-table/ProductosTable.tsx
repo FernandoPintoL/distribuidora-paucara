@@ -22,6 +22,7 @@ export default function ProductosTable({
     onRemoveDetail,
     almacen_id,
     cliente_id,
+    isClienteGeneral = false,
     manuallySelectedTipoPrecio = {},
     isCalculatingPrices = false,
     readOnly = false,
@@ -308,8 +309,8 @@ export default function ProductosTable({
                     combo_id: comboId,
                     campo: field,
                     valor: value,
-                    items_original: comboItems.map((i: any) => ({id: i.id, cantidad: i.cantidad})),
-                    items_actualizado: comboItemsActualizados.map((i: any) => ({id: i.id, cantidad: i.cantidad}))
+                    items_original: comboItems.map((i: any) => ({ id: i.id, cantidad: i.cantidad })),
+                    items_actualizado: comboItemsActualizados.map((i: any) => ({ id: i.id, cantidad: i.cantidad }))
                 });
 
                 if (comboId) {
@@ -336,6 +337,7 @@ export default function ProductosTable({
                 tipo={tipo}
                 almacen_id={almacen_id}
                 cliente_id={cliente_id}
+                isClienteGeneral={isClienteGeneral}
                 readOnly={readOnly}
                 es_farmacia={es_farmacia}
                 onProductSelected={onAddProduct}
@@ -365,7 +367,7 @@ export default function ProductosTable({
                                 </th>
                                 {tipo === 'compra' && (
                                     <>
-                                        <th className="px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Precio Compra
                                         </th>
                                         <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">

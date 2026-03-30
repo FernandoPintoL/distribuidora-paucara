@@ -65,6 +65,7 @@ export interface ProductosTableProps {
     showLoteFields?: boolean; // Para mostrar campos de lote y fecha de vencimiento en compras
     almacen_id?: number; // ✅ NUEVO: Almacén para búsqueda API
     cliente_id?: number | null; // ✅ NUEVO: Cliente para filtrar tipos_precio (LICORERIA vs VENTA)
+    isClienteGeneral?: boolean; // ✅ NUEVO: Indicar si es cliente GENERAL para seleccionar tipo de precio LICORERIA
     manuallySelectedTipoPrecio?: Record<number, boolean>; // ✅ NUEVO: Track cuáles fueron selecciones manuales del usuario
     isCalculatingPrices?: boolean; // ✅ NUEVO: Mostrar indicador de carga al calcular precios
     readOnly?: boolean; // ✅ NUEVO: Deshabilitar edición de detalles (para APROBADO+)

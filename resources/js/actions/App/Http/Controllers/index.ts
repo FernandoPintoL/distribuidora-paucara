@@ -45,6 +45,7 @@ import ConfiguracionGlobalController from './ConfiguracionGlobalController'
 import EmpresaController from './EmpresaController'
 import CodigoBarraController from './CodigoBarraController'
 import ReporteCodigosBarraController from './ReporteCodigosBarraController'
+import ReporteController from './ReporteController'
 import UnidadMedidaController from './UnidadMedidaController'
 import TipoPrecioController from './TipoPrecioController'
 import PrecioRangoController from './PrecioRangoController'
@@ -63,7 +64,6 @@ import ImpresionComprasController from './ImpresionComprasController'
 import DetalleCompraController from './DetalleCompraController'
 import DetalleVentaController from './DetalleVentaController'
 import CuentaPorCobrarController from './CuentaPorCobrarController'
-import ReporteController from './ReporteController'
 import DevolucionController from './DevolucionController'
 import ServicioController from './ServicioController'
 import ImpresionProformasController from './ImpresionProformasController'
@@ -142,6 +142,7 @@ ConfiguracionGlobalController,
 EmpresaController,
 CodigoBarraController,
 ReporteCodigosBarraController,
+ReporteController,
 UnidadMedidaController,
 TipoPrecioController,
 PrecioRangoController,
@@ -160,7 +161,6 @@ ImpresionComprasController,
 DetalleCompraController,
 DetalleVentaController,
 CuentaPorCobrarController,
-ReporteController,
 DevolucionController,
 ServicioController,
 ImpresionProformasController,

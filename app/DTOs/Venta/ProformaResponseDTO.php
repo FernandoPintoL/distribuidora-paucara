@@ -101,6 +101,7 @@ class ProformaResponseDTO extends BaseDTO
                 'longitud' => (float) ($model->direccionSolicitada->longitud ?? 0),
                 'ciudad' => $model->direccionSolicitada->ciudad ?? null,
                 'departamento' => $model->direccionSolicitada->departamento ?? null,
+                'observaciones' => $model->direccionSolicitada->observaciones ?? null,
             ] : null,
             direccion_confirmada: $model->relationLoaded('direccionConfirmada') && $model->direccionConfirmada ? [
                 'id' => $model->direccionConfirmada->id,
@@ -109,6 +110,7 @@ class ProformaResponseDTO extends BaseDTO
                 'longitud' => (float) ($model->direccionConfirmada->longitud ?? 0),
                 'ciudad' => $model->direccionConfirmada->ciudad ?? null,
                 'departamento' => $model->direccionConfirmada->departamento ?? null,
+                'observaciones' => $model->direccionConfirmada->observaciones ?? null,
             ] : null,
             detalles: $model->detalles->map(function($det) use ($model) {
                 // ✅ NUEVO: Lógica de fallback para tipo_precio_id basada en cliente_id
@@ -155,6 +157,7 @@ class ProformaResponseDTO extends BaseDTO
                     'nombre' => $det->producto->nombre ?? 'N/A',
                     'producto_id' => $det->producto_id,
                     'sku' => $det->producto->sku ?? null,
+                    'marca' => $det->producto->marca?->nombre ?? null,
                     'peso' => (float) ($det->producto->peso ?? 0),
                     'categoria' => $det->producto->categoria?->nombre ?? null,
                     'stock_disponible' => $stockDisponible,
