@@ -78,11 +78,21 @@ $descuento = obtenerDescuento($venta);
             {{-- ✅ NUEVO: Mostrar Preventista solo si empresa.es_farmacia = false --}}
             @php
             // Obtener información del preventista desde la venta
+            // Prioridad 1: Usuario creador de la proforma
+            // Prioridad 2: Preventista directo (preventista_id)
             $preventista = null;
-            if (is_array($venta) && isset($venta['proforma']) && isset($venta['proforma']['usuario_creador'])) {
-            $preventista = $venta['proforma']['usuario_creador']['name'] ?? null;
-            } elseif (is_object($venta) && $venta->proforma && $venta->proforma->usuarioCreador) {
-            $preventista = $venta->proforma->usuarioCreador->name;
+            if (is_array($venta)) {
+                if (isset($venta['proforma']) && isset($venta['proforma']['usuario_creador'])) {
+                    $preventista = $venta['proforma']['usuario_creador']['name'] ?? null;
+                } elseif (isset($venta['preventista']) && isset($venta['preventista']['name'])) {
+                    $preventista = $venta['preventista']['name'];
+                }
+            } elseif (is_object($venta)) {
+                if ($venta->proforma && $venta->proforma->usuarioCreador) {
+                    $preventista = $venta->proforma->usuarioCreador->name;
+                } elseif ($venta->preventista) {
+                    $preventista = $venta->preventista->name;
+                }
             }
 
             // Obtener información de la empresa

@@ -18,15 +18,20 @@
             @if($documento->usuario)
                 <p><strong>Vendedor:</strong> {{ $documento->usuario->name }}</p>
             @endif
-            {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
+            {{-- ✅ NUEVO: Mostrar preventista (desde proforma O directamente de preventista_id) --}}
             @php
-                $usuarioCreadorProforma = null;
-                if ($documento->proforma_id && $documento->proforma) {
-                    $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
+                $preventista = null;
+                // Prioridad 1: Usuario creador de la proforma (si existe)
+                if ($documento->proforma_id && $documento->proforma && $documento->proforma->usuarioCreador) {
+                    $preventista = $documento->proforma->usuarioCreador;
+                }
+                // Prioridad 2: Preventista directo (preventista_id)
+                elseif ($documento->preventista_id && $documento->preventista) {
+                    $preventista = $documento->preventista;
                 }
             @endphp
-            @if($usuarioCreadorProforma)
-                <p><strong>Preventista:</strong> {{ $usuarioCreadorProforma->name }}</p>
+            @if($preventista)
+                <p><strong>Preventista:</strong> {{ $preventista->name }}</p>
             @endif
             @if($documento->movimientoCaja && $documento->movimientoCaja->caja)
                 <p><strong>Caja:</strong> {{ $documento->movimientoCaja->caja->nombre }}</p>

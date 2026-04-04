@@ -1,6 +1,6 @@
 @extends('impresion.layouts.base-ticket')
 
-@section('titulo', 'Venta #' . $documento->numero)
+@section('titulo', 'Venta Folio' . $documento->id)
 
 @section('contenido')
 
@@ -9,8 +9,8 @@
 {{-- ==================== INFO DEL DOCUMENTO ==================== --}}
 <div class="documento-titulo" style="font-size:12px;">{{ $documento->tipoDocumento->nombre ?? 'Folio: ' }} N°{{ $documento->id }}</div>
 <div class="documento-numero" style="font-size:12px;">{{ $documento->numero }}</div>
-<div class="center" style="margin-top: 3px; font-size:12px">
-    <p style="margin: 2px 0;"><strong>Creado:</strong> {{ $documento->created_at->format('d/m/Y H:i') }}</p>
+<div class="center" style="margin-top: 3px; font-size:11px">
+    <p style="margin: 2px 0;"><strong>Creados:</strong> {{ $documento->created_at->format('d/m/Y H:i') }}</p>
     <p style="margin: 2px 0;"><strong>Emisión:</strong> {{ now()->format('d/m/Y H:i') }}</p>
 </div>
 
@@ -47,15 +47,20 @@
             @endif
         </tr>
     </table>
-    {{-- ✅ NUEVO: Mostrar usuario creador de la proforma si existe --}}
+    {{-- ✅ NUEVO: Mostrar preventista (desde proforma O directamente de preventista_id) --}}
     @php
-    $usuarioCreadorProforma = null;
-    if ($documento->proforma_id && $documento->proforma) {
-    $usuarioCreadorProforma = $documento->proforma->usuarioCreador;
+    $preventista = null;
+    // Prioridad 1: Usuario creador de la proforma (si existe)
+    if ($documento->proforma_id && $documento->proforma && $documento->proforma->usuarioCreador) {
+        $preventista = $documento->proforma->usuarioCreador;
+    }
+    // Prioridad 2: Preventista directo (preventista_id)
+    elseif ($documento->preventista_id && $documento->preventista) {
+        $preventista = $documento->preventista;
     }
     @endphp
-    @if($usuarioCreadorProforma)
-    <p><strong>Preventista:</strong> {{ $usuarioCreadorProforma->name }}</p>
+    @if($preventista)
+    <p><strong>Preventista:</strong> {{ $preventista->name }}</p>
     @endif
 </div>
 

@@ -551,6 +551,7 @@ class ImpresionService
             'cliente.localidad',  // ✅ NUEVO: Cargar localidad del cliente
             'detalles.producto.stock.almacen',
             'usuario',
+            'preventista',        // ✅ NUEVO: Cargar preventista directamente (preventista_id)
             'tipoPago',
             'tipoDocumento',
             'moneda',
@@ -559,6 +560,16 @@ class ImpresionService
             'proforma.usuarioCreador',
             'direccionCliente',   // ✅ NUEVO: Cargar dirección registrada en la venta
             'accessToken',
+        ]);
+
+        // ✅ DEBUG: Log para verificar la carga de proforma y usuarioCreador
+        \Log::info('🖨️ [ImpresionService::imprimirVenta] Relaciones cargadas', [
+            'venta_id'           => $venta->id,
+            'proforma_id'        => $venta->proforma_id,
+            'preventista_id'     => $venta->preventista_id,
+            'tiene_proforma'     => (bool) $venta->proforma,
+            'usuario_creador'    => $venta->proforma?->usuarioCreador?->name ?? 'NO EXISTE',
+            'preventista_name'   => $venta->preventista?->name ?? 'NO EXISTE',
         ]);
 
         return $this->generarPDF('venta', $venta, $formato, $opciones);
@@ -579,6 +590,7 @@ class ImpresionService
             'cliente.localidad',
             'detalles.producto.stock.almacen',
             'usuario',
+            'preventista',        // ✅ NUEVO: Cargar preventista directamente (preventista_id)
             'tipoPago',
             'tipoDocumento',
             'moneda',
