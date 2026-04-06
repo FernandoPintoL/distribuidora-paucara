@@ -43,7 +43,15 @@ class ApiProformaController extends Controller
         if ($request->filled('fecha_programada') && ! $request->filled('fecha_entrega_solicitada')) {
             try {
                 $requestData['fecha_entrega_solicitada'] = \Carbon\Carbon::parse($request->fecha_programada)->format('Y-m-d');
+                \Log::info('✅ Normalización fecha_programada → fecha_entrega_solicitada', [
+                    'fecha_programada' => $request->fecha_programada,
+                    'fecha_entrega_solicitada' => $requestData['fecha_entrega_solicitada'],
+                ]);
             } catch (\Exception $e) {
+                \Log::error('❌ Error normalizando fecha_programada', [
+                    'fecha_programada' => $request->fecha_programada,
+                    'error' => $e->getMessage(),
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Formato de fecha_programada inválido',
@@ -121,6 +129,16 @@ class ApiProformaController extends Controller
 
         DB::beginTransaction();
         try {
+            // ✅ LOG: Comenzó creación de proforma
+            \Log::info('🔄 Iniciando creación de proforma...', [
+                'cliente_id' => $requestData['cliente_id'],
+                'tipo_entrega' => $requestData['tipo_entrega'],
+                'fecha_entrega' => $requestData['fecha_entrega_solicitada'] ?? null,
+                'direccion_id' => $requestData['direccion_entrega_solicitada_id'] ?? null,
+                'politica_pago' => $requestData['politica_pago'],
+                'productos_count' => count($requestData['productos'] ?? []),
+            ]);
+
             // Obtener el cliente (por cliente_id, no por usuario autenticado)
             $cliente = Cliente::findOrFail($request->cliente_id);
 
@@ -144,6 +162,33 @@ class ApiProformaController extends Controller
                                           // ✅ Obtener el usuario autenticado que está creando la proforma
                                           // IMPORTANTE: usuario_creador_id debe ser el usuario autenticado ACTUAL, no el user_id del cliente
             $usuarioCreador = Auth::id(); // El usuario que CREA la proforma (quien hace la solicitud API)
+
+            // ✅ NUEVO (2026-04-06): Obtener preventista_id si el usuario es preventista
+            // Buscar en la tabla empleados si existe un preventista con este user_id
+            $preventistaId = null;
+            $usuarioAutenticado = auth()->user();
+
+            try {
+                $empleado = \DB::table('empleados')->where('user_id', $usuarioCreador)->first();
+                if ($empleado && $empleado->id) {
+                    $preventistaId = $empleado->id;
+                    \Log::info('✅ Usuario autenticado es empleado/preventista', [
+                        'user_id' => $usuarioCreador,
+                        'preventista_id' => $preventistaId,
+                        'usuario_nick' => $usuarioAutenticado->usernick,
+                    ]);
+                } else {
+                    \Log::info('ℹ️  Usuario autenticado NO está en tabla empleados', [
+                        'user_id' => $usuarioCreador,
+                        'usuario_nick' => $usuarioAutenticado?->usernick ?? 'desconocido',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('⚠️  Error buscando empleado/preventista', [
+                    'user_id' => $usuarioCreador,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // ✅ NUEVO: Instanciar servicio de precios con rangos
             $precioRangoService = app(PrecioRangoProductoService::class);
@@ -289,9 +334,25 @@ class ApiProformaController extends Controller
 
             // Crear proforma con solicitud de entrega del cliente
             // ✅ CORREGIDO (2026-04-05): Usar fecha_vencimiento del request, o default 7 días
-            $fechaVencimiento = $requestData['fecha_vencimiento']
+            // ✅ CORREGIDO (2026-04-06): Usar null coalescing para evitar undefined array key
+            $fechaVencimiento = isset($requestData['fecha_vencimiento']) && $requestData['fecha_vencimiento']
                 ? \Carbon\Carbon::parse($requestData['fecha_vencimiento'])->toDateString()
                 : now()->addDays(7)->toDateString();
+
+            \Log::info('📝 Datos preparados para crear proforma', [
+                'numero' => 'auto-generated',
+                'fecha' => now()->toDateTimeString(),
+                'fecha_vencimiento' => $fechaVencimiento,
+                'cliente_id' => $requestData['cliente_id'],
+                'tipo_entrega' => $requestData['tipo_entrega'],
+                'subtotal' => $subtotal,
+                'total' => $total,
+                'politica_pago' => $requestData['politica_pago'],
+                'fecha_entrega_solicitada' => $fechaEntrega,
+                'hora_entrega_solicitada' => $horaEntrega,
+                'hora_entrega_solicitada_fin' => $horaEntregaFin,
+                'direccion_entrega_solicitada_id' => $requestData['tipo_entrega'] === 'DELIVERY' ? $requestData['direccion_entrega_solicitada_id'] : null,
+            ]);
 
             $proforma = Proforma::create([
                 'numero'                          => Proforma::generarNumeroProforma(),
@@ -308,6 +369,8 @@ class ApiProformaController extends Controller
                                                         // Usuario creador: el usuario asociado al cliente
                                                         // IMPORTANTE: esto es user_id, NO cliente_id
                 'usuario_creador_id'              => $usuarioCreador,
+                // ✅ NUEVO (2026-04-06): Asignar preventista_id si el usuario es preventista
+                'preventista_id'                  => $preventistaId,
                 // ✅ NUEVO: Política de pago
                 'politica_pago'                   => $requestData['politica_pago'],
                 // Solicitud de entrega del cliente (usa campos normalizados)
@@ -318,6 +381,11 @@ class ApiProformaController extends Controller
                 'direccion_entrega_solicitada_id' => $requestData['tipo_entrega'] === 'DELIVERY'
                     ? $requestData['direccion_entrega_solicitada_id']
                     : null,
+            ]);
+
+            \Log::info('✅ Proforma creada en BD', [
+                'proforma_id' => $proforma->id,
+                'proforma_numero' => $proforma->numero,
             ]);
 
             // Crear detalles
@@ -405,6 +473,20 @@ class ApiProformaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // ✅ LOG DETALLADO del error para debugging
+            \Log::error('❌ ERROR CRÍTICO creando proforma', [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_trace' => $e->getTraceAsString(),
+                'request_data' => [
+                    'cliente_id' => $request->cliente_id ?? null,
+                    'tipo_entrega' => $request->tipo_entrega ?? null,
+                    'productos_count' => count($request->productos ?? []),
+                ],
+            ]);
 
             return response()->json([
                 'success' => false,
