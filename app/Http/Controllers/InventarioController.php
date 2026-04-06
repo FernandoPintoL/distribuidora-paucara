@@ -3793,16 +3793,29 @@ class InventarioController extends Controller
                             'almacen_id' => $ajuste->almacen_id,
                             'movimientos' => [],
                             'cantidad_total' => 0,
+                            'totales_previos_producto_capturados' => false,
                             'cantidad_total_anterior' => 0,
-                            'cantidad_total_posterior' => 0,
                             'cantidad_disponible_anterior' => 0,
-                            'cantidad_disponible_posterior' => 0,
                             'cantidad_reservada_anterior' => 0,
-                            'cantidad_reservada_posterior' => 0,
                         ];
+
+                        // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES en la primera iteración
+                        $movimientosPorProducto[$productoId]['cantidad_total_anterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                            ->where('almacen_id', $ajuste->almacen_id)
+                            ->sum('cantidad');
+
+                        $movimientosPorProducto[$productoId]['cantidad_disponible_anterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                            ->where('almacen_id', $ajuste->almacen_id)
+                            ->sum('cantidad_disponible');
+
+                        $movimientosPorProducto[$productoId]['cantidad_reservada_anterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                            ->where('almacen_id', $ajuste->almacen_id)
+                            ->sum('cantidad_reservada');
+
+                        $movimientosPorProducto[$productoId]['totales_previos_producto_capturados'] = true;
                     }
 
-                    // Capturar valores ANTES
+                    // Capturar valores ANTES (por lote)
                     $cantidadTotalAntes = (float) $stockProducto->cantidad;
                     $cantidadDisponibleAntes = (float) $stockProducto->cantidad_disponible;
                     $cantidadReservadaAntes = (float) $stockProducto->cantidad_reservada;
@@ -3830,14 +3843,8 @@ class InventarioController extends Controller
                     $cantidadDisponibleDespues = (float) $stockProducto->cantidad_disponible;
                     $cantidadReservadaDespues = (float) $stockProducto->cantidad_reservada;
 
-                    // Acumular para movimiento agrupado (se registrará una sola vez por producto)
+                    // Acumular cantidad total inversa
                     $movimientosPorProducto[$productoId]['cantidad_total'] += $cantidadInversa;
-                    $movimientosPorProducto[$productoId]['cantidad_total_anterior'] += $cantidadTotalAntes;
-                    $movimientosPorProducto[$productoId]['cantidad_total_posterior'] += $cantidadTotalDespues;
-                    $movimientosPorProducto[$productoId]['cantidad_disponible_anterior'] += $cantidadDisponibleAntes;
-                    $movimientosPorProducto[$productoId]['cantidad_disponible_posterior'] += $cantidadDisponibleDespues;
-                    $movimientosPorProducto[$productoId]['cantidad_reservada_anterior'] += $cantidadReservadaAntes;
-                    $movimientosPorProducto[$productoId]['cantidad_reservada_posterior'] += $cantidadReservadaDespues;
 
                     $movimientosPorProducto[$productoId]['movimientos'][] = [
                         'stock_producto_id' => $stockProducto->id,
@@ -3852,18 +3859,46 @@ class InventarioController extends Controller
                     ];
                 }
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO DESPUÉS para cada producto
+                foreach ($movimientosPorProducto as &$productoData) {
+                    $productoData['cantidad_total_posterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoData['producto_id'])
+                        ->where('almacen_id', $productoData['almacen_id'])
+                        ->sum('cantidad');
+
+                    $productoData['cantidad_disponible_posterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoData['producto_id'])
+                        ->where('almacen_id', $productoData['almacen_id'])
+                        ->sum('cantidad_disponible');
+
+                    $productoData['cantidad_reservada_posterior'] = (float) \App\Models\StockProducto::where('producto_id', $productoData['producto_id'])
+                        ->where('almacen_id', $productoData['almacen_id'])
+                        ->sum('cantidad_reservada');
+                }
+                unset($productoData);
+
                 // ✅ Registrar movimientos agrupados por producto usando el servicio
                 foreach ($movimientosPorProducto as $productoData) {
                     $movimientoService->registrarMovimientoAgrupado(
                         $productoData['producto_id'],
                         $productoData['almacen_id'],
                         MovimientoInventario::TIPO_AJUSTE, // Tipo genérico para anulación
+                        'ajuste_inventario',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                         $productoData['cantidad_total'],
                         $ajuste->numero . '-REV',
                         $productoData['movimientos'],
                         [
-                            'referencia_tipo' => 'ajuste_inventario',
+                            // 'referencia_tipo' => 'ajuste_inventario',  // ← Movido a parámetro directo
                             'referencia_id' => $ajuste->id,
+                            // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
+                            'totales_previos' => [
+                                'cantidad_total_anterior' => $productoData['cantidad_total_anterior'],
+                                'cantidad_disponible_anterior' => $productoData['cantidad_disponible_anterior'],
+                                'cantidad_reservada_anterior' => $productoData['cantidad_reservada_anterior'],
+                            ],
+                            'totales_posteriores' => [
+                                'cantidad_total_posterior' => $productoData['cantidad_total_posterior'],
+                                'cantidad_disponible_posterior' => $productoData['cantidad_disponible_posterior'],
+                                'cantidad_reservada_posterior' => $productoData['cantidad_reservada_posterior'],
+                            ],
                             'observacion_extra' => [
                                 'ajuste_numero' => $ajuste->numero,
                                 'motivo_anulacion' => $motivo,

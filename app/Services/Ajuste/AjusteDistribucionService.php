@@ -95,6 +95,19 @@ class AjusteDistribucionService
                     'cantidad_lotes' => count($ajustesProducto),
                 ]);
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES de procesar lotes
+                $totalProductoAntes = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $totalDisponibleAntes = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoAntes = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
+
                 $diferenciaTotalProducto = 0;  // Balance neto del producto
                 $detallesLotes = [];
                 $cantidadTotalAnterior = 0;
@@ -106,7 +119,7 @@ class AjusteDistribucionService
                     $nuevaCantidad = (float) ($ajuste['nueva_cantidad'] ?? 0);
                     $observacion = $ajuste['observacion'] ?? 'Ajuste de inventario';
 
-                    // Capturar ANTES
+                    // Capturar ANTES (por lote)
                     $cantidadAnterior = (float) $stockProducto->cantidad;
                     $cantidadDisponibleAnterior = (float) $stockProducto->cantidad_disponible;
                     $cantidadReservadaAnterior = (float) $stockProducto->cantidad_reservada;
@@ -158,6 +171,19 @@ class AjusteDistribucionService
                     ]);
                 }
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO DESPUÉS de procesar todos los lotes
+                $totalProductoDespues = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $totalDisponibleDespues = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoDespues = (float) StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
+
                 // ✅ Determinar tipo de movimiento basado en balance NETO del producto
                 $tipo = $diferenciaTotalProducto >= 0 ?
                     MovimientoInventario::TIPO_ENTRADA_AJUSTE :
@@ -168,12 +194,24 @@ class AjusteDistribucionService
                     producto_id: $productoId,
                     almacen_id: $almacenId,
                     tipo: $tipo,
+                    referencia_tipo: 'ajuste',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                     cantidad: $diferenciaTotalProducto,  // Balance neto (puede ser + o -)
                     numero_documento: $numeroAjuste,
                     detallesLotes: $detallesLotes,
                     opciones: [
-                        'referencia_tipo' => 'ajuste',
+                        // 'referencia_tipo' => 'ajuste',  // ← Movido a parámetro directo
                         'referencia_id' => null,
+                        // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
+                        'totales_previos' => [
+                            'cantidad_total_anterior' => $totalProductoAntes,
+                            'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                            'cantidad_reservada_anterior' => $totalReservadoAntes,
+                        ],
+                        'totales_posteriores' => [
+                            'cantidad_total_posterior' => $totalProductoDespues,
+                            'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                            'cantidad_reservada_posterior' => $totalReservadoDespues,
+                        ],
                     ]
                 );
 

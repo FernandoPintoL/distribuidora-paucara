@@ -13,7 +13,6 @@ use App\Services\Traits\ManagesTransactions;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-
 /**
  * VentaService - Lógica de negocio para Ventas
  *
@@ -121,7 +120,7 @@ class VentaService
                     'estado_documento_id' => $estadoDocumentoId,
                 ]);
             } else {
-                $estadoDocumentoId = \App\Models\EstadoDocumento::obtenerEstadoInicial();
+                $estadoDocumentoId = EstadoDocumento::obtenerEstadoInicial();
                 Log::info('📋 [VentaService::crear] Usando estado inicial por defecto', [
                     'estado_documento_id' => $estadoDocumentoId,
                 ]);
@@ -208,20 +207,18 @@ class VentaService
                 'moneda_id'                  => $monedaDefecto?->id ?? 1,
                 'observaciones'              => $dto->observaciones,
                 'almacen_id'                 => $dto->almacen_id,
-                'proforma_id'                => $dto->proforma_id,
-                // ✅ CORREGIDO (2026-02-10): direccion_cliente_id solo se requiere si requiere_envio=true
+                'proforma_id'                => $dto->proforma_id, // ✅ CORREGIDO (2026-02-10): direccion_cliente_id solo se requiere si requiere_envio=true
                 'direccion_cliente_id'       => ($dto->requiere_envio && $dto->direccion_cliente_id) ? $dto->direccion_cliente_id : null,
                 // Campos de logística
                 'requiere_envio'             => $dto->requiere_envio,
                 'canal_origen'               => $dto->canal_origen ?? 'WEB',
-                'estado_logistico_id'        => $estadoLogisticoId,  // ✅ MODIFICADO (2026-02-10): Usa variable calculada (SIN_ENTREGA por defecto)
+                'estado_logistico_id'        => $estadoLogisticoId,  // ✅ MODIFICADO (2026-02-10): Usa variable calculada (SIN_ENTREGA por defecto) 
                 // Campos de política de pago
                 'tipo_pago_id'               => $dto->tipo_pago_id,  // ✅ NUEVO: Tipo de pago seleccionado
                 'politica_pago'              => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'estado_pago'                => $estadoPago,                                             // ✅ Dinámico según pago inicial
                 'monto_pagado'               => $montoPagado,  // ✅ CORREGIDO (2026-03-02): Usa monto calculado (total si CONTADO sin pago)
-                'monto_pendiente'            => max(0, ($dto->subtotal - ($dto->descuento ?? 0)) - $montoPagado),
-                                                                                                         // Campos de SLA y compromisos de entrega
+                'monto_pendiente'            => max(0, ($dto->subtotal - ($dto->descuento ?? 0)) - $montoPagado), // Campos de SLA y compromisos de entrega
                 'fecha_entrega_comprometida' => $dto->fecha_entrega_comprometida,
                 'hora_entrega_comprometida'  => $dto->hora_entrega_comprometida,
                 'ventana_entrega_ini'        => $dto->ventana_entrega_ini,
@@ -516,11 +513,10 @@ class VentaService
 
             // Revertir stock si ya se consumió
             if ($venta->estado === 'Aprobado') {
-                $this->stockService->devolverStock(
-                    $venta->detalles->toArray(),
-                    $venta->numero . "-RECHAZO",
-                    $venta->almacen_id
-                );
+                // ✅ CORREGIDO (2026-04-05): Usar VentaDistribucionService para registrar totales correctos
+                // StockService::devolverStock() solo registra por lote (incorrecto)
+                // VentaDistribucionService::devolverStock() registra totales del producto (correcto)
+                $this->ventaDistribucionService->devolverStock($venta->numero);
             }
 
             // Cambiar estado a Cancelado

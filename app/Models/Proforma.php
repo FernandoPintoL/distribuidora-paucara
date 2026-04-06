@@ -34,8 +34,10 @@ class Proforma extends Model
         'cliente_id',
         'usuario_creador_id',
         'usuario_aprobador_id',
+        'preventista_id',  // ✅ NUEVO (2026-04-06): Preventista asignado a la proforma
         'fecha_aprobacion',
         'moneda_id',
+        'requiere_envio',  // ✅ NUEVO (2026-04-06): Indica si requiere envío
         // Solicitud de entrega del cliente
         'fecha_entrega_solicitada',
         'hora_entrega_solicitada',
@@ -502,7 +504,7 @@ class Proforma extends Model
                     $this,
                     $productoId,
                     $cantidad,
-                    3  // 3 días de vencimiento
+                    $this->fecha_vencimiento  // ✅ CORREGIDO (2026-04-05): Usar fecha de vencimiento de la proforma
                 );
 
                 // Validar resultado

@@ -47,6 +47,7 @@ class VentaController extends Controller
 
     public function __construct(
         private VentaService $ventaService,
+        private \App\Services\Venta\VentaDistribucionService $ventaDistribucionService,
         private \App\Services\ImpresionService $impresionService,
         private \App\Services\PrinterService $printerService,
         private \App\Services\ExcelExportService $excelExportService,
@@ -556,7 +557,7 @@ class VentaController extends Controller
                 $this->printerService->printTicket($datosTicket);
             } catch (\Exception $e) {
                 // Log error pero no fallar la creación de venta
-                \Illuminate\Support\Facades\Log::warning('Advertencia al imprimir ticket', [
+                Log::warning('Advertencia al imprimir ticket', [
                     'venta_id' => $ventaDTO->id,
                     'error'    => $e->getMessage(),
                 ]);
@@ -587,7 +588,7 @@ class VentaController extends Controller
 
         } catch (\Exception $e) {
             // Error inesperado
-            \Illuminate\Support\Facades\Log::error('Error al crear venta', [
+            Log::error('Error al crear venta', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -804,7 +805,10 @@ class VentaController extends Controller
                 // 1️⃣ Revertir movimientos de stock si la venta fue aprobada
                 if ($venta->estado === 'Aprobado') {
                     try {
-                        $venta->revertirMovimientosStock();
+                        // ✅ CORREGIDO (2026-04-05): Usar VentaDistribucionService para registrar totales correctos
+                        // Venta::revertirMovimientosStock() NO capturaba totales_previos/posteriores
+                        // VentaDistribucionService::devolverStock() registra totales del producto (correcto)
+                        $this->ventaDistribucionService->devolverStock($venta->numero);
                         $stockRevertido = true;
                     } catch (\Exception $e) {
                         Log::warning('No se pudo revertir stock al anular venta', [

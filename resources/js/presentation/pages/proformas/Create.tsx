@@ -40,6 +40,10 @@ import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-
 import { useClienteSearch } from '@/infrastructure/hooks/use-api-search'
 import { usePrecioRangoCarrito } from '@/application/hooks/use-precio-rango-carrito'
 
+// ✅ NUEVOS: Componentes reutilizables Fase 1, 2 y 3
+import RequiereEnvioToggle from '@/presentation/components/form-sections/RequiereEnvioToggle'
+import DetallesEnvioPanel from '@/presentation/components/form-sections/DetallesEnvioPanel'
+
 // DOMAIN LAYER
 import type { Id } from '@/domain/entities/shared'
 import type { Producto } from '@/domain/entities/productos'
@@ -136,6 +140,7 @@ interface Props {
     detallesProforma?: ProformaDetalleLocal[]  // ✅ NUEVO: Detalles precargados
     direccionesCliente?: Array<{ id: number; direccion: string; localidad_id: number }>  // ✅ NUEVO: Direcciones del cliente
     default_tipo_precio_id?: number | string  // ✅ NUEVO: ID del tipo de precio por defecto (VENTA)
+    logistica_envios?: boolean  // ✅ CORREGIDO (2026-04-05): Indicador para mostrar/ocultar logística de envíos
 }
 
 export default function ProformasCreate({
@@ -148,9 +153,10 @@ export default function ProformasCreate({
     proforma,
     detallesProforma = [],
     direccionesCliente = [],
-    default_tipo_precio_id = 1  // ✅ NUEVO: Tipo precio por defecto (fallback a 1)
+    default_tipo_precio_id = 1,  // ✅ NUEVO: Tipo precio por defecto (fallback a 1)
+    logistica_envios = false  // ✅ CORREGIDO (2026-04-05): Indicador para mostrar/ocultar logística de envíos
 }: Props) {
-    console.log('🚀 ProformasCreate renderizado con props:', { clientes, productosIniciales, almacenes, preventistas, almacen_id_empresa, modo, proforma, detallesProforma, direccionesCliente });
+    console.log('🚀 ProformasCreate renderizado con props:', { clientes, productosIniciales, almacenes, preventistas, almacen_id_empresa, modo, proforma, detallesProforma, direccionesCliente, logistica_envios });
 
 
     // ✅ NUEVO: Validaciones defensivas con useMemo para evitar renderizados múltiples
@@ -194,6 +200,31 @@ export default function ProformasCreate({
     const [tipoEntrega, setTipoEntrega] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY')
     const [observaciones, setObservaciones] = useState('')
     const [politicaPago, setPoliticaPago] = useState<'CONTRA_ENTREGA' | 'ANTICIPADO_100'>('CONTRA_ENTREGA')
+
+    // ✅ NUEVOS (2026-04-06): Horarios de entrega
+    const [turnoEntrega, setTurnoEntrega] = useState<'manana' | 'tarde' | ''>('')
+    const [horaEntregaSolicitada, setHoraEntregaSolicitada] = useState('')
+    const [horaEntregaSolicitadaFin, setHoraEntregaSolicitadaFin] = useState('')
+
+    // ✅ CORREGIDO (2026-04-06): Usar direcciones del cliente directamente si están disponibles
+    // Priorizar direcciones que vienen en clienteSeleccionado (más eficiente que otro fetch)
+    const direccionesDisponibles = useMemo(() => {
+        if (clienteSeleccionado?.direcciones && Array.isArray(clienteSeleccionado.direcciones)) {
+            return clienteSeleccionado.direcciones.filter((d: any) => d.activa !== false)
+        }
+        return []
+    }, [clienteSeleccionado?.direcciones])
+
+    const cargandoDirecciones = false // No necesita cargar si vienen en el cliente
+
+    const [direccionEntregaId, setDireccionEntregaId] = useState<number | null>(null)
+
+    // ✅ NUEVO: Auto-seleccionar dirección si solo hay una (sin bucle infinito)
+    useEffect(() => {
+        if (direccionesDisponibles.length === 1 && !direccionEntregaId) {
+            setDireccionEntregaId(direccionesDisponibles[0].id)
+        }
+    }, [direccionesDisponibles.length])
 
     // ✅ NUEVO: Función para transformar detalles del backend al formato que ProductosTable espera
     const transformarDetalles = (detalles: any[]) => {
@@ -274,6 +305,23 @@ export default function ProformasCreate({
             // ✅ Activar envío si hay fecha de entrega solicitada
             if (proforma.fecha_entrega_solicitada) {
                 setRequiereEnvio(true)
+                // ✅ CORREGIDO (2026-04-05): Preseleccionar dirección de entrega
+                if (proforma.direccion_entrega_solicitada_id) {
+                    setDireccionEntregaId(proforma.direccion_entrega_solicitada_id)
+                }
+                // ✅ NUEVO (2026-04-06): Cargar horarios de entrega
+                if (proforma.hora_entrega_solicitada) {
+                    setHoraEntregaSolicitada(proforma.hora_entrega_solicitada)
+                    // Detectar turno según la hora
+                    if (proforma.hora_entrega_solicitada >= '08:00' && proforma.hora_entrega_solicitada < '14:00') {
+                        setTurnoEntrega('manana')
+                    } else if (proforma.hora_entrega_solicitada >= '14:00' && proforma.hora_entrega_solicitada <= '18:00') {
+                        setTurnoEntrega('tarde')
+                    }
+                }
+                if (proforma.hora_entrega_solicitada_fin) {
+                    setHoraEntregaSolicitadaFin(proforma.hora_entrega_solicitada_fin)
+                }
             }
         }
     }, [modo, proforma, detallesProforma, clientesSeguro])
@@ -287,13 +335,8 @@ export default function ProformasCreate({
         error: errorProductos
     } = useBuscarProductos({ debounceMs: 400 })
 
-    // Búsqueda de cliente mejorada
-    const {
-        results: clientesSearchResults,
-        search: buscarClientes,
-        loading: cargandoClientesSearch,
-        clear: limpiarBusquedaClientes
-    } = useClienteSearch()
+    // Búsqueda de cliente mejorada (patrón igual a ventas/create.tsx)
+    const { search: buscarClientes } = useClienteSearch()
 
     // Cálculo de precios por rango
     const {
@@ -434,7 +477,6 @@ export default function ProformasCreate({
         setClienteValue(cliente.id)
         setClienteDisplay(cliente.nombre)
         setClienteSeleccionado(cliente)
-        limpiarBusquedaClientes()
     }
 
     const handleCreateCliente = () => {
@@ -485,10 +527,13 @@ export default function ProformasCreate({
                     fecha: fecha || undefined,
                     fecha_vencimiento: fechaVencimiento || undefined,
                     fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
+                    hora_entrega_solicitada: requiereEnvio ? horaEntregaSolicitada : null,  // ✅ NUEVO (2026-04-06)
+                    hora_entrega_solicitada_fin: requiereEnvio ? horaEntregaSolicitadaFin : null,  // ✅ NUEVO (2026-04-06)
                     tipo_entrega: tipoEntrega,
                     canal: canal,
                     politica_pago: politicaPago,
                     observaciones: observaciones || undefined,
+                    direccion_entrega_solicitada_id: requiereEnvio ? direccionEntregaId : null,  // ✅ CORREGIDO (2026-04-05): Enviar dirección de entrega
                     // ✅ ACTUALIZACIÓN: Incluir estado y preventista en modo edición
                     estado_inicial: estadoInicial,
                     preventista_id: preventistaId,
@@ -535,9 +580,12 @@ export default function ProformasCreate({
                     canal,
                     requiere_envio: requiereEnvio,
                     fecha_entrega_solicitada: requiereEnvio ? fechaEntregaSolicitada : null,
+                    hora_entrega_solicitada: requiereEnvio ? horaEntregaSolicitada : null,  // ✅ NUEVO (2026-04-06)
+                    hora_entrega_solicitada_fin: requiereEnvio ? horaEntregaSolicitadaFin : null,  // ✅ NUEVO (2026-04-06)
                     tipo_entrega: tipoEntrega,
                     politica_pago: politicaPago,
                     observaciones,
+                    direccion_entrega_solicitada_id: requiereEnvio ? direccionEntregaId : null,  // ✅ CORREGIDO (2026-04-05): Enviar dirección de entrega
                     detalles: detalles.map((d, index) => {
                         const detalle = {
                             producto_id: d.producto_id,
@@ -615,12 +663,38 @@ export default function ProformasCreate({
                                 value={clienteValue}
                                 displayValue={clienteDisplay}
                                 onSearch={buscarClientes}
-                                onChange={(value, option) => {
+                                onChange={async (value, option) => {
                                     setClienteValue(value)
-                                    if (option) {
+                                    if (option && value) {
                                         setClienteDisplay(option.label)
+                                        // ✅ CORREGIDO (2026-04-06): Fetch cliente completo desde API con validación
+                                        const clienteId = Number(value)
+                                        if (!isNaN(clienteId) && clienteId > 0) {
+                                            try {
+                                                const response = await fetch(`/api/clientes/${clienteId}`)
+                                                if (response.ok) {
+                                                    const result = await response.json()
+                                                    if (result.success && result.data) {
+                                                        console.log('✅ Cliente cargado desde API:', result.data)
+                                                        setClienteSeleccionado(result.data)
+                                                    } else {
+                                                        console.warn('⚠️ Respuesta API sin datos:', result)
+                                                    }
+                                                } else {
+                                                    console.error(`Error cargando cliente ${clienteId}:`, response.statusText)
+                                                    setClienteSeleccionado(null)
+                                                }
+                                            } catch (error) {
+                                                console.error(`Error fetching cliente ${clienteId}:`, error)
+                                                setClienteSeleccionado(null)
+                                            }
+                                        } else {
+                                            console.warn('ID de cliente inválido:', value)
+                                            setClienteSeleccionado(null)
+                                        }
                                     } else {
                                         setClienteDisplay('')
+                                        setClienteSeleccionado(null)
                                     }
                                 }}
                                 placeholder="Buscar cliente por nombre, NIT/CI o teléfono..."
@@ -642,34 +716,16 @@ export default function ProformasCreate({
                                 </p>
                             )}
                         </div>
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-md font-medium text-gray-900 dark:text-white">
-                                🚚 Información de Envío
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => setRequiereEnvio(!requiereEnvio)}
-                                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${requiereEnvio
-                                    ? 'bg-green-600 dark:bg-green-700'
-                                    : 'bg-gray-300 dark:bg-gray-600'
-                                    } focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900`}
-                            >
-                                <span
-                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${requiereEnvio ? 'translate-x-7' : 'translate-x-1'
-                                        }`}
-                                />
-                                <span className="ml-2 text-sm font-medium text-white">
-                                    {requiereEnvio ? 'Sí' : 'No'}
-                                </span>
-                            </button>
-                        </div>
-                        </div>
+                        <RequiereEnvioToggle
+                            value={requiereEnvio}
+                            onChange={setRequiereEnvio}
+                            label="🚚 Requiere Envío"
+                        />
                     </div>
 
                     {/* ✅ NUEVO: Sección con 4 selectores en una línea responsiva */}
                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {/* Estado Inicial */}
                             <div>
                                 <Label htmlFor="estado-inicial" className="text-sm">📝 Estado Inicial</Label>
@@ -680,40 +736,6 @@ export default function ProformasCreate({
                                     <SelectContent>
                                         <SelectItem value="BORRADOR">Borrador</SelectItem>
                                         <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Preventista */}
-                            <div>
-                                <Label htmlFor="preventista" className="text-sm">
-                                    👤 Preventista (Opcional)
-                                </Label>
-                                <select
-                                    id="preventista"
-                                    value={preventistaId || ''}
-                                    onChange={(e) => setPreventistaId(e.target.value ? parseInt(e.target.value) : null)}
-                                    className="w-full px-1 py-1 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white"
-                                >
-                                    <option value="">-- Seleccionar preventista --</option>
-                                    {preventistas && preventistas.map((preventista: any) => (
-                                        <option key={preventista.id} value={preventista.id}>
-                                            {preventista.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Política de Pago */}
-                            <div>
-                                <Label htmlFor="politica-pago" className="text-sm">💳 Política de Pago</Label>
-                                <Select value={politicaPago} onValueChange={(v) => setPoliticaPago(v as any)}>
-                                    <SelectTrigger id="politica-pago">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="CONTRA_ENTREGA">Contra Entrega</SelectItem>
-                                        <SelectItem value="ANTICIPADO_100">Anticipado 100%</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -734,6 +756,26 @@ export default function ProformasCreate({
                         </div>
                     </div>
 
+                    {/* ✅ FASE 3: Panel completo de Detalles de Envío */}
+                    <DetallesEnvioPanel
+                        visible={logistica_envios && requiereEnvio}
+                        politicaPago={politicaPago}
+                        onPoliticaPagoChange={setPoliticaPago}
+                        clienteSeleccionado={clienteSeleccionado}
+                        direccionesDisponibles={direccionesDisponibles}
+                        cargandoDirecciones={cargandoDirecciones}
+                        direccionClienteId={direccionEntregaId}
+                        onDireccionChange={setDireccionEntregaId}
+                        preventistas={preventistasSeguro}
+                        cargandoPrevenstitas={false}
+                        preventistaId={preventistaId}
+                        onPreventistaChange={setPreventistaId}
+                        entregaId={null}
+                        onEntregaChange={() => {}}
+                        showEntrega={false}
+                        gridCols="2"
+                    />
+
                     {/* ✅ NUEVO: Grid responsivo de fechas en 3 columnas */}
                     <div className="mt-6">
                         {/* Fechas en 3 columnas responsivas */}
@@ -752,16 +794,64 @@ export default function ProformasCreate({
                             
                             {/* Fecha Entrega Solicitada - solo si requiere_envio */}
                             {requiereEnvio && (
-                                <div>
-                                    <Label htmlFor="fecha-entrega" className="text-sm">📅 Fecha Entrega Solicitada</Label>
-                                    <Input
-                                        id="fecha-entrega"
-                                        type="date"
-                                        value={fechaEntregaSolicitada}
-                                        onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
-                                        required={requiereEnvio}
-                                    />
-                                </div>
+                                <>
+                                    <div>
+                                        <Label htmlFor="fecha-entrega" className="text-sm">📅 Fecha Entrega Solicitada</Label>
+                                        <Input
+                                            id="fecha-entrega"
+                                            type="date"
+                                            value={fechaEntregaSolicitada}
+                                            onChange={(e) => setFechaEntregaSolicitada(e.target.value)}
+                                            required={requiereEnvio}
+                                        />
+                                    </div>
+                                    {/* Selector de Turno */}
+                                    <div>
+                                        <Label htmlFor="turno-entrega" className="text-sm">⏰ Turno de Entrega</Label>
+                                        <Select value={turnoEntrega} onValueChange={(value: any) => {
+                                            setTurnoEntrega(value)
+                                            // Limpiar horas cuando cambia turno
+                                            setHoraEntregaSolicitada('')
+                                            setHoraEntregaSolicitadaFin('')
+                                        }}>
+                                            <SelectTrigger id="turno-entrega">
+                                                <SelectValue placeholder="Selecciona un turno" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="manana">🌅 Turno Mañana (08:00 - 12:00)</SelectItem>
+                                                <SelectItem value="tarde">🌆 Turno Tarde (14:00 - 18:00)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Horarios de Entrega - solo si turno está seleccionado */}
+                                    {turnoEntrega && (
+                                        <>
+                                            <div>
+                                                <Label htmlFor="hora-inicio" className="text-sm">🕐 Hora Inicio</Label>
+                                                <Input
+                                                    id="hora-inicio"
+                                                    type="time"
+                                                    value={horaEntregaSolicitada}
+                                                    onChange={(e) => setHoraEntregaSolicitada(e.target.value)}
+                                                    min={turnoEntrega === 'manana' ? '08:00' : '14:00'}
+                                                    max={turnoEntrega === 'manana' ? '12:00' : '18:00'}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="hora-fin" className="text-sm">🕐 Hora Fin</Label>
+                                                <Input
+                                                    id="hora-fin"
+                                                    type="time"
+                                                    value={horaEntregaSolicitadaFin}
+                                                    onChange={(e) => setHoraEntregaSolicitadaFin(e.target.value)}
+                                                    min={turnoEntrega === 'manana' ? '08:00' : '14:00'}
+                                                    max={turnoEntrega === 'manana' ? '12:00' : '18:00'}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </>
                             )}
 
                             {/* Fecha Vencimiento */}

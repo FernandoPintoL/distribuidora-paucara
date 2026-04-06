@@ -25,6 +25,14 @@ class CrearProformaDTO extends BaseDTO
         public ?int $usuario_id = null,
         public ?int $preventista_id = null,
         public ?string $estado_inicial = 'BORRADOR',  // BORRADOR o PENDIENTE
+        // ✅ NUEVOS CAMPOS (2026-04-06): Detalles de envío
+        public ?bool $requiere_envio = false,
+        public ?string $fecha_entrega_solicitada = null,
+        public ?string $hora_entrega_solicitada = null,
+        public ?string $hora_entrega_solicitada_fin = null,
+        public ?string $tipo_entrega = 'DELIVERY',
+        public ?int $direccion_entrega_solicitada_id = null,
+        public ?string $canal_origen = 'WEB',  // WEB, PRESENCIAL, TELEFONO, etc.
     ) {}
 
     /**
@@ -36,6 +44,16 @@ class CrearProformaDTO extends BaseDTO
     public static function fromRequest(Request $request): self
     {
         $estadoInicial = $request->input('estado_inicial', 'BORRADOR');
+        $preventistaId = $request->input('preventista_id');
+
+        // ✅ NUEVO (2026-04-06): Debug log para preventista_id
+        \Illuminate\Support\Facades\Log::debug('🔍 [CrearProformaDTO::fromRequest] Datos recibidos', [
+            'cliente_id' => $request->input('cliente_id'),
+            'preventista_id' => $preventistaId,
+            'estado_inicial' => $estadoInicial,
+            'requiere_envio' => $request->input('requiere_envio'),
+            'all_request' => $request->all(),
+        ]);
 
         // ✅ Validar que estado sea BORRADOR o PENDIENTE
         if (!in_array($estadoInicial, ['BORRADOR', 'PENDIENTE'])) {
@@ -55,8 +73,16 @@ class CrearProformaDTO extends BaseDTO
             canal: $request->input('canal', 'PRESENCIAL'),
             politica_pago: $request->input('politica_pago', 'CONTRA_ENTREGA'),
             usuario_id: \Illuminate\Support\Facades\Auth::id(),
-            preventista_id: $request->input('preventista_id') ? (int) $request->input('preventista_id') : null,
+            preventista_id: $preventistaId ? (int) $preventistaId : null,
             estado_inicial: $estadoInicial,
+            // ✅ NUEVOS CAMPOS (2026-04-06): Detalles de envío
+            requiere_envio: (bool) $request->input('requiere_envio', false),
+            fecha_entrega_solicitada: $request->input('fecha_entrega_solicitada'),
+            hora_entrega_solicitada: $request->input('hora_entrega_solicitada'),
+            hora_entrega_solicitada_fin: $request->input('hora_entrega_solicitada_fin'),
+            tipo_entrega: $request->input('tipo_entrega', 'DELIVERY'),
+            direccion_entrega_solicitada_id: $request->input('direccion_entrega_solicitada_id') ? (int) $request->input('direccion_entrega_solicitada_id') : null,
+            canal_origen: 'WEB',  // Siempre WEB cuando se crea desde la aplicación web
         );
     }
 

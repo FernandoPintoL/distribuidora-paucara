@@ -1179,85 +1179,26 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 throw error;
             }
 
-            // PASO 1: Aprobar proforma con coordinación
-            // ✅ NUEVO: Solo ejecutar si la proforma está en estado "pendiente"
-            console.log('%c🔍 PASO 1: Validando estado de proforma...', 'color: blue;', {
-                estado: proforma.estado,
-                ejecutar: puedeSerEditada(proforma.estado),
-            });
+            // ✅ REFACTORIZADO (2026-04-05): PASO 1 & PASO 2 COMBINADOS
+            // El endpoint convertir-venta ahora:
+            // - Si proforma está PENDIENTE → la aprueba automáticamente (PASO 1)
+            // - Luego la convierte a venta (PASO 2)
+            // TODO en UNA transacción DB para evitar race conditions
+            console.log('%c⏳ PASO 1&2: Aprobando y convirtiendo a venta (transacción única)...', 'color: blue;');
 
-            if (puedeSerEditada(proforma.estado)) {
-                console.log('%c⏳ PASO 1: Aprobando proforma...', 'color: blue;');
+            // ✅ Preparar datos de coordinación (ahora solo informativos, no afectan conversión)
+            const coordinacionData = {
+                fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
+                hora_entrega_confirmada: extractTime(coordinacion.hora_entrega_confirmada),
+                hora_entrega_confirmada_fin: extractTime(coordinacion.hora_entrega_confirmada_fin),
+                comentario_coordinacion: coordinacion.comentario_coordinacion,
+                numero_intentos_contacto: coordinacion.numero_intentos_contacto,
+                fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
+                resultado_ultimo_intento: coordinacion.resultado_ultimo_intento,
+                notas_llamada: coordinacion.notas_llamada || null,
+            };
 
-                const aprobarResponse = await fetch(`/api/proformas/${proforma.id}/aprobar`, {
-                    method: 'POST',
-                    redirect: 'manual', // ✅ NO seguir redirects automáticamente
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
-                    },
-                    body: JSON.stringify({
-                        fecha_entrega_confirmada: coordinacion.fecha_entrega_confirmada,
-                        // Ahora el backend devuelve tiempos en formato 'H:i', pero mantenemos la extracción por compatibilidad
-                        hora_entrega_confirmada: extractTime(coordinacion.hora_entrega_confirmada),
-                        hora_entrega_confirmada_fin: extractTime(coordinacion.hora_entrega_confirmada_fin),
-                        comentario_coordinacion: coordinacion.comentario_coordinacion,
-                        numero_intentos_contacto: coordinacion.numero_intentos_contacto,
-                        fecha_ultimo_intento: coordinacion.fecha_ultimo_intento || null,
-                        resultado_ultimo_intento: coordinacion.resultado_ultimo_intento,
-                        notas_llamada: coordinacion.notas_llamada || null,
-                    }),
-                });
-
-                console.log('%c📥 Respuesta de aprobación recibida', 'color: gray;', {
-                    status: aprobarResponse.status,
-                    ok: aprobarResponse.ok,
-                    redirected: aprobarResponse.redirected,
-                    type: aprobarResponse.type,
-                    url: aprobarResponse.url,
-                });
-
-                // ✅ Detectar redirects (cuando redirect: 'manual')
-                if (aprobarResponse.redirected || (aprobarResponse.status >= 300 && aprobarResponse.status < 400)) {
-                    console.error('❌ Servidor está redirigiendo en lugar de retornar JSON:', {
-                        redirectedTo: aprobarResponse.url,
-                        status: aprobarResponse.status,
-                    });
-                    throw new Error(`El servidor está redirigiendo a ${aprobarResponse.url} en lugar de retornar JSON. Esto indica un problema de middleware.`);
-                }
-
-                if (!aprobarResponse.ok) {
-                    const errorData = await aprobarResponse.json();
-                    console.error('❌ Error en aprobación:', {
-                        status: aprobarResponse.status,
-                        error: errorData
-                    });
-                    const errorMessage = errorData.message || `Error ${aprobarResponse.status}: Error al aprobar proforma`;
-                    toast.error(errorMessage);
-                    throw new Error(errorMessage);
-                }
-
-                const aprobarData = await aprobarResponse.json();
-                console.log('%c✅ PASO 1 completado: Proforma aprobada', 'color: green;', aprobarData);
-                toast.success('✅ Proforma aprobada exitosamente');
-
-                // Actualizar estado del flujo
-                if (approvalFlow) {
-                    approvalFlow.setProformaAprobada(aprobarData.data?.proforma || proforma);
-                    approvalFlow.setLoading(true, 'converting');
-                }
-            } else {
-                // ✅ NUEVO: Log claro cuando se omite el PASO 1 porque no está pendiente
-                console.log('%c⏭️ PASO 1 omitido: Proforma no está en estado "pendiente"', 'color: orange;', {
-                    estado: proforma.estado,
-                    razon: 'Solo se aprueba si la proforma está pendiente'
-                });
-            }
-
-            // PASO 2: Convertir a venta con datos de pago
-            console.log('%c⏳ PASO 2: Convirtiendo a venta...', 'color: blue;');
+            console.log('%c📋 Datos de coordinación preparados (solo informativos)', 'color: gray;', coordinacionData);
 
             // ✅ Preparar datos de pago (pueden no existir si no se especificaron)
             const paymentData = coordinacion.payment ? {
@@ -1298,14 +1239,18 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
 
             if (!convertirResponse.ok) {
                 const errorData = await convertirResponse.json();
-                const errorMessage = errorData.message || 'Error al convertir a venta';
-                console.error('❌ Error en conversión:', { status: convertirResponse.status, error: errorData });
+                const errorMessage = errorData.message || 'Error al aprobar y convertir a venta';
+                console.error('%c❌ Error en PASO 1&2:', 'color: red;', {
+                    status: convertirResponse.status,
+                    error: errorData,
+                    razon: 'Posibles: Stock insuficiente, Caja no disponible, Proforma inválida'
+                });
                 toast.error(errorMessage);
                 throw new Error(errorMessage);
             }
 
             const convertirData = await convertirResponse.json();
-            console.log('%c✅ PASO 2 completado: Proforma convertida a venta', 'color: green;', convertirData);
+            console.log('%c✅ PASO 1&2 COMPLETADOS: Proforma aprobada Y convertida a venta', 'color: green; font-weight: bold;', convertirData);
 
             // ✅ NUEVO: Mostrar detalles del stock consumido
             const stockConsumido = convertirData.data?.stock_consumido;
@@ -1327,9 +1272,10 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                 toast.success('✅ Proforma convertida a venta exitosamente');
             }
 
-            // Actualizar estado del flujo con éxito
+            // ✅ Actualizar estado del flujo con éxito (PASO 1&2 completados)
             if (approvalFlow) {
-                approvalFlow.setVentaCreada(convertirData.data?.venta || {});
+                approvalFlow.setProformaAprobada(convertirData.data?.proforma || proforma); // PASO 1 completado
+                approvalFlow.setVentaCreada(convertirData.data?.venta || {}); // PASO 2 completado
                 approvalFlow.markAsSuccess();
                 approvalFlow.setLoading(false, 'success');
             }
@@ -1337,9 +1283,10 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
             // Cerrar diálogo
             setShowAprobarDialog(false);
 
-            // Mostrar notificación de éxito
+            // ✅ Mostrar notificación de éxito (PASO 0, PASO 1&2 completados)
             const successMessage = `Proforma aprobada, convertida a venta y reservas consumidas exitosamente`;
             console.log('%c🎉 ' + successMessage, 'color: green; font-weight: bold;');
+            toast.success(successMessage);
 
             // ✅ NUEVO: Obtener la venta creada para imprimir
             const ventaCreada = convertirData.data?.venta;

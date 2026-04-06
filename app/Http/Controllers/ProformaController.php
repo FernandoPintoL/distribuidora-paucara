@@ -243,15 +243,21 @@ class ProformaController extends Controller
         // ✅ NUEVO: Obtener tipo_precio por defecto (VENTA)
         $default_tipo_precio_id = $this->proformaService->obtenerIdTipoPrecioDefault();
 
+        // ✅ CORREGIDO (2026-04-05): Obtener empresa principal para logistica_envios
+        $empresaPrincipal = \App\Models\Empresa::where('es_principal', true)
+            ->where('activo', true)
+            ->first();
+
         return Inertia::render('proformas/Create', [
-            'clientes'              => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
-            'productos'             => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'clientes'              => [], // ✅ CORREGIDO (2026-04-06): Array vacío - Búsqueda en tiempo real via API
+            'productos'             => [], // ✅ CORREGIDO (2026-04-06): Array vacío - Búsqueda en tiempo real via API
             'almacenes'             => Almacen::activos()->select('id', 'nombre')->get(),
             'preventistas'          => User::whereHas('roles', function ($query) {
                 $query->where('name', 'preventista');
             })->select('id', 'name', 'email')->get(),
             'almacen_id_empresa'    => $almacen_id_empresa, // ✅ NUEVO: Almacén principal de la empresa
             'default_tipo_precio_id' => $default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto para ProductosTable
+            'logistica_envios'      => (bool) $empresaPrincipal?->logistica_envios,  // ✅ CORREGIDO (2026-04-05): Mostrar panel envío si está habilitado
         ]);
     }
 
@@ -498,14 +504,15 @@ class ProformaController extends Controller
             ],
             'detallesProforma'      => $detallesProforma,
             'direccionesCliente'    => $proforma->cliente->direcciones()->select('id', 'direccion', 'localidad_id')->get(),
-            'clientes'              => Cliente::activos()->select('id', 'nombre', 'nit')->get(),
-            'productos'             => Producto::activos()->select('id', 'nombre', 'codigo_barras')->get(),
+            'clientes'              => [], // ✅ CORREGIDO (2026-04-06): Array vacío - Búsqueda en tiempo real via API
+            'productos'             => [], // ✅ CORREGIDO (2026-04-06): Array vacío - Búsqueda en tiempo real via API
             'almacenes'             => Almacen::activos()->select('id', 'nombre')->get(),
             'preventistas'          => User::whereHas('roles', function ($query) {
                 $query->where('name', 'preventista');
             })->select('id', 'name', 'email')->get(),
             'almacen_id_empresa'    => $almacen_id_empresa,
             'default_tipo_precio_id' => $default_tipo_precio_id, // ✅ NUEVO: Tipo precio por defecto para ProductosTable
+            'logistica_envios'      => (bool) auth()->user()?->empresa?->logistica_envios,  // ✅ CORREGIDO (2026-04-05): Mostrar panel envío si está habilitado
         ]);
     }
 

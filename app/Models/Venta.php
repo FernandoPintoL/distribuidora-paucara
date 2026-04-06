@@ -793,11 +793,12 @@ class Venta extends Model
                         $productoId,
                         $almacenId,
                         MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                        'venta_anulacion',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                         $cantidadTotalARevertir,  // Positivo: entrada/reversión
                         $this->numero . '-REV',
                         $detallesLotes,
                         [
-                            'referencia_tipo' => 'venta_anulacion',
+                            // 'referencia_tipo' => 'venta_anulacion',  // ← Movido a parámetro directo
                             'referencia_id' => $this->id,
                             'observacion_extra' => [
                                 'venta_numero' => $this->numero,

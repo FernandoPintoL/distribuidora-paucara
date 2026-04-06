@@ -199,6 +199,14 @@ class ProformaService
                     ->first();
             }
 
+            // ✅ NUEVO (2026-04-06): Debug log para verificar preventista_id
+            Log::debug('🔍 [ProformaService::crear] DTO recibido', [
+                'preventista_id' => $dto->preventista_id,
+                'requiere_envio' => $dto->requiere_envio,
+                'tipo_entrega' => $dto->tipo_entrega,
+                'canal_origen' => $dto->canal_origen,
+            ]);
+
             // 3.2 Crear Proforma
             $proforma = Proforma::create([
                 'numero'             => $this->generarNumero(),
@@ -212,9 +220,16 @@ class ProformaService
                 'total'              => $dto->total,
                 'estado_proforma_id' => $estadoInicial->id,  // ✅ Estado elegido por usuario
                 'observaciones'      => $dto->observaciones,
-                'canal_origen'       => $dto->canal ?? 'PRESENCIAL',
+                'canal_origen'       => $dto->canal_origen ?? 'WEB',  // ✅ CORREGIDO (2026-04-06): Usar canal_origen
                 'politica_pago'      => $dto->politica_pago ?? 'CONTRA_ENTREGA',
                 'moneda_id'          => 1, // ✅ Bolivianos por defecto
+                // ✅ NUEVOS CAMPOS (2026-04-06): Detalles de envío
+                'requiere_envio'     => $dto->requiere_envio ?? false,
+                'fecha_entrega_solicitada' => $dto->fecha_entrega_solicitada,
+                'hora_entrega_solicitada' => $dto->hora_entrega_solicitada,
+                'hora_entrega_solicitada_fin' => $dto->hora_entrega_solicitada_fin,
+                'tipo_entrega'       => $dto->tipo_entrega ?? 'DELIVERY',
+                'direccion_entrega_solicitada_id' => $dto->direccion_entrega_solicitada_id,
             ]);
 
             // 3.3 Crear detalles

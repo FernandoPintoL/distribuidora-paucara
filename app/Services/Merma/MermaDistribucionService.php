@@ -183,11 +183,12 @@ class MermaDistribucionService
                     producto_id: $productoId,
                     almacen_id: $almacenId,
                     tipo: MovimientoInventario::TIPO_SALIDA_MERMA,
+                    referencia_tipo: 'merma',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                     cantidad: -$cantidadAMermar,  // Negativo para salida
                     numero_documento: $numeroMerma,
                     detallesLotes: $detallesLotes,
                     opciones: [
-                        'referencia_tipo' => 'merma',
+                        // 'referencia_tipo' => 'merma',  // ← Movido a parámetro directo
                         'referencia_id' => null,
                         'observacion_extra' => [
                             'motivo' => $motivo,

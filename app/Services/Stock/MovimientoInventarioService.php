@@ -7,6 +7,7 @@ use App\Models\Producto;
 use App\Models\StockProducto;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Pest\Support\Str;
 
 /**
  * ✅ NUEVO (2026-03-27): Servicio centralizado para registrar movimientos de inventario
@@ -49,6 +50,7 @@ class MovimientoInventarioService
         int $producto_id,
         int $almacen_id,
         string $tipo,
+        string $referencia_tipo,
         float $cantidad,
         string $numero_documento,
         array $detallesLotes = [],
@@ -168,7 +170,7 @@ class MovimientoInventarioService
                 'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
                 'tipo' => $tipo,
                 'numero_documento' => $numero_documento,
-                'referencia_tipo' => $opciones['referencia_tipo'] ?? null,
+                'referencia_tipo' => $referencia_tipo,
                 'referencia_id' => $opciones['referencia_id'] ?? null,
                 'observacion' => json_encode($observacion),
                 'user_id' => Auth::id() ?? 1,

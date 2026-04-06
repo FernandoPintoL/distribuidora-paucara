@@ -226,11 +226,12 @@ class CompraDistribucionService
                     producto_id: $productoId,
                     almacen_id: $almacenId,
                     tipo: MovimientoInventario::TIPO_ENTRADA_COMPRA,
+                    referencia_tipo: 'compra',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                     cantidad: $cantidadTotalAñadida,  // Positivo para entrada
                     numero_documento: $numeroCompra,
                     detallesLotes: $detallesLotes,
                     opciones: [
-                        'referencia_tipo' => 'compra',
+                        // 'referencia_tipo' => 'compra',  // ← Movido a parámetro directo
                         'referencia_id' => null,
                         // ✅ Pasar totales GENERALES obtenidos antes (línea 99-109)
                         'totales_previos' => [
@@ -315,12 +316,32 @@ class CompraDistribucionService
                     $cantidadTotalARevertir = 0;
                     $almacenId = null;
 
+                    // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES
+                    $totalProductoAntes = null;
+                    $totalDisponibleAntes = null;
+                    $totalReservadoAntes = null;
+
                     foreach ($productosMovimientos as $movimiento) {
                         $stock = $movimiento->stockProducto;
                         $cantidadARevertir = abs($movimiento->cantidad);
                         $almacenId = $stock->almacen_id;
 
-                        // Valores ANTES de revertir
+                        // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO en la PRIMERA iteración
+                        if ($totalProductoAntes === null) {
+                            $totalProductoAntes = (float) StockProducto::where('producto_id', $productoId)
+                                ->where('almacen_id', $almacenId)
+                                ->sum('cantidad');
+
+                            $totalDisponibleAntes = (float) StockProducto::where('producto_id', $productoId)
+                                ->where('almacen_id', $almacenId)
+                                ->sum('cantidad_disponible');
+
+                            $totalReservadoAntes = (float) StockProducto::where('producto_id', $productoId)
+                                ->where('almacen_id', $almacenId)
+                                ->sum('cantidad_reservada');
+                        }
+
+                        // Valores ANTES de revertir (por lote)
                         $cantidadAnterior = $stock->cantidad;
                         $cantidadDisponibleAnterior = $stock->cantidad_disponible;
                         $cantidadReservadaAnterior = $stock->cantidad_reservada;
@@ -352,17 +373,42 @@ class CompraDistribucionService
                         $cantidadTotalARevertir += $cantidadARevertir;
                     }
 
+                    // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO DESPUÉS
+                    $totalProductoDespues = (float) StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad');
+
+                    $totalDisponibleDespues = (float) StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_disponible');
+
+                    $totalReservadoDespues = (float) StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_reservada');
+
                     // Crear movimiento de reversión agrupado
                     $movimientoReversion = $this->movimientoService->registrarMovimientoAgrupado(
                         producto_id: $productoId,
                         almacen_id: $almacenId,
                         tipo: MovimientoInventario::TIPO_SALIDA_AJUSTE,
+                        referencia_tipo: 'compra_reversion',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                         cantidad: -$cantidadTotalARevertir,  // Negativo para salida/reversión
                         numero_documento: $numeroCompra . '-REV',
                         detallesLotes: $detallesLotes,
                         opciones: [
-                            'referencia_tipo' => 'compra_reversion',
+                            // 'referencia_tipo' => 'compra_reversion',  // ← Movido a parámetro directo
                             'referencia_id' => null,
+                            // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
+                            'totales_previos' => [
+                                'cantidad_total_anterior' => $totalProductoAntes,
+                                'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                                'cantidad_reservada_anterior' => $totalReservadoAntes,
+                            ],
+                            'totales_posteriores' => [
+                                'cantidad_total_posterior' => $totalProductoDespues,
+                                'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                                'cantidad_reservada_posterior' => $totalReservadoDespues,
+                            ],
                         ]
                     );
 

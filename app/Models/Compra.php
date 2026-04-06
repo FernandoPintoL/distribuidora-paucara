@@ -121,6 +121,19 @@ class Compra extends Model
                 $cantidadTotalARevertir = 0;
                 $producto = $detallesProducto->first()->producto;
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES de procesar lotes
+                $totalProductoAntes = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad');
+
+                $totalDisponibleAntes = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoAntes = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad_reservada');
+
                 // Procesar cada detalle (lote) del producto
                 foreach ($detallesProducto as $detalle) {
                     try {
@@ -151,7 +164,7 @@ class Compra extends Model
                             ]);
                         }
 
-                        // Capturar ANTES de actualizar
+                        // Capturar ANTES de actualizar (por lote)
                         $cantidadAnterior = (float) $stockProducto->cantidad;
                         $cantidadDisponibleAnterior = (float) $stockProducto->cantidad_disponible;
                         $cantidadReservadaAnterior = (float) $stockProducto->cantidad_reservada;
@@ -212,6 +225,19 @@ class Compra extends Model
                     }
                 }
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO DESPUÉS de procesar todos los lotes
+                $totalProductoDespues = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad');
+
+                $totalDisponibleDespues = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoDespues = (float) \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->sum('cantidad_reservada');
+
                 // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento SALIDA_AJUSTE agregado
                 if ($cantidadTotalARevertir > 0) {
                     $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
@@ -225,6 +251,17 @@ class Compra extends Model
                         [
                             'referencia_tipo' => 'compra_anulacion',
                             'referencia_id' => $this->id,
+                            // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
+                            'totales_previos' => [
+                                'cantidad_total_anterior' => $totalProductoAntes,
+                                'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                                'cantidad_reservada_anterior' => $totalReservadoAntes,
+                            ],
+                            'totales_posteriores' => [
+                                'cantidad_total_posterior' => $totalProductoDespues,
+                                'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                                'cantidad_reservada_posterior' => $totalReservadoDespues,
+                            ],
                             'observacion_extra' => [
                                 'compra_numero' => $this->numero,
                                 'compra_id' => $this->id,

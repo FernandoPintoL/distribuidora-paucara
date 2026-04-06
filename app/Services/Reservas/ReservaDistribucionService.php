@@ -24,7 +24,7 @@ class ReservaDistribucionService
      * @param Proforma $proforma
      * @param int $producto_id
      * @param int $cantidad_solicitada
-     * @param int $dias_vencimiento (por defecto 3 días)
+     * @param $fecha_vencimiento Fecha de vencimiento de la reserva (de la proforma)
      *
      * @return array ['success' => bool, 'reservas' => [...], 'error' => string|null, 'distribucion' => [...]]
      */
@@ -32,7 +32,7 @@ class ReservaDistribucionService
         Proforma $proforma,
         int $producto_id,
         int $cantidad_solicitada,
-        int $dias_vencimiento = 3
+        $fecha_vencimiento  // ✅ CORREGIDO (2026-04-05): Ahora recibe fecha completa, no días
     ) {
         try {
             // 🔧 Obtener el almacén de la empresa del usuario autenticado
@@ -92,14 +92,23 @@ class ReservaDistribucionService
                 $proforma,
                 $producto,
                 $almacen_id,
-                $dias_vencimiento,
+                $fecha_vencimiento,  // ✅ CORREGIDO (2026-04-05): Cambiar de $dias_vencimiento a $fecha_vencimiento
                 $producto_id,
                 $cantidad_solicitada
             ) {
                 // 📊 Capturar ANTES de todas las actualizaciones
-                $totalProductoAntes = $producto->stock()
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES de cualquier cambio
+                $totalProductoAntes = (float) $producto->stock()
+                    ->where('almacen_id', $almacen_id)
+                    ->sum('cantidad');
+
+                $totalDisponibleAntes = (float) $producto->stock()
                     ->where('almacen_id', $almacen_id)
                     ->sum('cantidad_disponible');
+
+                $totalReservadoAntes = (float) $producto->stock()
+                    ->where('almacen_id', $almacen_id)
+                    ->sum('cantidad_reservada');
 
                 foreach ($lotes as $stock_producto) {
                     if ($cantidad_pendiente <= 0) {
@@ -130,7 +139,7 @@ class ReservaDistribucionService
                         'stock_producto_id' => $stock_producto->id,
                         'cantidad_reservada' => $cantidad_a_reservar,
                         'fecha_reserva' => now(),
-                        'fecha_expiracion' => now()->addDays($dias_vencimiento),
+                        'fecha_expiracion' => $fecha_vencimiento,  // ✅ CORREGIDO (2026-04-05): Usar fecha de vencimiento de proforma
                         'estado' => ReservaProforma::ACTIVA,
                     ]);
 
@@ -169,26 +178,47 @@ class ReservaDistribucionService
                     ]);
                 }
 
-                // 📊 Capturar DESPUÉS de todas las actualizaciones
-                $totalProductoDespues = $producto->stock()
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO DESPUÉS de todas las actualizaciones
+                $totalProductoDespues = (float) $producto->stock()
+                    ->where('almacen_id', $almacen_id)
+                    ->sum('cantidad');
+
+                $totalDisponibleDespues = (float) $producto->stock()
                     ->where('almacen_id', $almacen_id)
                     ->sum('cantidad_disponible');
 
+                $totalReservadoDespues = (float) $producto->stock()
+                    ->where('almacen_id', $almacen_id)
+                    ->sum('cantidad_reservada');
+
                 // ✅ NUEVO (2026-03-27): Registrar UN SOLO movimiento AGRUPADO con detalles por lote
                 $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                // ✅ CORREGIDO (2026-04-05): Convertir a float para evitar type error
                 $movimientoService->registrarMovimientoAgrupado(
                     $producto_id,
                     $almacen_id,
                     MovimientoInventario::TIPO_RESERVA_PROFORMA,
-                    -($cantidad_solicitada - $cantidad_pendiente),  // Negativo: reserva
+                    'proforma',
+                    -(float)($cantidad_solicitada - $cantidad_pendiente),  // Negativo: reserva, convertir a float
                     $proforma->numero,
                     $detallesLotes,
                     [
                         'referencia_tipo' => 'proforma',
                         'referencia_id' => $proforma->id,
+                        // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO (usar variables, no sum() directo)
+                        'totales_previos' => [
+                            'cantidad_total_anterior' => $totalProductoAntes,
+                            'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                            'cantidad_reservada_anterior' => $totalReservadoAntes,
+                        ],
+                        'totales_posteriores' => [
+                            'cantidad_total_posterior' => $totalProductoDespues,
+                            'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                            'cantidad_reservada_posterior' => $totalReservadoDespues,
+                        ],
                         'observacion_extra' => [
                             'proforma_numero' => $proforma->numero,
-                            'dias_vencimiento' => $dias_vencimiento,
+                            'fecha_vencimiento' => $fecha_vencimiento,  // ✅ CORREGIDO (2026-04-05): Usar fecha en lugar de días
                         ]
                     ]
                 );
@@ -203,7 +233,7 @@ class ReservaDistribucionService
                     'cantidad_solicitada' => $cantidad_solicitada,
                     'cantidad_reservada' => $cantidad_solicitada - $cantidad_pendiente,
                     'cantidad_lotes' => count($distribucion),
-                    'dias_vencimiento' => $dias_vencimiento,
+                    'fecha_vencimiento' => $fecha_vencimiento,  // ✅ CORREGIDO (2026-04-05): Usar fecha en lugar de días
                 ],
             ];
         } catch (\Exception $e) {
@@ -380,6 +410,11 @@ class ReservaDistribucionService
                     $almacen_id = null;
                     $producto = null;
 
+                    // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES de hacer cualquier cambio
+                    $totalProductoAntes = null;
+                    $totalDisponibleAntes = null;
+                    $totalReservadoAntes = null;
+
                     // Procesar todas las reservas de este producto
                     foreach ($reservasProducto as $reserva) {
                         $cantidad = $reserva->cantidad_reservada;
@@ -387,7 +422,22 @@ class ReservaDistribucionService
                         $producto = $stock->producto;
                         $almacen_id = $stock->almacen_id;
 
-                        // ✅ Capturar ANTES de actualizar
+                        // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO en la PRIMERA iteración
+                        if ($totalProductoAntes === null) {
+                            $totalProductoAntes = (float) $producto->stock()
+                                ->where('almacen_id', $almacen_id)
+                                ->sum('cantidad');
+
+                            $totalDisponibleAntes = (float) $producto->stock()
+                                ->where('almacen_id', $almacen_id)
+                                ->sum('cantidad_disponible');
+
+                            $totalReservadoAntes = (float) $producto->stock()
+                                ->where('almacen_id', $almacen_id)
+                                ->sum('cantidad_reservada');
+                        }
+
+                        // ✅ Capturar ANTES de actualizar (por lote)
                         $cantidadTotalAntes = (float) $stock->cantidad;
                         $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
                         $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
@@ -433,17 +483,43 @@ class ReservaDistribucionService
 
                     // ✅ NUEVO (2026-03-27): Registrar UN SOLO movimiento AGRUPADO con detalles por lote
                     if ($cantidad_total_producto > 0 && $producto && $almacen_id) {
+                        // ✅ CORREGIDO (2026-04-05): Obtener totales del PRODUCTO COMPLETO DESPUÉS (ahora)
+                        $totalProductoDespues = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad');
+
+                        $totalDisponibleDespues = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad_disponible');
+
+                        $totalReservadoDespues = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad_reservada');
+
                         $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                        // ✅ CORREGIDO (2026-04-05): Convertir a float y pasar referencia_tipo correctamente
                         $movimientoService->registrarMovimientoAgrupado(
                             $producto->id,
                             $almacen_id,
                             MovimientoInventario::TIPO_LIBERACION_RESERVA,
-                            $cantidad_total_producto,  // Positivo: liberar
+                            'proforma',
+                            (float)$cantidad_total_producto,  // Positivo: liberar, convertir a float
                             $proforma->numero,
                             $detallesLotes,
                             [
                                 'referencia_tipo' => 'proforma',
                                 'referencia_id' => $proforma->id,
+                                // ✅ CORREGIDO (2026-04-05): Usar valores REALES capturados de la BD
+                                'totales_previos' => [
+                                    'cantidad_total_anterior' => $totalProductoAntes,
+                                    'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                                    'cantidad_reservada_anterior' => $totalReservadoAntes,
+                                ],
+                                'totales_posteriores' => [
+                                    'cantidad_total_posterior' => $totalProductoDespues,
+                                    'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                                    'cantidad_reservada_posterior' => $totalReservadoDespues,
+                                ],
                                 'observacion_extra' => [
                                     'motivo' => $motivo,
                                     'motivo_liberacion' => "Liberación de reserva: {$motivo}",
@@ -544,6 +620,12 @@ class ReservaDistribucionService
                 $almacen_id = null;
                 $producto = null;
 
+                // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO ANTES de hacer cualquier decrement
+                // Se obtiene en la primera iteración del lote
+                $totalProductoAntes = null;
+                $totalDisponibleAntes = null;
+                $totalReservadoAntes = null;
+
                 // Procesar todas las reservas de este producto
                 foreach ($reservasProducto as $reserva) {
                     $cantidad = $reserva->cantidad_reservada;
@@ -551,7 +633,22 @@ class ReservaDistribucionService
                     $producto = $stock->producto;
                     $almacen_id = $stock->almacen_id;
 
-                    // ✅ Capturar ANTES de actualizar
+                    // ✅ CORREGIDO (2026-04-05): Capturar totales del PRODUCTO en la PRIMERA iteración
+                    if ($totalProductoAntes === null) {
+                        $totalProductoAntes = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad');
+
+                        $totalDisponibleAntes = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad_disponible');
+
+                        $totalReservadoAntes = (float) $producto->stock()
+                            ->where('almacen_id', $almacen_id)
+                            ->sum('cantidad_reservada');
+                    }
+
+                    // ✅ Capturar ANTES de actualizar (por lote)
                     $cantidadTotalAntes = (float) $stock->cantidad;
                     $cantidadDisponibleAntes = (float) $stock->cantidad_disponible;
                     $cantidadReservadaAntes = (float) $stock->cantidad_reservada;
@@ -598,17 +695,44 @@ class ReservaDistribucionService
 
                 // ✅ NUEVO (2026-03-27): Registrar UN SOLO movimiento AGRUPADO con detalles por lote
                 if ($cantidad_total_producto > 0 && $producto && $almacen_id) {
+                    // ✅ CORREGIDO (2026-04-05): Obtener totales del PRODUCTO COMPLETO DESPUÉS (ahora)
+                    $totalProductoDespues = (float) $producto->stock()
+                        ->where('almacen_id', $almacen_id)
+                        ->sum('cantidad');
+
+                    $totalDisponibleDespues = (float) $producto->stock()
+                        ->where('almacen_id', $almacen_id)
+                        ->sum('cantidad_disponible');
+
+                    $totalReservadoDespues = (float) $producto->stock()
+                        ->where('almacen_id', $almacen_id)
+                        ->sum('cantidad_reservada');
+
                     $movimientoService = new \App\Services\Stock\MovimientoInventarioService();
+                    // ✅ CORREGIDO (2026-04-05): Convertir a float explícitamente para evitar type error
+                    // $cantidad_total_producto puede ser string si viene de acumulación de strings
                     $movimiento = $movimientoService->registrarMovimientoAgrupado(
                         $producto->id,
                         $almacen_id,
                         MovimientoInventario::TIPO_CONSUMO_RESERVA,
-                        -$cantidad_total_producto,  // Negativo: consumo (salida)
+                        'proforma',
+                        -(float)$cantidad_total_producto,  // Negativo: consumo (salida), convertir a float
                         $numeroVenta,
                         $detallesLotes,
                         [
                             'referencia_tipo' => 'proforma',
                             'referencia_id' => $proforma->id,
+                            // ✅ NUEVO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
+                            'totales_previos' => [
+                                'cantidad_total_anterior' => $totalProductoAntes,
+                                'cantidad_disponible_anterior' => $totalDisponibleAntes,
+                                'cantidad_reservada_anterior' => $totalReservadoAntes,
+                            ],
+                            'totales_posteriores' => [
+                                'cantidad_total_posterior' => $totalProductoDespues,
+                                'cantidad_disponible_posterior' => $totalDisponibleDespues,
+                                'cantidad_reservada_posterior' => $totalReservadoDespues,
+                            ],
                             'observacion_extra' => [
                                 'proforma_numero' => $proforma->numero,
                                 'venta_numero' => $numeroVenta,

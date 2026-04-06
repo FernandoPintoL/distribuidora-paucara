@@ -244,6 +244,28 @@ class VentaDistribucionService
                     ]);
                 }
 
+                // ✅ NUEVO (2026-04-05): ANTES de consumir, obtener totales del PRODUCTO COMPLETO
+                // Esto es lo que se registrará en movimientos_inventario
+                $totalProductoAnterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $totalDisponibleProductoAnterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoProductoAnterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
+
+                Log::info('📊 [VentaDistribucionService] Totales del producto ANTES del consumo', [
+                    'venta' => $numeroVenta,
+                    'producto_id' => $productoId,
+                    'total_anterior' => $totalProductoAnterior,
+                    'disponible_anterior' => $totalDisponibleProductoAnterior,
+                    'reservado_anterior' => $totalReservadoProductoAnterior,
+                ]);
+
                 // 4. ✅ REFACTORIZADO (2026-03-27): Consumir stock según FIFO y recolectar detalles de lotes
                 $cantidadRestante = (float) $cantidadAConsumir;
                 $detallesLotes = [];
@@ -271,8 +293,9 @@ class VentaDistribucionService
                     $cantidadDisponiblePosterior = (float) $stock->cantidad_disponible;
                     $cantidadReservadaPosterior = (float) $stock->cantidad_reservada;
 
-                    // ✅ NUEVO: Recolectar detalle de este lote
-                    // El MovimientoInventarioService sumará estos valores para obtener los totales
+                    // ✅ NUEVO: Recolectar detalle de este lote (para auditoría)
+                    // Pero NO usaremos estos valores para movimientos_inventario
+                    // Usaremos los totales del producto (calculados ANTES)
                     $detallesLotes[] = [
                         'stock_producto_id' => $stock->id,
                         'lote' => $stock->lote,
@@ -296,17 +319,51 @@ class VentaDistribucionService
                     $cantidadRestante = (float) ($cantidadRestante - $cantidadTomar);
                 }
 
+                // ✅ NUEVO (2026-04-05): DESPUÉS de consumir, obtener totales del PRODUCTO COMPLETO
+                $totalProductoPosterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                $totalDisponibleProductoPosterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_disponible');
+
+                $totalReservadoProductoPosterior = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad_reservada');
+
+                Log::info('📊 [VentaDistribucionService] Totales del producto DESPUÉS del consumo', [
+                    'venta' => $numeroVenta,
+                    'producto_id' => $productoId,
+                    'total_posterior' => $totalProductoPosterior,
+                    'disponible_posterior' => $totalDisponibleProductoPosterior,
+                    'reservado_posterior' => $totalReservadoProductoPosterior,
+                ]);
+
                 // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento agrupado para este producto
+                // ✅ NUEVO (2026-04-05): Pasar totales del PRODUCTO COMPLETO (no solo lotes consumidos)
                 $movimiento = $this->movimientoService->registrarMovimientoAgrupado(
                     producto_id: $productoId,
                     almacen_id: $almacenId,
                     tipo: MovimientoInventario::TIPO_SALIDA_VENTA,
+                    referencia_tipo: 'venta',
                     cantidad: -$cantidadAConsumir,  // Negativo para salida
                     numero_documento: $numeroVenta,
                     detallesLotes: $detallesLotes,
                     opciones: [
                         'referencia_tipo' => 'venta',
                         'referencia_id' => null,  // Se establecerá con el venta_id si es necesario
+                        // ✅ NUEVO (2026-04-05): Totales del PRODUCTO COMPLETO
+                        'totales_previos' => [
+                            'cantidad_total_anterior' => $totalProductoAnterior,
+                            'cantidad_disponible_anterior' => $totalDisponibleProductoAnterior,
+                            'cantidad_reservada_anterior' => $totalReservadoProductoAnterior,
+                        ],
+                        'totales_posteriores' => [
+                            'cantidad_total_posterior' => $totalProductoPosterior,
+                            'cantidad_disponible_posterior' => $totalDisponibleProductoPosterior,
+                            'cantidad_reservada_posterior' => $totalReservadoProductoPosterior,
+                        ],
                         'observacion_extra' => [
                             'cantidad_solicitada' => $cantidad,
                             'unidad_venta_id' => $unidadVentaId,
@@ -398,6 +455,27 @@ class VentaDistribucionService
                     $cantidadTotalADevolver = 0;
                     $almacenId = auth()->user()?->empresa?->almacen_id ?? 1;
 
+                    // ✅ NUEVO (2026-04-05): ANTES de devolver, obtener totales del PRODUCTO COMPLETO
+                    $totalProductoAnterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad');
+
+                    $totalDisponibleProductoAnterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_disponible');
+
+                    $totalReservadoProductoAnterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_reservada');
+
+                    Log::info('📊 [VentaDistribucionService] Totales del producto ANTES de devolver', [
+                        'venta' => $numeroVenta,
+                        'producto_id' => $productoId,
+                        'total_anterior' => $totalProductoAnterior,
+                        'disponible_anterior' => $totalDisponibleProductoAnterior,
+                        'reservado_anterior' => $totalReservadoProductoAnterior,
+                    ]);
+
                     foreach ($productosMovimientos as $movimiento) {
                         $stock = $movimiento->stockProducto;
                         $cantidadADevolver = abs($movimiento->cantidad);
@@ -444,7 +522,9 @@ class VentaDistribucionService
                             'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
                         ]);
 
-                        // ✅ NUEVO: Recolectar detalle de este lote
+                        // ✅ NUEVO: Recolectar detalle de este lote (para auditoría)
+                        // Pero NO usaremos estos valores para movimientos_inventario
+                        // Usaremos los totales del producto (calculados ANTES)
                         $detallesLotes[] = [
                             'stock_producto_id' => $stock->id,
                             'lote' => $stock->lote,
@@ -461,17 +541,51 @@ class VentaDistribucionService
                         $cantidadTotalADevolver += $cantidadADevolver;
                     }
 
+                    // ✅ NUEVO (2026-04-05): DESPUÉS de devolver, obtener totales del PRODUCTO COMPLETO
+                    $totalProductoPosterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad');
+
+                    $totalDisponibleProductoPosterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_disponible');
+
+                    $totalReservadoProductoPosterior = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->sum('cantidad_reservada');
+
+                    Log::info('📊 [VentaDistribucionService] Totales del producto DESPUÉS de devolver', [
+                        'venta' => $numeroVenta,
+                        'producto_id' => $productoId,
+                        'total_posterior' => $totalProductoPosterior,
+                        'disponible_posterior' => $totalDisponibleProductoPosterior,
+                        'reservado_posterior' => $totalReservadoProductoPosterior,
+                    ]);
+
                     // ✅ REFACTORIZADO (2026-03-27): Crear UN SOLO movimiento agrupado para este producto
+                    // ✅ NUEVO (2026-04-05): Pasar totales del PRODUCTO COMPLETO (no solo lotes devueltos)
                     $movimientoDevolucion = $this->movimientoService->registrarMovimientoAgrupado(
                         producto_id: $productoId,
                         almacen_id: $almacenId,
                         tipo: MovimientoInventario::TIPO_ENTRADA_AJUSTE,
+                        referencia_tipo: 'venta_devolucion',  // ✅ CORREGIDO (2026-04-05): Parámetro requerido
                         cantidad: $cantidadTotalADevolver,  // Positivo para entrada/devolución
                         numero_documento: $numeroVenta . '-DEV',
                         detallesLotes: $detallesLotes,
                         opciones: [
-                            'referencia_tipo' => 'venta_devolucion',
+                            // 'referencia_tipo' => 'venta_devolucion',  // ← Movido a parámetro directo
                             'referencia_id' => null,
+                            // ✅ NUEVO (2026-04-05): Totales del PRODUCTO COMPLETO
+                            'totales_previos' => [
+                                'cantidad_total_anterior' => $totalProductoAnterior,
+                                'cantidad_disponible_anterior' => $totalDisponibleProductoAnterior,
+                                'cantidad_reservada_anterior' => $totalReservadoProductoAnterior,
+                            ],
+                            'totales_posteriores' => [
+                                'cantidad_total_posterior' => $totalProductoPosterior,
+                                'cantidad_disponible_posterior' => $totalDisponibleProductoPosterior,
+                                'cantidad_reservada_posterior' => $totalReservadoProductoPosterior,
+                            ],
                         ]
                     );
 

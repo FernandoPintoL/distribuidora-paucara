@@ -290,8 +290,8 @@ export function OutputSelectionModal({
                 // Para mermas
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'proforma') {
-                // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
-                url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=download`;
+                // ✅ Para proformas INDIVIDUALES - rutaBase ya incluye el ID
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'reporte-productos-vendidos') {
                 // Para reporte de productos vendidos - obtener filtros de la URL actual
                 const params = new URLSearchParams(window.location.search);
@@ -339,8 +339,8 @@ export function OutputSelectionModal({
                 // Para mermas
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'proforma') {
-                // ✅ Para proformas INDIVIDUALES - incluir ID en la ruta
-                url = `${rutaBase}/${documentoId}/imprimir?formato=${formato}&accion=${accionURL}`;
+                // ✅ Para proformas INDIVIDUALES - rutaBase ya incluye el ID
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'reporte-productos-vendidos') {
                 // Para reporte de productos vendidos - obtener filtros de la URL actual
                 const params = new URLSearchParams(window.location.search);
