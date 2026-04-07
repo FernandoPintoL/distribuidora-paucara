@@ -259,6 +259,17 @@ class ApiProformaController extends Controller
                     // Para PRODUCTOS SIMPLES: Validar stock disponible
                     $stockDisponible = $producto->stock()->sum('cantidad_disponible');
 
+                    // ✅ DEBUG: Registrar detalles del stock
+                    \Log::info('🔍 Validación de PRODUCTO SIMPLE', [
+                        'producto_id'        => $producto->id,
+                        'nombre'             => $producto->nombre,
+                        'cantidad_requerida' => $cantidad,
+                        'stock_disponible'   => $stockDisponible,
+                        'hay_relacion_stock' => $producto->stock()->count(),
+                        'stock_minimo'       => $producto->stock_minimo,
+                        'stock_maximo'       => $producto->stock_maximo,
+                    ]);
+
                     if ($stockDisponible < $cantidad) {
                         $stockInsuficiente[] = [
                             'producto'   => $producto->nombre,
@@ -266,14 +277,21 @@ class ApiProformaController extends Controller
                             'disponible' => $stockDisponible,
                             'faltante'   => $cantidad - $stockDisponible,
                         ];
+                        \Log::warning('⚠️  STOCK INSUFICIENTE para producto', [
+                            'producto_id'        => $producto->id,
+                            'nombre'             => $producto->nombre,
+                            'cantidad_requerida' => $cantidad,
+                            'stock_disponible'   => $stockDisponible,
+                            'faltante'           => $cantidad - $stockDisponible,
+                        ]);
+                    } else {
+                        \Log::info('✅ Validación de PRODUCTO SIMPLE exitosa', [
+                            'producto_id'        => $producto->id,
+                            'nombre'             => $producto->nombre,
+                            'cantidad_requerida' => $cantidad,
+                            'stock_disponible'   => $stockDisponible,
+                        ]);
                     }
-
-                    \Log::info('✅ Validación de PRODUCTO SIMPLE exitosa', [
-                        'producto_id'        => $producto->id,
-                        'nombre'             => $producto->nombre,
-                        'cantidad_requerida' => $cantidad,
-                        'stock_disponible'   => $stockDisponible,
-                    ]);
                 }
 
                 $subtotalItem = $cantidad * $precioUnitario;
@@ -321,12 +339,20 @@ class ApiProformaController extends Controller
 
             // Si hay productos con stock insuficiente, retornar error
             if (! empty($stockInsuficiente)) {
+                \Log::error('❌ VALIDACIÓN FALLIDA: Stock insuficiente', [
+                    'productos_sin_stock' => $stockInsuficiente,
+                    'total_productos_sin_stock' => count($stockInsuficiente),
+                ]);
                 return response()->json([
                     'success'             => false,
                     'message'             => 'Stock insuficiente para algunos productos',
                     'productos_sin_stock' => $stockInsuficiente,
                 ], 422);
             }
+
+            \Log::info('✅ VALIDACIÓN EXITOSA: Stock suficiente para todos los productos', [
+                'total_productos' => count($requestData['productos']),
+            ]);
 
             // Calcular impuestos (13% IVA) - Por ahora no se suma al total
             $impuesto = $subtotal * 0.13;
@@ -2909,28 +2935,180 @@ class ApiProformaController extends Controller
                 // Validación 2: Si hay reservas activas, verificar que no estén expiradas
                 $reservasActivas = $proforma->reservasActivas()->count();
 
+                // ✅ INICIALIZAR SERVICIOS para validaciones de stock (necesarios en ambos bloques)
+                $comboStockService = app(\App\Services\ComboStockService::class);
+                $stockService = app(\App\Services\Stock\StockService::class);
+                $almacenId = auth()->user()->almacen_id ?? 1;
+
                 if ($reservasActivas > 0) {
                     // Hay reservas: verificar que NO estén expiradas
                     if ($proforma->tieneReservasExpiradas()) {
+                        Log::error('❌ Reservas expiradas para proforma', [
+                            'proforma_id' => $proforma->id,
+                        ]);
                         return response()->json([
                             'success' => false,
                             'message' => 'Las reservas de stock han expirado',
                         ], 422);
                     }
 
-                    // ✅ SIMPLIFICADO: Si hay reservas activas NO expiradas, no validar disponibilidad
-                    // Las reservas ya garantizan que el stock existe para esta proforma
-                    Log::info('✅ Proforma tiene reservas activas, continuando conversión sin validar stock disponible', [
+                    // ✅ MEJORADO (2026-04-06): Incluso con reservas activas, validar que el stock real sea suficiente
+                    // Las reservas pueden quedar obsoletas si el stock se consume por otra venta
+                    Log::info('🔍 Validando que stock real sea suficiente incluso con reservas activas', [
+                        'proforma_id' => $proforma->id,
+                        'reservas_activas' => $reservasActivas,
+                    ]);
+
+                    $productosConStockInsuficiente = [];
+
+                    foreach ($proforma->detalles as $detalle) {
+                        $producto = $detalle->producto;
+                        $cantidad = $detalle->cantidad;
+
+                        if ($producto->es_combo) {
+                            // Para COMBOS: Validar capacidad
+                            $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
+                            $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+
+                            if ($capacidadDisponible < $cantidad) {
+                                $productosConStockInsuficiente[] = [
+                                    'producto_id' => $producto->id,
+                                    'producto' => $producto->nombre . ' (COMBO)',
+                                    'requerido' => $cantidad,
+                                    'disponible' => $capacidadDisponible,
+                                    'faltante' => $cantidad - $capacidadDisponible,
+                                ];
+                                Log::warning('⚠️  Stock real insuficiente para COMBO (con reservas)', [
+                                    'producto_id' => $producto->id,
+                                    'nombre' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $capacidadDisponible,
+                                    'proforma_id' => $proforma->id,
+                                ]);
+                            }
+                        } else {
+                            // Para PRODUCTOS SIMPLES: Validar stock real
+                            $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+
+                            if ($stockDisponible < $cantidad) {
+                                $productosConStockInsuficiente[] = [
+                                    'producto_id' => $producto->id,
+                                    'producto' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $stockDisponible,
+                                    'faltante' => $cantidad - $stockDisponible,
+                                ];
+                                Log::warning('⚠️  Stock real insuficiente para PRODUCTO SIMPLE (con reservas)', [
+                                    'producto_id' => $producto->id,
+                                    'nombre' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $stockDisponible,
+                                    'proforma_id' => $proforma->id,
+                                ]);
+                            }
+                        }
+                    }
+
+                    // ❌ Si hay productos con stock insuficiente, rechazar
+                    if (! empty($productosConStockInsuficiente)) {
+                        Log::error('❌ [convertirAVenta] RECHAZADA: Stock real insuficiente (aunque tiene reservas)', [
+                            'proforma_id' => $proforma->id,
+                            'proforma_numero' => $proforma->numero,
+                            'productos_sin_stock' => $productosConStockInsuficiente,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'El stock real se agotó. Las reservas no pueden garantizar la venta.',
+                            'code' => 'STOCK_INSUFICIENTE_REAL',
+                            'productos_sin_stock' => $productosConStockInsuficiente,
+                        ], 422);
+                    }
+
+                    Log::info('✅ Stock real validado, reservas activas vigentes, continuando conversión', [
                         'proforma_id'      => $proforma->id,
                         'reservas_activas' => $reservasActivas,
                     ]);
                 } else {
-                    // NO hay reservas: intentar crearlas automáticamente
-                    Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', intentando crearlas...');
+                    // NO hay reservas: VALIDAR STOCK DISPONIBLE ANTES DE INTENTAR CREAR
+                    Log::info('⚠️  No hay reservas para proforma ' . $proforma->numero . ', validando stock disponible...');
 
+                    // ✅ NUEVO (2026-04-06): Validación explícita de stock antes de convertir
+                    // Los servicios ya fueron inicializados arriba ($comboStockService, $almacenId, etc)
+                    $productosConStockInsuficiente = [];
+
+                    foreach ($proforma->detalles as $detalle) {
+                        $producto = $detalle->producto;
+                        $cantidad = $detalle->cantidad;
+
+                        if ($producto->es_combo) {
+                            // Para COMBOS: Validar capacidad
+                            $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
+                            $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+
+                            if ($capacidadDisponible < $cantidad) {
+                                $productosConStockInsuficiente[] = [
+                                    'producto_id' => $producto->id,
+                                    'producto' => $producto->nombre . ' (COMBO)',
+                                    'requerido' => $cantidad,
+                                    'disponible' => $capacidadDisponible,
+                                    'faltante' => $cantidad - $capacidadDisponible,
+                                ];
+                                Log::warning('⚠️  Stock insuficiente para COMBO', [
+                                    'producto_id' => $producto->id,
+                                    'nombre' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $capacidadDisponible,
+                                    'proforma_id' => $proforma->id,
+                                ]);
+                            }
+                        } else {
+                            // Para PRODUCTOS SIMPLES: Validar stock disponible
+                            $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+
+                            if ($stockDisponible < $cantidad) {
+                                $productosConStockInsuficiente[] = [
+                                    'producto_id' => $producto->id,
+                                    'producto' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $stockDisponible,
+                                    'faltante' => $cantidad - $stockDisponible,
+                                ];
+                                Log::warning('⚠️  Stock insuficiente para PRODUCTO SIMPLE', [
+                                    'producto_id' => $producto->id,
+                                    'nombre' => $producto->nombre,
+                                    'requerido' => $cantidad,
+                                    'disponible' => $stockDisponible,
+                                    'proforma_id' => $proforma->id,
+                                ]);
+                            }
+                        }
+                    }
+
+                    // ❌ Si hay productos con stock insuficiente, rechazar la conversión
+                    if (! empty($productosConStockInsuficiente)) {
+                        Log::error('❌ [convertirAVenta] RECHAZADA: Stock insuficiente', [
+                            'proforma_id' => $proforma->id,
+                            'proforma_numero' => $proforma->numero,
+                            'productos_sin_stock' => $productosConStockInsuficiente,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'No hay stock disponible para convertir esta proforma a venta',
+                            'code' => 'STOCK_INSUFICIENTE',
+                            'productos_sin_stock' => $productosConStockInsuficiente,
+                        ], 422);
+                    }
+
+                    // ✅ Stock validado, ahora intentar crear reservas
                     $reservasCreadas = $proforma->reservarStock();
 
                     if (! $reservasCreadas) {
+                        Log::error('❌ Error al crear reservas automáticamente', [
+                            'proforma_id' => $proforma->id,
+                            'proforma_numero' => $proforma->numero,
+                        ]);
                         return response()->json([
                             'success' => false,
                             'message' => 'No se pudieron crear reservas de stock. Verifique la disponibilidad de inventario.',
