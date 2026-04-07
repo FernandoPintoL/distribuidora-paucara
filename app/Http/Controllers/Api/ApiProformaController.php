@@ -2829,17 +2829,18 @@ class ApiProformaController extends Controller
                         'cierre_consolidado_reciente' => $cierreConsolidadoReciente,
                     ]);
 
-                    return response()->json([
+                    throw new \Exception(json_encode([
                         'success'  => false,
                         'message'  => 'No puede convertir proforma a venta sin una caja abierta o consolidada del día anterior. Por favor, abra una caja primero.',
                         'code'     => 'CAJA_NO_DISPONIBLE',
+                        'status'   => 422,
                         'detalles' => [
                             'politica_pago'    => $politica,
                             'monto_pagado'     => $montoPagado,
                             'motivo'           => 'Requiere caja abierta HOY o consolidada en las últimas 24 horas',
                             'accion_requerida' => 'Abra una caja en /cajas antes de convertir esta proforma',
                         ],
-                    ], 422);
+                    ]));
                 }
 
                 // ✅ Log: Validación de caja exitosa
@@ -2863,11 +2864,12 @@ class ApiProformaController extends Controller
                             'proforma_id' => $proforma->id,
                         ]);
 
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => "El cliente '{$cliente->nombre}' no tiene permiso para solicitar crédito",
                             'code' => 'CLIENTE_SIN_PERMISO_CREDITO',
-                        ], 422);
+                            'status' => 422,
+                        ]));
                     }
 
                     if (! $cliente->limite_credito || $cliente->limite_credito <= 0) {
@@ -2876,11 +2878,12 @@ class ApiProformaController extends Controller
                             'proforma_id' => $proforma->id,
                         ]);
 
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => "El cliente '{$cliente->nombre}' no tiene límite de crédito configurado",
                             'code' => 'CLIENTE_SIN_LIMITE_CREDITO',
-                        ], 422);
+                            'status' => 422,
+                        ]));
                     }
 
                     // Calcular saldo disponible
@@ -2888,16 +2891,17 @@ class ApiProformaController extends Controller
                     $totalProforma   = (float) $proforma->total;
 
                     if ($saldoDisponible < $totalProforma) {
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => "Crédito insuficiente para esta venta",
                             'code'    => 'CREDITO_INSUFICIENTE',
+                            'status'  => 422,
                             'datos'   => [
                                 'monto_venta'      => $totalProforma,
                                 'saldo_disponible' => $saldoDisponible,
                                 'limite_credito'   => (float) $cliente->limite_credito,
                             ],
-                        ], 422);
+                        ]));
                     }
                 }
 
@@ -2925,11 +2929,12 @@ class ApiProformaController extends Controller
 
                 // Validación 1: La proforma debe poder convertirse
                 if (! $proforma->puedeConvertirseAVenta()) {
-                    return response()->json([
+                    throw new \Exception(json_encode([
                         'success'       => false,
                         'message'       => 'Esta proforma no puede convertirse a venta',
                         'estado_actual' => $proforma->estado,
-                    ], 422);
+                        'status'        => 422,
+                    ]));
                 }
 
                 // Validación 2: Si hay reservas activas, verificar que no estén expiradas
@@ -2946,10 +2951,11 @@ class ApiProformaController extends Controller
                         Log::error('❌ Reservas expiradas para proforma', [
                             'proforma_id' => $proforma->id,
                         ]);
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => 'Las reservas de stock han expirado',
-                        ], 422);
+                            'status' => 422,
+                        ]));
                     }
 
                     // ✅ MEJORADO (2026-04-06): Incluso con reservas activas, validar que el stock real sea suficiente
@@ -2966,45 +2972,116 @@ class ApiProformaController extends Controller
                         $cantidad = $detalle->cantidad;
 
                         if ($producto->es_combo) {
-                            // Para COMBOS: Validar capacidad
-                            $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
-                            $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+                            // Para COMBOS con reservas activas:
+                            $reservasDelProducto = $proforma->reservas()
+                                ->whereHas('stockProducto', function ($q) use ($producto) {
+                                    $q->where('producto_id', $producto->id);
+                                })
+                                ->where('estado', 'ACTIVA')
+                                ->sum('cantidad_reservada');
 
-                            if ($capacidadDisponible < $cantidad) {
-                                $productosConStockInsuficiente[] = [
-                                    'producto_id' => $producto->id,
-                                    'producto' => $producto->nombre . ' (COMBO)',
-                                    'requerido' => $cantidad,
-                                    'disponible' => $capacidadDisponible,
-                                    'faltante' => $cantidad - $capacidadDisponible,
-                                ];
-                                Log::warning('⚠️  Stock real insuficiente para COMBO (con reservas)', [
-                                    'producto_id' => $producto->id,
-                                    'nombre' => $producto->nombre,
-                                    'requerido' => $cantidad,
-                                    'disponible' => $capacidadDisponible,
-                                    'proforma_id' => $proforma->id,
-                                ]);
+                            if ($reservasDelProducto > 0) {
+                                // Hay reservas: validar que sean suficientes
+                                if ($reservasDelProducto < $cantidad) {
+                                    $productosConStockInsuficiente[] = [
+                                        'producto_id' => $producto->id,
+                                        'producto' => $producto->nombre . ' (COMBO)',
+                                        'requerido' => $cantidad,
+                                        'disponible' => $reservasDelProducto,
+                                        'faltante' => $cantidad - $reservasDelProducto,
+                                        'tipo' => 'RESERVAS_INSUFICIENTES',
+                                    ];
+                                    Log::warning('⚠️  Reservas insuficientes para COMBO', [
+                                        'producto_id' => $producto->id,
+                                        'nombre' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'reservado' => $reservasDelProducto,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                }
+                            } else {
+                                // NO hay reservas: validar capacidad de combo
+                                $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
+                                $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+
+                                if ($capacidadDisponible < $cantidad) {
+                                    $productosConStockInsuficiente[] = [
+                                        'producto_id' => $producto->id,
+                                        'producto' => $producto->nombre . ' (COMBO)',
+                                        'requerido' => $cantidad,
+                                        'disponible' => $capacidadDisponible,
+                                        'faltante' => $cantidad - $capacidadDisponible,
+                                        'tipo' => 'CAPACIDAD_COMBO_INSUFICIENTE',
+                                    ];
+                                    Log::warning('⚠️  Capacidad de COMBO insuficiente (sin reservas)', [
+                                        'producto_id' => $producto->id,
+                                        'nombre' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'disponible' => $capacidadDisponible,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                }
                             }
                         } else {
-                            // Para PRODUCTOS SIMPLES: Validar stock real
-                            $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+                            // Para PRODUCTOS SIMPLES con reservas activas:
+                            // Validar que las RESERVAS DE ESTA PROFORMA cubran la cantidad
+                            $reservasDelProducto = $proforma->reservas()
+                                ->whereHas('stockProducto', function ($q) use ($producto) {
+                                    $q->where('producto_id', $producto->id);
+                                })
+                                ->where('estado', 'ACTIVA')
+                                ->sum('cantidad_reservada');
 
-                            if ($stockDisponible < $cantidad) {
-                                $productosConStockInsuficiente[] = [
-                                    'producto_id' => $producto->id,
-                                    'producto' => $producto->nombre,
-                                    'requerido' => $cantidad,
-                                    'disponible' => $stockDisponible,
-                                    'faltante' => $cantidad - $stockDisponible,
-                                ];
-                                Log::warning('⚠️  Stock real insuficiente para PRODUCTO SIMPLE (con reservas)', [
-                                    'producto_id' => $producto->id,
-                                    'nombre' => $producto->nombre,
-                                    'requerido' => $cantidad,
-                                    'disponible' => $stockDisponible,
-                                    'proforma_id' => $proforma->id,
-                                ]);
+                            // ✅ MEJORADO: Si hay reservas, usar esas en lugar de cantidad_disponible
+                            if ($reservasDelProducto > 0) {
+                                // Hay reservas: validar que sean suficientes
+                                if ($reservasDelProducto < $cantidad) {
+                                    $productosConStockInsuficiente[] = [
+                                        'producto_id' => $producto->id,
+                                        'producto' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'disponible' => $reservasDelProducto,
+                                        'faltante' => $cantidad - $reservasDelProducto,
+                                        'tipo' => 'RESERVAS_INSUFICIENTES',
+                                    ];
+                                    Log::warning('⚠️  Reservas insuficientes para PRODUCTO SIMPLE', [
+                                        'producto_id' => $producto->id,
+                                        'nombre' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'reservado' => $reservasDelProducto,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                } else {
+                                    // ✅ Las reservas cubren la cantidad, permitir conversión
+                                    Log::info('✅ Reservas suficientes para PRODUCTO SIMPLE', [
+                                        'producto_id' => $producto->id,
+                                        'nombre' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'reservado' => $reservasDelProducto,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                }
+                            } else {
+                                // NO hay reservas: validar stock disponible
+                                $stockDisponible = $producto->stock()->sum('cantidad_disponible');
+
+                                if ($stockDisponible < $cantidad) {
+                                    $productosConStockInsuficiente[] = [
+                                        'producto_id' => $producto->id,
+                                        'producto' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'disponible' => $stockDisponible,
+                                        'faltante' => $cantidad - $stockDisponible,
+                                        'tipo' => 'STOCK_DISPONIBLE_INSUFICIENTE',
+                                    ];
+                                    Log::warning('⚠️  Stock real insuficiente para PRODUCTO SIMPLE (sin reservas)', [
+                                        'producto_id' => $producto->id,
+                                        'nombre' => $producto->nombre,
+                                        'requerido' => $cantidad,
+                                        'disponible' => $stockDisponible,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                }
                             }
                         }
                     }
@@ -3017,12 +3094,13 @@ class ApiProformaController extends Controller
                             'productos_sin_stock' => $productosConStockInsuficiente,
                         ]);
 
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => 'El stock real se agotó. Las reservas no pueden garantizar la venta.',
                             'code' => 'STOCK_INSUFICIENTE_REAL',
+                            'status' => 422,
                             'productos_sin_stock' => $productosConStockInsuficiente,
-                        ], 422);
+                        ]));
                     }
 
                     Log::info('✅ Stock real validado, reservas activas vigentes, continuando conversión', [
@@ -3093,12 +3171,13 @@ class ApiProformaController extends Controller
                             'productos_sin_stock' => $productosConStockInsuficiente,
                         ]);
 
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => 'No hay stock disponible para convertir esta proforma a venta',
                             'code' => 'STOCK_INSUFICIENTE',
+                            'status' => 422,
                             'productos_sin_stock' => $productosConStockInsuficiente,
-                        ], 422);
+                        ]));
                     }
 
                     // ✅ Stock validado, ahora intentar crear reservas
@@ -3109,10 +3188,11 @@ class ApiProformaController extends Controller
                             'proforma_id' => $proforma->id,
                             'proforma_numero' => $proforma->numero,
                         ]);
-                        return response()->json([
+                        throw new \Exception(json_encode([
                             'success' => false,
                             'message' => 'No se pudieron crear reservas de stock. Verifique la disponibilidad de inventario.',
-                        ], 422);
+                            'status' => 422,
+                        ]));
                     }
 
                     Log::info('✅ Reservas creadas automáticamente para proforma ' . $proforma->numero);
@@ -3526,6 +3606,14 @@ class ApiProformaController extends Controller
                     'error'       => $e->getMessage(),
                     'trace'       => $e->getTraceAsString(),
                 ]);
+
+                // ✅ MEJORADO: Intentar decodificar errores JSON con status 422
+                $errorData = @json_decode($e->getMessage(), true);
+                if (is_array($errorData) && isset($errorData['status'])) {
+                    $statusCode = $errorData['status'];
+                    unset($errorData['status']); // Remover status del JSON de respuesta
+                    return response()->json($errorData, $statusCode);
+                }
 
                 return response()->json([
                     'success' => false,
