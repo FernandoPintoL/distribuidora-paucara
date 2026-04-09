@@ -889,6 +889,8 @@ export default function VentaForm() {
     const handleDetallesActualizados = useCallback((nuevosDetalles: DetalleProducto[]) => {
         console.log('🔄 [create.tsx] ProductosTable notificó cambios en detalles por rangos');
         setDetallesWithProducts(nuevosDetalles);
+        calculateTotals(nuevosDetalles);
+        calculatePeso(nuevosDetalles);
     }, []);
 
     const calculateTotals = (detalles: DetalleProducto[]) => {
