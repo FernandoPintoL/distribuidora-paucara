@@ -146,7 +146,7 @@ crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-export const show = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -161,7 +161,7 @@ show.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-show.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -194,7 +194,7 @@ show.url = (args: { venta: number | { id: number } } | [venta: number | { id: nu
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-show.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -203,7 +203,7 @@ show.get = (args: { venta: number | { id: number } } | [venta: number | { id: nu
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-show.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
@@ -213,7 +213,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-    const showForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
@@ -223,7 +223,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-        showForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
@@ -232,7 +232,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-        showForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

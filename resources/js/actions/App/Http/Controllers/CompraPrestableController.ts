@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-export const showApi = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const showApi = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: showApi.url(args, options),
     method: 'get',
 })
@@ -152,7 +152,7 @@ showApi.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-showApi.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+showApi.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -185,7 +185,7 @@ showApi.url = (args: { compra: number | { id: number } } | [compra: number | { i
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-showApi.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+showApi.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: showApi.url(args, options),
     method: 'get',
 })
@@ -194,7 +194,7 @@ showApi.get = (args: { compra: number | { id: number } } | [compra: number | { i
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-showApi.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+showApi.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: showApi.url(args, options),
     method: 'head',
 })
@@ -204,7 +204,7 @@ showApi.head = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-    const showApiForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showApiForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: showApi.url(args, options),
         method: 'get',
     })
@@ -214,7 +214,7 @@ showApi.head = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-        showApiForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showApiForm.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: showApi.url(args, options),
             method: 'get',
         })
@@ -223,7 +223,7 @@ showApi.head = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:99
  * @route '/api/compras-prestables/{compra}'
  */
-        showApiForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showApiForm.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: showApi.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -239,7 +239,7 @@ showApi.head = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:179
  * @route '/api/compras-prestables/{compra}/agregar-detalle'
  */
-export const agregarDetalle = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const agregarDetalle = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: agregarDetalle.url(args, options),
     method: 'post',
 })
@@ -254,7 +254,7 @@ agregarDetalle.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:179
  * @route '/api/compras-prestables/{compra}/agregar-detalle'
  */
-agregarDetalle.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+agregarDetalle.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -287,7 +287,7 @@ agregarDetalle.url = (args: { compra: number | { id: number } } | [compra: numbe
  * @see app/Http/Controllers/CompraPrestableController.php:179
  * @route '/api/compras-prestables/{compra}/agregar-detalle'
  */
-agregarDetalle.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+agregarDetalle.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: agregarDetalle.url(args, options),
     method: 'post',
 })
@@ -297,7 +297,7 @@ agregarDetalle.post = (args: { compra: number | { id: number } } | [compra: numb
  * @see app/Http/Controllers/CompraPrestableController.php:179
  * @route '/api/compras-prestables/{compra}/agregar-detalle'
  */
-    const agregarDetalleForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const agregarDetalleForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: agregarDetalle.url(args, options),
         method: 'post',
     })
@@ -307,7 +307,7 @@ agregarDetalle.post = (args: { compra: number | { id: number } } | [compra: numb
  * @see app/Http/Controllers/CompraPrestableController.php:179
  * @route '/api/compras-prestables/{compra}/agregar-detalle'
  */
-        agregarDetalleForm.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        agregarDetalleForm.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: agregarDetalle.url(args, options),
             method: 'post',
         })
@@ -318,7 +318,7 @@ agregarDetalle.post = (args: { compra: number | { id: number } } | [compra: numb
  * @see app/Http/Controllers/CompraPrestableController.php:229
  * @route '/api/compras-prestables/{compra}/detalles/{detalle}'
  */
-export const eliminarDetalle = (args: { compra: number | { id: number }, detalle: number | { id: number } } | [compra: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const eliminarDetalle = (args: { compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: eliminarDetalle.url(args, options),
     method: 'delete',
 })
@@ -333,7 +333,7 @@ eliminarDetalle.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:229
  * @route '/api/compras-prestables/{compra}/detalles/{detalle}'
  */
-eliminarDetalle.url = (args: { compra: number | { id: number }, detalle: number | { id: number } } | [compra: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions) => {
+eliminarDetalle.url = (args: { compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
                     compra: args[0],
@@ -363,7 +363,7 @@ eliminarDetalle.url = (args: { compra: number | { id: number }, detalle: number 
  * @see app/Http/Controllers/CompraPrestableController.php:229
  * @route '/api/compras-prestables/{compra}/detalles/{detalle}'
  */
-eliminarDetalle.delete = (args: { compra: number | { id: number }, detalle: number | { id: number } } | [compra: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+eliminarDetalle.delete = (args: { compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: eliminarDetalle.url(args, options),
     method: 'delete',
 })
@@ -373,7 +373,7 @@ eliminarDetalle.delete = (args: { compra: number | { id: number }, detalle: numb
  * @see app/Http/Controllers/CompraPrestableController.php:229
  * @route '/api/compras-prestables/{compra}/detalles/{detalle}'
  */
-    const eliminarDetalleForm = (args: { compra: number | { id: number }, detalle: number | { id: number } } | [compra: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const eliminarDetalleForm = (args: { compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: eliminarDetalle.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -388,7 +388,7 @@ eliminarDetalle.delete = (args: { compra: number | { id: number }, detalle: numb
  * @see app/Http/Controllers/CompraPrestableController.php:229
  * @route '/api/compras-prestables/{compra}/detalles/{detalle}'
  */
-        eliminarDetalleForm.delete = (args: { compra: number | { id: number }, detalle: number | { id: number } } | [compra: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        eliminarDetalleForm.delete = (args: { compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [compra: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: eliminarDetalle.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',
@@ -404,7 +404,7 @@ eliminarDetalle.delete = (args: { compra: number | { id: number }, detalle: numb
  * @see app/Http/Controllers/CompraPrestableController.php:264
  * @route '/api/compras-prestables/{compra}/confirmar'
  */
-export const confirmar = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const confirmar = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
     method: 'post',
 })
@@ -419,7 +419,7 @@ confirmar.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:264
  * @route '/api/compras-prestables/{compra}/confirmar'
  */
-confirmar.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+confirmar.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -452,7 +452,7 @@ confirmar.url = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:264
  * @route '/api/compras-prestables/{compra}/confirmar'
  */
-confirmar.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+confirmar.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
     method: 'post',
 })
@@ -462,7 +462,7 @@ confirmar.post = (args: { compra: number | { id: number } } | [compra: number | 
  * @see app/Http/Controllers/CompraPrestableController.php:264
  * @route '/api/compras-prestables/{compra}/confirmar'
  */
-    const confirmarForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const confirmarForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: confirmar.url(args, options),
         method: 'post',
     })
@@ -472,7 +472,7 @@ confirmar.post = (args: { compra: number | { id: number } } | [compra: number | 
  * @see app/Http/Controllers/CompraPrestableController.php:264
  * @route '/api/compras-prestables/{compra}/confirmar'
  */
-        confirmarForm.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        confirmarForm.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: confirmar.url(args, options),
             method: 'post',
         })
@@ -483,7 +483,7 @@ confirmar.post = (args: { compra: number | { id: number } } | [compra: number | 
  * @see app/Http/Controllers/CompraPrestableController.php:292
  * @route '/api/compras-prestables/{compra}/cancelar'
  */
-export const cancelar = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const cancelar = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
@@ -498,7 +498,7 @@ cancelar.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:292
  * @route '/api/compras-prestables/{compra}/cancelar'
  */
-cancelar.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+cancelar.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -531,7 +531,7 @@ cancelar.url = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:292
  * @route '/api/compras-prestables/{compra}/cancelar'
  */
-cancelar.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+cancelar.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
@@ -541,7 +541,7 @@ cancelar.post = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:292
  * @route '/api/compras-prestables/{compra}/cancelar'
  */
-    const cancelarForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const cancelarForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: cancelar.url(args, options),
         method: 'post',
     })
@@ -551,7 +551,7 @@ cancelar.post = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:292
  * @route '/api/compras-prestables/{compra}/cancelar'
  */
-        cancelarForm.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        cancelarForm.post = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: cancelar.url(args, options),
             method: 'post',
         })
@@ -562,7 +562,7 @@ cancelar.post = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-export const imprimir = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const imprimir = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -577,7 +577,7 @@ imprimir.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-imprimir.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+imprimir.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -610,7 +610,7 @@ imprimir.url = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-imprimir.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+imprimir.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -619,7 +619,7 @@ imprimir.get = (args: { compra: number | { id: number } } | [compra: number | { 
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-imprimir.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+imprimir.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: imprimir.url(args, options),
     method: 'head',
 })
@@ -629,7 +629,7 @@ imprimir.head = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-    const imprimirForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const imprimirForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: imprimir.url(args, options),
         method: 'get',
     })
@@ -639,7 +639,7 @@ imprimir.head = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-        imprimirForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, options),
             method: 'get',
         })
@@ -648,7 +648,7 @@ imprimir.head = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:326
  * @route '/api/compras-prestables/{compra}/imprimir'
  */
-        imprimirForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -664,7 +664,7 @@ imprimir.head = (args: { compra: number | { id: number } } | [compra: number | {
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-export const show = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -679,7 +679,7 @@ show.definition = {
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-show.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
@@ -712,7 +712,7 @@ show.url = (args: { compra: number | { id: number } } | [compra: number | { id: 
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-show.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -721,7 +721,7 @@ show.get = (args: { compra: number | { id: number } } | [compra: number | { id: 
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-show.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
@@ -731,7 +731,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-    const showForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
@@ -741,7 +741,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-        showForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
@@ -750,7 +750,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
  * @see app/Http/Controllers/CompraPrestableController.php:78
  * @route '/prestamos/compras/{compra}'
  */
-        showForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { compra: string | number | { id: string | number } } | [compra: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',

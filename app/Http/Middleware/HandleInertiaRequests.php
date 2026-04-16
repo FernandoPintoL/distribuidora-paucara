@@ -72,15 +72,21 @@ class HandleInertiaRequests extends Middleware
             ]);
         }
 
+        // ✅ CORREGIDO (2026-04-16): Cargar relación empresa del usuario
+        $user = $request->user();
+        if ($user) {
+            $user->load('empresa');
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
-                'roles' => $request->user() ? $request->user()->getRoleNames() : [],
+                'user' => $user,
+                'roles' => $user ? $user->getRoleNames() : [],
                 // Optimización: Solo cargar permisos cuando sea necesario
-                'permissions' => $request->user() ? $this->getEssentialPermissions($request->user()) : [],
+                'permissions' => $user ? $this->getEssentialPermissions($user) : [],
                 // ✅ Compartir token SANCTUM para WebSocket
                 'sanctumToken' => $sanctumToken,
             ],

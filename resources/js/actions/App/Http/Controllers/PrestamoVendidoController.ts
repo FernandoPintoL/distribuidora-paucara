@@ -137,7 +137,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-export const show = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -152,7 +152,7 @@ show.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-show.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+show.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -185,7 +185,7 @@ show.url = (args: { venta: number | { id: number } } | [venta: number | { id: nu
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-show.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -194,7 +194,7 @@ show.get = (args: { venta: number | { id: number } } | [venta: number | { id: nu
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-show.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
@@ -204,7 +204,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-    const showForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: show.url(args, options),
         method: 'get',
     })
@@ -214,7 +214,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-        showForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, options),
             method: 'get',
         })
@@ -223,7 +223,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:99
  * @route '/api/prestamos-vendidos/{venta}'
  */
-        showForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showForm.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: show.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -239,7 +239,7 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
  * @see app/Http/Controllers/PrestamoVendidoController.php:179
  * @route '/api/prestamos-vendidos/{venta}/agregar-detalle'
  */
-export const agregarDetalle = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const agregarDetalle = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: agregarDetalle.url(args, options),
     method: 'post',
 })
@@ -254,7 +254,7 @@ agregarDetalle.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:179
  * @route '/api/prestamos-vendidos/{venta}/agregar-detalle'
  */
-agregarDetalle.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+agregarDetalle.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -287,7 +287,7 @@ agregarDetalle.url = (args: { venta: number | { id: number } } | [venta: number 
  * @see app/Http/Controllers/PrestamoVendidoController.php:179
  * @route '/api/prestamos-vendidos/{venta}/agregar-detalle'
  */
-agregarDetalle.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+agregarDetalle.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: agregarDetalle.url(args, options),
     method: 'post',
 })
@@ -297,7 +297,7 @@ agregarDetalle.post = (args: { venta: number | { id: number } } | [venta: number
  * @see app/Http/Controllers/PrestamoVendidoController.php:179
  * @route '/api/prestamos-vendidos/{venta}/agregar-detalle'
  */
-    const agregarDetalleForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const agregarDetalleForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: agregarDetalle.url(args, options),
         method: 'post',
     })
@@ -307,7 +307,7 @@ agregarDetalle.post = (args: { venta: number | { id: number } } | [venta: number
  * @see app/Http/Controllers/PrestamoVendidoController.php:179
  * @route '/api/prestamos-vendidos/{venta}/agregar-detalle'
  */
-        agregarDetalleForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        agregarDetalleForm.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: agregarDetalle.url(args, options),
             method: 'post',
         })
@@ -318,7 +318,7 @@ agregarDetalle.post = (args: { venta: number | { id: number } } | [venta: number
  * @see app/Http/Controllers/PrestamoVendidoController.php:229
  * @route '/api/prestamos-vendidos/{venta}/detalles/{detalle}'
  */
-export const eliminarDetalle = (args: { venta: number | { id: number }, detalle: number | { id: number } } | [venta: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const eliminarDetalle = (args: { venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: eliminarDetalle.url(args, options),
     method: 'delete',
 })
@@ -333,7 +333,7 @@ eliminarDetalle.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:229
  * @route '/api/prestamos-vendidos/{venta}/detalles/{detalle}'
  */
-eliminarDetalle.url = (args: { venta: number | { id: number }, detalle: number | { id: number } } | [venta: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions) => {
+eliminarDetalle.url = (args: { venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
                     venta: args[0],
@@ -363,7 +363,7 @@ eliminarDetalle.url = (args: { venta: number | { id: number }, detalle: number |
  * @see app/Http/Controllers/PrestamoVendidoController.php:229
  * @route '/api/prestamos-vendidos/{venta}/detalles/{detalle}'
  */
-eliminarDetalle.delete = (args: { venta: number | { id: number }, detalle: number | { id: number } } | [venta: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+eliminarDetalle.delete = (args: { venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: eliminarDetalle.url(args, options),
     method: 'delete',
 })
@@ -373,7 +373,7 @@ eliminarDetalle.delete = (args: { venta: number | { id: number }, detalle: numbe
  * @see app/Http/Controllers/PrestamoVendidoController.php:229
  * @route '/api/prestamos-vendidos/{venta}/detalles/{detalle}'
  */
-    const eliminarDetalleForm = (args: { venta: number | { id: number }, detalle: number | { id: number } } | [venta: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const eliminarDetalleForm = (args: { venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: eliminarDetalle.url(args, {
                     [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                         _method: 'DELETE',
@@ -388,7 +388,7 @@ eliminarDetalle.delete = (args: { venta: number | { id: number }, detalle: numbe
  * @see app/Http/Controllers/PrestamoVendidoController.php:229
  * @route '/api/prestamos-vendidos/{venta}/detalles/{detalle}'
  */
-        eliminarDetalleForm.delete = (args: { venta: number | { id: number }, detalle: number | { id: number } } | [venta: number | { id: number }, detalle: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        eliminarDetalleForm.delete = (args: { venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } } | [venta: string | number | { id: string | number }, detalle: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: eliminarDetalle.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'DELETE',
@@ -404,7 +404,7 @@ eliminarDetalle.delete = (args: { venta: number | { id: number }, detalle: numbe
  * @see app/Http/Controllers/PrestamoVendidoController.php:264
  * @route '/api/prestamos-vendidos/{venta}/confirmar'
  */
-export const confirmar = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const confirmar = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
     method: 'post',
 })
@@ -419,7 +419,7 @@ confirmar.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:264
  * @route '/api/prestamos-vendidos/{venta}/confirmar'
  */
-confirmar.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+confirmar.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -452,7 +452,7 @@ confirmar.url = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:264
  * @route '/api/prestamos-vendidos/{venta}/confirmar'
  */
-confirmar.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+confirmar.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: confirmar.url(args, options),
     method: 'post',
 })
@@ -462,7 +462,7 @@ confirmar.post = (args: { venta: number | { id: number } } | [venta: number | { 
  * @see app/Http/Controllers/PrestamoVendidoController.php:264
  * @route '/api/prestamos-vendidos/{venta}/confirmar'
  */
-    const confirmarForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const confirmarForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: confirmar.url(args, options),
         method: 'post',
     })
@@ -472,7 +472,7 @@ confirmar.post = (args: { venta: number | { id: number } } | [venta: number | { 
  * @see app/Http/Controllers/PrestamoVendidoController.php:264
  * @route '/api/prestamos-vendidos/{venta}/confirmar'
  */
-        confirmarForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        confirmarForm.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: confirmar.url(args, options),
             method: 'post',
         })
@@ -483,7 +483,7 @@ confirmar.post = (args: { venta: number | { id: number } } | [venta: number | { 
  * @see app/Http/Controllers/PrestamoVendidoController.php:292
  * @route '/api/prestamos-vendidos/{venta}/cancelar'
  */
-export const cancelar = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const cancelar = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
@@ -498,7 +498,7 @@ cancelar.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:292
  * @route '/api/prestamos-vendidos/{venta}/cancelar'
  */
-cancelar.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+cancelar.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -531,7 +531,7 @@ cancelar.url = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:292
  * @route '/api/prestamos-vendidos/{venta}/cancelar'
  */
-cancelar.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+cancelar.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancelar.url(args, options),
     method: 'post',
 })
@@ -541,7 +541,7 @@ cancelar.post = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:292
  * @route '/api/prestamos-vendidos/{venta}/cancelar'
  */
-    const cancelarForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    const cancelarForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: cancelar.url(args, options),
         method: 'post',
     })
@@ -551,7 +551,7 @@ cancelar.post = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:292
  * @route '/api/prestamos-vendidos/{venta}/cancelar'
  */
-        cancelarForm.post = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+        cancelarForm.post = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: cancelar.url(args, options),
             method: 'post',
         })
@@ -562,7 +562,7 @@ cancelar.post = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-export const imprimir = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const imprimir = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -577,7 +577,7 @@ imprimir.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-imprimir.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+imprimir.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -610,7 +610,7 @@ imprimir.url = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-imprimir.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+imprimir.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: imprimir.url(args, options),
     method: 'get',
 })
@@ -619,7 +619,7 @@ imprimir.get = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+imprimir.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: imprimir.url(args, options),
     method: 'head',
 })
@@ -629,7 +629,7 @@ imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-    const imprimirForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const imprimirForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: imprimir.url(args, options),
         method: 'get',
     })
@@ -639,7 +639,7 @@ imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-        imprimirForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, options),
             method: 'get',
         })
@@ -648,7 +648,7 @@ imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:326
  * @route '/api/prestamos-vendidos/{venta}/imprimir'
  */
-        imprimirForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        imprimirForm.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: imprimir.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -664,7 +664,7 @@ imprimir.head = (args: { venta: number | { id: number } } | [venta: number | { i
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-export const descargarPdf = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const descargarPdf = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: descargarPdf.url(args, options),
     method: 'get',
 })
@@ -679,7 +679,7 @@ descargarPdf.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-descargarPdf.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+descargarPdf.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -712,7 +712,7 @@ descargarPdf.url = (args: { venta: number | { id: number } } | [venta: number | 
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-descargarPdf.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+descargarPdf.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: descargarPdf.url(args, options),
     method: 'get',
 })
@@ -721,7 +721,7 @@ descargarPdf.get = (args: { venta: number | { id: number } } | [venta: number | 
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-descargarPdf.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+descargarPdf.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: descargarPdf.url(args, options),
     method: 'head',
 })
@@ -731,7 +731,7 @@ descargarPdf.head = (args: { venta: number | { id: number } } | [venta: number |
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-    const descargarPdfForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const descargarPdfForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: descargarPdf.url(args, options),
         method: 'get',
     })
@@ -741,7 +741,7 @@ descargarPdf.head = (args: { venta: number | { id: number } } | [venta: number |
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-        descargarPdfForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        descargarPdfForm.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: descargarPdf.url(args, options),
             method: 'get',
         })
@@ -750,7 +750,7 @@ descargarPdf.head = (args: { venta: number | { id: number } } | [venta: number |
  * @see app/Http/Controllers/PrestamoVendidoController.php:357
  * @route '/api/prestamos-vendidos/{venta}/descargar-pdf'
  */
-        descargarPdfForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        descargarPdfForm.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: descargarPdf.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
@@ -766,7 +766,7 @@ descargarPdf.head = (args: { venta: number | { id: number } } | [venta: number |
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-export const showWeb = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const showWeb = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: showWeb.url(args, options),
     method: 'get',
 })
@@ -781,7 +781,7 @@ showWeb.definition = {
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-showWeb.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+showWeb.url = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
@@ -814,7 +814,7 @@ showWeb.url = (args: { venta: number | { id: number } } | [venta: number | { id:
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-showWeb.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+showWeb.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: showWeb.url(args, options),
     method: 'get',
 })
@@ -823,7 +823,7 @@ showWeb.get = (args: { venta: number | { id: number } } | [venta: number | { id:
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-showWeb.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+showWeb.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: showWeb.url(args, options),
     method: 'head',
 })
@@ -833,7 +833,7 @@ showWeb.head = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-    const showWebForm = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    const showWebForm = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: showWeb.url(args, options),
         method: 'get',
     })
@@ -843,7 +843,7 @@ showWeb.head = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-        showWebForm.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showWebForm.get = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: showWeb.url(args, options),
             method: 'get',
         })
@@ -852,7 +852,7 @@ showWeb.head = (args: { venta: number | { id: number } } | [venta: number | { id
  * @see app/Http/Controllers/PrestamoVendidoController.php:78
  * @route '/prestamos/ventas/{venta}'
  */
-        showWebForm.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        showWebForm.head = (args: { venta: string | number | { id: string | number } } | [venta: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: showWeb.url(args, {
                         [options?.mergeQuery ? 'mergeQuery' : 'query']: {
                             _method: 'HEAD',
