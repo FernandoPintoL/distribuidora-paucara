@@ -150,16 +150,24 @@ class PrestamosSidebarSeeder extends Seeder
 
         $permisoNombres = array_values(array_unique($permisoNombres));
 
+        // ✅ MEJORADO (2026-04-16): Crear permisos con tracking
+        $permisosCreados = 0;
         foreach ($permisoNombres as $permisoNombre) {
-            Permission::firstOrCreate(
+            $permiso = Permission::firstOrCreate(
                 ['name' => $permisoNombre, 'guard_name' => 'web']
             );
+            if ($permiso->wasRecentlyCreated) {
+                $permisosCreados++;
+            }
         }
 
+        // ✅ MEJORADO (2026-04-16): Asignar permisos a roles admin y Super Admin
         $admin = Role::firstOrCreate(['name' => 'admin'], ['guard_name' => 'web']);
-        $admin->givePermissionTo($permisoNombres);
+        $admin->syncPermissions($permisoNombres); // syncPermissions = reemplaza todos los permisos
 
         $superAdmin = Role::firstOrCreate(['name' => 'Super Admin'], ['guard_name' => 'web']);
-        $superAdmin->givePermissionTo($permisoNombres);
+        $superAdmin->syncPermissions($permisoNombres);
+
+        $this->command?->info("✅ Permisos de Préstamos: {$permisosCreados} creados, " . count($permisoNombres) . " total asignado a admin");
     }
 }
