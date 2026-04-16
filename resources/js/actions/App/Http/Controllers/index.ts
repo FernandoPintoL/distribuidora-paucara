@@ -31,6 +31,8 @@ import ConciliacionCajaController from './ConciliacionCajaController'
 import AlertasController from './AlertasController'
 import PrestableController from './PrestableController'
 import PrestableStockController from './PrestableStockController'
+import PrestamoVendidoController from './PrestamoVendidoController'
+import CompraPrestableController from './CompraPrestableController'
 import PrestamoClienteController from './PrestamoClienteController'
 import PrestamoProveedorController from './PrestamoProveedorController'
 import ReportesController from './ReportesController'
@@ -128,6 +130,8 @@ ConciliacionCajaController,
 AlertasController,
 PrestableController,
 PrestableStockController,
+PrestamoVendidoController,
+CompraPrestableController,
 PrestamoClienteController,
 PrestamoProveedorController,
 ReportesController,

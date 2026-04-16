@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('categorias', CategoriaController::class)->middleware('permission:categorias.manage');
     Route::resource('marcas', \App\Http\Controllers\MarcaController::class)->middleware('permission:marcas.manage');
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
+    // ⚠️ REMOVIDO: Ruta de sectores (duplicada en api.php) - usar API en su lugar
     Route::resource('localidades', \App\Http\Controllers\LocalidadController::class)->middleware('permission:localidades.manage');
     Route::get('localidades/api/active', [\App\Http\Controllers\LocalidadController::class, 'getActiveLocalidades'])->name('localidades.api.active');
 
@@ -772,6 +773,17 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         Route::get('/', [\App\Http\Controllers\PrestamosInertiaController::class, 'index'])->name('index');
         Route::get('prestables', [\App\Http\Controllers\PrestamosInertiaController::class, 'prestables'])->name('prestables');
         Route::get('stock', [\App\Http\Controllers\PrestamosInertiaController::class, 'stock'])->name('stock');
+        Route::get('ajustes/historial', fn() => Inertia::render('prestamos/ajustes/historial'))->name('ajustes.historial');
+        Route::get('ajustes/movimientos', fn() => Inertia::render('prestamos/ajustes/movimientos'))->name('ajustes.movimientos');
+        Route::get('ventas', fn() => Inertia::render('prestamos/ventas/listado'))->name('ventas.listado');
+        Route::get('ventas/crear', fn() => Inertia::render('prestamos/ventas/crear'))->name('ventas.crear');
+        Route::get('ventas/{venta}', [\App\Http\Controllers\PrestamoVendidoController::class, 'showWeb'])->name('ventas.show');
+
+        // Compras de Prestables
+        Route::get('compras', fn() => Inertia::render('prestamos/compras/listado'))->name('compras.listado');
+        Route::get('compras/crear', fn() => Inertia::render('prestamos/compras/crear'))->name('compras.crear');
+        Route::get('compras/{compra}', [\App\Http\Controllers\CompraPrestableController::class, 'show'])->name('compras.show');
+
         Route::get('clientes', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesIndex'])->name('clientes.index');
         Route::get('clientes/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesCrear'])->name('clientes.crear');
         Route::post('clientes', [\App\Http\Controllers\PrestamosInertiaController::class, 'clientesStore'])->name('clientes.store');
@@ -781,8 +793,32 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
             ->name('clientes.imprimir')
             ->where('prestamo', '[0-9]+');
 
+        // Página de devoluciones de un préstamo
+        Route::get('clientes/{prestamo}/devoluciones', fn(\App\Models\PrestamoCliente $prestamo) =>
+            Inertia::render('prestamos/clientes/devoluciones', ['prestamoId' => $prestamo->id])
+        )->name('clientes.devoluciones')
+        ->where('prestamo', '[0-9]+');
+
+        // Imprimir todas las devoluciones de un préstamo
+        Route::get('clientes/{prestamo}/devoluciones/imprimir', [\App\Http\Controllers\PrestamoClienteController::class, 'imprimirTodasLasDevoluciones'])
+            ->name('clientes.devoluciones.imprimir')
+            ->where('prestamo', '[0-9]+');
+
+        // Página de devoluciones de un préstamo a proveedor
+        Route::get('proveedores/{prestamo}/devoluciones', fn(\App\Models\PrestamoProveedor $prestamo) =>
+            Inertia::render('prestamos/proveedores/devoluciones', ['prestamoId' => $prestamo->id])
+        )->name('proveedores.devoluciones')
+        ->where('prestamo', '[0-9]+');
+
         Route::get('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresIndex'])->name('proveedores.index');
-        Route::get('proveedores/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresCrear'])->name('proveedores.crear');
+
+        // Rutas para PRÉSTAMOS a proveedor
+        Route::get('proveedores/prestamos/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresPrestamosCrear'])->name('proveedores.prestamos.crear');
+
+        // Rutas para COMPRA de prestables
+        Route::get('proveedores/compras/crear', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresComprasCrear'])->name('proveedores.compras.crear');
+
+        // POST es igual para ambos (se diferencia por es_compra en los datos)
         Route::post('proveedores', [\App\Http\Controllers\PrestamosInertiaController::class, 'proveedoresStore'])->name('proveedores.store');
 
         // Impresión de préstamos de proveedor

@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import devoluciones from './devoluciones'
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::index
  * @see app/Http/Controllers/PrestamosInertiaController.php:42
@@ -212,7 +213,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
 export const imprimir = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +228,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
 imprimir.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +261,7 @@ imprimir.url = (args: { prestamo: number | { id: number } } | [prestamo: number 
 
 /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
 imprimir.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +270,7 @@ imprimir.get = (args: { prestamo: number | { id: number } } | [prestamo: number 
 })
 /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
 imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +280,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
 
     /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
     const imprimirForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +290,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
 
             /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
         imprimirForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +299,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
         })
             /**
 * @see \App\Http\Controllers\PrestamoClienteController::imprimir
- * @see app/Http/Controllers/PrestamoClienteController.php:313
+ * @see app/Http/Controllers/PrestamoClienteController.php:301
  * @route '/prestamos/clientes/{prestamo}/imprimir'
  */
         imprimirForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -312,11 +313,107 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
         })
     
     imprimir.form = imprimirForm
+/**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+export const devoluciones = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: devoluciones.url(args, options),
+    method: 'get',
+})
+
+devoluciones.definition = {
+    methods: ["get","head"],
+    url: '/prestamos/clientes/{prestamo}/devoluciones',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+devoluciones.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { prestamo: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { prestamo: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    prestamo: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        prestamo: typeof args.prestamo === 'object'
+                ? args.prestamo.id
+                : args.prestamo,
+                }
+
+    return devoluciones.definition.url
+            .replace('{prestamo}', parsedArgs.prestamo.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+devoluciones.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: devoluciones.url(args, options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+devoluciones.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: devoluciones.url(args, options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+    const devolucionesForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: devoluciones.url(args, options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+        devolucionesForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: devoluciones.url(args, options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:797
+ * @route '/prestamos/clientes/{prestamo}/devoluciones'
+ */
+        devolucionesForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: devoluciones.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    devoluciones.form = devolucionesForm
 const clientes = {
     index,
 crear,
 store,
 imprimir,
+devoluciones,
 }
 
 export default clientes

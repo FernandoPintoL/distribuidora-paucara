@@ -134,90 +134,82 @@ class Compra extends Model
                     ->where('almacen_id', $almacen->id)
                     ->sum('cantidad_reservada');
 
-                // Procesar cada detalle (lote) del producto
+                // ✅ MEJORADO (2026-04-16): Revertir de TODOS los lotes disponibles del producto (Opción A automática)
+                // Acumular cuánto se necesita restar del producto
+                $cantidadTotalARevertirDelProducto = 0;
                 foreach ($detallesProducto as $detalle) {
+                    $cantidadTotalARevertirDelProducto += (int) $detalle->cantidad;
+                }
+
+                // Buscar TODOS los lotes del producto en el almacén, ordenados por fecha vencimiento (FIFO)
+                $lotesDisponibles = \App\Models\StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacen->id)
+                    ->orderBy('fecha_vencimiento', 'ASC')
+                    ->orderBy('id', 'ASC')
+                    ->lockForUpdate()
+                    ->get();
+
+                $cantidadRestante = $cantidadTotalARevertirDelProducto;
+
+                foreach ($lotesDisponibles as $stockProducto) {
+                    if ($cantidadRestante <= 0) {
+                        break;
+                    }
+
                     try {
-                        // Buscar o crear stock_producto para este lote específico
-                        $stockProducto = \App\Models\StockProducto::where('producto_id', $productoId)
-                            ->where('almacen_id', $almacen->id)
-                            ->where(function ($q) use ($detalle) {
-                                if ($detalle->lote) {
-                                    $q->where('lote', $detalle->lote);
-                                } else {
-                                    $q->whereNull('lote');
-                                }
-                            })
-                            ->lockForUpdate()
-                            ->first();
-
-                        if (!$stockProducto) {
-                            // Si no existe, crearlo (caso raro)
-                            $stockProducto = \App\Models\StockProducto::create([
-                                'producto_id' => $productoId,
-                                'almacen_id' => $almacen->id,
-                                'cantidad' => 0,
-                                'cantidad_disponible' => 0,
-                                'cantidad_reservada' => 0,
-                                'lote' => $detalle->lote,
-                                'fecha_vencimiento' => $detalle->fecha_vencimiento,
-                                'fecha_actualizacion' => now(),
-                            ]);
-                        }
-
                         // Capturar ANTES de actualizar (por lote)
                         $cantidadAnterior = (float) $stockProducto->cantidad;
                         $cantidadDisponibleAnterior = (float) $stockProducto->cantidad_disponible;
                         $cantidadReservadaAnterior = (float) $stockProducto->cantidad_reservada;
-                        $cantidadARevertir = (int) $detalle->cantidad;
 
-                        // Revertir: decrementar cantidad (salida)
-                        $stockProducto->decrement('cantidad', $cantidadARevertir);
-                        $stockProducto->decrement('cantidad_disponible', $cantidadARevertir);
+                        // ✅ CORREGIDO (2026-04-16): Restar disponible, luego cantidad total (Opción A automática)
+                        // Determinar cuánto podemos restar de este lote
+                        $cantidadDisponibleEnEsteLote = (float) $stockProducto->cantidad_disponible;
+                        $cantidadARestarEnEsteLote = min($cantidadDisponibleEnEsteLote, $cantidadRestante);
 
-                        // Recargar para obtener DESPUÉS
-                        $stockProducto->refresh();
-                        $cantidadPosterior = (float) $stockProducto->cantidad;
-                        $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
-                        $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
+                        if ($cantidadARestarEnEsteLote > 0) {
+                            // Restar del stock
+                            $stockProducto->decrement('cantidad', (int) $cantidadARestarEnEsteLote);
+                            $stockProducto->decrement('cantidad_disponible', (int) $cantidadARestarEnEsteLote);
 
-                        // Guardar detalle por lote
-                        $detallesLotes[] = [
-                            'stock_producto_id' => $stockProducto->id,
-                            'lote' => $stockProducto->lote,
-                            'cantidad' => -$cantidadARevertir,  // Negativo: salida
-                            'cantidad_total_anterior' => $cantidadAnterior,
-                            'cantidad_total_posterior' => $cantidadPosterior,
-                            'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
-                            'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
-                            'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
-                            'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
-                        ];
+                            // Recargar para obtener DESPUÉS
+                            $stockProducto->refresh();
 
-                        $cantidadTotalARevertir += $cantidadARevertir;
+                            $cantidadPosterior = (float) $stockProducto->cantidad;
+                            $cantidadDisponiblePosterior = (float) $stockProducto->cantidad_disponible;
+                            $cantidadReservadaPosterior = (float) $stockProducto->cantidad_reservada;
 
-                        // Eliminar lote si queda en 0 o negativo
-                        if ($cantidadPosterior <= 0) {
-                            \Illuminate\Support\Facades\Log::info('Eliminando lote completamente por anulación de compra', [
+                            // Guardar detalle por lote
+                            $detallesLotes[] = [
+                                'stock_producto_id' => $stockProducto->id,
+                                'lote' => $stockProducto->lote,
+                                'cantidad' => -(int) $cantidadARestarEnEsteLote,  // Negativo: salida
+                                'cantidad_total_anterior' => $cantidadAnterior,
+                                'cantidad_total_posterior' => $cantidadPosterior,
+                                'cantidad_disponible_anterior' => $cantidadDisponibleAnterior,
+                                'cantidad_disponible_posterior' => $cantidadDisponiblePosterior,
+                                'cantidad_reservada_anterior' => $cantidadReservadaAnterior,
+                                'cantidad_reservada_posterior' => $cantidadReservadaPosterior,
+                            ];
+
+                            $cantidadTotalARevertir += (int) $cantidadARestarEnEsteLote;
+                            $cantidadRestante -= $cantidadARestarEnEsteLote;
+
+                            \Illuminate\Support\Facades\Log::info('Anulación: restar del lote', [
                                 'stock_producto_id' => $stockProducto->id,
                                 'producto_id' => $productoId,
-                                'lote' => $detalle->lote,
-                                'almacen_id' => $almacen->id,
-                                'cantidad_final' => $cantidadPosterior,
+                                'lote' => $stockProducto->lote,
+                                'cantidad_restada' => $cantidadARestarEnEsteLote,
+                                'cantidad_restante' => $cantidadRestante,
                             ]);
-
-                            // Eliminar movimientos primero (FK constraint)
-                            \App\Models\MovimientoInventario::where('stock_producto_id', $stockProducto->id)
-                                ->forceDelete();
-
-                            $stockProducto->forceDelete();
                         }
 
                     } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error('Error al revertir detalle de compra', [
+                        \Illuminate\Support\Facades\Log::error('Error al revertir de lote en anulación de compra', [
                             'compra_id' => $this->id,
                             'producto_id' => $productoId,
-                            'detalle_id' => $detalle->id,
-                            'lote' => $detalle->lote,
+                            'stock_producto_id' => $stockProducto->id,
+                            'lote' => $stockProducto->lote,
                             'error' => $e->getMessage(),
                         ]);
 
@@ -245,11 +237,11 @@ class Compra extends Model
                         $productoId,
                         $almacen->id,
                         \App\Models\MovimientoInventario::TIPO_SALIDA_AJUSTE,
-                        -$cantidadTotalARevertir,  // Negativo: salida
-                        $this->numero,
+                        'compra_anulacion',  // ✅ CORREGIDO: referencia_tipo debe ser 4to parámetro
+                        -(float) $cantidadTotalARevertir,  // ✅ CORREGIDO: Convertir a float. Negativo: salida
+                        $this->numero,  // numero_documento
                         $detallesLotes,
                         [
-                            'referencia_tipo' => 'compra_anulacion',
                             'referencia_id' => $this->id,
                             // ✅ CORREGIDO (2026-04-05): Pasar totales del PRODUCTO COMPLETO
                             'totales_previos' => [

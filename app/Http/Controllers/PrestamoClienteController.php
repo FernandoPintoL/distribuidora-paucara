@@ -26,7 +26,13 @@ class PrestamoClienteController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = PrestamoCliente::with(['detalles.prestable', 'cliente', 'chofer', 'devoluciones']);
+            $query = PrestamoCliente::with([
+                'detalles.prestable',
+                'detalles.devolucionDetalles',
+                'cliente',
+                'chofer',
+                'devoluciones.detalles.detallePrestamoCliente.prestable'
+            ]);
 
             // Filtro por cliente
             if ($request->has('cliente_id')) {
@@ -137,7 +143,14 @@ class PrestamoClienteController extends Controller
     public function show(PrestamoCliente $prestamo): JsonResponse
     {
         try {
-            $prestamo->load(['detalles.prestable', 'detalles.devoluciones', 'cliente', 'chofer', 'venta', 'devoluciones']);
+            $prestamo->load([
+                'detalles.prestable',
+                'detalles.devolucionDetalles',
+                'cliente',
+                'chofer',
+                'venta',
+                'devoluciones.detalles.detallePrestamoCliente.prestable'
+            ]);
             $resumen = $this->prestamoService->obtenerResumenPrestamo($prestamo->id);
 
             return response()->json([
@@ -200,14 +213,16 @@ class PrestamoClienteController extends Controller
 
     /**
      * POST /api/prestamos-cliente/{prestamo}/devolver
-     * Registrar devolución por detalle
+     * Registrar devolución con múltiples detalles
      */
     public function registrarDevolucion(Request $request, PrestamoCliente $prestamo): JsonResponse
     {
         try {
-            // Validar datos de devolución
+            // Preparar datos para validación y servicio
             $datosValidacion = $request->all();
+            $datosValidacion['prestamo_cliente_id'] = $prestamo->id;
 
+            // Validar datos de devolución
             $validacion = $this->validacionService->datosDevolucion($datosValidacion);
             if (!$validacion['valido']) {
                 return response()->json([
@@ -217,27 +232,8 @@ class PrestamoClienteController extends Controller
                 ], 422);
             }
 
-            // Validar que la cantidad devuelta no exceda la prestada
-            $cantidadDevuelta = ($request->integer('cantidad_devuelta') ?? 0) +
-                               ($request->integer('cantidad_dañada_parcial') ?? 0) +
-                               ($request->integer('cantidad_dañada_total') ?? 0);
-
-            $validacionDevolucio = $this->validacionService->puedoDevolver(
-                $request->integer('prestamo_cliente_detalle_id'),
-                $request->integer('cantidad_devuelta'),
-                $request->integer('cantidad_dañada_parcial'),
-                $request->integer('cantidad_dañada_total')
-            );
-
-            if (!$validacionDevolucio['valido']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $validacionDevolucio['mensaje'],
-                ], 422);
-            }
-
             // Registrar devolución
-            $devolución = $this->prestamoService->registrarDevolucion($request->all());
+            $devolución = $this->prestamoService->registrarDevolucion($datosValidacion);
 
             if (!$devolución) {
                 return response()->json([
@@ -246,20 +242,12 @@ class PrestamoClienteController extends Controller
                 ], 500);
             }
 
-            // Obtener el detalle para saber qué prestable es
-            $detalle = $devolución->detallePrestamoCliente;
-
-            // Obtener montos a cobrar por daño
-            $montos = $this->validacionService->obtenerMontosDaño(
-                $detalle->prestable_id,
-                $request->integer('cantidad_dañada_parcial') ?? 0,
-                $request->integer('cantidad_dañada_total') ?? 0
-            );
+            // Cargar relaciones
+            $devolución->load(['detalles.detallePrestamoCliente.prestable']);
 
             return response()->json([
                 'success' => true,
                 'data' => $devolución,
-                'montos_cobrados' => $montos,
                 'message' => 'Devolución registrada exitosamente',
             ], 201);
         } catch (\Exception $e) {
@@ -316,7 +304,14 @@ class PrestamoClienteController extends Controller
         $accion  = $request->input('accion', 'download'); // download | stream
 
         // Cargar relaciones necesarias para la impresión
-        $prestamo->load(['detalles.prestable', 'cliente', 'chofer', 'venta', 'devoluciones']);
+        $prestamo->load([
+            'detalles.prestable',
+            'detalles.devoluciones.detallePrestamoCliente.prestable',
+            'cliente',
+            'chofer',
+            'venta',
+            'devoluciones'
+        ]);
 
         // Generar PDF usando el tipo de documento "prestamo_cliente"
         $pdf = $this->impresionService->generarPDF('prestamo_cliente', $prestamo, $formato);
@@ -326,6 +321,84 @@ class PrestamoClienteController extends Controller
         return $accion === 'stream'
             ? $pdf->stream($nombreArchivo)
             : $pdf->download($nombreArchivo);
+    }
+
+    /**
+     * GET /api/prestamos-cliente/{prestamo}/devoluciones/{devolucion}/imprimir
+     * Imprimir comprobante de devolución en PDF
+     */
+    public function imprimirDevolucion(PrestamoCliente $prestamo, $devolucionId, Request $request)
+    {
+        try {
+            $devolucion = \App\Models\DevolucionCliente::findOrFail($devolucionId);
+
+            // Verificar que la devolución pertenece al préstamo
+            if ($devolucion->prestamo_cliente_id !== $prestamo->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Devolución no pertenece a este préstamo',
+                ], 403);
+            }
+
+            // Cargar relaciones
+            $devolucion->load([
+                'detalles.detallePrestamoCliente.prestable',
+                'prestamo.cliente'
+            ]);
+
+            $formato = $request->input('formato', 'A4');
+            $accion = $request->input('accion', 'download');
+
+            // Generar PDF usando el tipo de documento "devolucion_cliente"
+            $pdf = $this->impresionService->generarPDF('devolucion_cliente', $devolucion, $formato);
+
+            $nombreArchivo = "devolucion_prestamo_{$prestamo->id}_{$devolucionId}_{$formato}.pdf";
+
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('Error imprimiendo devolución', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generando PDF',
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/prestamos-cliente/{prestamo}/devoluciones/imprimir
+     * Imprimir todas las devoluciones de un préstamo en un solo PDF
+     */
+    public function imprimirTodasLasDevoluciones(PrestamoCliente $prestamo, Request $request)
+    {
+        try {
+            // Cargar todas las devoluciones con sus detalles y relaciones
+            $prestamo->load([
+                'detalles.prestable',
+                'devoluciones.detalles.detallePrestamoCliente.prestable',
+                'cliente'
+            ]);
+
+            $formato = $request->input('formato', 'A4');
+            $accion = $request->input('accion', 'download');
+
+            // Generar PDF usando el tipo de documento "devoluciones_cliente_todas"
+            // Este tipo imprimirá todas las devoluciones de un prestamo en un solo documento
+            $pdf = $this->impresionService->generarPDF('devoluciones_cliente_todas', $prestamo, $formato);
+
+            $nombreArchivo = "devoluciones_prestamo_{$prestamo->id}_{$formato}.pdf";
+
+            return $accion === 'stream'
+                ? $pdf->stream($nombreArchivo)
+                : $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('Error imprimiendo devoluciones', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generando PDF',
+            ], 500);
+        }
     }
 
     /**

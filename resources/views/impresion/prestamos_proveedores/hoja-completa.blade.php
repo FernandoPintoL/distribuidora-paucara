@@ -65,7 +65,7 @@
                     @foreach($documento->detalles as $detalle)
                         @php
                             $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
-                            $cantidadDevuelta = $detalle->devoluciones->sum('cantidad_devuelta') ?? 0;
+                            $cantidadDevuelta = $detalle->devolucionDetalles->sum('cantidad_devuelta') ?? 0;
                             $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
                         @endphp
                         <tr>

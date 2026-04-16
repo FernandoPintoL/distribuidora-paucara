@@ -15,6 +15,7 @@ use App\Models\MovimientoInventario;
 use App\Models\PrecioProducto;
 use App\Models\Producto;
 use App\Models\Proveedor;
+use App\Models\Sector;
 use App\Models\StockProducto;
 use App\Models\TipoAjusteInventario;
 use App\Models\TipoPrecio;
@@ -267,6 +268,19 @@ class ProductoController extends Controller
     {
         $empresa = auth()->user()?->empresa;
 
+        // ✨ Cargar todos los sectores organizados por almacén para el frontend
+        $almacenes = Almacen::orderBy('nombre')->get(['id', 'nombre']);
+        $sectoresPorAlmacen = [];
+
+        foreach ($almacenes as $almacen) {
+            $sectoresPorAlmacen[$almacen->id] = Sector::where('almacen_id', $almacen->id)
+                ->orderBy('es_generico', 'desc')
+                ->orderBy('nombre', 'asc')
+                ->get(['id', 'nombre', 'es_generico'])
+                ->map(fn($s) => ['value' => $s->id, 'label' => $s->nombre])
+                ->toArray();
+        }
+
         return Inertia::render('productos/form', [
             'producto'                      => null,
             'categorias'                    => Categoria::orderBy('nombre')->get(['id', 'nombre']),
@@ -275,7 +289,8 @@ class ProductoController extends Controller
             'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio'                  => TipoPrecio::getOptions(),
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes'                     => $almacenes,
+            'sectores'                      => $sectoresPorAlmacen, // ✨ NUEVO: Sectores pre-cargados por almacén
             'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
             'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
         ]);
@@ -624,10 +639,21 @@ class ProductoController extends Controller
             'precios'           => $precios,
             'codigos'           => $codigos, // Array de códigos de barra con metadata
             // mapear stock por almacén para el frontend
-            'almacenes'         => StockProducto::where('producto_id', $producto->id)
-                ->get(['almacen_id', 'cantidad as stock', 'lote', 'fecha_vencimiento'])
+            'stock_almacenes'   => StockProducto::where('producto_id', $producto->id)
+                ->with(['almacen:id,nombre', 'sector:id,nombre'])
+                ->get(['almacen_id', 'sector_id', 'cantidad as stock', 'cantidad_disponible', 'cantidad_reservada', 'lote', 'fecha_vencimiento'])
                 ->map(function ($s) {
-                    return ['almacen_id' => $s->almacen_id, 'stock' => $s->stock, 'lote' => $s->lote, 'fecha_vencimiento' => $s->fecha_vencimiento ? $s->fecha_vencimiento->format('Y-m-d') : null];
+                    return [
+                        'almacen_id' => $s->almacen_id,
+                        'almacen_nombre' => $s->almacen?->nombre,
+                        'sector_id' => $s->sector_id,
+                        'sector_nombre' => $s->sector?->nombre,
+                        'stock' => $s->stock,
+                        'cantidad_disponible' => $s->cantidad_disponible,
+                        'cantidad_reservada' => $s->cantidad_reservada,
+                        'lote' => $s->lote,
+                        'fecha_vencimiento' => $s->fecha_vencimiento ? $s->fecha_vencimiento->format('Y-m-d') : null
+                    ];
                 })->toArray(),
             'historial_precios' => $historialPrecios,
         ];
@@ -662,6 +688,19 @@ class ProductoController extends Controller
 
         $empresa = auth()->user()?->empresa;
 
+        // ✨ Cargar todos los sectores organizados por almacén para el frontend
+        $almacenes = Almacen::orderBy('nombre')->get(['id', 'nombre']);
+        $sectoresPorAlmacen = [];
+
+        foreach ($almacenes as $almacen) {
+            $sectoresPorAlmacen[$almacen->id] = Sector::where('almacen_id', $almacen->id)
+                ->orderBy('es_generico', 'desc')
+                ->orderBy('nombre', 'asc')
+                ->get(['id', 'nombre', 'es_generico'])
+                ->map(fn($s) => ['value' => $s->id, 'label' => $s->nombre])
+                ->toArray();
+        }
+
         return Inertia::render('productos/form', [
             'producto'                      => $payload,
             'categorias'                    => Categoria::orderBy('nombre')->get(['id', 'nombre']),
@@ -670,7 +709,8 @@ class ProductoController extends Controller
             'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio'                  => TipoPrecio::getOptions(),
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                     => Almacen::orderBy('nombre')->get(['id', 'nombre']),
+            'almacenes'                     => $almacenes,
+            'sectores'                      => $sectoresPorAlmacen, // ✨ NUEVO: Sectores pre-cargados por almacén
             'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
             'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
         ]);

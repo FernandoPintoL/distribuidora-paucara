@@ -27,6 +27,7 @@ class ProductoStockService
      *
      * @param int $productoId - ID del producto
      * @param int|null $almacenId - ID del almacén (si es null, suma todos)
+     * @param int|null $sectorId - ID del sector (opcional, si es null suma todo el almacén)
      * @return array Con estructura: {
      *     producto_id: int,
      *     stock_disponible: int,
@@ -35,7 +36,7 @@ class ProductoStockService
      *     capacidad: int|null  // Solo para combos
      * }
      */
-    public static function obtenerStockProducto(int $productoId, ?int $almacenId = null): array
+    public static function obtenerStockProducto(int $productoId, ?int $almacenId = null, ?int $sectorId = null): array
     {
         $producto = Producto::find($productoId);
 
@@ -56,6 +57,10 @@ class ProductoStockService
             $query->where('almacen_id', $almacenId);
         }
 
+        if ($sectorId) {
+            $query->where('sector_id', $sectorId);
+        }
+
         $stockDisponible = $query->sum('cantidad_disponible') ?? 0;
         $stockTotal = $query->sum('cantidad') ?? 0;
         $stockReservado = $stockTotal - $stockDisponible;
@@ -63,7 +68,7 @@ class ProductoStockService
         // Si es combo, también obtener capacidad
         $capacidad = null;
         if ($producto->es_combo) {
-            $capacidad = ComboStockService::calcularCapacidadCombos($productoId, $almacenId);
+            $capacidad = ComboStockService::calcularCapacidadCombos($productoId, $almacenId, $sectorId);
         }
 
         return [
@@ -80,12 +85,13 @@ class ProductoStockService
      *
      * @param array $productoIds - Array de IDs de productos
      * @param int|null $almacenId - ID del almacén (si es null, suma todos)
+     * @param int|null $sectorId - ID del sector (opcional)
      * @return Collection Con datos de stock de cada producto
      */
-    public static function obtenerStockMultiples(array $productoIds, ?int $almacenId = null): Collection
+    public static function obtenerStockMultiples(array $productoIds, ?int $almacenId = null, ?int $sectorId = null): Collection
     {
-        return collect($productoIds)->map(function ($productoId) use ($almacenId) {
-            return self::obtenerStockProducto($productoId, $almacenId);
+        return collect($productoIds)->map(function ($productoId) use ($almacenId, $sectorId) {
+            return self::obtenerStockProducto($productoId, $almacenId, $sectorId);
         });
     }
 
@@ -93,18 +99,24 @@ class ProductoStockService
      * Obtener stock de todos los productos (con paginación opcional)
      *
      * @param int|null $almacenId - ID del almacén (si es null, suma todos)
+     * @param int|null $sectorId - ID del sector (opcional)
      * @param int $perPage - Productos por página (null = sin paginación)
      * @return mixed Collection o Paginator
      */
-    public static function obtenerStockTodos(?int $almacenId = null, ?int $perPage = null)
+    public static function obtenerStockTodos(?int $almacenId = null, ?int $sectorId = null, ?int $perPage = null)
     {
         $query = Producto::query();
 
-        // Cargar stock
-        $query->with(['stocks' => function ($q) use ($almacenId) {
+        // Cargar stock con relación al sector
+        $query->with(['stocks' => function ($q) use ($almacenId, $sectorId) {
             if ($almacenId) {
                 $q->where('almacen_id', $almacenId);
             }
+            if ($sectorId) {
+                $q->where('sector_id', $sectorId);
+            }
+            // Cargar relación sector para cada stock
+            $q->with('sector:id,nombre,es_generico');
         }]);
 
         $productos = $perPage ? $query->paginate($perPage) : $query->get();
@@ -148,14 +160,19 @@ class ProductoStockService
      *
      * @param int $productoId - ID del producto
      * @param int|null $almacenId - ID del almacén
+     * @param int|null $sectorId - ID del sector (opcional)
      * @return int Stock disponible
      */
-    public static function obtenerStockDisponible(int $productoId, ?int $almacenId = null): int
+    public static function obtenerStockDisponible(int $productoId, ?int $almacenId = null, ?int $sectorId = null): int
     {
         $query = StockProducto::where('producto_id', $productoId);
 
         if ($almacenId) {
             $query->where('almacen_id', $almacenId);
+        }
+
+        if ($sectorId) {
+            $query->where('sector_id', $sectorId);
         }
 
         return (int) ($query->sum('cantidad_disponible') ?? 0);
@@ -167,11 +184,12 @@ class ProductoStockService
      * @param int $productoId - ID del producto
      * @param int $cantidad - Cantidad solicitada
      * @param int|null $almacenId - ID del almacén
+     * @param int|null $sectorId - ID del sector (opcional)
      * @return bool
      */
-    public static function hayStockDisponible(int $productoId, int $cantidad, ?int $almacenId = null): bool
+    public static function hayStockDisponible(int $productoId, int $cantidad, ?int $almacenId = null, ?int $sectorId = null): bool
     {
-        $stockDisponible = self::obtenerStockDisponible($productoId, $almacenId);
+        $stockDisponible = self::obtenerStockDisponible($productoId, $almacenId, $sectorId);
         return $stockDisponible >= $cantidad;
     }
 }

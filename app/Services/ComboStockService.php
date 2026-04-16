@@ -14,9 +14,10 @@ class ComboStockService
      *
      * @param int $comboId - ID del combo (producto)
      * @param int|null $almacenId - ID del almacén (opcional, si es null usa todos)
+     * @param int|null $sectorId - ID del sector (opcional, si es null usa todo el almacén)
      * @return int - Cantidad máxima de combos que se pueden hacer
      */
-    public static function calcularCapacidadCombos(int $comboId, ?int $almacenId = null): int
+    public static function calcularCapacidadCombos(int $comboId, ?int $almacenId = null, ?int $sectorId = null): int
     {
         // Obtener el combo
         $combo = Producto::findOrFail($comboId);
@@ -44,6 +45,11 @@ class ComboStockService
                 $stockQuery->where('almacen_id', $almacenId);
             }
 
+            // Filtrar por sector si se especifica
+            if ($sectorId) {
+                $stockQuery->where('sector_id', $sectorId);
+            }
+
             $stockDisponible = $stockQuery->sum('cantidad_disponible') ?? 0;
 
             // Calcular cuántos combos se pueden hacer con este producto
@@ -66,6 +72,7 @@ class ComboStockService
      *
      * @param int $comboId - ID del combo
      * @param int|null $almacenId - ID del almacén (opcional)
+     * @param int|null $sectorId - ID del sector (opcional)
      * @return array - [
      *     'capacidad_total' => int,
      *     'detalles' => [
@@ -81,7 +88,7 @@ class ComboStockService
      *     ]
      * ]
      */
-    public static function calcularCapacidadConDetalles(int $comboId, ?int $almacenId = null): array
+    public static function calcularCapacidadConDetalles(int $comboId, ?int $almacenId = null, ?int $sectorId = null): array
     {
         // Obtener el combo
         $combo = Producto::findOrFail($comboId);
@@ -114,6 +121,10 @@ class ComboStockService
 
             if ($almacenId) {
                 $stockQuery->where('almacen_id', $almacenId);
+            }
+
+            if ($sectorId) {
+                $stockQuery->where('sector_id', $sectorId);
             }
 
             $stockDisponible = $stockQuery->sum('cantidad_disponible') ?? 0;
@@ -159,6 +170,10 @@ class ComboStockService
                 $stockQuery->where('almacen_id', $almacenId);
             }
 
+            if ($sectorId) {
+                $stockQuery->where('sector_id', $sectorId);
+            }
+
             $stockDisponible = $stockQuery->sum('cantidad_disponible') ?? 0;
 
             // Calcular cuántos combos se podrían hacer (solo referencia)
@@ -189,11 +204,12 @@ class ComboStockService
      *
      * @param int $comboId - ID del combo
      * @param int|null $almacenId - ID del almacén
+     * @param int|null $sectorId - ID del sector (opcional)
      * @return array - ['capacidad' => int, 'cuello_botella' => array, 'componentes' => array]
      */
-    public static function obtenerStockProducto(int $comboId, ?int $almacenId = null): array
+    public static function obtenerStockProducto(int $comboId, ?int $almacenId = null, ?int $sectorId = null): array
     {
-        $detalles = self::calcularCapacidadConDetalles($comboId, $almacenId);
+        $detalles = self::calcularCapacidadConDetalles($comboId, $almacenId, $sectorId);
 
         // Encontrar cuello de botella
         $cuelloBotella = null;

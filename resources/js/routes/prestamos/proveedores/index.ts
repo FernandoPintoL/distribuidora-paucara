@@ -1,4 +1,101 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import prestamos from './prestamos'
+import compras from './compras'
+/**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+export const devoluciones = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: devoluciones.url(args, options),
+    method: 'get',
+})
+
+devoluciones.definition = {
+    methods: ["get","head"],
+    url: '/prestamos/proveedores/{prestamo}/devoluciones',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+devoluciones.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { prestamo: args }
+    }
+
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { prestamo: args.id }
+        }
+    
+    if (Array.isArray(args)) {
+        args = {
+                    prestamo: args[0],
+                }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+                        prestamo: typeof args.prestamo === 'object'
+                ? args.prestamo.id
+                : args.prestamo,
+                }
+
+    return devoluciones.definition.url
+            .replace('{prestamo}', parsedArgs.prestamo.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+devoluciones.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: devoluciones.url(args, options),
+    method: 'get',
+})
+/**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+devoluciones.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: devoluciones.url(args, options),
+    method: 'head',
+})
+
+    /**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+    const devolucionesForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+        action: devoluciones.url(args, options),
+        method: 'get',
+    })
+
+            /**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+        devolucionesForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: devoluciones.url(args, options),
+            method: 'get',
+        })
+            /**
+ * @see routes/web.php:808
+ * @route '/prestamos/proveedores/{prestamo}/devoluciones'
+ */
+        devolucionesForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+            action: devoluciones.url(args, {
+                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+                            _method: 'HEAD',
+                            ...(options?.query ?? options?.mergeQuery ?? {}),
+                        }
+                    }),
+            method: 'get',
+        })
+    
+    devoluciones.form = devolucionesForm
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::index
  * @see app/Http/Controllers/PrestamosInertiaController.php:89
@@ -78,86 +175,8 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     index.form = indexForm
 /**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-export const crear = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: crear.url(options),
-    method: 'get',
-})
-
-crear.definition = {
-    methods: ["get","head"],
-    url: '/prestamos/proveedores/crear',
-} satisfies RouteDefinition<["get","head"]>
-
-/**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-crear.url = (options?: RouteQueryOptions) => {
-    return crear.definition.url + queryParams(options)
-}
-
-/**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-crear.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
-    url: crear.url(options),
-    method: 'get',
-})
-/**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
-    url: crear.url(options),
-    method: 'head',
-})
-
-    /**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-    const crearForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-        action: crear.url(options),
-        method: 'get',
-    })
-
-            /**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-        crearForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: crear.url(options),
-            method: 'get',
-        })
-            /**
-* @see \App\Http\Controllers\PrestamosInertiaController::crear
- * @see app/Http/Controllers/PrestamosInertiaController.php:97
- * @route '/prestamos/proveedores/crear'
- */
-        crearForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
-            action: crear.url({
-                        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
-                            _method: 'HEAD',
-                            ...(options?.query ?? options?.mergeQuery ?? {}),
-                        }
-                    }),
-            method: 'get',
-        })
-    
-    crear.form = crearForm
-/**
 * @see \App\Http\Controllers\PrestamosInertiaController::store
- * @see app/Http/Controllers/PrestamosInertiaController.php:120
+ * @see app/Http/Controllers/PrestamosInertiaController.php:153
  * @route '/prestamos/proveedores'
  */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +191,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::store
- * @see app/Http/Controllers/PrestamosInertiaController.php:120
+ * @see app/Http/Controllers/PrestamosInertiaController.php:153
  * @route '/prestamos/proveedores'
  */
 store.url = (options?: RouteQueryOptions) => {
@@ -181,7 +200,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::store
- * @see app/Http/Controllers/PrestamosInertiaController.php:120
+ * @see app/Http/Controllers/PrestamosInertiaController.php:153
  * @route '/prestamos/proveedores'
  */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -191,7 +210,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\PrestamosInertiaController::store
- * @see app/Http/Controllers/PrestamosInertiaController.php:120
+ * @see app/Http/Controllers/PrestamosInertiaController.php:153
  * @route '/prestamos/proveedores'
  */
     const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -201,7 +220,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\PrestamosInertiaController::store
- * @see app/Http/Controllers/PrestamosInertiaController.php:120
+ * @see app/Http/Controllers/PrestamosInertiaController.php:153
  * @route '/prestamos/proveedores'
  */
         storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -212,7 +231,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     store.form = storeForm
 /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
 export const imprimir = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -227,7 +246,7 @@ imprimir.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
 imprimir.url = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -260,7 +279,7 @@ imprimir.url = (args: { prestamo: number | { id: number } } | [prestamo: number 
 
 /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
 imprimir.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -269,7 +288,7 @@ imprimir.get = (args: { prestamo: number | { id: number } } | [prestamo: number 
 })
 /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
 imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -279,7 +298,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
 
     /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
     const imprimirForm = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -289,7 +308,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
 
             /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
         imprimirForm.get = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -298,7 +317,7 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
         })
             /**
 * @see \App\Http\Controllers\PrestamoProveedorController::imprimir
- * @see app/Http/Controllers/PrestamoProveedorController.php:217
+ * @see app/Http/Controllers/PrestamoProveedorController.php:228
  * @route '/prestamos/proveedores/{prestamo}/imprimir'
  */
         imprimirForm.head = (args: { prestamo: number | { id: number } } | [prestamo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -313,8 +332,10 @@ imprimir.head = (args: { prestamo: number | { id: number } } | [prestamo: number
     
     imprimir.form = imprimirForm
 const proveedores = {
-    index,
-crear,
+    devoluciones,
+index,
+prestamos,
+compras,
 store,
 imprimir,
 }

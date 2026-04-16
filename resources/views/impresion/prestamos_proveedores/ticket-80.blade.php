@@ -5,15 +5,15 @@
         // Determinar estado global del préstamo
         $estado = $documento->estado;
         if ($estado === 'COMPLETAMENTE_DEVUELTO') {
-            $estadoClass = 'Estado: DEVUELTO ✓';
+            $estadoClass = 'Estado: DEVUELTO';
         } elseif ($estado === 'PARCIALMENTE_DEVUELTO') {
-            $estadoClass = 'Estado: PARCIAL ⚠';
+            $estadoClass = 'Estado: PARCIAL';
         } else {
-            $estadoClass = 'Estado: ACTIVO 📦';
+            $estadoClass = 'Estado: ACTIVO';
         }
     @endphp
 
-    <div class="ticket">
+    <div class="ticket" style="font-size: 13px;">
         <div style="text-align: center;">
             <h3 class="text-center text-sm font-bold mb-1">Préstamo Proveedor # <strong>{{ $documento->id }}</strong></h3>
             <p style="font-size: 12px; font-weight: bold;">PRÉSTAMO/COMPRA DE CANASTILLAS / EMBASES</p>
@@ -91,7 +91,7 @@
                     @foreach($documento->detalles as $detalle)
                         @php
                             $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
-                            $cantidadDevuelta = $detalle->devoluciones->sum('cantidad_devuelta') ?? 0;
+                            $cantidadDevuelta = $detalle->devolucionDetalles->sum('cantidad_devuelta') ?? 0;
                             $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
                         @endphp
                         <tr style="border-bottom: 1px solid #ccc;">

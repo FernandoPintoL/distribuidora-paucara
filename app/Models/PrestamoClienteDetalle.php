@@ -35,8 +35,14 @@ class PrestamoClienteDetalle extends Model
         return $this->belongsTo(Prestable::class);
     }
 
+    public function devolucionDetalles(): HasMany
+    {
+        return $this->hasMany(DevolucionClienteDetalle::class, 'prestamo_cliente_detalle_id');
+    }
+
+    // Método legacy para compatibilidad (deprecado)
     public function devoluciones(): HasMany
     {
-        return $this->hasMany(DevolucionClientePrestamo::class, 'prestamo_cliente_detalle_id');
+        return $this->devolucionDetalles();
     }
 }

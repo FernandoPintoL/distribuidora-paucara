@@ -4,8 +4,10 @@ namespace App\Services\Prestamos;
 
 use App\Models\PrestamoCliente;
 use App\Models\PrestamoClienteDetalle;
-use App\Models\DevolucionClientePrestamo;
+use App\Models\DevolucionCliente;
+use App\Models\DevolucionClienteDetalle;
 use App\Models\PrestableCondicion;
+use App\Services\MovimientoPrestableService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -17,10 +19,12 @@ use Illuminate\Support\Facades\Log;
 class PrestamoClienteService
 {
     private PrestableStockService $stockService;
+    private MovimientoPrestableService $movimientoService;
 
-    public function __construct(PrestableStockService $stockService)
+    public function __construct(PrestableStockService $stockService, MovimientoPrestableService $movimientoService)
     {
         $this->stockService = $stockService;
+        $this->movimientoService = $movimientoService;
     }
 
     /**
@@ -31,6 +35,7 @@ class PrestamoClienteService
      *   'cliente_id': int,
      *   'venta_id': ?int,
      *   'chofer_id': ?int,
+     *   'tipo_prestamo': 'canastillas'|'embases'|'canastillas_embases',
      *   'es_venta': bool,
      *   'es_evento': ?bool,
      *   'monto_garantia': ?float,
@@ -60,6 +65,7 @@ class PrestamoClienteService
                     'cliente_id' => $datos['cliente_id'],
                     'venta_id' => $datos['venta_id'] ?? null,
                     'chofer_id' => $datos['chofer_id'] ?? null,
+                    'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
                     'es_venta' => $datos['es_venta'],
                     'es_evento' => $datos['es_evento'] ?? false,
                     'monto_garantia' => $montoGarantia,
@@ -83,6 +89,13 @@ class PrestamoClienteService
                         'estado' => 'ACTIVO',
                     ]);
 
+                    // Obtener stock antes de actualizar
+                    $stock = $this->stockService->obtenerStock($detalle['prestable_id'], $almacenId);
+                    $disponibleAntes = $stock->cantidad_disponible;
+                    $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
+                    $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+                    $vendidaAntes = $stock->cantidad_vendida;
+
                     // Actualizar stock para cada detalle
                     if ($datos['es_venta']) {
                         $this->stockService->venderAlCliente(
@@ -97,11 +110,38 @@ class PrestamoClienteService
                             $detalle['cantidad']
                         );
                     }
+
+                    // Obtener stock después de actualizar
+                    $stock->refresh();
+
+                    // Registrar movimiento
+                    $this->movimientoService->registrarMovimiento([
+                        'prestable_stock_id' => $stock->id,
+                        'almacen_id' => $almacenId,
+                        'usuario_id' => auth()->id(),
+                        'tipo' => $datos['es_venta'] ? 'SALIDA' : 'CONSUMO_RESERVA',
+                        'cantidad' => $datos['es_venta'] ? -$detalle['cantidad'] : -$detalle['cantidad'],
+                        'disponible_anterior' => $disponibleAntes,
+                        'prestamo_cliente_anterior' => $prestamoClienteAntes,
+                        'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
+                        'vendida_anterior' => $vendidaAntes,
+                        'disponible_posterior' => $stock->cantidad_disponible,
+                        'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
+                        'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
+                        'vendida_posterior' => $stock->cantidad_vendida,
+                        'categoria_afectada' => $datos['es_venta'] ? 'vendida' : 'prestamo_cliente',
+                        'motivo' => $datos['es_venta'] ? 'Venta a cliente' : 'Préstamo a cliente',
+                        'numero_referencia' => $prestamo->id,
+                        'referencia_tipo' => 'PRESTAMO_CLIENTE',
+                        'referencia_id' => $prestamo->id,
+                        'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
+                    ]);
                 }
 
                 Log::info('✅ Préstamo creado', [
                     'prestamo_id' => $prestamo->id,
                     'cliente_id' => $datos['cliente_id'],
+                    'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
                     'cantidad_detalles' => count($detalles),
                     'es_venta' => $datos['es_venta'],
                 ]);
@@ -118,84 +158,304 @@ class PrestamoClienteService
     }
 
     /**
-     * Registrar devolución (parcial o total) por detalle
+     * Registrar devolución (parcial o total) con múltiples detalles
      *
      * @param array $datos
      * {
-     *   'prestamo_cliente_detalle_id': int,
-     *   'cantidad_devuelta': int,
-     *   'cantidad_dañada_parcial': ?int = 0,
-     *   'cantidad_dañada_total': ?int = 0,
+     *   'prestamo_cliente_id': int,
+     *   'fecha_devolucion': date,
+     *   'monto_cobrado_daño_total': ?float = 0,
      *   'observaciones': ?string,
      *   'chofer_id': ?int,
-     *   'fecha_devolucion': date,
+     *   'detalles': [
+     *     {
+     *       'prestamo_cliente_detalle_id': int,
+     *       'cantidad_devuelta': int,
+     *       'cantidad_dañada_parcial': ?int = 0,
+     *       'cantidad_dañada_total': ?int = 0,
+     *     },
+     *     ...
+     *   ]
      * }
      */
-    public function registrarDevolucion(array $datos): DevolucionClientePrestamo|false
+    public function registrarDevolucion(array $datos): DevolucionCliente|false
     {
         try {
             return DB::transaction(function () use ($datos) {
-                $detalle = PrestamoClienteDetalle::find($datos['prestamo_cliente_detalle_id']);
-
-                if (!$detalle) {
-                    throw new \Exception('Detalle de préstamo no encontrado');
+                // Validar que prestamo_cliente_id existe
+                $prestamo = PrestamoCliente::find($datos['prestamo_cliente_id']);
+                if (!$prestamo) {
+                    throw new \Exception('Préstamo no encontrado');
                 }
 
-                $cantidadDañadaParcial = $datos['cantidad_dañada_parcial'] ?? 0;
-                $cantidadDañadaTotal = $datos['cantidad_dañada_total'] ?? 0;
-                $cantidadTotal = $datos['cantidad_devuelta'] + $cantidadDañadaParcial + $cantidadDañadaTotal;
+                $almacenId = 3; // Almacén para canastillas
 
-                // Validar que no devuelve más de lo que pidió
-                if ($cantidadTotal > $detalle->cantidad_prestada) {
-                    throw new \Exception('Cantidad devuelta excede cantidad prestada');
-                }
+                // Crear encabezado de devolución
+                $devolucion = DevolucionCliente::create([
+                    'prestamo_cliente_id' => $datos['prestamo_cliente_id'],
+                    'fecha_devolucion' => $datos['fecha_devolucion'],
+                    'monto_cobrado_daño_total' => (float) ($datos['monto_cobrado_daño_total'] ?? 0),
+                    'monto_garantia_devuelta_total' => 0, // Se calculará de los detalles
+                    'observaciones' => $datos['observaciones'] ?? null,
+                    'chofer_id' => $datos['chofer_id'] ?? null,
+                ]);
 
-                // Obtener condiciones para calcular montos por daño
-                $condicion = PrestableCondicion::where('prestable_id', $detalle->prestable_id)->first();
-                $montoCobraDaño = 0;
-                $montoGarantiaDevuelta = 0;
+                $montoGarantiaTotal = 0;
+                $detalles = $datos['detalles'] ?? [];
 
-                if ($condicion) {
-                    $montoCobraDaño = ($cantidadDañadaParcial * $condicion->monto_daño_parcial) +
-                                      ($cantidadDañadaTotal * $condicion->monto_daño_total);
+                // Procesar cada detalle de devolución
+                foreach ($detalles as $detalleData) {
+                    $detalle = PrestamoClienteDetalle::find($detalleData['prestamo_cliente_detalle_id']);
 
-                    // Garantía devuelta solo para lo que está en buen estado
-                    if ($datos['cantidad_devuelta'] > 0) {
-                        $montoGarantiaDevuelta = $datos['cantidad_devuelta'] * $condicion->monto_garantia;
+                    if (!$detalle) {
+                        throw new \Exception('Detalle de préstamo no encontrado: ' . $detalleData['prestamo_cliente_detalle_id']);
+                    }
+
+                    $cantidadDevuelta = $detalleData['cantidad_devuelta'] ?? 0;
+                    $cantidadDañadaParcial = $detalleData['cantidad_dañada_parcial'] ?? 0;
+                    $cantidadDañadaTotal = $detalleData['cantidad_dañada_total'] ?? 0;
+                    $cantidadTotal = $cantidadDevuelta + $cantidadDañadaParcial + $cantidadDañadaTotal;
+
+                    // Calcular cuánto ya ha sido devuelto previamente
+                    $cantidadYaDevuelta = $detalle->devolucionDetalles()
+                        ->whereHas('devolucion', function ($q) {
+                            // Solo contar devoluciones confirmadas (creadas antes de esta)
+                            $q->where('created_at', '<', now());
+                        })
+                        ->sum(DB::raw('cantidad_devuelta + cantidad_dañada_parcial + cantidad_dañada_total'));
+
+                    $cantidadRestante = $detalle->cantidad_prestada - $cantidadYaDevuelta;
+
+                    // Validar que no devuelve más de lo que queda por devolver
+                    if ($cantidadTotal > $cantidadRestante) {
+                        throw new \Exception("Cantidad a devolver ({$cantidadTotal}) excede cantidad restante ({$cantidadRestante}) para detalle {$detalleData['prestamo_cliente_detalle_id']}. Ya devuelto: {$cantidadYaDevuelta}");
+                    }
+
+                    // Obtener condiciones para calcular garantía devuelta
+                    $condicion = PrestableCondicion::where('prestable_id', $detalle->prestable_id)->first();
+                    $montoGarantiaDevuelta = 0;
+
+                    if ($condicion) {
+                        // Garantía devuelta solo para lo que está en buen estado
+                        if ($cantidadDevuelta > 0) {
+                            $montoGarantiaDevuelta = $cantidadDevuelta * $condicion->monto_garantia;
+                        }
+                    }
+
+                    $montoGarantiaTotal += $montoGarantiaDevuelta;
+
+                    // Calcular TOTAL DEVUELTO HISTÓRICO ANTES de crear el nuevo registro
+                    $totalDevueltoHistorico = $detalle->devolucionDetalles()
+                        ->sum(DB::raw('cantidad_devuelta + cantidad_dañada_parcial + cantidad_dañada_total'));
+                    $totalDevueltoAhora = $totalDevueltoHistorico + $cantidadTotal;
+
+                    // Crear detalle de devolución
+                    // Nota: El monto_cobrado_daño se registra a nivel de cabecera (monto_cobrado_daño_total)
+                    $detalleDevolucion = DevolucionClienteDetalle::create([
+                        'devolucion_cliente_id' => $devolucion->id,
+                        'prestamo_cliente_detalle_id' => $detalleData['prestamo_cliente_detalle_id'],
+                        'cantidad_devuelta' => $cantidadDevuelta,
+                        'cantidad_dañada_parcial' => $cantidadDañadaParcial,
+                        'cantidad_dañada_total' => $cantidadDañadaTotal,
+                        'monto_cobrado_daño' => 0,
+                        'monto_garantia_devuelta' => $montoGarantiaDevuelta,
+                    ]);
+
+                    // Obtener stock ANTES de devolver
+                    $stock = $this->stockService->obtenerStock($detalle->prestable_id, $almacenId);
+                    $disponibleAntes = $stock->cantidad_disponible;
+                    $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
+                    $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+                    $vendidaAntes = $stock->cantidad_vendida;
+
+                    // Actualizar stock
+                    $this->stockService->devolverDelCliente(
+                        $detalle->prestable_id,
+                        $almacenId,
+                        $cantidadDevuelta,
+                        $cantidadDañadaParcial,
+                        $cantidadDañadaTotal
+                    );
+
+                    // Obtener stock DESPUÉS de devolver
+                    $stock->refresh();
+
+                    // Registrar movimiento de devolución
+                    $this->movimientoService->registrarMovimiento([
+                        'prestable_stock_id' => $stock->id,
+                        'almacen_id' => $almacenId,
+                        'usuario_id' => auth()->id(),
+                        'tipo' => 'ENTRADA',
+                        'cantidad' => $cantidadTotal,
+                        'disponible_anterior' => $disponibleAntes,
+                        'prestamo_cliente_anterior' => $prestamoClienteAntes,
+                        'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
+                        'vendida_anterior' => $vendidaAntes,
+                        'disponible_posterior' => $stock->cantidad_disponible,
+                        'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
+                        'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
+                        'vendida_posterior' => $stock->cantidad_vendida,
+                        'categoria_afectada' => 'prestamo_cliente',
+                        'motivo' => 'Devolución de préstamo a cliente',
+                        'numero_referencia' => $prestamo->id,
+                        'referencia_tipo' => 'DEVOLUCIO_CLIENTE',
+                        'referencia_id' => $devolucion->id,
+                        'observaciones' => $datos['observaciones'] ?? null,
+                    ]);
+
+                    // Actualizar embases relacionados si existen
+                    // ⚠️ Solo si el detalle actual es CANASTILLA, NO si es EMBASE (que ya se procesa por separado)
+                    $prestable = \App\Models\Prestable::find($detalle->prestable_id);
+                    if ($prestable && $prestable->tipo === 'CANASTILLA' && $prestable->embasesRelacionados()->count() > 0) {
+                        foreach ($prestable->embasesRelacionados()->get() as $embase) {
+                            // Buscar el detalle de EMBASE en el préstamo para registrar la devolución
+                            $detalleEmbase = $prestamo->detalles()
+                                ->whereHas('prestable', function ($q) use ($embase) {
+                                    $q->where('id', $embase->id);
+                                })
+                                ->first();
+
+                            // ⚠️ SKIP si el EMBASE ya está siendo procesado en los detalles del frontend
+                            $embaseYaProcesado = in_array($detalleEmbase?->id, array_column($detalles, 'prestamo_cliente_detalle_id'));
+                            if ($embaseYaProcesado) {
+                                continue;
+                            }
+
+                            // Calcular cambio en embases: cantidad_devuelta × capacidad
+                            $cambioEmbasesTotal = $cantidadDevuelta * ($prestable->capacidad ?? 1);
+
+                            // Restar embases dañados
+                            $embasesDanados = ($detalleData['embases_danados_parcial'] ?? 0) + ($detalleData['embases_danados_total'] ?? 0);
+                            $embasesADevolver = $cambioEmbasesTotal - $embasesDanados;
+
+                            // Calcular TOTAL DEVUELTO HISTÓRICO para embases ANTES de crear el nuevo registro
+                            $totalEmbasesHistorico = 0;
+                            if ($detalleEmbase) {
+                                $totalEmbasesHistorico = $detalleEmbase->devolucionDetalles()
+                                    ->sum(DB::raw('cantidad_devuelta + cantidad_dañada_parcial + cantidad_dañada_total'));
+                            }
+                            $totalEmbasesDevueltosAhora = $totalEmbasesHistorico + $embasesADevolver + $embasesDanados;
+
+                            // Crear detalle de devolución para el EMBASE si existe
+                            if ($detalleEmbase) {
+                                DevolucionClienteDetalle::create([
+                                    'devolucion_cliente_id' => $devolucion->id,
+                                    'prestamo_cliente_detalle_id' => $detalleEmbase->id,
+                                    'cantidad_devuelta' => $embasesADevolver,
+                                    'cantidad_dañada_parcial' => $detalleData['embases_danados_parcial'] ?? 0,
+                                    'cantidad_dañada_total' => $detalleData['embases_danados_total'] ?? 0,
+                                    'monto_cobrado_daño' => 0,
+                                    'monto_garantia_devuelta' => 0,
+                                ]);
+                            }
+
+                            // Obtener stock del embase ANTES
+                            $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenId);
+                            $disponibleEmbaseAntes = $stockEmbase->cantidad_disponible;
+                            $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_en_prestamo_cliente;
+                            $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_en_prestamo_proveedor;
+                            $vendidaEmbaseAntes = $stockEmbase->cantidad_vendida;
+
+                            // Actualizar stock del embase (devolver solo los no dañados)
+                            if ($embasesADevolver > 0) {
+                                $this->stockService->devolverDelCliente(
+                                    $embase->id,
+                                    $almacenId,
+                                    $embasesADevolver,
+                                    0,
+                                    0
+                                );
+                            }
+
+                            // Obtener stock DESPUÉS
+                            $stockEmbase->refresh();
+
+                            // Registrar movimiento del embase (devueltos en buen estado)
+                            if ($embasesADevolver > 0) {
+                                $this->movimientoService->registrarMovimiento([
+                                    'prestable_stock_id' => $stockEmbase->id,
+                                    'almacen_id' => $almacenId,
+                                    'usuario_id' => auth()->id(),
+                                    'tipo' => 'ENTRADA',
+                                    'cantidad' => $embasesADevolver,
+                                    'disponible_anterior' => $disponibleEmbaseAntes,
+                                    'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
+                                    'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
+                                    'vendida_anterior' => $vendidaEmbaseAntes,
+                                    'disponible_posterior' => $stockEmbase->cantidad_disponible,
+                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
+                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
+                                    'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                    'categoria_afectada' => 'prestamo_cliente',
+                                    'motivo' => 'Devolución de embase (asociado a canastilla)',
+                                    'numero_referencia' => $prestamo->id,
+                                    'referencia_tipo' => 'DEVOLUCIO_CLIENTE_EMBASE',
+                                    'referencia_id' => $devolucion->id,
+                                    'observaciones' => "Embase: {$embase->nombre}. Devueltos: {$embasesADevolver}/{$cambioEmbasesTotal}. Dañados: {$embasesDanados}",
+                                ]);
+                            }
+
+                            // Registrar movimiento por embases dañados (pérdida)
+                            if ($embasesDanados > 0) {
+                                $this->movimientoService->registrarMovimiento([
+                                    'prestable_stock_id' => $stockEmbase->id,
+                                    'almacen_id' => $almacenId,
+                                    'usuario_id' => auth()->id(),
+                                    'tipo' => 'SALIDA',
+                                    'cantidad' => -$embasesDanados,
+                                    'disponible_anterior' => $disponibleEmbaseAntes,
+                                    'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
+                                    'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
+                                    'vendida_anterior' => $vendidaEmbaseAntes,
+                                    'disponible_posterior' => $stockEmbase->cantidad_disponible,
+                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
+                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
+                                    'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                    'categoria_afectada' => 'prestamo_cliente',
+                                    'motivo' => 'Pérdida de embases en devolución',
+                                    'numero_referencia' => $prestamo->id,
+                                    'referencia_tipo' => 'DEVOLUCIO_CLIENTE_EMBASE_DANADO',
+                                    'referencia_id' => $devolucion->id,
+                                    'observaciones' => "Embase: {$embase->nombre}. Dañados parciales: {$detalleData['embases_danados_parcial']}. Dañados totales: {$detalleData['embases_danados_total']}",
+                                ]);
+                            }
+
+                            // Actualizar estado del detalle de EMBASE basado en el total calculado arriba
+                            if ($detalleEmbase) {
+                                // Total de embases que se supone fueron prestados (canastillas × capacidad)
+                                $totalEmbasesPrestados = $detalleEmbase->cantidad_prestada;
+
+                                if ($totalEmbasesDevueltosAhora >= $totalEmbasesPrestados) {
+                                    $detalleEmbase->update(['estado' => 'COMPLETAMENTE_DEVUELTO']);
+                                } else {
+                                    $detalleEmbase->update(['estado' => 'PARCIALMENTE_DEVUELTO']);
+                                }
+                            }
+
+                            Log::info('✅ Stock de embase actualizado en devolución', [
+                                'embase_id' => $embase->id,
+                                'embase_nombre' => $embase->nombre,
+                                'embases_calculados' => $cambioEmbasesTotal,
+                                'embases_danados' => $embasesDanados,
+                                'embases_a_devolver' => $embasesADevolver,
+                                'capacidad_canastilla' => $prestable->capacidad,
+                                'cantidad_canastilla' => $cantidadDevuelta,
+                            ]);
+                        }
+                    }
+
+                    // Actualizar estado del detalle basado en el total calculado arriba
+                    if ($totalDevueltoAhora >= $detalle->cantidad_prestada) {
+                        $detalle->update(['estado' => 'COMPLETAMENTE_DEVUELTO']);
+                    } else {
+                        $detalle->update(['estado' => 'PARCIALMENTE_DEVUELTO']);
                     }
                 }
 
-                // Crear devolución
-                $devolucion = DevolucionClientePrestamo::create([
-                    'prestamo_cliente_detalle_id' => $datos['prestamo_cliente_detalle_id'],
-                    'cantidad_devuelta' => $datos['cantidad_devuelta'],
-                    'cantidad_dañada_parcial' => $cantidadDañadaParcial,
-                    'cantidad_dañada_total' => $cantidadDañadaTotal,
-                    'monto_cobrado_daño' => $montoCobraDaño,
-                    'monto_garantia_devuelta' => $montoGarantiaDevuelta,
-                    'observaciones' => $datos['observaciones'] ?? null,
-                    'chofer_id' => $datos['chofer_id'] ?? null,
-                    'fecha_devolucion' => $datos['fecha_devolucion'],
-                ]);
-
-                // Actualizar stock
-                $this->stockService->devolverDelCliente(
-                    $detalle->prestable_id,
-                    auth()->user()->empresa->almacen_id,
-                    $datos['cantidad_devuelta'],
-                    $cantidadDañadaParcial,
-                    $cantidadDañadaTotal
-                );
-
-                // Actualizar estado del detalle
-                if ($cantidadTotal == $detalle->cantidad_prestada) {
-                    $detalle->update(['estado' => 'COMPLETAMENTE_DEVUELTO']);
-                } else {
-                    $detalle->update(['estado' => 'PARCIALMENTE_DEVUELTO']);
-                }
+                // Actualizar monto_garantia_devuelta_total en la cabecera
+                $devolucion->update(['monto_garantia_devuelta_total' => $montoGarantiaTotal]);
 
                 // Actualizar estado del encabezado si todos los detalles están devueltos
-                $prestamo = $detalle->prestamo;
                 $todosDevueltos = $prestamo->detalles()
                     ->where('estado', '!=', 'COMPLETAMENTE_DEVUELTO')
                     ->count() === 0;
@@ -208,14 +468,13 @@ class PrestamoClienteService
 
                 Log::info('✅ Devolución registrada', [
                     'devolucion_id' => $devolucion->id,
-                    'detalle_id' => $datos['prestamo_cliente_detalle_id'],
-                    'cantidad_devuelta' => $datos['cantidad_devuelta'],
-                    'daño_parcial' => $cantidadDañadaParcial,
-                    'daño_total' => $cantidadDañadaTotal,
-                    'cobro_daño' => $montoCobraDaño,
+                    'prestamo_cliente_id' => $datos['prestamo_cliente_id'],
+                    'cantidad_detalles' => count($detalles),
+                    'monto_cobrado_daño_total' => $datos['monto_cobrado_daño_total'] ?? 0,
+                    'monto_garantia_devuelta_total' => $montoGarantiaTotal,
                 ]);
 
-                return $devolucion;
+                return $devolucion->load('detalles');
             });
         } catch (\Exception $e) {
             Log::error('❌ Error registrando devolución', [
@@ -347,6 +606,13 @@ class PrestamoClienteService
                         $cantidadPendiente = $detalle->cantidad_prestada - $cantidadDevuelta;
 
                         if ($cantidadPendiente > 0) {
+                            // Obtener stock ANTES de devolver
+                            $stock = $this->stockService->obtenerStock($detalle->prestable_id, $almacenId);
+                            $disponibleAntes = $stock->cantidad_disponible;
+                            $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
+                            $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+                            $vendidaAntes = $stock->cantidad_vendida;
+
                             // Devolver como cantidad en buen estado
                             $this->stockService->devolverDelCliente(
                                 $detalle->prestable_id,
@@ -355,6 +621,91 @@ class PrestamoClienteService
                                 0, // sin daño parcial
                                 0  // sin daño total
                             );
+
+                            // Obtener stock DESPUÉS de devolver
+                            $stock->refresh();
+
+                            // Registrar movimiento de devolución por anulación
+                            $this->movimientoService->registrarMovimiento([
+                                'prestable_stock_id' => $stock->id,
+                                'almacen_id' => $almacenId,
+                                'usuario_id' => auth()->id(),
+                                'tipo' => 'ENTRADA',
+                                'cantidad' => $cantidadPendiente,
+                                'disponible_anterior' => $disponibleAntes,
+                                'prestamo_cliente_anterior' => $prestamoClienteAntes,
+                                'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
+                                'vendida_anterior' => $vendidaAntes,
+                                'disponible_posterior' => $stock->cantidad_disponible,
+                                'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
+                                'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
+                                'vendida_posterior' => $stock->cantidad_vendida,
+                                'categoria_afectada' => 'prestamo_cliente',
+                                'motivo' => 'Devolución por anulación de préstamo',
+                                'numero_referencia' => $prestamo->id,
+                                'referencia_tipo' => 'PRESTAMO_CLIENTE_ANULADO',
+                                'referencia_id' => $prestamo->id,
+                                'observaciones' => $razonAnulacion,
+                            ]);
+
+                            // Actualizar embases relacionados si existen
+                            $prestable = \App\Models\Prestable::find($detalle->prestable_id);
+                            if ($prestable && $prestable->embasesRelacionados()->count() > 0) {
+                                foreach ($prestable->embasesRelacionados()->get() as $embase) {
+                                    // Calcular cambio en embases: cantidad_pendiente × capacidad
+                                    $cambioEmbases = $cantidadPendiente * ($prestable->capacidad ?? 1);
+
+                                    // Obtener stock del embase ANTES
+                                    $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenId);
+                                    $disponibleEmbaseAntes = $stockEmbase->cantidad_disponible;
+                                    $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_en_prestamo_cliente;
+                                    $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_en_prestamo_proveedor;
+                                    $vendidaEmbaseAntes = $stockEmbase->cantidad_vendida;
+
+                                    // Actualizar stock del embase (devolver)
+                                    $this->stockService->devolverDelCliente(
+                                        $embase->id,
+                                        $almacenId,
+                                        $cambioEmbases,
+                                        0,
+                                        0
+                                    );
+
+                                    // Obtener stock DESPUÉS
+                                    $stockEmbase->refresh();
+
+                                    // Registrar movimiento del embase
+                                    $this->movimientoService->registrarMovimiento([
+                                        'prestable_stock_id' => $stockEmbase->id,
+                                        'almacen_id' => $almacenId,
+                                        'usuario_id' => auth()->id(),
+                                        'tipo' => 'ENTRADA',
+                                        'cantidad' => $cambioEmbases,
+                                        'disponible_anterior' => $disponibleEmbaseAntes,
+                                        'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
+                                        'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
+                                        'vendida_anterior' => $vendidaEmbaseAntes,
+                                        'disponible_posterior' => $stockEmbase->cantidad_disponible,
+                                        'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
+                                        'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
+                                        'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                        'categoria_afectada' => 'prestamo_cliente',
+                                        'motivo' => 'Devolución de embase por anulación de préstamo',
+                                        'numero_referencia' => $prestamo->id,
+                                        'referencia_tipo' => 'PRESTAMO_CLIENTE_ANULADO_EMBASE',
+                                        'referencia_id' => $prestamo->id,
+                                        'observaciones' => "Embase: {$embase->nombre}. Multiplicador: {$prestable->capacidad}. Razón: {$razonAnulacion}",
+                                    ]);
+
+                                    Log::info('✅ Stock de embase actualizado en anulación', [
+                                        'embase_id' => $embase->id,
+                                        'embase_nombre' => $embase->nombre,
+                                        'cambio_embases' => $cambioEmbases,
+                                        'capacidad_canastilla' => $prestable->capacidad,
+                                        'cantidad_canastilla' => $cantidadPendiente,
+                                    ]);
+                                }
+                            }
                         }
                     }
 

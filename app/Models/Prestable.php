@@ -56,6 +56,14 @@ class Prestable extends Model
     }
 
     /**
+     * Embases relacionados (si este prestable es de tipo CANASTILLA)
+     */
+    public function embasesRelacionados(): HasMany
+    {
+        return $this->hasMany(Prestable::class, 'prestable_relacionado_id');
+    }
+
+    /**
      * Precios de venta y préstamo
      */
     public function precios(): HasMany

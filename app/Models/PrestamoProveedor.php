@@ -44,9 +44,9 @@ class PrestamoProveedor extends Model
         return $this->belongsTo(Proveedor::class);
     }
 
-    // ✅ Relación a través de detalles para devoluciones
+    // ✅ Relación a devoluciones (cabecera)
     public function devoluciones(): HasMany
     {
-        return $this->hasMany(DevolucionProveedorPrestamo::class, 'prestamo_proveedor_detalle_id');
+        return $this->hasMany(DevolucionProveedor::class, 'prestamo_proveedor_id');
     }
 }

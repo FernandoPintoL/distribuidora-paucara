@@ -245,7 +245,7 @@ export default function StockYProductos({
                         <table className="w-full">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                                    <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
                                         {/* Columna para expandir */}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -269,9 +269,9 @@ export default function StockYProductos({
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Vencimiento
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    {/* <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Valor Total
-                                    </th>
+                                    </th> */}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -297,7 +297,7 @@ export default function StockYProductos({
                                         <React.Fragment key={uniqueKey}>
                                             {/* Fila principal */}
                                             <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                <td className="px-1 py-1 whitespace-nowrap text-center">
                                                     {(hasFractionedInfo || tieneMultiplesLotes) && (
                                                         <button
                                                             onClick={() => toggleRow(uniqueKey)}
@@ -321,7 +321,7 @@ export default function StockYProductos({
                                                         </button>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                <td className="px-1 py-1 whitespace-nowrap">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
                                                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -337,12 +337,12 @@ export default function StockYProductos({
                                                         </div>
                                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                                             {stock.producto_codigo_barra && (
-                                                                <>Código: {stock.producto_codigo_barra}</>
+                                                                <>Cod B.: {stock.producto_codigo_barra}</>
                                                             )}
                                                         </p>
                                                         {stock.producto_sku && (
                                                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                SKU: {stock.producto_sku}
+                                                                Cod.: {stock.producto_sku}
                                                             </p>
                                                         )}
                                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
@@ -390,11 +390,11 @@ export default function StockYProductos({
                                                         {stock.fecha_vencimiento_proximo ? stock.fecha_vencimiento_proximo : '-'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                {/* <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                                                         Bs{valorTotal.toFixed(2)}
                                                     </span>
-                                                </td>
+                                                </td> */}
                                             </tr>
 
                                             {/* Fila expandible: detalles por lote y conversiones */}

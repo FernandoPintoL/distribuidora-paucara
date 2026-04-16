@@ -98,6 +98,24 @@ class ProveedorController extends Controller
         ]);
     }
 
+    /**
+     * API: Obtener todos los proveedores con límite
+     */
+    public function indexApi(Request $request): JsonResponse
+    {
+        $limite = $request->integer('limit', 50);
+
+        $proveedores = Proveedor::select(['id', 'nombre', 'razon_social', 'nit', 'telefono', 'email', 'contacto', 'activo'])
+            ->where('activo', true)
+            ->limit($limite)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $proveedores,
+        ]);
+    }
+
     public function create(): InertiaResponse
     {
         return Inertia::render('proveedores/form', [

@@ -41,6 +41,48 @@ class Almacen extends Model
         return $this->hasMany(StockProducto::class, 'almacen_id');
     }
 
+    public function sectores()
+    {
+        return $this->hasMany(Sector::class, 'almacen_id');
+    }
+
+    /**
+     * Obtener el sector genérico automático de este almacén
+     * Usado para asignar stocks cuando no se especifica un sector
+     */
+    public function sectorGenerico()
+    {
+        return $this->sectores()->where('es_generico', true)->first();
+    }
+
+    /**
+     * Boot del modelo - Crear sector genérico automáticamente
+     */
+    protected static function booted()
+    {
+        // Crear sector "General" cuando se crea un almacén
+        static::created(function ($almacen) {
+            // Verificar que no exista ya un sector genérico (por si acaso)
+            $sectorExistente = Sector::where('almacen_id', $almacen->id)
+                ->where('es_generico', true)
+                ->first();
+
+            if (!$sectorExistente) {
+                Sector::create([
+                    'almacen_id' => $almacen->id,
+                    'nombre' => 'General',
+                    'es_generico' => true,
+                    'descripcion' => 'Sector genérico automático - Productos sin clasificación específica',
+                ]);
+
+                \Illuminate\Support\Facades\Log::info('Almacen: Sector genérico creado automáticamente', [
+                    'almacen_id' => $almacen->id,
+                    'almacen_nombre' => $almacen->nombre,
+                ]);
+            }
+        });
+    }
+
     /**
      * Determina si la transferencia hacia otro almacén requiere transporte
      */

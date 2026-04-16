@@ -5,15 +5,15 @@
         // Determinar estado global del préstamo
         $estado = $documento->estado;
         if ($estado === 'COMPLETAMENTE_DEVUELTO') {
-            $estadoClass = 'Estado: DEVUELTO ✓';
+            $estadoClass = 'Estado: DEVUELTO';
         } elseif ($estado === 'PARCIALMENTE_DEVUELTO') {
-            $estadoClass = 'Estado: PARCIAL ⚠';
+            $estadoClass = 'Estado: PARCIAL';
         } else {
-            $estadoClass = 'Estado: ACTIVO 📦';
+            $estadoClass = 'Estado: ACTIVO';
         }
     @endphp
 
-    <div class="ticket">
+    <div class="ticket" style="font-size: 13px;">
         <div style="text-align: center;">
             <h3 class="text-center text-sm font-bold mb-1">Prestamo # <strong>{{ $documento->id }}</strong></h3>
             <p style="font-size: 12px; font-weight: bold;">PRÉSTAMO DE CANASTILLAS / EMBASES</p>
@@ -103,7 +103,7 @@
                     @foreach($documento->detalles as $detalle)
                         @php
                             $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
-                            $cantidadDevuelta = $detalle->devoluciones->sum('cantidad_devuelta') ?? 0;
+                            $cantidadDevuelta = $detalle->devolucionDetalles->sum('cantidad_devuelta') ?? 0;
                             $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
                         @endphp
                         <tr style="border-bottom: 1px solid #ccc;">
@@ -126,11 +126,20 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $cantTotalDevuelta = 0;
+                        if($documento->devoluciones && count($documento->devoluciones) > 0) {
+                            foreach($documento->devoluciones as $devolucion) {
+                                $cantTotalDevuelta += $devolucion->detalles->sum('cantidad_devuelta');
+                            }
+                        }
+                        $cantPrestadaTotal = $documento->cantidad_prestada ?? $documento->cantidad ?? 0;
+                    @endphp
                     <tr style="border-bottom: 1px solid #ccc;">
                         <td style="text-align: left; padding: 2px;">{{ substr($documento->prestable->nombre ?? 'Prestable', 0, 12) }}</td>
-                        <td style="text-align: center; padding: 2px;">{{ number_format($documento->cantidad_prestada ?? $documento->cantidad ?? 0, 0) }}</td>
-                        <td style="text-align: center; padding: 2px;">{{ number_format($documento->devoluciones->sum('cantidad_devuelta') ?? 0, 0) }}</td>
-                        <td style="text-align: center; padding: 2px; font-weight: bold;">{{ number_format(($documento->cantidad_prestada ?? $documento->cantidad ?? 0) - ($documento->devoluciones->sum('cantidad_devuelta') ?? 0), 0) }}</td>
+                        <td style="text-align: center; padding: 2px;">{{ number_format($cantPrestadaTotal, 0) }}</td>
+                        <td style="text-align: center; padding: 2px;">{{ number_format($cantTotalDevuelta, 0) }}</td>
+                        <td style="text-align: center; padding: 2px; font-weight: bold;">{{ number_format($cantPrestadaTotal - $cantTotalDevuelta, 0) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -139,7 +148,44 @@
         <!-- SEPARADOR -->
         <div style="border-top: 1px solid #000; margin: 3px 0;"></div>
 
-       
+        <!-- RESUMEN DE DEVOLUCIONES -->
+        @php
+            $todasLasDevoluciones = [];
+            if($documento->devoluciones && count($documento->devoluciones) > 0) {
+                foreach($documento->devoluciones as $devolucion) {
+                    foreach($devolucion->detalles as $detalleDevolucion) {
+                        $todasLasDevoluciones[] = $detalleDevolucion;
+                    }
+                }
+            }
+        @endphp
+
+        @if(count($todasLasDevoluciones) > 0)
+            <p class="text-center text-xs font-bold mb-1"><strong>RESUMEN DEVOLUCIONES</strong></p>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #000;">
+                        <th style="text-align: left; padding: 2px; font-weight: bold;">Prestable</th>
+                        <th style="text-align: center; padding: 2px; font-weight: bold;">B</th>
+                        <th style="text-align: center; padding: 2px; font-weight: bold;">P</th>
+                        <th style="text-align: center; padding: 2px; font-weight: bold;">T</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($todasLasDevoluciones as $dev)
+                        <tr style="border-bottom: 1px solid #ccc;">
+                            <td style="text-align: left; padding: 2px;">{{ substr($dev->detallePrestamoCliente->prestable->nombre ?? 'N/D', 0, 10) }}</td>
+                            <td style="text-align: center; padding: 2px; font-weight: bold;">{{ $dev->cantidad_devuelta ?? 0 }}</td>
+                            <td style="text-align: center; padding: 2px;">{{ $dev->cantidad_dañada_parcial ?? 0 }}</td>
+                            <td style="text-align: center; padding: 2px;">{{ $dev->cantidad_dañada_total ?? 0 }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <p style="margin-top: 2px; text-align: center; font-size: 12px;">
+                <strong>TIPO DE DAÑO: B=Bueno</strong> <strong>P=Parcial</strong> <strong>T=Total</strong>
+            </p>
+        @endif
 
         @if(!empty($documento->observaciones))
             <p class="text-xs mb-1">
@@ -154,11 +200,11 @@
             <strong>IMPORTANTE</strong>
         </p>
 
-        <p class="text-[10px] text-center">
+        <p class="text-[10px] text-center" style="font-size: 12px;">
             El cliente se compromete a devolver las canastillas/embases en buen estado dentro del plazo acordado.
         </p>
 
-        <p class="text-[10px] text-center mt-1">
+        <p class="text-[10px] text-center mt-1" style="font-size: 12px;">
             Producto dañado o faltante será cobrado.
         </p>
 

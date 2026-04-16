@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\ReporteProductoDañadoController;
 use App\Http\Controllers\Api\BannerPublicitarioController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\StockDisponiblePdfController;
+use App\Http\Controllers\Api\SectorController;
 use App\Http\Controllers\ReporteCargaPdfController;
 use App\Http\Controllers\ReporteCargoListController;
 use App\Http\Controllers\Api\NotificationController;
@@ -47,6 +48,8 @@ use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ComboController;
 use App\Http\Controllers\ConciliacionCajaController;
 use App\Http\Controllers\PrestableController;
+use App\Http\Controllers\PrestamoVendidoController;
+use App\Http\Controllers\CompraPrestableController;
 use App\Http\Controllers\PrestableStockController;
 use App\Http\Controllers\PrestamoClienteController;
 use App\Http\Controllers\PrestamoProveedorController;
@@ -285,6 +288,22 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     Route::apiResource('tipos-ajuste-inventario', TipoAjusteInventarioController::class, [
         'only' => ['store', 'update', 'destroy', 'show']
     ]);
+
+    // ==========================================
+    // 🏢 SECTORES DE ALMACÉN
+    // ==========================================
+    // Listar sectores por almacén: GET /api/sectores?almacen_id=2
+    // Obtener sector: GET /api/sectores/{id}
+    // Crear sector: POST /api/sectores
+    // Actualizar sector: PUT /api/sectores/{id}
+    // Eliminar sector: DELETE /api/sectores/{id}
+    Route::apiResource('sectores', SectorController::class);
+
+    // Obtener sector genérico de un almacén
+    Route::get('/almacenes/{almacenId}/sector-generico', [SectorController::class, 'obtenerGenerico']);
+
+    // Obtener sectores de un almacén (para formularios)
+    Route::get('/almacenes/{almacenId}/sectores', [SectorController::class, 'obtenerSectoresPorAlmacen']);
 
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
@@ -621,6 +640,7 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::get('/', [ClienteController::class, 'index']);
         Route::post('/', [ClienteController::class, 'store']);
         Route::get('buscar', [ClienteController::class, 'buscarApi']);
+        Route::get('search', [ClienteController::class, 'search']);
 
         // Ruta especial para obtener el perfil del cliente autenticado (debe ir antes de {cliente})
         Route::get('mi-perfil', [ClienteController::class, 'miPerfil']);
@@ -1119,7 +1139,9 @@ Route::middleware(['auth:sanctum,web'])->get('/entregas/{id}', [EntregaControlle
 
 // Rutas API para proveedores
 Route::group(['prefix' => 'proveedores'], function () {
+    Route::get('/', [ProveedorController::class, 'indexApi']);
     Route::post('/', [ProveedorController::class, 'storeApi']);
+    Route::get('search', [ProveedorController::class, 'buscarApi']);
     Route::get('buscar', [ProveedorController::class, 'buscarApi']);
 });
 
@@ -1350,7 +1372,12 @@ Route::middleware(['auth:sanctum,web'])->group(function () {
 Route::middleware(['auth:sanctum'])->group(function () {
     // Prestables (Canastillas/Embases)
     Route::prefix('prestables')->group(function () {
+        // Rutas sin parámetros (van antes de las parametrizadas)
         Route::get('/', [PrestableController::class, 'index']);
+        Route::get('/ajustes/historial', [PrestableController::class, 'historialAjustes']);
+        Route::get('/movimientos', [PrestableController::class, 'movimientos']);
+
+        // Rutas con parámetros
         Route::post('/', [PrestableController::class, 'store']);
         Route::get('/{prestable}', [PrestableController::class, 'show']);
         Route::put('/{prestable}', [PrestableController::class, 'update']);
@@ -1358,10 +1385,43 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/{prestable}/stock', [PrestableController::class, 'obtenerStock']);
         Route::get('/{prestable}/disponibilidad', [PrestableController::class, 'obtenerDisponibilidad']);
         Route::post('/{prestable}/stock/incrementar', [PrestableController::class, 'incrementarStock']);
+        Route::post('/{prestable}/stock/ajustar', [PrestableController::class, 'ajustarStock']);
+        Route::get('/{prestable}/ajuste-documento', [PrestableController::class, 'ajusteDocumento']);
 
         // Stock management
         Route::get('/{prestable}/stock/detalle', [PrestableStockController::class, 'show']);
         Route::post('/{prestable}/stock/agregar-almacen', [PrestableStockController::class, 'agregarAlmacen']);
+    });
+
+    // Ventas de Prestables
+    Route::prefix('prestamos-vendidos')->group(function () {
+        // Rutas sin parámetros (van antes de las parametrizadas)
+        Route::get('/', [PrestamoVendidoController::class, 'index']);
+        Route::post('/', [PrestamoVendidoController::class, 'store']);
+
+        // Rutas con parámetros
+        Route::get('/{venta}', [PrestamoVendidoController::class, 'show']);
+        Route::post('/{venta}/agregar-detalle', [PrestamoVendidoController::class, 'agregarDetalle']);
+        Route::delete('/{venta}/detalles/{detalle}', [PrestamoVendidoController::class, 'eliminarDetalle']);
+        Route::post('/{venta}/confirmar', [PrestamoVendidoController::class, 'confirmar']);
+        Route::post('/{venta}/cancelar', [PrestamoVendidoController::class, 'cancelar']);
+        Route::get('/{venta}/imprimir', [PrestamoVendidoController::class, 'imprimir']);
+        Route::get('/{venta}/descargar-pdf', [PrestamoVendidoController::class, 'descargarPdf']);
+    });
+
+    // Compras de Prestables
+    Route::prefix('compras-prestables')->group(function () {
+        // Rutas sin parámetros (van antes de las parametrizadas)
+        Route::get('/', [CompraPrestableController::class, 'index']);
+        Route::post('/', [CompraPrestableController::class, 'store']);
+
+        // Rutas con parámetros
+        Route::get('/{compra}', [CompraPrestableController::class, 'showApi']);
+        Route::post('/{compra}/agregar-detalle', [CompraPrestableController::class, 'agregarDetalle']);
+        Route::delete('/{compra}/detalles/{detalle}', [CompraPrestableController::class, 'eliminarDetalle']);
+        Route::post('/{compra}/confirmar', [CompraPrestableController::class, 'confirmar']);
+        Route::post('/{compra}/cancelar', [CompraPrestableController::class, 'cancelar']);
+        Route::get('/{compra}/imprimir', [CompraPrestableController::class, 'imprimir']);
     });
 
     // Prestable Stock Records
@@ -1378,6 +1438,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/{prestamo}', [PrestamoClienteController::class, 'update']);
         Route::post('/{prestamo}/devolver', [PrestamoClienteController::class, 'registrarDevolucion']);
         Route::post('/{prestamo}/anular', [PrestamoClienteController::class, 'anularPrestamo']);
+        Route::get('/{prestamo}/devoluciones/imprimir', [PrestamoClienteController::class, 'imprimirTodasLasDevoluciones']);
+        Route::get('/{prestamo}/devoluciones/{devolucion}/imprimir', [PrestamoClienteController::class, 'imprimirDevolucion']);
         Route::get('/chofer/{choferId}/pendientes', [PrestamoClienteController::class, 'obtenerPendientesChofer']);
         Route::get('/cliente/{clienteId}/activos', [PrestamoClienteController::class, 'obtenerActivosCliente']);
     });
@@ -1386,10 +1448,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('prestamos-proveedor')->group(function () {
         Route::get('/', [PrestamoProveedorController::class, 'index']);
         Route::post('/', [PrestamoProveedorController::class, 'store']);
-        Route::get('/{prestamo}', [PrestamoProveedorController::class, 'show']);
-        Route::post('/{prestamo}/devolver', [PrestamoProveedorController::class, 'registrarDevolucion']);
+        // Rutas específicas PRIMERO (antes de rutas con parámetros genéricos)
         Route::get('/proveedor/{proveedorId}/activos', [PrestamoProveedorController::class, 'obtenerActivosProveedor']);
         Route::get('/proveedor/{proveedorId}/deuda', [PrestamoProveedorController::class, 'obtenerDeuda']);
+        // Rutas genéricas DESPUÉS
+        Route::get('/{prestamo}', [PrestamoProveedorController::class, 'show']);
+        Route::post('/{prestamo}/devolver', [PrestamoProveedorController::class, 'registrarDevolucion']);
+        Route::post('/{prestamo}/anular', [PrestamoProveedorController::class, 'anularPrestamo']);
     });
 
     // Reportes de Préstamos

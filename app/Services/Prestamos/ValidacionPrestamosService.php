@@ -266,35 +266,63 @@ class ValidacionPrestamosService
     {
         $errores = [];
 
-        // Validar detalle de préstamo
-        if (!isset($datos['prestamo_cliente_detalle_id'])) {
-            $errores[] = 'prestamo_cliente_detalle_id requerido';
-        } else {
-            if (!\App\Models\PrestamoClienteDetalle::find($datos['prestamo_cliente_detalle_id'])) {
-                $errores[] = 'Detalle de préstamo no encontrado';
-            }
-        }
-
-        // Validar cantidad devuelta
-        if (!isset($datos['cantidad_devuelta']) || $datos['cantidad_devuelta'] < 0) {
-            $errores[] = 'cantidad_devuelta requerida y debe ser >= 0';
-        }
-
-        // Validar cantidades de daño
-        if (!isset($datos['cantidad_dañada_parcial'])) {
-            $datos['cantidad_dañada_parcial'] = 0;
-        }
-        if (!isset($datos['cantidad_dañada_total'])) {
-            $datos['cantidad_dañada_total'] = 0;
-        }
-
-        if ($datos['cantidad_dañada_parcial'] < 0 || $datos['cantidad_dañada_total'] < 0) {
-            $errores[] = 'Cantidades de daño no pueden ser negativas';
+        // Validar prestamo_cliente_id (agregado en la llamada del controlador)
+        if (empty($datos['prestamo_cliente_id'])) {
+            $errores[] = 'prestamo_cliente_id requerido';
         }
 
         // Validar fecha
-        if (!isset($datos['fecha_devolucion'])) {
+        if (empty($datos['fecha_devolucion'])) {
             $errores[] = 'fecha_devolucion requerida';
+        }
+
+        // Validar detalles (array de devoluciones)
+        if (!isset($datos['detalles']) || !is_array($datos['detalles']) || count($datos['detalles']) === 0) {
+            $errores[] = 'detalles requerido (al menos 1 ítem)';
+        } else {
+            foreach ($datos['detalles'] as $i => $detalle) {
+                // Validar detalle de préstamo
+                if (empty($detalle['prestamo_cliente_detalle_id'])) {
+                    $errores[] = "detalles[{$i}].prestamo_cliente_detalle_id requerido";
+                } else {
+                    if (!\App\Models\PrestamoClienteDetalle::find($detalle['prestamo_cliente_detalle_id'])) {
+                        $errores[] = "detalles[{$i}].prestamo_cliente_detalle_id: Detalle no encontrado";
+                    }
+                }
+
+                // Validar cantidad devuelta
+                if (!isset($detalle['cantidad_devuelta']) || $detalle['cantidad_devuelta'] < 0) {
+                    $errores[] = "detalles[{$i}].cantidad_devuelta requerida y debe ser >= 0";
+                }
+
+                // Validar cantidades de daño (default a 0)
+                $parcial = $detalle['cantidad_dañada_parcial'] ?? 0;
+                $total = $detalle['cantidad_dañada_total'] ?? 0;
+
+                if ($parcial < 0 || $total < 0) {
+                    $errores[] = "detalles[{$i}]: Cantidades de daño no pueden ser negativas";
+                }
+
+                // Validar que no devuelve más de lo permitido
+                $detalleId = $detalle['prestamo_cliente_detalle_id'] ?? null;
+                if ($detalleId) {
+                    $detallePrestamoCliente = \App\Models\PrestamoClienteDetalle::find($detalleId);
+                    if ($detallePrestamoCliente) {
+                        $cantidadDevuelta = $detalle['cantidad_devuelta'] ?? 0;
+                        $cantidadTotal = $cantidadDevuelta + $parcial + $total;
+
+                        // Calcular cuánto ya ha sido devuelto
+                        $cantidadYaDevuelta = $detallePrestamoCliente->devolucionDetalles()
+                            ->sum(\Illuminate\Support\Facades\DB::raw('cantidad_devuelta + cantidad_dañada_parcial + cantidad_dañada_total'));
+
+                        $cantidadRestante = $detallePrestamoCliente->cantidad_prestada - $cantidadYaDevuelta;
+
+                        if ($cantidadTotal > $cantidadRestante) {
+                            $errores[] = "detalles[{$i}]: Cantidad a devolver ({$cantidadTotal}) excede restante ({$cantidadRestante}). Ya devuelto: {$cantidadYaDevuelta}";
+                        }
+                    }
+                }
+            }
         }
 
         return [

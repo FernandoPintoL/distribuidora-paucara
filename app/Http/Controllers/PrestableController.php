@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prestable;
+use App\Models\PrestableStock;
 use App\Models\Proveedor;
 use App\Models\Producto;
 use App\Services\Prestamos\PrestableStockService;
@@ -10,6 +11,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\AjusteStockPrestable;
+use App\Models\MovimientoPrestable;
 
 class PrestableController extends Controller
 {
@@ -26,7 +30,24 @@ class PrestableController extends Controller
         try {
             $almacenCanastillasEmbases = 3; // Almacén fijo para prestables
 
-            $query = Prestable::with(['producto:id,nombre,sku', 'proveedor:id,nombre', 'precios', 'condiciones', 'stocks', 'prestablePadre:id,nombre,codigo'])
+            // Relaciones base por defecto
+            $relaciones = [
+                'producto:id,nombre,sku',
+                'proveedor:id,nombre',
+                'precios',
+                'condiciones',
+                'stocks',
+                'prestablePadre:id,nombre,codigo',
+                'embasesRelacionados.stocks',  // Siempre cargar embases
+            ];
+
+            // Si se solicita dinamicamente via parámetro with, agregar esas relaciones
+            if ($request->has('with')) {
+                $withParams = explode(',', $request->string('with'));
+                $relaciones = array_merge($relaciones, $withParams);
+            }
+
+            $query = Prestable::with($relaciones)
                 ->whereHas('stocks', function ($q) use ($almacenCanastillasEmbases) {
                     $q->where('almacen_id', $almacenCanastillasEmbases);
                 });
@@ -51,10 +72,13 @@ class PrestableController extends Controller
                 });
             }
 
+            // Ordenar en orden descendente por ID (más recientes primero)
+            $query->orderByDesc('id');
+
             $prestables = $query->paginate($request->integer('per_page', 15));
 
-            // Agregar totales a cada prestable
-            $prestables->getCollection()->transform(function ($prestable) {
+            // Convertir a array y agregar totales, asegurando que las relaciones se incluyan
+            $data = $prestables->getCollection()->map(function ($prestable) {
                 $totalCanastillas = 0;
                 $totalEmbases = 0;
 
@@ -71,15 +95,23 @@ class PrestableController extends Controller
                     }
                 }
 
-                $prestable->total_canastillas = $totalCanastillas;
-                $prestable->total_embases = $totalEmbases;
-
-                return $prestable;
+                // Retornar array con todas las propiedades y relaciones
+                return array_merge($prestable->toArray(), [
+                    'total_canastillas' => $totalCanastillas,
+                    'total_embases' => $totalEmbases,
+                    'embasesRelacionados' => $prestable->embasesRelacionados->toArray(), // Explícitamente incluir embases
+                    'stocks' => $prestable->stocks->toArray(),
+                ]);
             });
 
             return response()->json([
                 'success' => true,
-                'data' => $prestables,
+                'data' => [
+                    'data' => $data,
+                    'current_page' => $prestables->currentPage(),
+                    'per_page' => $prestables->perPage(),
+                    'total' => $prestables->total(),
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Error listando prestables', ['error' => $e->getMessage()]);
@@ -100,13 +132,14 @@ class PrestableController extends Controller
 
             $validated = $request->validate([
                 'nombre' => 'required|string|max:255',
-                'codigo' => 'required|string|unique:prestables,codigo',
+                'codigo' => 'nullable|string|unique:prestables,codigo|max:50', // Opcional - si se proporciona, debe ser único
                 'tipo' => 'required|in:CANASTILLA,EMBASES,OTRO',
                 'capacidad' => 'nullable|integer|min:1',
                 'producto_id' => 'nullable|exists:productos,id',
                 'proveedor_id' => 'nullable|exists:proveedores,id',
                 'prestable_relacionado_id' => 'nullable|exists:prestables,id',
                 'descripcion' => 'nullable|string',
+                'crear_embase_asociado' => 'nullable|boolean', // ✨ NUEVO: Flag para crear embase
                 'precios' => 'nullable|array',
                 'precios.*.tipo_precio' => 'nullable|in:VENTA,PRESTAMO',
                 'precios.*.valor' => 'nullable|numeric|min:0',
@@ -117,14 +150,27 @@ class PrestableController extends Controller
             ]);
 
             Log::info('✅ PRESTABLE VALIDADO:', $validated);
-            Log::info('📍 Precios:', ['precios' => $validated['precios'] ?? 'NO ENVIADO']);
-            Log::info('📍 Condiciones:', ['condiciones' => $validated['condiciones'] ?? 'NO ENVIADO']);
+            Log::info('📍 Código recibido:', ['codigo' => $validated['codigo'] ?? 'VACÍO - SERÁ AUTOGENERADO']);
 
             $prestable = DB::transaction(function () use ($validated) {
-                // Crear prestable
+                // ✨ NUEVO: Si no hay código personalizado, generar basado en el ID
+                $codigoPersonalizado = $validated['codigo'];
+
+                if (!empty($codigoPersonalizado)) {
+                    // Validar que el código personalizado sea único
+                    if (Prestable::where('codigo', $codigoPersonalizado)->exists()) {
+                        throw new \Exception("El código '{$codigoPersonalizado}' ya existe");
+                    }
+                    $codigoAUsar = $codigoPersonalizado;
+                } else {
+                    // Usar un código temporal que será reemplazado por el ID
+                    $codigoAUsar = 'TEMP-' . time();
+                }
+
+                // Crear prestable con el código temporal (o personalizado)
                 $prestable = Prestable::create([
                     'nombre' => $validated['nombre'],
-                    'codigo' => $validated['codigo'],
+                    'codigo' => $codigoAUsar,
                     'tipo' => $validated['tipo'],
                     'capacidad' => $validated['capacidad'] ?? null,
                     'producto_id' => $validated['producto_id'] ?? null,
@@ -133,6 +179,18 @@ class PrestableController extends Controller
                     'descripcion' => $validated['descripcion'] ?? null,
                     'activo' => true,
                 ]);
+
+                // ✨ Si no era código personalizado, generar el FINAL basado en el ID
+                if (empty($codigoPersonalizado)) {
+                    $prefijo = $validated['tipo'] === 'CANASTILLA' ? 'CANT' : ($validated['tipo'] === 'EMBASES' ? 'EMBA' : 'PRES');
+                    $codigoFinal = "{$prefijo}-{$prestable->id}"; // Ej: CANT-42
+
+                    // Actualizar el prestable con el código basado en ID
+                    $prestable->update(['codigo' => $codigoFinal]);
+                    Log::info('🔑 Código autogenerado basado en ID:', ['id' => $prestable->id, 'codigo' => $codigoFinal]);
+                }
+
+                Log::info('✅ Prestable creado con código:', ['id' => $prestable->id, 'codigo' => $prestable->codigo]);
 
                 // Crear precios
                 if (isset($validated['precios']) && is_array($validated['precios'])) {
@@ -182,6 +240,66 @@ class PrestableController extends Controller
                     Log::warning('⚠️ No hay condiciones para procesar');
                 }
 
+                // ✨ NUEVO: Crear stock inicial en almacén de prestables (almacén 3)
+                $almacenPrestables = 3;
+                Log::info('📦 Creando stock inicial para prestable en almacén:', ['almacen_id' => $almacenPrestables]);
+                $prestable->stocks()->create([
+                    'almacen_id' => $almacenPrestables,
+                    'cantidad_disponible' => 0,
+                    'cantidad_en_prestamo_cliente' => 0,
+                    'cantidad_en_prestamo_proveedor' => 0,
+                    'cantidad_vendida' => 0,
+                ]);
+
+                // ✨ NUEVO: Si es canastilla y se solicita crear embase asociado
+                if ($validated['tipo'] === 'CANASTILLA' && !empty($validated['crear_embase_asociado'])) {
+                    Log::info('🔗 Creando embase asociado para canastilla:', ['canastilla_id' => $prestable->id]);
+
+                    // Crear código temporal para el embase
+                    $codigoEmbaseTemporal = 'TEMP-' . time() . '-EMB';
+
+                    // Crear el embase
+                    $embase = Prestable::create([
+                        'nombre' => 'EMB-' . $validated['nombre'], // Prefijo EMB- en el nombre
+                        'codigo' => $codigoEmbaseTemporal,
+                        'tipo' => 'EMBASES',
+                        'capacidad' => null, // Los embases no tienen capacidad
+                        'producto_id' => $validated['producto_id'] ?? null, // Mismo producto
+                        'proveedor_id' => $validated['proveedor_id'] ?? null,
+                        'prestable_relacionado_id' => $prestable->id, // Relacionado con la canastilla
+                        'descripcion' => $validated['descripcion'] ?? null,
+                        'activo' => true,
+                    ]);
+
+                    // Generar código del embase basado en su ID
+                    $codigoEmbaseFinal = "EMBA-{$embase->id}";
+                    $embase->update(['codigo' => $codigoEmbaseFinal]);
+
+                    // Crear stock inicial para el embase
+                    $embase->stocks()->create([
+                        'almacen_id' => $almacenPrestables,
+                        'cantidad_disponible' => 0,
+                        'cantidad_en_prestamo_cliente' => 0,
+                        'cantidad_en_prestamo_proveedor' => 0,
+                        'cantidad_vendida' => 0,
+                    ]);
+
+                    // Copiar precios del embase si los tiene
+                    if (isset($validated['precios']) && is_array($validated['precios'])) {
+                        foreach ($validated['precios'] as $precio) {
+                            if (!empty($precio['tipo_precio']) && $precio['valor'] !== null) {
+                                $embase->precios()->create([
+                                    'tipo_precio' => $precio['tipo_precio'],
+                                    'valor' => $precio['valor'] ?? 0,
+                                    'activo' => true,
+                                ]);
+                            }
+                        }
+                    }
+
+                    Log::info('✅ Embase asociado creado:', ['embase_id' => $embase->id, 'codigo' => $embase->codigo]);
+                }
+
                 return $prestable;
             });
 
@@ -222,7 +340,7 @@ class PrestableController extends Controller
     public function show(Prestable $prestable): JsonResponse
     {
         try {
-            $prestable->load(['producto', 'proveedor', 'precios', 'condiciones', 'stocks.almacen', 'prestablePadre:id,nombre,codigo,capacidad']);
+            $prestable->load(['producto', 'proveedor', 'precios', 'condiciones', 'stocks.almacen', 'prestablePadre:id,nombre,codigo,capacidad', 'embasesRelacionados']);
 
             // Calcular totales de stock
             $totalCanastillas = 0;
@@ -521,6 +639,311 @@ class PrestableController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error incrementando stock', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * POST /api/prestables/{prestable}/stock/ajustar
+     * Realizar ajustes de stock con los 4 valores de categorías
+     */
+    public function ajustarStock(Request $request, Prestable $prestable): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'almacen_id' => 'required|exists:almacenes,id',
+                'cantidad_disponible' => 'required|integer|min:0',
+                'cantidad_en_prestamo_cliente' => 'required|integer|min:0',
+                'cantidad_en_prestamo_proveedor' => 'required|integer|min:0',
+                'cantidad_vendida' => 'required|integer|min:0',
+                'motivo' => 'nullable|string|max:255',
+                'comentarios' => 'nullable|string|max:500',
+            ]);
+
+            $stock = PrestableStock::where('prestable_id', $prestable->id)
+                ->where('almacen_id', $validated['almacen_id'])
+                ->firstOrFail();
+
+            // Valores anteriores para auditoría
+            $valoresAnteriores = [
+                'disponible' => $stock->cantidad_disponible,
+                'prestamo_cliente' => $stock->cantidad_en_prestamo_cliente,
+                'prestamo_proveedor' => $stock->cantidad_en_prestamo_proveedor,
+                'vendida' => $stock->cantidad_vendida,
+            ];
+
+            DB::transaction(function () use ($stock, $validated, $prestable, $valoresAnteriores) {
+                // Actualizar stock
+                $stock->update([
+                    'cantidad_disponible' => $validated['cantidad_disponible'],
+                    'cantidad_en_prestamo_cliente' => $validated['cantidad_en_prestamo_cliente'],
+                    'cantidad_en_prestamo_proveedor' => $validated['cantidad_en_prestamo_proveedor'],
+                    'cantidad_vendida' => $validated['cantidad_vendida'],
+                ]);
+
+                // 📊 Guardar ajuste en auditoría
+                $ajuste = AjusteStockPrestable::create([
+                    'prestable_id' => $prestable->id,
+                    'prestable_stock_id' => $stock->id,
+                    'almacen_id' => $validated['almacen_id'],
+                    'usuario_id' => auth()->id(),
+                    'cantidad_disponible_antes' => $valoresAnteriores['disponible'],
+                    'cantidad_en_prestamo_cliente_antes' => $valoresAnteriores['prestamo_cliente'],
+                    'cantidad_en_prestamo_proveedor_antes' => $valoresAnteriores['prestamo_proveedor'],
+                    'cantidad_vendida_antes' => $valoresAnteriores['vendida'],
+                    'cantidad_disponible_despues' => $validated['cantidad_disponible'],
+                    'cantidad_en_prestamo_cliente_despues' => $validated['cantidad_en_prestamo_cliente'],
+                    'cantidad_en_prestamo_proveedor_despues' => $validated['cantidad_en_prestamo_proveedor'],
+                    'cantidad_vendida_despues' => $validated['cantidad_vendida'],
+                    'motivo' => $validated['motivo'] ?? null,
+                    'comentarios' => $validated['comentarios'] ?? null,
+                    'tipo_ajuste' => 'ajuste_relativo',
+                    'ip_usuario' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+
+                // 📈 Registrar movimiento en tabla movimientos_prestables
+                MovimientoPrestable::create([
+                    'prestable_stock_id' => $stock->id,
+                    'almacen_id' => $validated['almacen_id'],
+                    'usuario_id' => auth()->id(),
+                    'tipo' => 'AJUSTE_DIRECTO',
+                    'cantidad' => $ajuste->cambio_total,
+                    'disponible_anterior' => $valoresAnteriores['disponible'],
+                    'prestamo_cliente_anterior' => $valoresAnteriores['prestamo_cliente'],
+                    'prestamo_proveedor_anterior' => $valoresAnteriores['prestamo_proveedor'],
+                    'vendida_anterior' => $valoresAnteriores['vendida'],
+                    'disponible_posterior' => $validated['cantidad_disponible'],
+                    'prestamo_cliente_posterior' => $validated['cantidad_en_prestamo_cliente'],
+                    'prestamo_proveedor_posterior' => $validated['cantidad_en_prestamo_proveedor'],
+                    'vendida_posterior' => $validated['cantidad_vendida'],
+                    'categoria_afectada' => null,
+                    'motivo' => $validated['motivo'] ?? null,
+                    'observaciones' => $validated['comentarios'] ?? null,
+                    'numero_referencia' => "AJUSTE-{$ajuste->id}",
+                    'referencia_tipo' => 'AJUSTE',
+                    'referencia_id' => $ajuste->id,
+                    'ip_usuario' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+
+                Log::info('📊 AJUSTE DE STOCK PRESTABLE (TABLA) - GUARDADO EN AUDITORÍA', [
+                    'prestable_id' => $prestable->id,
+                    'almacen_id' => $validated['almacen_id'],
+                    'usuario_id' => auth()->id(),
+                    'valores_anteriores' => $valoresAnteriores,
+                    'valores_nuevos' => [
+                        'disponible' => $validated['cantidad_disponible'],
+                        'prestamo_cliente' => $validated['cantidad_en_prestamo_cliente'],
+                        'prestamo_proveedor' => $validated['cantidad_en_prestamo_proveedor'],
+                        'vendida' => $validated['cantidad_vendida'],
+                    ],
+                    'motivo' => $validated['motivo'] ?? 'Sin especificar',
+                    'comentarios' => $validated['comentarios'] ?? 'Sin comentarios',
+                ]);
+            });
+
+            // Recargar stock actualizado
+            $stock->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock ajustado exitosamente',
+                'data' => $stock,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Error ajustando stock', [
+                'prestable_id' => $prestable->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * GET /api/prestables/ajustes/historial
+     * Obtener historial de ajustes con paginación y filtros
+     */
+    public function historialAjustes(Request $request): JsonResponse
+    {
+        try {
+            $query = AjusteStockPrestable::query()
+                ->with(['prestable', 'almacen', 'usuario'])
+                ->orderByDesc('created_at');
+
+            // Filtros
+            if ($request->filled('prestable_id')) {
+                $query->where('prestable_id', $request->input('prestable_id'));
+            }
+
+            if ($request->filled('almacen_id')) {
+                $query->where('almacen_id', $request->input('almacen_id'));
+            }
+
+            if ($request->filled('usuario_id')) {
+                $query->where('usuario_id', $request->input('usuario_id'));
+            }
+
+            if ($request->filled('fecha_desde')) {
+                $query->whereDate('created_at', '>=', $request->input('fecha_desde'));
+            }
+
+            if ($request->filled('fecha_hasta')) {
+                $query->whereDate('created_at', '<=', $request->input('fecha_hasta'));
+            }
+
+            if ($request->filled('buscar')) {
+                $buscar = $request->input('buscar');
+                $query->whereHas('prestable', function ($q) use ($buscar) {
+                    $q->where('nombre', 'ilike', "%{$buscar}%")
+                        ->orWhere('codigo', 'ilike', "%{$buscar}%");
+                });
+            }
+
+            $ajustes = $query->paginate(20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $ajustes,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo historial de ajustes', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generar documento imprimible de ajuste de stock
+     * GET /api/prestables/{prestable}/ajuste-documento
+     */
+    public function ajusteDocumento(Prestable $prestable, Request $request)
+    {
+        try {
+            $datos = [
+                'fecha' => $request->input('fecha', now()->format('d/m/Y H:i')),
+                'prestable_nombre' => $prestable->nombre,
+                'prestable_codigo' => $prestable->codigo,
+                'almacen' => $request->input('almacen', 'N/A'),
+                'valores_antes' => [
+                    'disponible' => $request->input('disponible_antes', 0),
+                    'prestamo_cliente' => $request->input('prestamo_cliente_antes', 0),
+                    'prestamo_proveedor' => $request->input('prestamo_proveedor_antes', 0),
+                    'vendida' => $request->input('vendida_antes', 0),
+                ],
+                'valores_despues' => [
+                    'disponible' => $request->input('disponible_despues', 0),
+                    'prestamo_cliente' => $request->input('prestamo_cliente_despues', 0),
+                    'prestamo_proveedor' => $request->input('prestamo_proveedor_despues', 0),
+                    'vendida' => $request->input('vendida_despues', 0),
+                ],
+                'motivo' => $request->input('motivo', ''),
+                'comentarios' => $request->input('comentarios', ''),
+                'usuario' => auth()->user()->name,
+                'empresa' => config('app.name'),
+            ];
+
+            // 🔗 Si se actualizó el embase, incluir su información
+            if ($request->has('embase_nombre')) {
+                $datos['embase'] = [
+                    'nombre' => $request->input('embase_nombre'),
+                    'codigo' => $request->input('embase_codigo'),
+                    'multiplicador' => $request->input('multiplicador', 1),
+                    'valores_antes' => [
+                        'disponible' => $request->input('embase_disponible_antes', 0),
+                        'prestamo_cliente' => $request->input('embase_prestamo_cliente_antes', 0),
+                        'prestamo_proveedor' => $request->input('embase_prestamo_proveedor_antes', 0),
+                        'vendida' => $request->input('embase_vendida_antes', 0),
+                    ],
+                    'valores_despues' => [
+                        'disponible' => $request->input('embase_disponible_despues', 0),
+                        'prestamo_cliente' => $request->input('embase_prestamo_cliente_despues', 0),
+                        'prestamo_proveedor' => $request->input('embase_prestamo_proveedor_despues', 0),
+                        'vendida' => $request->input('embase_vendida_despues', 0),
+                    ],
+                ];
+            }
+
+            $html = view('documentos.ajuste-stock', $datos)->render();
+            $pdf = Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+
+            $nombreArchivo = "ajuste-stock_{$prestable->codigo}_" . now()->format('Ymd_His') . ".pdf";
+
+            return $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('Error generando documento de ajuste', [
+                'prestable_id' => $prestable->id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * GET /api/prestables/movimientos
+     * Obtener movimientos de prestables con paginación y filtros
+     */
+    public function movimientos(Request $request): JsonResponse
+    {
+        try {
+            $query = \App\Models\MovimientoPrestable::query()
+                ->with(['prestableStock.prestable', 'almacen', 'usuario']);
+
+            // Filtros
+            if ($request->filled('tipo')) {
+                $query->where('tipo', $request->input('tipo'));
+            }
+
+            if ($request->filled('almacen_id')) {
+                $query->where('almacen_id', $request->input('almacen_id'));
+            }
+
+            if ($request->filled('usuario_id')) {
+                $query->where('usuario_id', $request->input('usuario_id'));
+            }
+
+            if ($request->filled('fecha_desde')) {
+                $query->whereDate('created_at', '>=', $request->input('fecha_desde'));
+            }
+
+            if ($request->filled('fecha_hasta')) {
+                $query->whereDate('created_at', '<=', $request->input('fecha_hasta'));
+            }
+
+            if ($request->filled('buscar')) {
+                $buscar = $request->input('buscar');
+                $query->whereHas('prestableStock.prestable', function ($q) use ($buscar) {
+                    $q->where('nombre', 'ilike', "%{$buscar}%")
+                        ->orWhere('codigo', 'ilike', "%{$buscar}%");
+                });
+            }
+
+            // Incluir anulados o solo activos
+            if (!$request->boolean('incluir_anulados', false)) {
+                $query->where('anulado', false);
+            }
+
+            $movimientos = $query->orderBy('created_at', 'desc')->paginate(50);
+
+            return response()->json([
+                'success' => true,
+                'data' => $movimientos,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo movimientos de prestables', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }

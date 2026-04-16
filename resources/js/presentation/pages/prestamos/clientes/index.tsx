@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -18,9 +18,16 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/presentation/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/presentation/components/ui/dropdown-menu';
+import ToastContainer from '@/presentation/components/ui/toast-container';
 import prestamoClienteService from '@/infrastructure/services/prestamo-cliente.service';
 import type { PrestamoCliente, EstadoPrestamo, DatosDevolucionCliente } from '@/domain/entities/prestamos';
-import { Plus, RotateCcw, Printer, Eye, Edit, X } from 'lucide-react';
+import { Plus, RotateCcw, Printer, Eye, Edit, X, History, MoreHorizontal } from 'lucide-react';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 export default function PrestamosClientesIndex() {
@@ -44,40 +51,140 @@ export default function PrestamosClientesIndex() {
     const [anularData, setAnularData] = useState({
         razon_anulacion: '',
     });
-    const [devolucionData, setDevolucionData] = useState<DatosDevolucionCliente>({
-        cantidad_devuelta: 0,
-        cantidad_dañada_parcial: 0,
-        cantidad_dañada_total: 0,
+
+    // Expandable rows
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+    // Toasts
+    const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>>([]);
+
+    const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration = 4000) => {
+        const id = Date.now().toString();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => removeToast(id), duration);
+    };
+
+    const removeToast = (id: string) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    };
+
+    // Filtros
+    const [filtroEstado, setFiltroEstado] = useState<string>('');
+    const [filtroPrestableId, setFiltroPrestableId] = useState<string>('');
+    const [filtroVentaId, setFiltroVentaId] = useState<string>('');
+    const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+    const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+    const [busquedaCliente, setBusquedaCliente] = useState('');
+    const [filtroVencimientoDesde, setFiltroVencimientoDesde] = useState('');
+    const [filtroVencimientoHasta, setFiltroVencimientoHasta] = useState('');
+    const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+    const [devolucionData, setDevolucionData] = useState({
         fecha_devolucion: new Date().toISOString().split('T')[0],
+        monto_cobrado_daño_total: 0,
+        observaciones: '',
+        detalles: [] as Array<{
+            prestamo_cliente_detalle_id: number;
+            cantidad_devuelta: number;
+            cantidad_dañada_parcial: number;
+            cantidad_dañada_total: number;
+        }>,
     });
+
+    const agregarDetalleADevolucion = (detalleId: number) => {
+        const yaExiste = devolucionData.detalles.find(d => d.prestamo_cliente_detalle_id === detalleId);
+        if (!yaExiste) {
+            setDevolucionData({
+                ...devolucionData,
+                detalles: [...devolucionData.detalles, {
+                    prestamo_cliente_detalle_id: detalleId,
+                    cantidad_devuelta: 0,
+                    cantidad_dañada_parcial: 0,
+                    cantidad_dañada_total: 0,
+                }],
+            });
+        }
+    };
+
+    const actualizarDetalleDevolucion = (detalleId: number, campo: string, valor: number) => {
+        setDevolucionData({
+            ...devolucionData,
+            detalles: devolucionData.detalles.map(d =>
+                d.prestamo_cliente_detalle_id === detalleId
+                    ? { ...d, [campo]: valor }
+                    : d
+            ),
+        });
+    };
 
     useEffect(() => {
         fetchPrestamos();
-    }, []);
+    }, [filtroEstado, filtroPrestableId, filtroVentaId, filtroFechaDesde, filtroFechaHasta]);
 
     const fetchPrestamos = async () => {
+        setLoading(true);
         try {
-            const response = await prestamoClienteService.getAll({ per_page: 50 });
+            const params: any = { per_page: 100 };
+            if (filtroEstado) params.estado = filtroEstado;
+            if (filtroPrestableId) params.prestable_id = filtroPrestableId;
+            if (filtroVentaId) params.venta_id = filtroVentaId;
+            if (filtroFechaDesde) params.fecha_desde = filtroFechaDesde;
+            if (filtroFechaHasta) params.fecha_hasta = filtroFechaHasta;
+            const response = await prestamoClienteService.getAll(params);
             setPrestamos((response as any).data || []);
+        } catch (error: any) {
+            console.error('Error cargando préstamos:', error);
+            addToast('Error cargando préstamos', 'error');
         } finally {
             setLoading(false);
         }
     };
 
+    const toggleExpandedRow = (prestamoId: number) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(prestamoId)) {
+                newSet.delete(prestamoId);
+            } else {
+                newSet.add(prestamoId);
+            }
+            return newSet;
+        });
+    };
+
     const handleRegistrarDevolucion = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedPrestamo) return;
+        if (!selectedPrestamo || devolucionData.detalles.length === 0) return;
 
         try {
-            await prestamoClienteService.registrarDevolucion(
-                selectedPrestamo.id,
-                devolucionData
-            );
+            const payload = {
+                fecha_devolucion: devolucionData.fecha_devolucion,
+                monto_cobrado_daño_total: devolucionData.monto_cobrado_daño_total,
+                observaciones: devolucionData.observaciones,
+                detalles: devolucionData.detalles,
+            };
+
+            console.log('📤 Enviando devolución:', payload);
+            await prestamoClienteService.registrarDevolucion(selectedPrestamo.id, payload as any);
+
+            addToast('✅ Devolución registrada exitosamente', 'success');
             setShowDevolucionModal(false);
-            setSelectedPrestamo(null);
+            setDevolucionData({
+                fecha_devolucion: new Date().toISOString().split('T')[0],
+                monto_cobrado_daño_total: 0,
+                observaciones: '',
+                detalles: [],
+            });
             await fetchPrestamos();
-        } catch (error) {
+
+            // Abrir modal de impresión después de registrar devolución
+            setSelectedPrestamoForPrint(selectedPrestamo);
+            setShowOutputModal(true);
+            setSelectedPrestamo(null);
+        } catch (error: any) {
             console.error('Error al registrar devolución:', error);
+            const mensajeError = error?.response?.data?.message || 'Error al registrar devolución';
+            addToast(`❌ ${mensajeError}`, 'error', 6000);
         }
     };
 
@@ -100,11 +207,14 @@ export default function PrestamosClientesIndex() {
                 setShowEditModal(false);
                 setSelectedPrestamoEdit(null);
                 await fetchPrestamos();
+                addToast('Préstamo actualizado exitosamente', 'success');
             } else {
-                console.error('Error al actualizar préstamo:', response.statusText);
+                const data = await response.json();
+                addToast(data.message || 'Error al actualizar préstamo', 'error');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al editar préstamo:', error);
+            addToast(error.message || 'Error al editar préstamo', 'error');
         }
     };
 
@@ -137,11 +247,14 @@ export default function PrestamosClientesIndex() {
                 setSelectedPrestamoAnular(null);
                 setAnularData({ razon_anulacion: '' });
                 await fetchPrestamos();
+                addToast('Préstamo anulado exitosamente', 'success');
             } else {
-                console.error('Error al anular préstamo:', response.statusText);
+                const data = await response.json();
+                addToast(data.message || 'Error al anular préstamo', 'error');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al anular préstamo:', error);
+            addToast(error.message || 'Error al anular préstamo', 'error');
         }
     };
 
@@ -175,6 +288,55 @@ export default function PrestamosClientesIndex() {
         return diasVencidos > 0 ? diasVencidos : null;
     };
 
+    const limpiarFiltros = () => {
+        setFiltroEstado('');
+        setFiltroPrestableId('');
+        setFiltroVentaId('');
+        setFiltroFechaDesde('');
+        setFiltroFechaHasta('');
+        setBusquedaCliente('');
+        setFiltroVencimientoDesde('');
+        setFiltroVencimientoHasta('');
+    };
+
+    const prestamosFiltrados = useMemo(() => {
+        let resultado = prestamos;
+
+        if (busquedaCliente.trim()) {
+            const busqueda = busquedaCliente.toLowerCase();
+            resultado = resultado.filter(p =>
+                (p.cliente?.nombre || '').toLowerCase().includes(busqueda) ||
+                (p.cliente?.razon_social || '').toLowerCase().includes(busqueda)
+            );
+        }
+
+        if (filtroVencimientoDesde) {
+            resultado = resultado.filter(p =>
+                p.fecha_esperada_devolucion && p.fecha_esperada_devolucion >= filtroVencimientoDesde
+            );
+        }
+
+        if (filtroVencimientoHasta) {
+            resultado = resultado.filter(p =>
+                p.fecha_esperada_devolucion && p.fecha_esperada_devolucion <= filtroVencimientoHasta
+            );
+        }
+
+        // Ordenar descendente por ID (IDs mayores primero)
+        return resultado.sort((a, b) => b.id - a.id);
+    }, [prestamos, busquedaCliente, filtroVencimientoDesde, filtroVencimientoHasta]);
+
+    const filtrosActivos = [
+        filtroEstado,
+        filtroPrestableId,
+        filtroVentaId,
+        filtroFechaDesde,
+        filtroFechaHasta,
+        busquedaCliente,
+        filtroVencimientoDesde,
+        filtroVencimientoHasta,
+    ].filter(Boolean).length;
+
     return (
         <AppLayout>
             <Head title="Préstamos a Clientes" />
@@ -189,131 +351,434 @@ export default function PrestamosClientesIndex() {
                     </a>
                 </div>
 
+                {/* Panel de Filtros */}
+                <div className="mb-6">
+                    <div className="flex gap-2 mb-3">
+                        <Button
+                            variant={mostrarFiltros ? 'default' : 'outline'}
+                            onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                            className="gap-2"
+                        >
+                            <span>🔍 Filtros{filtrosActivos > 0 ? ` · ${filtrosActivos}` : ''}</span>
+                        </Button>
+                        {filtrosActivos > 0 && (
+                            <Button variant="ghost" onClick={limpiarFiltros} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                ✕ Limpiar
+                            </Button>
+                        )}
+                    </div>
+
+                    {mostrarFiltros && (
+                        <Card className="p-6 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                            <div className="space-y-4">
+                                {/* Fila 1: Búsqueda, Estado, Prestable y Venta */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            🔍 Buscar Cliente
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre o razón social..."
+                                            value={busquedaCliente}
+                                            onChange={(e) => setBusquedaCliente(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Estado
+                                        </label>
+                                        <select
+                                            value={filtroEstado}
+                                            onChange={(e) => setFiltroEstado(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="">Todos</option>
+                                            <option value="ACTIVO">Activo</option>
+                                            <option value="PARCIALMENTE_DEVUELTO">Parcialmente Devuelto</option>
+                                            <option value="COMPLETAMENTE_DEVUELTO">Completamente Devuelto</option>
+                                            <option value="CANCELADO">Cancelado</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Prestable ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="ID..."
+                                            value={filtroPrestableId}
+                                            onChange={(e) => setFiltroPrestableId(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            🛒 Venta ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="ID de venta..."
+                                            value={filtroVentaId}
+                                            onChange={(e) => setFiltroVentaId(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Fila 2: Fechas Préstamo */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            📅 Fecha Préstamo Desde
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={filtroFechaDesde}
+                                            onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            📅 Fecha Préstamo Hasta
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={filtroFechaHasta}
+                                            onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Fila 3: Fechas Vencimiento */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            ⏰ Fecha Vencimiento Desde
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={filtroVencimientoDesde}
+                                            onChange={(e) => setFiltroVencimientoDesde(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            ⏰ Fecha Vencimiento Hasta
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={filtroVencimientoHasta}
+                                            onChange={(e) => setFiltroVencimientoHasta(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Resultados */}
+                                <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        📊 <strong>{prestamosFiltrados.length}</strong> préstamo{prestamosFiltrados.length !== 1 ? 's' : ''} encontrado{prestamosFiltrados.length !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+                </div>
+
                 {/* Modal de Devolución Flotante */}
                 {selectedPrestamo && (() => {
                     const cantidadTotal = selectedPrestamo.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || 0;
                     const prestabesNombres = selectedPrestamo.detalles?.map((d: any) => d.prestable?.nombre).join(', ') || selectedPrestamo.prestable?.nombre || 'N/D';
-                    return (
-                    <Dialog open={showDevolucionModal} onOpenChange={setShowDevolucionModal}>
-                        <DialogContent className="max-w-sm w-full">
-                            <DialogHeader>
-                                <DialogTitle>Registrar Devolución</DialogTitle>
-                                <DialogDescription>
-                                    {prestabesNombres} - {selectedPrestamo.cliente?.nombre || selectedPrestamo.cliente?.razon_social}
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
-                                <p className="text-sm text-blue-900 dark:text-blue-200">
-                                    <strong>Cantidad Prestada:</strong> {cantidadTotal}
-                                </p>
-                            </div>
-                            <form onSubmit={handleRegistrarDevolucion} className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Cantidad Devuelta *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min="0"
-                                        max={selectedPrestamo.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || selectedPrestamo.cantidad || 0}
-                                        value={devolucionData.cantidad_devuelta}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                cantidad_devuelta: Number(e.target.value),
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Dañada Parcial
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={devolucionData.cantidad_dañada_parcial || 0}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                cantidad_dañada_parcial: Number(e.target.value),
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Dañada Total
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={devolucionData.cantidad_dañada_total || 0}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                cantidad_dañada_total: Number(e.target.value),
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Fecha Devolución *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={devolucionData.fecha_devolucion}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                fecha_devolucion: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Observaciones
-                                    </label>
-                                    <textarea
-                                        value={devolucionData.observaciones || ''}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                observaciones: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        rows={3}
-                                    />
-                                </div>
-                            </div>
 
-                                <div className="flex gap-2 pt-4">
-                                    <Button type="submit" className="flex-1">Registrar Devolución</Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={() => {
-                                            setShowDevolucionModal(false);
-                                            setSelectedPrestamo(null);
-                                        }}
-                                    >
-                                        Cancelar
-                                    </Button>
+                    // Debug: Log de datos para verificar capacidad
+                    if (selectedPrestamo.detalles && selectedPrestamo.detalles.length > 0) {
+                    }
+
+                    return (
+                        <Dialog open={showDevolucionModal} onOpenChange={setShowDevolucionModal}>
+                            <DialogContent
+                                style={{ width: '90vw', maxWidth: '90vw' }}
+                                className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 p-2"
+                            >
+                                <DialogHeader>
+                                    <DialogTitle>Registrar Devolución</DialogTitle>
+                                    <DialogDescription>
+                                        {prestabesNombres} - {selectedPrestamo.cliente?.nombre || selectedPrestamo.cliente?.razon_social}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                {/* <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
+                                    <p className="text-sm text-blue-900 dark:text-blue-200 mb-3">
+                                        <strong>📦 Prestables a Devolver:</strong>
+                                    </p>
+                                    {selectedPrestamo.detalles?.map((detalle: any) => {
+                                        // Calcular cantidad ya devuelta para este detalle
+                                        const cantidadYaDevuelta = detalle.devolucion_detalles?.reduce((sum: number, d: any) =>
+                                            sum + (d.cantidad_devuelta + d.cantidad_dañada_parcial + d.cantidad_dañada_total), 0) || 0;
+                                        const cantidadFaltante = detalle.cantidad_prestada - cantidadYaDevuelta;
+                                        const estado = cantidadFaltante === 0 ? '✅ Completa' :
+                                                     cantidadFaltante === detalle.cantidad_prestada ? '⏳ Pendiente' :
+                                                     '⚠️ Parcial';
+
+                                        return (
+                                            <div key={detalle.id} className="mb-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 overflow-hidden">
+                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-700">
+                                                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                                                        {detalle.prestable?.nombre} {estado}
+                                                    </p>
+                                                </div>
+                                                <table className="w-full text-sm">
+                                                    <tbody>
+                                                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400">📤 Prestado</td>
+                                                            <td className="px-3 py-2 font-bold text-gray-800 dark:text-gray-200">{detalle.cantidad_prestada}</td>
+                                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400">📥 Devuelto</td>
+                                                            <td className="px-3 py-2 font-bold text-green-600 dark:text-green-400">{cantidadYaDevuelta}</td>
+                                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400">⏳ Faltante</td>
+                                                            <td className="px-3 py-2 font-bold text-orange-600 dark:text-orange-400">{cantidadFaltante}</td>
+                                                        </tr>
+                                                        {detalle.prestable?.capacidad && (
+                                                            <tr className="bg-gray-50 dark:bg-gray-700/50">
+                                                                <td colSpan={6} className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                                                                    📦 Capacidad: {detalle.prestable.capacidad} embases/canastilla
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        );
+                                    })}
+                                </div> */}
+                                <form onSubmit={handleRegistrarDevolucion} className="space-y-4">
+                                {/* Tabla Editable de Devoluciones */}
+                                <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+                                                <th className="px-3 py-2 text-left font-semibold text-gray-900 dark:text-white">📦 Prestable</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📤 Prestado</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📥 Devuelto</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⏳ Faltante</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">✏️ Devolviendo</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔴 D.Parcial</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⚫ D.Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedPrestamo.detalles?.map((detalle: any) => {
+                                                const cantidadYaDevuelta = (detalle.devolucion_detalles || detalle.devolucionDetalles)?.reduce((sum: number, d: any) =>
+                                                    sum + (d.cantidad_devuelta + d.cantidad_dañada_parcial + d.cantidad_dañada_total), 0) || 0;
+                                                const cantidadFaltante = detalle.cantidad_prestada - cantidadYaDevuelta;
+                                                const detalleAct = devolucionData.detalles.find(d => d.prestamo_cliente_detalle_id === detalle.id);
+
+                                                return (
+                                                    <tr key={detalle.id} className={`border-b border-gray-200 dark:border-gray-700 ${cantidadFaltante > 0 ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900 opacity-60'}`}>
+                                                        <td className="px-3 py-2 text-gray-900 dark:text-white font-medium">{detalle.prestable?.nombre}</td>
+                                                        <td className="px-3 py-2 text-center text-gray-700 dark:text-gray-300">{detalle.cantidad_prestada}</td>
+                                                        <td className="px-3 py-2 text-center text-green-600 dark:text-green-400 font-bold">{cantidadYaDevuelta}</td>
+                                                        <td className="px-3 py-2 text-center text-orange-600 dark:text-orange-400 font-bold">{cantidadFaltante}</td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            {cantidadFaltante > 0 ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={cantidadFaltante}
+                                                                    value={detalleAct?.cantidad_devuelta || ''}
+                                                                    placeholder="0"
+                                                                    onChange={(e) => {
+                                                                        const cantidad = e.target.value === '' ? 0 : Number(e.target.value);
+                                                                        const detailExists = devolucionData.detalles.some(d => d.prestamo_cliente_detalle_id === detalle.id);
+
+                                                                        // Si es canastilla, auto-calcular embases
+                                                                        let detallesActualizados = devolucionData.detalles;
+                                                                        if (detalle.prestable?.tipo === 'CANASTILLA') {
+                                                                            const capacidad = detalle.prestable?.capacidad || 0;
+                                                                            const cantidadEmbases = cantidad * capacidad;
+                                                                            const detalleEmbases = selectedPrestamo.detalles?.find((d: any) => d.prestable?.tipo === 'EMBASE' || d.prestable?.tipo === 'EMBASES');
+
+                                                                            if (detalleEmbases) {
+                                                                                const embasesExiste = devolucionData.detalles.some(d => d.prestamo_cliente_detalle_id === detalleEmbases.id);
+                                                                                if (embasesExiste) {
+                                                                                    detallesActualizados = detallesActualizados.map(d =>
+                                                                                        d.prestamo_cliente_detalle_id === detalleEmbases.id
+                                                                                            ? { ...d, cantidad_devuelta: cantidadEmbases }
+                                                                                            : d
+                                                                                    );
+                                                                                } else if (cantidadEmbases > 0) {
+                                                                                    detallesActualizados = [...detallesActualizados, {
+                                                                                        prestamo_cliente_detalle_id: detalleEmbases.id,
+                                                                                        cantidad_devuelta: cantidadEmbases,
+                                                                                        cantidad_dañada_parcial: 0,
+                                                                                        cantidad_dañada_total: 0,
+                                                                                    }];
+                                                                                }
+                                                                            }
+                                                                        }
+
+                                                                        setDevolucionData({
+                                                                            ...devolucionData,
+                                                                            detalles: detailExists
+                                                                                ? detallesActualizados.map(d =>
+                                                                                    d.prestamo_cliente_detalle_id === detalle.id
+                                                                                        ? { ...d, cantidad_devuelta: cantidad }
+                                                                                        : d
+                                                                                  )
+                                                                                : [...detallesActualizados, {
+                                                                                    prestamo_cliente_detalle_id: detalle.id,
+                                                                                    cantidad_devuelta: cantidad,
+                                                                                    cantidad_dañada_parcial: 0,
+                                                                                    cantidad_dañada_total: 0,
+                                                                                  }],
+                                                                        });
+                                                                    }}
+                                                                    className="w-full px-2 py-1 border border-blue-400 dark:border-blue-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center font-bold focus:ring-2 focus:ring-blue-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            {detalleAct ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={detalleAct.cantidad_devuelta || 0}
+                                                                    value={detalleAct.cantidad_dañada_parcial || 0}
+                                                                    onChange={(e) => {
+                                                                        setDevolucionData({
+                                                                            ...devolucionData,
+                                                                            detalles: devolucionData.detalles.map(d =>
+                                                                                d.prestamo_cliente_detalle_id === detalle.id
+                                                                                    ? { ...d, cantidad_dañada_parcial: Number(e.target.value) }
+                                                                                    : d
+                                                                            ),
+                                                                        });
+                                                                    }}
+                                                                    className="w-full px-2 py-1 border border-yellow-400 dark:border-yellow-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-yellow-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center">
+                                                            {detalleAct ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={detalleAct.cantidad_devuelta || 0}
+                                                                    value={detalleAct.cantidad_dañada_total || 0}
+                                                                    onChange={(e) => {
+                                                                        setDevolucionData({
+                                                                            ...devolucionData,
+                                                                            detalles: devolucionData.detalles.map(d =>
+                                                                                d.prestamo_cliente_detalle_id === detalle.id
+                                                                                    ? { ...d, cantidad_dañada_total: Number(e.target.value) }
+                                                                                    : d
+                                                                            ),
+                                                                        });
+                                                                    }}
+                                                                    className="w-full px-2 py-1 border border-red-400 dark:border-red-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-red-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Monto a Pagar */}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                                💰 Monto Total a Pagar por Daños
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={devolucionData.monto_cobrado_daño_total}
+                                                onChange={(e) =>
+                                                    setDevolucionData({
+                                                        ...devolucionData,
+                                                        monto_cobrado_daño_total: Number(e.target.value),
+                                                    })
+                                                }
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 text-lg font-semibold"
+                                            />
+                                        </div>
+
+                                        {/* Fecha Devolución */}
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                                Fecha Devolución *
+                                            </label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={devolucionData.fecha_devolucion}
+                                                onChange={(e) =>
+                                                    setDevolucionData({
+                                                        ...devolucionData,
+                                                        fecha_devolucion: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+
+                                        {/* Observaciones */}
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                                Observaciones
+                                            </label>
+                                            <textarea
+                                                value={devolucionData.observaciones}
+                                                onChange={(e) =>
+                                                    setDevolucionData({
+                                                        ...devolucionData,
+                                                        observaciones: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-4">
+                                        <Button type="submit" className="flex-1" disabled={devolucionData.detalles.length === 0}>
+                                            Registrar Devolución
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                setShowDevolucionModal(false);
+                                                setSelectedPrestamo(null);
+                                                setDevolucionData({
+                                                    fecha_devolucion: new Date().toISOString().split('T')[0],
+                                                    monto_cobrado_daño_total: 0,
+                                                    observaciones: '',
+                                                    detalles: [],
+                                                });
+                                            }}
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
                     );
                 })()}
 
@@ -346,9 +811,13 @@ export default function PrestamosClientesIndex() {
                                     <TableRow className="border-gray-200 dark:border-gray-700">
                                         <TableHead className="text-gray-900 dark:text-gray-100 w-16">Folio</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Cliente</TableHead>
+                                        <TableHead className="text-center text-gray-900 dark:text-gray-100">Venta ID</TableHead>
                                         {/* <TableHead className="text-gray-900 dark:text-gray-100">Prestable</TableHead> */}
                                         {/* <TableHead className="text-center text-gray-900 dark:text-gray-100">Cantidad</TableHead> */}
                                         <TableHead className="text-gray-900 dark:text-gray-100">Garantía</TableHead>
+                                        <TableHead className="text-center text-gray-900 dark:text-gray-100">Total</TableHead>
+                                        <TableHead className="text-center text-gray-900 dark:text-gray-100">Devuelto</TableHead>
+                                        <TableHead className="text-center text-gray-900 dark:text-gray-100">Faltante</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Fecha Préstamo</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Plazo</TableHead>
                                         {/* <TableHead className="text-gray-900 dark:text-gray-100">Vencido</TableHead> */}
@@ -357,19 +826,48 @@ export default function PrestamosClientesIndex() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {prestamos.map((p) => {
+                                    {prestamosFiltrados.map((p) => {
                                         const diasVencidos = calcularDiasVencidos(p.fecha_esperada_devolucion);
                                         // Mostrar resumen de detalles para la nueva estructura
                                         const cantidadTotal = p.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || 0;
+                                        // Sumar devoluciones de cada detalle usando devolucion_detalles
+                                        const cantidadDevuelta = p.detalles?.reduce((sum: number, detalle: any) => {
+                                            const devueltoDetalle = detalle.devolucion_detalles?.reduce((s: number, dev: any) => s + (dev.cantidad_devuelta || 0), 0) || 0;
+                                            return sum + devueltoDetalle;
+                                        }, 0) || 0;
+                                        const cantidadFaltante = p.estado === 'CANCELADO' ? 0 : Math.max(0, cantidadTotal - cantidadDevuelta);
                                         const prestabesNombres = p.detalles?.map((d: any) => d.prestable?.nombre).join(', ') || p.prestable?.nombre || 'N/D';
+                                        const isExpanded = expandedRows.has(p.id);
 
                                         return (
-                                            <TableRow key={p.id} className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                                                <TableCell className="text-gray-900 dark:text-gray-100 font-semibold">#{p.id}</TableCell>
+                                            <>
+                                                <TableRow key={p.id} className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                                <TableCell className="text-gray-900 dark:text-gray-100 font-semibold cursor-pointer" onClick={() => toggleExpandedRow(p.id)}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                                                        #{p.id}
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell className="text-gray-900 dark:text-gray-100">{p.cliente?.nombre || p.cliente?.razon_social}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {p.venta_id ? (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                                                            #{p.venta_id}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-500">-</span>
+                                                    )}
+                                                </TableCell>
                                                 {/* <TableCell className="text-gray-900 dark:text-gray-100 text-sm">{prestabesNombres}</TableCell> */}
                                                 {/* <TableCell className="text-center text-gray-900 dark:text-gray-100">{cantidadTotal || p.cantidad || 0}</TableCell> */}
                                                 <TableCell className="text-gray-900 dark:text-gray-100">Bs {p.monto_garantia}</TableCell>
+                                                <TableCell className="text-center text-gray-900 dark:text-gray-100 font-semibold">{cantidadTotal}</TableCell>
+                                                <TableCell className="text-center text-gray-900 dark:text-gray-100 font-semibold text-green-600 dark:text-green-400">{cantidadDevuelta}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className={`font-semibold ${cantidadFaltante === 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                        {cantidadFaltante}
+                                                    </span>
+                                                </TableCell>
                                                 <TableCell className="text-gray-900 dark:text-gray-100">
                                                     {new Date(p.fecha_prestamo).toLocaleDateString('es-ES')}
                                                 </TableCell>
@@ -391,68 +889,105 @@ export default function PrestamosClientesIndex() {
                                                 </TableCell> */}
                                                 <TableCell>{getEstadoBadge(p.estado)}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => abrirModalEdicion(p)}
-                                                            title="Editar"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                setSelectedPrestamoDetalles(p);
-                                                                setShowDetallesModal(true);
-                                                            }}
-                                                            title="Ver detalles"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                setSelectedPrestamoForPrint(p);
-                                                                setShowOutputModal(true);
-                                                            }}
-                                                            title="Imprimir"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Printer size={16} />
-                                                        </Button>
-                                                        {p.estado === 'ACTIVO' && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                onClick={() => {
-                                                                    setSelectedPrestamo(p);
-                                                                    setShowDevolucionModal(true);
-                                                                }}
-                                                                title="Registrar devolución"
                                                                 className="h-8 w-8 p-0"
+                                                                aria-label="Abrir menú de acciones"
                                                             >
-                                                                <RotateCcw size={16} />
+                                                                <MoreHorizontal size={16} />
                                                             </Button>
-                                                        )}
-                                                        {p.estado !== 'CANCELADO' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => abrirModalAnular(p)}
-                                                                title="Anular préstamo"
-                                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56">
+                                                            <DropdownMenuItem onSelect={() => abrirModalEdicion(p)}>
+                                                                <Edit size={16} />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem asChild>
+                                                                <a href={`/prestamos/clientes/${p.id}/devoluciones`}>
+                                                                    <History size={16} />
+                                                                    Ver devoluciones
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onSelect={async () => {
+                                                                    try {
+                                                                        const prestamoActualizado = await prestamoClienteService.getById(p.id);
+                                                                        setSelectedPrestamoDetalles(prestamoActualizado);
+                                                                        setShowDetallesModal(true);
+                                                                    } catch (error) {
+                                                                        console.error('Error cargando detalles:', error);
+                                                                        addToast('Error cargando detalles del préstamo', 'error');
+                                                                    }
+                                                                }}
                                                             >
-                                                                <X size={16} />
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                                <Eye size={16} />
+                                                                Ver detalles
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onSelect={() => {
+                                                                    setSelectedPrestamoForPrint(p);
+                                                                    setShowOutputModal(true);
+                                                                }}
+                                                            >
+                                                                <Printer size={16} />
+                                                                Imprimir
+                                                            </DropdownMenuItem>
+                                                            {(p.estado === 'ACTIVO' || p.estado === 'PARCIALMENTE_DEVUELTO') && (
+                                                                <DropdownMenuItem
+                                                                    onSelect={() => {
+                                                                        setSelectedPrestamo(p);
+                                                                        setShowDevolucionModal(true);
+                                                                    }}
+                                                                >
+                                                                    <RotateCcw size={16} />
+                                                                    Registrar devolución
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {p.estado !== 'CANCELADO' && (
+                                                                <DropdownMenuItem
+                                                                    variant="destructive"
+                                                                    onSelect={() => abrirModalAnular(p)}
+                                                                >
+                                                                    <X size={16} />
+                                                                    Anular préstamo
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
+
+                                            {/* Expandable detail rows */}
+                                            {isExpanded && p.detalles && p.detalles.map((detalle: any, detalleIdx: number) => {
+                                                const totalDetalle = detalle.cantidad_prestada || 0;
+                                                const devueltoDetalle = detalle.devolucion_detalles?.reduce((s: number, dev: any) => s + (dev.cantidad_devuelta || 0), 0) || 0;
+                                                const faltanteDetalle = p.estado === 'CANCELADO' ? 0 : Math.max(0, totalDetalle - devueltoDetalle);
+                                                const nombreDetalle = detalle.prestable?.nombre || 'N/D';
+
+                                                return (
+                                                    <TableRow key={`${p.id}-detail-${detalleIdx}`} className="bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-700">
+                                                        <TableCell className="pl-4 text-gray-700 dark:text-gray-300 text-sm">{nombreDetalle}</TableCell>
+                                                        <TableCell></TableCell>
+                                                        <TableCell></TableCell>
+                                                        <TableCell></TableCell>
+                                                        <TableCell className="text-center text-gray-700 dark:text-gray-300 text-sm font-medium">{totalDetalle}</TableCell>
+                                                        <TableCell className="text-center text-green-600 dark:text-green-400 text-sm font-medium">{devueltoDetalle}</TableCell>
+                                                        <TableCell className="text-center">
+                                                            <span className={`text-sm font-medium ${faltanteDetalle === 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                                {faltanteDetalle}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="text-gray-700 dark:text-gray-300 text-sm"></TableCell>
+                                                        <TableCell className="text-gray-700 dark:text-gray-300 text-sm"></TableCell>
+                                                        <TableCell></TableCell>
+                                                        <TableCell></TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                            </>
                                         );
                                     })}
                                 </TableBody>
@@ -543,7 +1078,10 @@ export default function PrestamosClientesIndex() {
                 {/* Modal de Detalles del Préstamo */}
                 {selectedPrestamoDetalles && (
                     <Dialog open={showDetallesModal} onOpenChange={setShowDetallesModal}>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent
+                                style={{ width: '90vw', maxWidth: '90vw' }}
+                                className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 p-2"
+                            >
                             <DialogHeader>
                                 <DialogTitle>Detalles del Préstamo #{selectedPrestamoDetalles.id}</DialogTitle>
                                 <DialogDescription>
@@ -563,6 +1101,18 @@ export default function PrestamosClientesIndex() {
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Estado</p>
                                         <p className="font-semibold">{getEstadoBadge(selectedPrestamoDetalles.estado)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Chofer</p>
+                                        <p className="font-semibold text-gray-900 dark:text-white">
+                                            {selectedPrestamoDetalles.chofer?.nombre || 'No asignado'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Venta Relacionada</p>
+                                        <p className="font-semibold text-gray-900 dark:text-white">
+                                            {selectedPrestamoDetalles.venta_id ? `#${selectedPrestamoDetalles.venta_id}` : 'N/A'}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Fecha Préstamo</p>
@@ -593,42 +1143,114 @@ export default function PrestamosClientesIndex() {
                                 {/* Detalles de Prestables */}
                                 {selectedPrestamoDetalles.detalles && selectedPrestamoDetalles.detalles.length > 0 && (
                                     <div>
-                                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-3">Prestables</h3>
-                                        <div className="space-y-2">
-                                            {selectedPrestamoDetalles.detalles.map((detalle: any, idx: number) => (
-                                                <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <p className="font-semibold text-gray-900 dark:text-white">
-                                                                {detalle.prestable?.nombre || 'Prestable'}
-                                                            </p>
-                                                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                                Cantidad: <span className="font-semibold text-gray-900 dark:text-white">{detalle.cantidad_prestada}</span>
-                                                            </p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                                detalle.estado === 'ACTIVO'
+                                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-4">Prestables y Devoluciones</h3>
+                                        <div className="space-y-6">
+                                            {selectedPrestamoDetalles.detalles.map((detalle: any, idx: number) => {
+                                                const totalPrestado = detalle.cantidad_prestada || 0;
+                                                const totalDevuelto = detalle.devolucion_detalles?.reduce((sum: number, dev: any) => sum + (dev.cantidad_devuelta || 0), 0) || 0;
+                                                const totalDañadoParcial = detalle.devolucion_detalles?.reduce((sum: number, dev: any) => sum + (dev.cantidad_dañada_parcial || 0), 0) || 0;
+                                                const totalDañadoTotal = detalle.devolucion_detalles?.reduce((sum: number, dev: any) => sum + (dev.cantidad_dañada_total || 0), 0) || 0;
+                                                const totalFaltante = Math.max(0, totalPrestado - totalDevuelto - totalDañadoTotal);
+                                                const porcentajeDevolución = totalPrestado > 0 ? Math.round((totalDevuelto / totalPrestado) * 100) : 0;
+
+                                                return (
+                                                    <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                        {/* Encabezado */}
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <div>
+                                                                <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                                                                    {detalle.prestable?.nombre || 'Prestable'}
+                                                                </p>
+                                                            </div>
+                                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${detalle.estado === 'ACTIVO'
                                                                     ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                                                                     : detalle.estado === 'COMPLETAMENTE_DEVUELTO'
-                                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                                            }`}>
+                                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                                                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                                                }`}>
                                                                 {detalle.estado.replace(/_/g, ' ')}
                                                             </span>
                                                         </div>
-                                                    </div>
-                                                    {detalle.devoluciones && detalle.devoluciones.length > 0 && (
-                                                        <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                                                            {detalle.devoluciones.map((dev: any, devIdx: number) => (
-                                                                <p key={devIdx}>
-                                                                    Devolución {devIdx + 1}: {dev.cantidad_devuelta} unidades - {new Date(dev.fecha_devolucion).toLocaleDateString('es-ES')}
-                                                                </p>
-                                                            ))}
+
+                                                        {/* Resumen de Devoluciones */}
+                                                        <div className="mb-4 p-3 bg-white dark:bg-gray-900 rounded-lg">
+                                                            <div className="grid grid-cols-4 gap-3 mb-3">
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Prestado</p>
+                                                                    <p className="font-semibold text-lg text-gray-900 dark:text-white">{totalPrestado}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Devuelto</p>
+                                                                    <p className="font-semibold text-lg text-green-600 dark:text-green-400">{totalDevuelto}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Faltante</p>
+                                                                    <p className="font-semibold text-lg text-orange-600 dark:text-orange-400">{totalFaltante}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% Devuelto</p>
+                                                                    <p className="font-semibold text-lg text-blue-600 dark:text-blue-400">{porcentajeDevolución}%</p>
+                                                                </div>
+                                                            </div>
+                                                            {/* Barra de progreso */}
+                                                            <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all"
+                                                                    style={{ width: `${porcentajeDevolución}%` }}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+
+                                                        {/* Tabla de Devoluciones Detalladas */}
+                                                        {detalle.devolucion_detalles && detalle.devolucion_detalles.length > 0 ? (
+                                                            <div className="overflow-x-auto">
+                                                                    <table className="w-full text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b border-gray-300 dark:border-gray-600">
+                                                                                <th className="text-left py-2 px-2 font-semibold text-gray-900 dark:text-white">Fecha</th>
+                                                                            <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-white">Devuelto</th>
+                                                                            <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-white">Dañado Parcial</th>
+                                                                            <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-white">Dañado Total</th>
+                                                                            <th className="text-left py-2 px-2 font-semibold text-gray-900 dark:text-white">Observaciones</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {detalle.devolucion_detalles.map((dev: any, devIdx: number) => (
+                                                                            <tr key={devIdx} className="border-b border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700/50">
+                                                                                <td className="py-2 px-2 text-gray-600 dark:text-gray-400">
+                                                                                    {new Date(dev.created_at).toLocaleDateString('es-ES')}
+                                                                                </td>
+                                                                                <td className="text-center py-2 px-2 text-green-600 dark:text-green-400 font-medium">
+                                                                                    {dev.cantidad_devuelta || 0}
+                                                                                </td>
+                                                                                <td className="text-center py-2 px-2 text-yellow-600 dark:text-yellow-400 font-medium">
+                                                                                    {dev.cantidad_dañada_parcial || 0}
+                                                                                </td>
+                                                                                <td className="text-center py-2 px-2 text-red-600 dark:text-red-400 font-medium">
+                                                                                    {dev.cantidad_dañada_total || 0}
+                                                                                </td>
+                                                                                <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                                                                                    {dev.observaciones || '-'}
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        {/* Fila de Totales */}
+                                                                        <tr className="bg-gray-100 dark:bg-gray-700/50 font-semibold">
+                                                                            <td className="py-2 px-2 text-gray-900 dark:text-white">Total</td>
+                                                                            <td className="text-center py-2 px-2 text-green-600 dark:text-green-400">{totalDevuelto}</td>
+                                                                            <td className="text-center py-2 px-2 text-yellow-600 dark:text-yellow-400">{totalDañadoParcial}</td>
+                                                                            <td className="text-center py-2 px-2 text-red-600 dark:text-red-400">{totalDañadoTotal}</td>
+                                                                            <td className="py-2 px-2"></td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400 italic">Sin devoluciones registradas</p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -726,6 +1348,12 @@ export default function PrestamosClientesIndex() {
                         </DialogContent>
                     </Dialog>
                 )}
+
+                {/* Toast Container */}
+                <ToastContainer
+                    toasts={toasts}
+                    onClose={removeToast}
+                />
             </div>
         </AppLayout>
     );

@@ -2421,16 +2421,16 @@ class ClienteController extends Controller
             ->where(function ($q) use ($query) {
                 $q->where('nombre', 'ilike', "%{$query}%")
                     ->orWhere('razon_social', 'ilike', "%{$query}%")
-                    ->orWhere('codigo', 'ilike', "%{$query}%");
+                    ->orWhere('nit', 'ilike', "%{$query}%");
             })
-            ->select('id', 'nombre', 'razon_social', 'codigo')
+            ->select('id', 'nombre', 'razon_social', 'nit')
             ->limit(20)
             ->get()
             ->map(function ($cliente) {
                 return [
                     'id' => $cliente->id,
                     'nombre' => $cliente->nombre ?? $cliente->razon_social,
-                    'codigo' => $cliente->codigo,
+                    'nit' => $cliente->nit,
                 ];
             });
 

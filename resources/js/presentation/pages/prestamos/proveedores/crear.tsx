@@ -53,6 +53,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
         proveedor_id: undefined as number | undefined,
         es_compra: false,
         compra_id: undefined as number | undefined,
+        tipo_prestamo: 'canastillas_embases' as 'canastillas' | 'embases' | 'canastillas_embases',
         fecha_prestamo: new Date().toISOString().split('T')[0],
         fecha_esperada_devolucion: getDateAdd7Days(),
         monto_garantia: 0,
@@ -60,11 +61,6 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
 
     // Lista de prestables agregados
     const [prestablesAgregados, setPrestablesAgregados] = useState<PrestamoItem[]>([]);
-
-    // Filtros para prestables
-    const [mostrarCanastillas, setMostrarCanastillas] = useState(true);
-    const [mostrarEmbasesIndependientes, setMostrarEmbasesIndependientes] = useState(false);
-    const [mostrarSoloEmbases, setMostrarSoloEmbases] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [loadingCompra, setLoadingCompra] = useState(false);
@@ -221,13 +217,13 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
         e.preventDefault();
         setError('');
 
-        if (!formData.proveedor_id) {
-            setError('Selecciona un proveedor');
+        if (!formData.compra_id) {
+            setError('Selecciona una compra (requerida para los préstamos a proveedor)');
             return;
         }
 
-        if (formData.es_compra && !formData.compra_id) {
-            setError('Selecciona una compra');
+        if (!formData.proveedor_id) {
+            setError('Selecciona un proveedor (se cargará automáticamente)');
             return;
         }
 
@@ -322,8 +318,8 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                         </div>
                     )}
 
-                    {/* Info Banner - Diferencia Cliente vs Proveedor */}
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    {/* Info Banner - Cómo funciona el Préstamo a Proveedor */}
+                    {/* <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                         <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
                             ℹ️ Cómo funciona el Préstamo a Proveedor
                         </h3>
@@ -332,13 +328,13 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                 <strong>Diferencia clave:</strong> El proveedor es el DUEÑO de las canastillas/embases
                             </p>
                             <p>
-                                ✅ <strong>El proveedor nos PRESTA sus items</strong> → <span className="font-semibold text-green-600">NUESTRO STOCK AUMENTA</span>
+                                ✅ <strong>El proveedor nos PRESTA sus items</strong> → <span className="font-semibold text-blue-600">STOCK AUMENTA pero NO está disponible para prestar a clientes</span>
                             </p>
                             <p>
-                                📍 Estos items deben devolverse cuando termine el préstamo
+                                📍 <strong>Debes devolver</strong> estos items cuando termine el préstamo
                             </p>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Sección 1: Información del Préstamo */}
                     <Card className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
@@ -348,25 +344,25 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
 
                         {/* Fila: Compra y Proveedor - 2 Columnas */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Columna 1: Compra */}
+                            {/* Columna 1: Compra (REQUERIDA) */}
                             <div>
                                 <AsyncSearchSelect
-                                    label="📦 Compra (Opcional)"
-                                    placeholder="Buscar compra por número o folio..."
+                                    label="📦 Compra *"
+                                    placeholder="Buscar compra por número..."
                                     value={formData.compra_id || ''}
                                     searchEndpoint="/api/compras/search"
                                     onChange={(id) => {
-                                        console.log('🔍 [AsyncSelect] Compra seleccionada:', id, 'tipo:', typeof id, 'formData.compra_id antes:', formData.compra_id);
+                                        console.log('🔍 [AsyncSelect] Compra seleccionada:', id, 'tipo:', typeof id);
                                         handleCompraSeleccionada(id ? Number(id) : undefined);
                                     }}
                                     minSearchLength={1}
-                                    allowClear
+                                    required
                                 />
                                 {loadingCompra && (
                                     <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 flex items-center gap-2">
                                         <Loader2 className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-spin" />
                                         <p className="text-xs text-amber-700 dark:text-amber-300">
-                                            Cargando...
+                                            Cargando proveedor...
                                         </p>
                                     </div>
                                 )}
@@ -379,19 +375,20 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                 )}
                             </div>
 
-                            {/* Columna 2: Proveedor */}
+                            {/* Columna 2: Proveedor (AUTO-CARGADO) */}
                             <div>
                                 <SearchSelect
                                     label="Proveedor *"
-                                    placeholder="Buscar proveedor..."
+                                    placeholder="Se cargará automáticamente..."
                                     value={formData.proveedor_id || ''}
                                     options={proveedoresOptions}
                                     onChange={(id) =>
                                         setFormData({ ...formData, proveedor_id: id ? Number(id) : undefined })
                                     }
+                                    disabled={!formData.compra_id}
                                     required
                                 />
-                                {formData.proveedor_id && formData.compra_id && (
+                                {formData.proveedor_id && (
                                     <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                                         <p className="text-xs text-green-700 dark:text-green-300">
                                             ✅ Proveedor: <span className="font-medium">{proveedores.find(p => p.id === formData.proveedor_id)?.nombre}</span>
@@ -401,64 +398,33 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                             </div>
                         </div>
 
-                        {/* Fila: Tipo de Operación y Garantía */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                              
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Tipo de Operación *
-                                    </label>
-                                    <select
-                                        value={formData.es_compra ? 'compra' : 'prestamo'}
-                                        onChange={(e) => setFormData({ ...formData, es_compra: e.target.value === 'compra', compra_id: undefined })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="prestamo">📦 Préstamo del Proveedor</option>
-                                        <option value="compra">🛒 Compra al Proveedor</option>
-                                    </select>
-
-                                    {/* Help text dinámico según selección */}
-                                    {!formData.es_compra ? (
-                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-start gap-1">
-                                            <span>ℹ️</span>
-                                            <span>El proveedor nos presta sus items • <strong>Stock AUMENTA</strong> • Deben devolverse</span>
-                                        </p>
-                                    ) : (
-                                        <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-start gap-1">
-                                            <span>ℹ️</span>
-                                            <span>Compramos items al proveedor • <strong>Stock AUMENTA</strong> • Son nuestros</span>
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Garantía Total (Opcional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={formData.monto_garantia}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                setFormData({
-                                                    ...formData,
-                                                    monto_garantia: val === '' ? 0 : parseFloat(val),
-                                                });
-                                            }
-                                        }}
-                                        onFocus={(e) => e.target.select()}
-                                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="0.00"
-                                    />
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        Escribe la garantía manualmente (Sugerencia: {totalGarantia.toFixed(2)})
-                                    </p>
-                                </div>
+                        {/* Fila: Garantía */}
+                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                    Garantía Total (Opcional)
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={formData.monto_garantia}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                            setFormData({
+                                                ...formData,
+                                                monto_garantia: val === '' ? 0 : parseFloat(val),
+                                            });
+                                        }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="0.00"
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Escribe la garantía manualmente (Sugerencia: {totalGarantia.toFixed(2)})
+                                </p>
                             </div>
-
-                        {/* Fila: Fechas */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                     Fecha de Préstamo *
@@ -498,77 +464,67 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                             📦 Seleccionar Prestables
                         </h2>
 
-                        {/* Filtro por Tipo */}
-                        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <p className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                                🔍 Filtrar por tipo:
+                        {/* Filtro por Tipo - Radio Buttons */}
+                        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <p className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">
+                                📋 Tipo de Préstamo *
                             </p>
-                            <div className="flex flex-wrap gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
+                            <div className="flex flex-wrap gap-6">
+                                <label className="flex items-center gap-3 cursor-pointer">
                                     <input
-                                        type="checkbox"
-                                        checked={mostrarCanastillas && !mostrarSoloEmbases}
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="canastillas"
+                                        checked={formData.tipo_prestamo === 'canastillas'}
                                         onChange={(e) => {
-                                            setMostrarCanastillas(e.target.checked);
-                                            setMostrarSoloEmbases(false);
-                                        }}
-                                        disabled={mostrarSoloEmbases}
-                                        className="w-4 h-4 cursor-pointer disabled:opacity-50"
-                                    />
-                                    <span className={`text-sm ${mostrarSoloEmbases ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        📦 Canastillas
-                                    </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={mostrarEmbasesIndependientes && !mostrarSoloEmbases}
-                                        onChange={(e) => {
-                                            setMostrarEmbasesIndependientes(e.target.checked);
-                                            setMostrarSoloEmbases(false);
-                                        }}
-                                        disabled={mostrarSoloEmbases}
-                                        className="w-4 h-4 cursor-pointer disabled:opacity-50"
-                                    />
-                                    <span className={`text-sm ${mostrarSoloEmbases ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        🔖 Embases independientes
-                                    </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer border-l pl-4 border-gray-300 dark:border-gray-600">
-                                    <input
-                                        type="checkbox"
-                                        checked={mostrarSoloEmbases}
-                                        onChange={(e) => {
-                                            setMostrarSoloEmbases(e.target.checked);
-                                            if (e.target.checked) {
-                                                setMostrarCanastillas(false);
-                                                setMostrarEmbasesIndependientes(true);
-                                                // Remover canastillas del carrito
-                                                setPrestablesAgregados(
-                                                    prestablesAgregados.filter(item => {
-                                                        const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
-                                                        return prestable?.tipo === 'EMBASES';
-                                                    })
-                                                );
-                                            }
+                                            setFormData({ ...formData, tipo_prestamo: 'canastillas' });
+                                            // Limpiar embases del carrito
+                                            setPrestablesAgregados(
+                                                prestablesAgregados.filter(item => {
+                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    return prestable?.tipo === 'CANASTILLA';
+                                                })
+                                            );
                                         }}
                                         className="w-4 h-4 cursor-pointer"
                                     />
-                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                        🔖 Solo embases
-                                    </span>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">📦 Solo Canastillas</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="embases"
+                                        checked={formData.tipo_prestamo === 'embases'}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, tipo_prestamo: 'embases' });
+                                            // Limpiar canastillas del carrito
+                                            setPrestablesAgregados(
+                                                prestablesAgregados.filter(item => {
+                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    return prestable?.tipo === 'EMBASES';
+                                                })
+                                            );
+                                        }}
+                                        className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">🔖 Solo Embases</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer border-l pl-6 border-blue-300 dark:border-blue-700">
+                                    <input
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="canastillas_embases"
+                                        checked={formData.tipo_prestamo === 'canastillas_embases'}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, tipo_prestamo: 'canastillas_embases' });
+                                        }}
+                                        className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">📦+🔖 Canastillas + Embases</span>
                                 </label>
                             </div>
                         </div>
-
-                        {/* Mensaje si no hay filtros seleccionados */}
-                        {!mostrarCanastillas && !mostrarEmbasesIndependientes && (
-                            <div className="p-6 text-center bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-4">
-                                <p className="text-amber-800 dark:text-amber-300">
-                                    ⚠️ Selecciona al menos un tipo de filtro arriba para ver prestables disponibles
-                                </p>
-                            </div>
-                        )}
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Columna Izquierda: Tabla de Prestables Disponibles */}
@@ -595,16 +551,13 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                                     ) || 0;
                                                     if (stockTotal <= 0) return false;
 
-                                                    // Si está activado "mostrarSoloEmbases", mostrar TODOS los embases
-                                                    if (mostrarSoloEmbases) {
-                                                        return prestable.tipo === 'EMBASES';
-                                                    }
-
-                                                    if (prestable.tipo === 'CANASTILLA' && mostrarCanastillas) {
-                                                        return true;
-                                                    }
-                                                    if (prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id && mostrarEmbasesIndependientes) {
-                                                        return true;
+                                                    // Filtrar por tipo_prestamo
+                                                    if (formData.tipo_prestamo === 'canastillas') return prestable.tipo === 'CANASTILLA';
+                                                    if (formData.tipo_prestamo === 'embases') return prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id;
+                                                    if (formData.tipo_prestamo === 'canastillas_embases') {
+                                                        // Canastillas + embases independientes
+                                                        if (prestable.tipo === 'CANASTILLA') return true;
+                                                        if (prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id) return true;
                                                     }
                                                     return false;
                                                 })
@@ -632,11 +585,10 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                                     return (
                                                         <TableRow
                                                             key={prestable.id}
-                                                            className={`border-gray-200 dark:border-gray-700 transition ${
-                                                                estaSeleccionado
+                                                            className={`border-gray-200 dark:border-gray-700 transition ${estaSeleccionado
                                                                     ? 'bg-blue-50 dark:bg-blue-900/20'
                                                                     : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <TableCell className="text-center">
                                                                 <input
@@ -683,28 +635,31 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                         if (!p.activo) return false;
                                         const stockTotal = p.stocks?.reduce((sum, stock) => sum + (stock.cantidad_disponible || 0), 0) || 0;
                                         if (stockTotal <= 0) return false;
-                                        if (mostrarSoloEmbases) return p.tipo === 'EMBASES';
-                                        if (p.tipo === 'CANASTILLA' && mostrarCanastillas) return true;
-                                        if (p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id && mostrarEmbasesIndependientes) return true;
+                                        if (formData.tipo_prestamo === 'canastillas') return p.tipo === 'CANASTILLA';
+                                        if (formData.tipo_prestamo === 'embases') return p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id;
+                                        if (formData.tipo_prestamo === 'canastillas_embases') {
+                                            if (p.tipo === 'CANASTILLA') return true;
+                                            if (p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id) return true;
+                                        }
                                         return false;
-                                    }).length === 0 && (mostrarCanastillas || mostrarEmbasesIndependientes || mostrarSoloEmbases) && (
-                                        <div className="p-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                                            <p>No hay prestables disponibles</p>
-                                        </div>
-                                    )}
+                                    }).length === 0 && (
+                                            <div className="p-4 text-center text-sm text-gray-600 dark:text-gray-400">
+                                                <p>No hay prestables disponibles</p>
+                                            </div>
+                                        )}
                                 </div>
                             </div>
 
                             {/* Columna Derecha: Resumen/Carrito */}
                             <div>
-                                <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                {/* <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                                     <p className="text-xs font-semibold text-green-900 dark:text-green-100">
                                         ✅ RECIBIENDO del proveedor:
                                     </p>
                                     <p className="text-xs text-green-800 dark:text-green-200 mt-1">
                                         Los items seleccionados <strong>AUMENTAN</strong> nuestro stock
                                     </p>
-                                </div>
+                                </div> */}
                                 <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Carrito ({prestablesAgregados.length})</h3>
                                 {prestablesAgregados.length === 0 ? (
                                     <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800/30">
@@ -712,7 +667,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                     </div>
                                 ) : (
                                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                                        {!mostrarSoloEmbases && prestables
+                                        {(formData.tipo_prestamo === 'canastillas' || formData.tipo_prestamo === 'canastillas_embases') && prestables
                                             .filter(p => p.tipo === 'CANASTILLA')
                                             .map(canastilla => {
                                                 const canastillaItem = prestablesAgregados.find(p => p.prestable_id === Number(canastilla.id));
@@ -805,8 +760,8 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                             .filter(item => {
                                                 const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
                                                 if (prestable?.tipo !== 'EMBASES') return false;
-                                                // En modo "Solo embases", mostrar todos los embases
-                                                if (mostrarSoloEmbases) return true;
+                                                // En modo "embases", mostrar todos los embases
+                                                if (formData.tipo_prestamo === 'embases') return true;
                                                 // En modo normal, mostrar solo embases sin relación
                                                 return !(prestable as any).prestable_relacionado_id;
                                             })

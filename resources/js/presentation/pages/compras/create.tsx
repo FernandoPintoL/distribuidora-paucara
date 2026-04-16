@@ -88,6 +88,56 @@ const formatearNumero = (valor: number | string | null | undefined): string | nu
   return str.replace(/\.?0+$/, '');
 };
 
+// ✅ HELPER FUNCTION: Obtener fecha actual en zona horaria local (yyyy-MM-dd)
+const getTodayDateString = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// ✅ HELPER FUNCTION: Extraer mensajes de error de forma legible desde respuesta del backend
+const extractErrorMessages = (
+  errorsObj: Record<string, string | string[]> | any,
+  defaultMessage: string = 'Error en la operación'
+): string => {
+  if (!errorsObj) return defaultMessage;
+
+  // Si hay un error general
+  if (errorsObj.error) {
+    return typeof errorsObj.error === 'string'
+      ? errorsObj.error
+      : Array.isArray(errorsObj.error)
+        ? errorsObj.error[0]
+        : defaultMessage;
+  }
+
+  // Extraer primer error de cada campo de validación
+  const errorMessages: string[] = [];
+
+  for (const [field, message] of Object.entries(errorsObj)) {
+    if (field === 'error' || field === 'message') continue;
+
+    if (Array.isArray(message)) {
+      // Si es array, tomar el primer mensaje
+      if (message.length > 0) {
+        errorMessages.push(message[0]);
+      }
+    } else if (typeof message === 'string') {
+      // Si es string, agregarlo directo
+      errorMessages.push(message);
+    }
+  }
+
+  // Si hay mensajes, devolverlos separados por saltos de línea
+  if (errorMessages.length > 0) {
+    return errorMessages.join('\n');
+  }
+
+  return defaultMessage;
+};
+
 interface PageProps extends InertiaPageProps {
   compra?: Compra;
   proveedores: Proveedor[];
@@ -153,8 +203,8 @@ export default function CompraForm() {
 
   const { data, setData, post, put, processing, errors } = useForm<CompraFormData>({
     numero: props.compra?.numero || undefined, // Solo para edición
-    // ✅ FIX 2026-03-19: Normalizar fecha principal a formato yyyy-MM-dd
-    fecha: props.compra?.fecha ? normalizeDateForInput(props.compra.fecha) : new Date().toISOString().slice(0, 10),
+    // ✅ FIX 2026-04-16: Usar zona horaria local en lugar de UTC para obtener fecha actual
+    fecha: props.compra?.fecha ? normalizeDateForInput(props.compra.fecha) : getTodayDateString(),
     numero_factura: props.compra?.numero_factura ?? '',
     subtotal: props.compra?.subtotal ?? 0,
     descuento: props.compra?.descuento ?? 0,
@@ -841,21 +891,17 @@ export default function CompraForm() {
           isEditing ? 'Compra actualizada exitosamente' : 'Compra creada exitosamente'
         );
       },
-      onError: (errors: Record<string, string>) => {
+      onError: (errors: Record<string, string | string[]>) => {
         console.error('❌ CompraForm::submit() - onError: Error en respuesta', errors);
         if (loadingToast) {
           NotificationService.dismiss(loadingToast);
         }
 
-        // Mostrar errores específicos del backend
-        if (errors.error) {
-          NotificationService.error(errors.error);
-        } else {
-          NotificationService.error(
-            isEditing ? 'Error al actualizar la compra' : 'Error al crear la compra'
-          );
-        }
-        console.error('Form errors:', errors);
+        // ✅ Usar función auxiliar para extraer errores de forma legible
+        const defaultMsg = isEditing ? 'Error al actualizar la compra' : 'Error al crear la compra';
+        const errorMessage = extractErrorMessages(errors, defaultMsg);
+        NotificationService.error(errorMessage);
+        console.error('Form errors details:', errors);
       },
       onFinish: () => {
         console.log('🏁 CompraForm::submit() - onFinish: Completado');
@@ -957,8 +1003,8 @@ export default function CompraForm() {
           if (loadingToast) {
             NotificationService.dismiss(loadingToast);
           }
-          const errorMsg = typeof errors.error === 'string' ? errors.error : 'Error al actualizar la compra';
-          NotificationService.error(errorMsg);
+          const errorMessage = extractErrorMessages(errors, 'Error al actualizar la compra');
+          NotificationService.error(errorMessage);
         },
       });
     } else {
@@ -977,8 +1023,8 @@ export default function CompraForm() {
           if (loadingToast) {
             NotificationService.dismiss(loadingToast);
           }
-          const errorMsg = typeof errors.error === 'string' ? errors.error : 'Error al crear la compra';
-          NotificationService.error(errorMsg);
+          const errorMessage = extractErrorMessages(errors, 'Error al crear la compra');
+          NotificationService.error(errorMessage);
         },
       });
     }

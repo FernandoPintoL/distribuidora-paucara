@@ -24,7 +24,7 @@ class PrestamoProveedorController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = PrestamoProveedor::with(['detalles.prestable', 'proveedor', 'detalles.devoluciones']);
+            $query = PrestamoProveedor::with(['detalles.prestable', 'proveedor', 'detalles.devolucionDetalles']);
 
             // Filtro por proveedor
             if ($request->has('proveedor_id')) {
@@ -106,7 +106,7 @@ class PrestamoProveedorController extends Controller
     public function show(PrestamoProveedor $prestamo): JsonResponse
     {
         try {
-            $prestamo->load(['detalles.prestable', 'proveedor', 'detalles.devoluciones']);
+            $prestamo->load(['detalles.prestable', 'proveedor', 'detalles.devolucionDetalles', 'devoluciones.detalles']);
             $resumen = $this->prestamoService->obtenerResumen($prestamo->id);
 
             return response()->json([
@@ -127,31 +127,33 @@ class PrestamoProveedorController extends Controller
     public function registrarDevolucion(Request $request, PrestamoProveedor $prestamo): JsonResponse
     {
         try {
+            // Validar datos de devolución
             $validated = $request->validate([
-                'prestamo_proveedor_detalle_id' => 'required|exists:prestamo_proveedor_detalle,id',
-                'cantidad_devuelta' => 'required|integer|min:1',
-                'observaciones' => 'nullable|string',
                 'fecha_devolucion' => 'required|date',
+                'monto_cobrado_daño_total' => 'nullable|numeric|min:0',
+                'observaciones' => 'nullable|string',
+                'detalles' => 'required|array|min:1',
+                'detalles.*.prestamo_proveedor_detalle_id' => 'required|exists:prestamo_proveedor_detalle,id',
+                'detalles.*.cantidad_devuelta' => 'required|integer|min:0',
+                'detalles.*.cantidad_dañada_parcial' => 'nullable|integer|min:0',
+                'detalles.*.cantidad_dañada_total' => 'nullable|integer|min:0',
             ]);
 
-            // ✅ NUEVO: Validar que el detalle pertenece a este préstamo
-            $detalle = \App\Models\PrestamoProveedorDetalle::findOrFail($validated['prestamo_proveedor_detalle_id']);
-            if ($detalle->prestamo_proveedor_id !== $prestamo->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El detalle no pertenece a este préstamo',
-                ], 422);
+            // Validar que todos los detalles pertenecen a este préstamo
+            foreach ($validated['detalles'] as $detalleData) {
+                $detalle = \App\Models\PrestamoProveedorDetalle::findOrFail($detalleData['prestamo_proveedor_detalle_id']);
+                if ($detalle->prestamo_proveedor_id !== $prestamo->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Uno o más detalles no pertenecen a este préstamo',
+                    ], 422);
+                }
             }
 
-            // Validar cantidad contra el detalle
-            $cantidadYaDevuelta = $detalle->devoluciones()->sum('cantidad_devuelta');
-            if ($cantidadYaDevuelta + $validated['cantidad_devuelta'] > $detalle->cantidad_prestada) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Cantidad a devolver excede lo prestado en este detalle',
-                ], 422);
-            }
+            // Agregar prestamo_proveedor_id
+            $validated['prestamo_proveedor_id'] = $prestamo->id;
 
+            // Registrar devolución
             $devolución = $this->prestamoService->registrarDevolucion($validated);
 
             if (!$devolución) {
@@ -161,14 +163,23 @@ class PrestamoProveedorController extends Controller
                 ], 500);
             }
 
+            // Cargar relaciones
+            $devolución->load(['detalles.detallePrestamoProveedor.prestable']);
+
             return response()->json([
                 'success' => true,
                 'data' => $devolución,
                 'message' => 'Devolución registrada exitosamente',
             ], 201);
         } catch (\Exception $e) {
-            Log::error('❌ Error registrando devolución', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            Log::error('❌ Error registrando devolución a proveedor', [
+                'error' => $e->getMessage(),
+                'prestamo_id' => $prestamo->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
@@ -220,7 +231,7 @@ class PrestamoProveedorController extends Controller
         $accion  = $request->input('accion', 'download'); // download | stream
 
         // Cargar relaciones necesarias para la impresión
-        $prestamo->load(['detalles.prestable', 'proveedor', 'compra', 'detalles.devoluciones']);
+        $prestamo->load(['detalles.prestable', 'detalles.devolucionDetalles', 'proveedor', 'compra', 'devoluciones.detalles']);
 
         // Generar PDF usando el tipo de documento "prestamo_proveedor"
         $pdf = $this->impresionService->generarPDF('prestamo_proveedor', $prestamo, $formato);
@@ -230,5 +241,59 @@ class PrestamoProveedorController extends Controller
         return $accion === 'stream'
             ? $pdf->stream($nombreArchivo)
             : $pdf->download($nombreArchivo);
+    }
+
+    /**
+     * POST /api/prestamos-proveedor/{prestamo}/anular
+     * Anular préstamo a proveedor
+     */
+    public function anularPrestamo(Request $request, PrestamoProveedor $prestamo): JsonResponse
+    {
+        try {
+            Log::info('📝 Anulando préstamo a proveedor', [
+                'prestamo_id' => $prestamo->id,
+                'datos' => $request->all()
+            ]);
+
+            // Validar datos
+            $datosValidacion = $request->validate([
+                'razon_anulacion' => 'nullable|string|max:500',
+            ]);
+
+            // Anular préstamo
+            $prestamoAnulado = $this->prestamoService->anularPrestamo(
+                $prestamo->id,
+                $datosValidacion['razon_anulacion'] ?? null
+            );
+
+            if (!$prestamoAnulado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error anulando préstamo',
+                ], 500);
+            }
+
+            Log::info('✅ Préstamo a proveedor anulado correctamente', [
+                'prestamo_id' => $prestamoAnulado->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $prestamoAnulado->load(['detalles.prestable', 'proveedor']),
+                'message' => 'Préstamo anulado exitosamente',
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('⚠️ Validación fallida al anular préstamo', [
+                'errores' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('❌ Error anulando préstamo', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 }

@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { Id, Pagination } from '@/domain/entities/shared';
 import type {
     PrestamoCliente,
+    DevolucionCliente,
     NuevoPrestamoCliente,
     DatosDevolucionCliente,
     FiltrosPrestamosCliente,
@@ -38,7 +39,7 @@ export class PrestamoClienteService {
 
     async registrarDevolucion(id: Id, payload: DatosDevolucionCliente) {
         const { data } = await axios.post(`/api/prestamos-cliente/${id}/devolver`, payload);
-        return data.data as PrestamoCliente;
+        return data.data as DevolucionCliente;
     }
 
     // ========================================

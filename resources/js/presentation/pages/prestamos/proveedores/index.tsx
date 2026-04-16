@@ -18,10 +18,17 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/presentation/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/presentation/components/ui/dropdown-menu';
 import prestamoProveedorService from '@/infrastructure/services/prestamo-proveedor.service';
 import type { PrestamoProveedor, EstadoPrestamo, DatosDevolucionProveedor } from '@/domain/entities/prestamos';
-import { Plus, RotateCcw, Printer, Eye, Edit, X } from 'lucide-react';
+import { Plus, RotateCcw, Printer, Eye, Edit, X, History, MoreHorizontal } from 'lucide-react';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
+import toast from 'react-hot-toast';
 
 export default function PrestamosProveedoresIndex() {
     const [prestamos, setPrestamos] = useState<PrestamoProveedor[]>([]);
@@ -44,10 +51,43 @@ export default function PrestamosProveedoresIndex() {
     const [anularData, setAnularData] = useState({
         razon_anulacion: '',
     });
-    const [devolucionData, setDevolucionData] = useState<DatosDevolucionProveedor>({
-        cantidad_devuelta: 0,
+    const [devolucionData, setDevolucionData] = useState({
         fecha_devolucion: new Date().toISOString().split('T')[0],
+        monto_cobrado_daño_total: 0,
+        observaciones: '',
+        detalles: [] as Array<{
+            prestamo_proveedor_detalle_id: number;
+            cantidad_devuelta: number;
+            cantidad_dañada_parcial: number;
+            cantidad_dañada_total: number;
+        }>,
     });
+
+    const agregarDetalleADevolucion = (detalleId: number) => {
+        const yaExiste = devolucionData.detalles.find(d => d.prestamo_proveedor_detalle_id === detalleId);
+        if (!yaExiste) {
+            setDevolucionData({
+                ...devolucionData,
+                detalles: [...devolucionData.detalles, {
+                    prestamo_proveedor_detalle_id: detalleId,
+                    cantidad_devuelta: 0,
+                    cantidad_dañada_parcial: 0,
+                    cantidad_dañada_total: 0,
+                }],
+            });
+        }
+    };
+
+    const actualizarDetalleDevolucion = (detalleId: number, campo: string, valor: number) => {
+        setDevolucionData({
+            ...devolucionData,
+            detalles: devolucionData.detalles.map(d =>
+                d.prestamo_proveedor_detalle_id === detalleId
+                    ? { ...d, [campo]: valor }
+                    : d
+            ),
+        });
+    };
 
     useEffect(() => {
         fetchPrestamos();
@@ -64,18 +104,33 @@ export default function PrestamosProveedoresIndex() {
 
     const handleRegistrarDevolucion = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedPrestamo) return;
+        if (!selectedPrestamo || devolucionData.detalles.length === 0) return;
 
         try {
             await prestamoProveedorService.registrarDevolucion(
                 selectedPrestamo.id,
                 devolucionData
             );
+            toast.success('✅ Devolución registrada exitosamente');
             setShowDevolucionModal(false);
-            setSelectedPrestamo(null);
+            setDevolucionData({
+                fecha_devolucion: new Date().toISOString().split('T')[0],
+                monto_cobrado_daño_total: 0,
+                observaciones: '',
+                detalles: [],
+            });
             await fetchPrestamos();
-        } catch (error) {
+
+            // Abrir modal de impresión después de registrar devolución
+            setSelectedPrestamoForPrint(selectedPrestamo);
+            setShowOutputModal(true);
+            setSelectedPrestamo(null);
+        } catch (error: any) {
             console.error('Error al registrar devolución:', error);
+            const mensajeError = error?.response?.data?.message ||
+                                error?.message ||
+                                'Error registrando devolución';
+            toast.error(`❌ ${mensajeError}`);
         }
     };
 
@@ -168,53 +223,229 @@ export default function PrestamosProveedoresIndex() {
             <div className="p-8 bg-white dark:bg-gray-950 min-h-screen">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">🤝 Préstamos a Proveedores</h1>
-                    <a href="/prestamos/proveedores/crear">
-                        <Button className="gap-2">
-                            <Plus size={20} />
-                            Nuevo Préstamo
-                        </Button>
-                    </a>
+                    <div className="flex gap-3">
+                        <a href="/prestamos/proveedores/prestamos/crear">
+                            <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
+                                <Plus size={20} />
+                                Nuevo Préstamo
+                            </Button>
+                        </a>
+                        {/* <a href="/prestamos/proveedores/compras/crear">
+                            <Button className="gap-2 bg-green-600 hover:bg-green-700">
+                                <Plus size={20} />
+                                Nueva Compra
+                            </Button>
+                        </a> */}
+                    </div>
                 </div>
 
-                {/* Modal de Devolución Flotante */}
+                {/* Modal de Devolución Flotante - Tabla Editable */}
                 {selectedPrestamo && (() => {
-                    const cantidadTotal = selectedPrestamo.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || 0;
-                    const prestabesNombres = selectedPrestamo.detalles?.map((d: any) => d.prestable?.nombre).join(', ') || selectedPrestamo.prestable?.nombre || 'N/D';
+                    const prestabesNombres = selectedPrestamo.detalles?.map((d: any) => d.prestable?.nombre).join(', ') || 'N/D';
+
+
                     return (
                     <Dialog open={showDevolucionModal} onOpenChange={setShowDevolucionModal}>
-                        <DialogContent className="max-w-sm w-full">
+                        <DialogContent
+                            style={{ width: '90vw', maxWidth: '90vw' }}
+                            className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 p-2"
+                        >
                             <DialogHeader>
                                 <DialogTitle>Registrar Devolución</DialogTitle>
                                 <DialogDescription>
                                     {prestabesNombres} - {selectedPrestamo.proveedor?.nombre || selectedPrestamo.proveedor?.razon_social}
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
-                                <p className="text-sm text-blue-900 dark:text-blue-200">
-                                    <strong>Cantidad Prestada:</strong> {cantidadTotal}
-                                </p>
-                            </div>
+
                             <form onSubmit={handleRegistrarDevolucion} className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4">
+                            {/* Tabla Editable de Devoluciones */}
+                            <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+                                            <th className="px-3 py-2 text-left font-semibold text-gray-900 dark:text-white">📦 Prestable</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📤 Prestado</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📥 Devuelto</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⏳ Faltante</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">✏️ Devolviendo</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔴 D.Parcial</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⚫ D.Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(() => {
+                                            console.log('=== MODAL DEVOLUCIÓN ABIERTO ===');
+                                            console.log('TODOS LOS DETALLES:', selectedPrestamo.detalles);
+                                            console.log('devolucionData (estado actual):', devolucionData);
+                                            selectedPrestamo.detalles?.forEach((d: any, idx: number) => {
+                                                console.log(`Detalle ${idx}:`, d.prestable?.nombre, '| tipo:', d.prestable?.tipo, '| devolucion_detalles:', d.devolucion_detalles);
+                                            });
+
+                                            const detalleCanastilla = selectedPrestamo.detalles?.find((d: any) => d.prestable?.tipo === 'CANASTILLA');
+                                            const detalleEmbase = selectedPrestamo.detalles?.find((d: any) => d.prestable?.tipo === 'EMBASES');
+                                            const capacidadCanastillaGlobal = detalleCanastilla?.prestable?.capacidad || 0;
+                                            console.log('detalleCanastilla:', detalleCanastilla);
+                                            console.log('detalleEmbase:', detalleEmbase);
+                                            console.log('capacidadCanastillaGlobal:', capacidadCanastillaGlobal);
+
+                                            return selectedPrestamo.detalles?.map((detalle: any) => {
+                                                const cantidadYaDevuelta = (detalle.devolucion_detalles || detalle.devolucionDetalles)?.reduce((sum: number, d: any) =>
+                                                    sum + (d.cantidad_devuelta + d.cantidad_dañada_parcial + d.cantidad_dañada_total), 0) || 0;
+                                                const cantidadFaltante = detalle.cantidad_prestada - cantidadYaDevuelta;
+                                                const detalleAct = devolucionData.detalles.find(d => d.prestamo_proveedor_detalle_id === detalle.id);
+
+                                                console.log(`📊 ${detalle.prestable?.nombre}: Prestado=${detalle.cantidad_prestada}, YaDevuelto=${cantidadYaDevuelta}, Faltante=${cantidadFaltante}`);
+
+                                                // Lógica para auto-calcular embases si es canastilla
+                                                const esCanastilla = detalle.prestable?.tipo === 'CANASTILLA';
+                                                const detalleEmbaseAct = detalleEmbase ? devolucionData.detalles.find(d => d.prestamo_proveedor_detalle_id === detalleEmbase.id) : null;
+
+                                                const handleCantidadCanastilla = (cantidad: number) => {
+                                                    console.log('handleCantidadCanastilla llamado con:', cantidad);
+                                                    console.log('esCanastilla:', esCanastilla);
+                                                    console.log('detalleEmbase:', detalleEmbase);
+                                                    console.log('capacidadCanastillaGlobal:', capacidadCanastillaGlobal);
+
+                                                    const nuevosDetalles = [...devolucionData.detalles];
+                                                    const indexCanastilla = nuevosDetalles.findIndex(d => d.prestamo_proveedor_detalle_id === detalle.id);
+
+                                                    // Agregar o actualizar canastilla
+                                                    if (indexCanastilla >= 0) {
+                                                        nuevosDetalles[indexCanastilla].cantidad_devuelta = cantidad;
+                                                    } else {
+                                                        nuevosDetalles.push({
+                                                            prestamo_proveedor_detalle_id: detalle.id,
+                                                            cantidad_devuelta: cantidad,
+                                                            cantidad_dañada_parcial: 0,
+                                                            cantidad_dañada_total: 0,
+                                                        });
+                                                    }
+
+                                                    // Auto-calcular embases
+                                                    if (esCanastilla && detalleEmbase) {
+                                                        const embasesCalculados = cantidad * capacidadCanastillaGlobal;
+                                                        console.log('embasesCalculados:', embasesCalculados);
+                                                        const indexEmbase = nuevosDetalles.findIndex(d => d.prestamo_proveedor_detalle_id === detalleEmbase.id);
+                                                        console.log('indexEmbase:', indexEmbase);
+
+                                                        if (indexEmbase >= 0) {
+                                                            nuevosDetalles[indexEmbase].cantidad_devuelta = embasesCalculados;
+                                                        } else if (embasesCalculados > 0) {
+                                                            nuevosDetalles.push({
+                                                                prestamo_proveedor_detalle_id: detalleEmbase.id,
+                                                                cantidad_devuelta: embasesCalculados,
+                                                                cantidad_dañada_parcial: 0,
+                                                                cantidad_dañada_total: 0,
+                                                            });
+                                                        }
+                                                        console.log('nuevosDetalles después:', nuevosDetalles);
+                                                    }
+
+                                                    setDevolucionData({
+                                                        ...devolucionData,
+                                                        detalles: nuevosDetalles,
+                                                    });
+                                                };
+
+                                            return (
+                                                <tr key={detalle.id} className={`border-b border-gray-200 dark:border-gray-700 ${cantidadFaltante > 0 ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900 opacity-60'}`}>
+                                                    <td className="px-3 py-2 text-gray-900 dark:text-white font-medium">{detalle.prestable?.nombre}</td>
+                                                    <td className="px-3 py-2 text-center text-gray-700 dark:text-gray-300">{detalle.cantidad_prestada}</td>
+                                                    <td className="px-3 py-2 text-center text-green-600 dark:text-green-400 font-bold">{cantidadYaDevuelta}</td>
+                                                    <td className="px-3 py-2 text-center text-orange-600 dark:text-orange-400 font-bold">{cantidadFaltante}</td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        {cantidadFaltante > 0 ? (
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max={cantidadFaltante}
+                                                                value={detalleAct?.cantidad_devuelta || ''}
+                                                                placeholder="0"
+                                                                onChange={(e) => {
+                                                                    const cantidad = e.target.value === '' ? 0 : Number(e.target.value);
+                                                                    if (esCanastilla) {
+                                                                        handleCantidadCanastilla(cantidad);
+                                                                    } else {
+                                                                        if (!detalleAct && cantidad > 0) {
+                                                                            agregarDetalleADevolucion(detalle.id);
+                                                                        }
+                                                                        actualizarDetalleDevolucion(detalle.id, 'cantidad_devuelta', cantidad);
+                                                                    }
+                                                                }}
+                                                                className="w-full px-2 py-1 border border-blue-400 dark:border-blue-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center font-bold focus:ring-2 focus:ring-blue-500"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        {detalleAct || (detalle.prestable?.tipo === 'EMBASE' && detalleEmbaseAct) ? (
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max={detalleAct?.cantidad_devuelta || 0}
+                                                                value={detalleAct?.cantidad_dañada_parcial || 0}
+                                                                onFocus={() => {
+                                                                    if (!detalleAct) {
+                                                                        agregarDetalleADevolucion(detalle.id);
+                                                                    }
+                                                                }}
+                                                                onChange={(e) => actualizarDetalleDevolucion(detalle.id, 'cantidad_dañada_parcial', Number(e.target.value))}
+                                                                className="w-full px-2 py-1 border border-yellow-400 dark:border-yellow-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-yellow-500"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        {detalleAct || (detalle.prestable?.tipo === 'EMBASE' && detalleEmbaseAct) ? (
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max={detalleAct?.cantidad_devuelta || 0}
+                                                                value={detalleAct?.cantidad_dañada_total || 0}
+                                                                onFocus={() => {
+                                                                    if (!detalleAct) {
+                                                                        agregarDetalleADevolucion(detalle.id);
+                                                                    }
+                                                                }}
+                                                                onChange={(e) => actualizarDetalleDevolucion(detalle.id, 'cantidad_dañada_total', Number(e.target.value))}
+                                                                className="w-full px-2 py-1 border border-red-400 dark:border-red-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-red-500"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                        })()}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Monto a Pagar */}
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Cantidad Devuelta *
+                                        💰 Monto Total a Pagar por Daños
                                     </label>
                                     <input
                                         type="number"
-                                        required
                                         min="0"
-                                        max={selectedPrestamo.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || selectedPrestamo.cantidad || 0}
-                                        value={devolucionData.cantidad_devuelta}
+                                        step="0.01"
+                                        value={devolucionData.monto_cobrado_daño_total}
                                         onChange={(e) =>
                                             setDevolucionData({
                                                 ...devolucionData,
-                                                cantidad_devuelta: Number(e.target.value),
+                                                monto_cobrado_daño_total: Number(e.target.value),
                                             })
                                         }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 text-lg font-semibold"
                                     />
                                 </div>
+
+                                {/* Fecha Devolución */}
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                         Fecha Devolución *
@@ -229,41 +460,51 @@ export default function PrestamosProveedoresIndex() {
                                                 fecha_devolucion: e.target.value,
                                             })
                                         }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-                                <div>
+
+                                {/* Observaciones */}
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                         Observaciones
                                     </label>
                                     <textarea
-                                        value={devolucionData.observaciones || ''}
+                                        value={devolucionData.observaciones}
                                         onChange={(e) =>
                                             setDevolucionData({
                                                 ...devolucionData,
                                                 observaciones: e.target.value,
                                             })
                                         }
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                         rows={3}
                                     />
                                 </div>
                             </div>
 
-                                <div className="flex gap-2 pt-4">
-                                    <Button type="submit" className="flex-1">Registrar Devolución</Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={() => {
-                                            setShowDevolucionModal(false);
-                                            setSelectedPrestamo(null);
-                                        }}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                </div>
+                            <div className="flex gap-2 pt-4">
+                                <Button type="submit" className="flex-1" disabled={devolucionData.detalles.length === 0}>
+                                    Registrar Devolución
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => {
+                                        setShowDevolucionModal(false);
+                                        setSelectedPrestamo(null);
+                                        setDevolucionData({
+                                            fecha_devolucion: new Date().toISOString().split('T')[0],
+                                            monto_cobrado_daño_total: 0,
+                                            observaciones: '',
+                                            detalles: [],
+                                        });
+                                    }}
+                                >
+                                    Cancelar
+                                </Button>
+                            </div>
                             </form>
                         </DialogContent>
                     </Dialog>
@@ -326,66 +567,69 @@ export default function PrestamosProveedoresIndex() {
                                                 </TableCell>
                                                 <TableCell>{getEstadoBadge(p.estado)}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => abrirModalEdicion(p)}
-                                                            title="Editar"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => {
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-8 w-8 p-0"
+                                                                aria-label="Abrir menú de acciones"
+                                                            >
+                                                                <MoreHorizontal size={16} />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56">
+                                                            <DropdownMenuItem onSelect={() => abrirModalEdicion(p)}>
+                                                                <Edit size={16} />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => {
                                                                 setSelectedPrestamoDetalles(p);
                                                                 setShowDetallesModal(true);
-                                                            }}
-                                                            title="Ver detalles"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => {
+                                                            }}>
+                                                                <Eye size={16} />
+                                                                Ver detalles
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem asChild>
+                                                                <a href={`/prestamos/proveedores/${p.id}/devoluciones`}>
+                                                                    <History size={16} />
+                                                                    Ver historial de devoluciones
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => {
                                                                 setSelectedPrestamoForPrint(p);
                                                                 setShowOutputModal(true);
-                                                            }}
-                                                            title="Imprimir"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Printer size={16} />
-                                                        </Button>
-                                                        {p.estado === 'ACTIVO' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => {
-                                                                    setSelectedPrestamo(p);
-                                                                    setShowDevolucionModal(true);
-                                                                }}
-                                                                title="Registrar devolución"
-                                                                className="h-8 w-8 p-0"
-                                                            >
-                                                                <RotateCcw size={16} />
-                                                            </Button>
-                                                        )}
-                                                        {p.estado !== 'CANCELADO' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => abrirModalAnular(p)}
-                                                                title="Anular préstamo"
-                                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                            >
-                                                                <X size={16} />
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                            }}>
+                                                                <Printer size={16} />
+                                                                Imprimir
+                                                            </DropdownMenuItem>
+                                                            {['ACTIVO', 'PARCIALMENTE_DEVUELTO'].includes((p.estado || '').trim()) && (
+                                                                <DropdownMenuItem onSelect={async () => {
+                                                                    try {
+                                                                        const response = await fetch(`/api/prestamos-proveedor/${p.id}`);
+                                                                        const result = await response.json();
+                                                                        if (result.success) {
+                                                                            setSelectedPrestamo(result.data);
+                                                                            setShowDevolucionModal(true);
+                                                                        }
+                                                                    } catch (error) {
+                                                                        console.error('Error cargando préstamo:', error);
+                                                                        setSelectedPrestamo(p);
+                                                                        setShowDevolucionModal(true);
+                                                                    }
+                                                                }}>
+                                                                    <RotateCcw size={16} />
+                                                                    Registrar devolución
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {p.estado !== 'CANCELADO' && p.estado !== 'COMPLETAMENTE_DEVUELTO' && (
+                                                                <DropdownMenuItem variant="destructive" onSelect={() => abrirModalAnular(p)}>
+                                                                    <X size={16} />
+                                                                    Anular préstamo
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         );

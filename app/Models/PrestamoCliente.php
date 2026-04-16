@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class PrestamoCliente extends Model
 {
@@ -15,6 +14,7 @@ class PrestamoCliente extends Model
         'cliente_id',
         'venta_id',
         'chofer_id',
+        'tipo_prestamo',
         'es_venta',
         'es_evento',
         'monto_garantia',
@@ -52,13 +52,8 @@ class PrestamoCliente extends Model
         return $this->hasMany(PrestamoClienteDetalle::class, 'prestamo_cliente_id');
     }
 
-    public function devoluciones(): HasManyThrough
+    public function devoluciones(): HasMany
     {
-        return $this->hasManyThrough(
-            DevolucionClientePrestamo::class,
-            PrestamoClienteDetalle::class,
-            'prestamo_cliente_id',
-            'prestamo_cliente_detalle_id'
-        );
+        return $this->hasMany(DevolucionCliente::class, 'prestamo_cliente_id');
     }
 }

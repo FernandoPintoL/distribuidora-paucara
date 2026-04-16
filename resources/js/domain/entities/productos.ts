@@ -29,7 +29,11 @@ export interface Imagen {
 export interface StockAlmacen {
   almacen_id: number | string;
   almacen_nombre?: string;
+  sector_id?: number | string | null;
+  sector_nombre?: string | null;
   stock: number;
+  cantidad_disponible?: number; // ✨ NUEVO: Cantidad disponible (readonly)
+  cantidad_reservada?: number; // ✨ NUEVO: Cantidad reservada (readonly)
   lote?: string | null;
   fecha_vencimiento?: string | null;
 }

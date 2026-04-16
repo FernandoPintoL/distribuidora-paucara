@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
         $this->call(AlmacenesUbicacionSeeder::class);
         // Asignar almacenes a empresas (antes de que se usen para búsquedas)
         $this->call(AssignAlmacenesToEmpresasSeeder::class);
+        // ✅ NUEVO: Crear sectores para almacenes
+        $this->call(SectorSeeder::class);
         // Seed roles and permissions FIRST
         $this->call(RolesAndPermissionsSeeder::class);
 
@@ -25,6 +27,9 @@ class DatabaseSeeder extends Seeder
 
         // Asignar permisos de reportes
         $this->call(AssignReportesPermissionsSeeder::class);
+
+        // ✅ NUEVO: Permisos de Sectores
+        $this->call(SectorPermissionsSeeder::class);
 
         // COMENTADO: Mapeo de Capacidades a Permisos reales
         // Nota: Este seeder crea roles duplicados (preventista, chofer, cajero, etc.)

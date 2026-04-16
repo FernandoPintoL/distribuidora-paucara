@@ -94,6 +94,36 @@ export default function DashboardPrestamos({
                         Actualizar
                     </Button>
                 </div>
+                {/* Quick Actions */}
+                <div className="flex flex-wrap gap-3">
+                    <Link href="/prestamos/clientes">
+                        <Button size="lg" className="gap-2">
+                            Préstamos a Clientes
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    </Link>
+
+                    <Link href="/prestamos/proveedores">
+                        <Button size="lg" variant="outline" className="gap-2">
+                            Préstamos en Compras
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    </Link>
+
+                    <Link href="/prestamos/stock">
+                        <Button size="lg" variant="outline" className="gap-2">
+                            Ver Stock
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    {/* enlace a prestamos/prestables */}
+                    <Link href="/prestamos/prestables">
+                        <Button size="lg" variant="outline" className="gap-2">
+                            Gestionar Productos de Prestamos
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                </div>
 
                 {/* KPIs Principales */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -296,29 +326,7 @@ export default function DashboardPrestamos({
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="flex flex-wrap gap-3">
-                    <Link href="/prestamos/clientes/crear">
-                        <Button size="lg" className="gap-2">
-                            Nuevo Préstamo Cliente
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
-                    </Link>
-
-                    <Link href="/prestamos/proveedores/crear">
-                        <Button size="lg" variant="outline" className="gap-2">
-                            Nueva Compra Proveedor
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
-                    </Link>
-
-                    <Link href="/prestamos/stock">
-                        <Button size="lg" variant="outline" className="gap-2">
-                            Ver Stock
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
-                    </Link>
-                </div>
+                
             </div>
         </AppLayout>
     );

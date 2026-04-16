@@ -27,7 +27,11 @@ export type TipoDocumento =
     | 'merma'
     | 'reporte-productos-vendidos'
     | 'prestamo-cliente'
-    | 'prestamo-proveedor';
+    | 'devoluciones-cliente'
+    | 'prestamo-proveedor'
+    | 'devoluciones-proveedor'
+    | 'prestamos-vendidos'
+    | 'compras-prestables';
 
 interface FormatoConfig {
     formato: string;
@@ -121,7 +125,23 @@ const FORMATO_CONFIG: Record<TipoDocumento, FormatoConfig[]> = {
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
+    'devoluciones-cliente': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
     'prestamo-proveedor': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'devoluciones-proveedor': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'prestamos-vendidos': [
+        { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
+        { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
+    ],
+    'compras-prestables': [
         { formato: 'TICKET_80', nombre: 'Ticket 80mm (Default)', descripcion: 'Impresora térmica 80mm' },
         { formato: 'A4', nombre: 'Hoja Completa (A4)', descripcion: 'Formato estándar A4' },
     ],
@@ -148,7 +168,7 @@ export function OutputSelectionModal({
     const [cargarImpresoras, setCargarImpresoras] = useState(false);
 
     const formatosDisponibles = FORMATO_CONFIG[tipoDocumento];
-    const formatoDefault = formatosDisponibles[0].formato;
+    const formatoDefault = formatosDisponibles?.[0]?.formato || 'TICKET_80';
 
     // ✅ DEBUG: Log cuando se abre el modal
     useEffect(() => {
@@ -239,6 +259,12 @@ export function OutputSelectionModal({
         } else if (tipoDocumento === 'prestamo-proveedor') {
             // Para préstamos a proveedor
             rutaBase = `/prestamos/proveedores/${documentoId}`;
+        } else if (tipoDocumento === 'prestamos-vendidos') {
+            // Para ventas de prestables
+            rutaBase = `/api/prestamos-vendidos/${documentoId}`;
+        } else if (tipoDocumento === 'compras-prestables') {
+            // Para compras de prestables
+            rutaBase = `/api/compras-prestables/${documentoId}`;
         } else {
             rutaBase = `/${tipoDocumento}s/${documentoId}`;
         }
@@ -300,8 +326,17 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'prestamo-cliente') {
                 // Para préstamos de cliente
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'devoluciones-cliente') {
+                // Para devoluciones de cliente
+                url = `/prestamos/clientes/${documentoId}/devoluciones/imprimir?formato=${formato}&accion=download`;
             } else if (tipoDocumento === 'prestamo-proveedor') {
                 // Para préstamos a proveedor
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'prestamos-vendidos') {
+                // Para ventas de prestables
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
+            } else if (tipoDocumento === 'compras-prestables') {
+                // Para compras de prestables
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=download`;
             } else {
                 url = `${rutaBase}/exportar-pdf?formato=${formato}`;
@@ -349,8 +384,17 @@ export function OutputSelectionModal({
             } else if (tipoDocumento === 'prestamo-cliente') {
                 // Para préstamos de cliente
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'devoluciones-cliente') {
+                // Para devoluciones de cliente
+                url = `/prestamos/clientes/${documentoId}/devoluciones/imprimir?formato=${formato}&accion=${accionURL}`;
             } else if (tipoDocumento === 'prestamo-proveedor') {
                 // Para préstamos a proveedor
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'prestamos-vendidos') {
+                // Para ventas de prestables
+                url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
+            } else if (tipoDocumento === 'compras-prestables') {
+                // Para compras de prestables
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;
             } else {
                 url = `${rutaBase}/imprimir?formato=${formato}&accion=${accionURL}`;

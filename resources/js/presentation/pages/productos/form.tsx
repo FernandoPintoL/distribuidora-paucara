@@ -1,6 +1,7 @@
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import Step1DatosProducto from './steps/Step1DatosProducto';
 import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
+import Step3Almacenes from './steps/Step3Almacenes'; // ✨ NUEVO: Almacenes y sectores
 import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
 import Step5PrecioRango from './steps/Step5PrecioRango'; // ✨ NUEVO
@@ -45,8 +46,14 @@ const initialProductoData: ProductoFormData = {
     { monto: 0, tipo_precio_id: 2 },
   ],
   codigos: [{ codigo: '' }],
+  almacenes: [], // ✨ NUEVO: Stock por almacén y sector
   conversiones: [], // ✨ NUEVO
 };
+
+interface ProductoFormPagePropsExtended extends ProductoFormPageProps {
+  almacenes?: Array<{ id: number; nombre: string }>;
+  sectores?: Record<number | string, Array<{ value: number; label: string }>>; // ✨ NUEVO: Sectores pre-cargados
+}
 
 export default function ProductoForm({
   producto,
@@ -57,8 +64,10 @@ export default function ProductoForm({
   configuraciones_ganancias,
   historial_precios,
   permite_productos_fraccionados, // ✨ NUEVO
-  es_farmacia // ✨ NUEVO - Indica si la empresa es farmacia
-}: ProductoFormPageProps) {
+  es_farmacia, // ✨ NUEVO - Indica si la empresa es farmacia
+  almacenes = [], // ✨ NUEVO - Almacenes disponibles
+  sectores = {} // ✨ NUEVO - Sectores pre-cargados por almacén
+}: ProductoFormPagePropsExtended) {
   // 🔍 LOGS PARA DEBUG
   console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
@@ -110,6 +119,7 @@ export default function ProductoForm({
       visible_app: producto.visible_app ?? true, // ✨ NUEVO - Visible en app
       precios: producto.precios?.length ? producto.precios : initialProductoData.precios,
       codigos: producto.codigos?.length ? producto.codigos : [{ codigo: '' }],
+      almacenes: producto.stock_almacenes?.length ? producto.stock_almacenes : [], // ✨ NUEVO
       conversiones: producto.conversiones?.length ? producto.conversiones : [], // ✨ NUEVO
     } : initialProductoData
   );
@@ -265,6 +275,25 @@ export default function ProductoForm({
       // No enviamos nada, el backend se encargará
     }
 
+    // ✨ NUEVO: Almacenes y sectores
+    if (data.almacenes && data.almacenes.length > 0) {
+      (data.almacenes as any[]).forEach((almacen, i) => {
+        formData.append(`almacenes[${i}][almacen_id]`, String(almacen.almacen_id));
+        if (almacen.sector_id) {
+          formData.append(`almacenes[${i}][sector_id]`, String(almacen.sector_id));
+        }
+        formData.append(`almacenes[${i}][stock]`, String(almacen.stock ?? 0));
+        if (almacen.lote) {
+          formData.append(`almacenes[${i}][lote]`, almacen.lote);
+        }
+        if (almacen.fecha_vencimiento) {
+          formData.append(`almacenes[${i}][fecha_vencimiento]`, almacen.fecha_vencimiento);
+        }
+      });
+
+      console.log('✅ Almacenes y sectores enviados:', data.almacenes);
+    }
+
     // Conversiones de unidad (si es fraccionado)
     formData.append('es_fraccionado', data.es_fraccionado ? '1' : '0');
 
@@ -398,6 +427,42 @@ export default function ProductoForm({
     }
   };
 
+  // ✨ NUEVO: Funciones para manejar almacenes y sectores
+  const addAlmacen = (prefill?: any) => {
+    const nuevosAlmacenes = [...(data.almacenes || [])];
+    nuevosAlmacenes.push(prefill || {
+      almacen_id: '',
+      almacen_nombre: '',
+      sector_id: undefined,
+      sector_nombre: undefined,
+      stock: 0,
+      lote: '',
+      fecha_vencimiento: ''
+    });
+    setData('almacenes', nuevosAlmacenes);
+  };
+
+  const setAlmacen = (i: number, key: string, value: any) => {
+    const nuevosAlmacenes = [...(data.almacenes || [])];
+    nuevosAlmacenes[i] = { ...nuevosAlmacenes[i], [key]: value };
+    setData('almacenes', nuevosAlmacenes);
+  };
+
+  const removeAlmacen = async (i: number) => {
+    const confirmed = await NotificationService.confirm(
+      '¿Estás seguro de eliminar este almacén?',
+      {
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar'
+      }
+    );
+
+    if (confirmed) {
+      const almacenesFiltrados = (data.almacenes || []).filter((_: unknown, idx: number) => idx !== i);
+      setData('almacenes', almacenesFiltrados);
+    }
+  };
+
   const setPerfil = (file: File | undefined) => {
     setPerfilState(file ? { file } : undefined);
   };
@@ -491,12 +556,7 @@ export default function ProductoForm({
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className={`grid w-full ${isEditing && permite_productos_fraccionados && data.es_fraccionado
-                ? 'grid-cols-4'
-                : isEditing || (permite_productos_fraccionados && data.es_fraccionado)
-                  ? 'grid-cols-4'
-                  : 'grid-cols-4'
-                }`}>
+              <TabsList className={`grid w-full grid-cols-5`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
 
                 {permite_productos_fraccionados && data.es_fraccionado && (
@@ -508,6 +568,7 @@ export default function ProductoForm({
                   <TabsTrigger value="precio-rango">Rango de Precios</TabsTrigger>
                 )}
                 <TabsTrigger value="precios">Precios y códigos</TabsTrigger>
+                <TabsTrigger value="almacenes">📦 Almacenes</TabsTrigger>
                 <TabsTrigger value="imagenes">Imágenes</TabsTrigger>
                 {isEditing && (producto as any)?.es_combo && (
                   <TabsTrigger value="combos">📦 Combos</TabsTrigger>
@@ -575,6 +636,20 @@ export default function ProductoForm({
                     )}
                   </TabsContent>
                 )}
+
+                <TabsContent value="almacenes" className="space-y-6 mt-6">
+                  <Step3Almacenes
+                    data={{ almacenes: data.almacenes || [] }}
+                    almacenesOptions={almacenes.map(a => ({
+                      value: a.id,
+                      label: a.nombre
+                    }))}
+                    sectores={sectores} // ✨ NUEVO: Pasar sectores pre-cargados
+                    addAlmacen={addAlmacen}
+                    setAlmacen={setAlmacen}
+                    removeAlmacen={removeAlmacen}
+                  />
+                </TabsContent>
 
                 <TabsContent value="imagenes" className="space-y-6 mt-6">
                   <Step4Imagenes

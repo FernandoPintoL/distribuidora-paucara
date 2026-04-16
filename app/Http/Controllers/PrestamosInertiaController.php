@@ -94,7 +94,10 @@ class PrestamosInertiaController extends Controller
     /**
      * Formulario para crear nuevo préstamo a proveedor
      */
-    public function proveedoresCrear(): Response
+    /**
+     * Formulario para PRÉSTAMOS A PROVEEDOR
+     */
+    public function proveedoresPrestamosCrear(): Response
     {
         $proveedores = Proveedor::where('activo', true)
             ->select('id', 'razon_social', 'nombre')
@@ -111,6 +114,36 @@ class PrestamosInertiaController extends Controller
             'proveedores' => $proveedores,
             'compras' => $compras,
         ]);
+    }
+
+    /**
+     * Formulario para COMPRA DE PRESTABLES
+     */
+    public function proveedoresComprasCrear(): Response
+    {
+        $proveedores = Proveedor::where('activo', true)
+            ->select('id', 'razon_social', 'nombre')
+            ->orderBy('razon_social')
+            ->get();
+
+        $compras = \App\Models\Compra::select('id', 'numero', 'proveedor_id')
+            ->with(['proveedor:id,nombre,razon_social'])
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        return Inertia::render('prestamos/proveedores/compras', [
+            'proveedores' => $proveedores,
+            'compras' => $compras,
+        ]);
+    }
+
+    /**
+     * Procesar creación de préstamo a proveedor (LEGACY - mantener para compatibilidad)
+     */
+    public function proveedoresCrear(): Response
+    {
+        return $this->proveedoresPrestamosCrear();
     }
 
     /**

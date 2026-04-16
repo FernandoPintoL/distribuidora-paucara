@@ -17,6 +17,7 @@ class StockProducto extends Model
     protected $fillable = [
         'producto_id',
         'almacen_id',
+        'sector_id',
         'cantidad',
         'cantidad_reservada',
         'cantidad_disponible',
@@ -55,6 +56,11 @@ class StockProducto extends Model
     public function almacen()
     {
         return $this->belongsTo(Almacen::class, 'almacen_id');
+    }
+
+    public function sector()
+    {
+        return $this->belongsTo(Sector::class, 'sector_id');
     }
 
     public function movimientos()
@@ -141,7 +147,8 @@ class StockProducto extends Model
     {
         return $query->with([
             'producto:id,nombre,sku',
-            'almacen:id,nombre'
+            'almacen:id,nombre',
+            'sector:id,nombre,es_generico'
         ]);
     }
 
@@ -367,10 +374,30 @@ class StockProducto extends Model
     }
 
     /**
-     * Boot del modelo para agregar validaciones automáticas
+     * Boot del modelo para agregar validaciones automáticas y asignaciones
      */
     protected static function booted()
     {
+        // 🔄 CREACIÓN: Asignar sector automáticamente si no viene en el request
+        static::creating(function ($stockProducto) {
+            // Si no tiene sector asignado, usar el sector genérico del almacén
+            if (!$stockProducto->sector_id && $stockProducto->almacen_id) {
+                $almacen = Almacen::find($stockProducto->almacen_id);
+                if ($almacen) {
+                    $sectorGenerico = $almacen->sectorGenerico();
+                    if ($sectorGenerico) {
+                        $stockProducto->sector_id = $sectorGenerico->id;
+                        \Illuminate\Support\Facades\Log::info('StockProducto: Sector asignado automáticamente', [
+                            'stock_producto_id' => $stockProducto->id,
+                            'almacen_id' => $stockProducto->almacen_id,
+                            'sector_id' => $sectorGenerico->id,
+                            'sector_nombre' => $sectorGenerico->nombre,
+                        ]);
+                    }
+                }
+            }
+        });
+
         // Validar antes de guardar
         static::saving(function ($stockProducto) {
             // ⚡ Saltear validaciones si estamos en carga masiva (optimización)

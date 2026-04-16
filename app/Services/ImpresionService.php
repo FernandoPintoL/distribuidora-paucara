@@ -298,6 +298,14 @@ class ImpresionService
                 'TICKET_80_FARMACIA' => 'impresion.ventas.ticket-80-farmacia',
                 'TICKET_58' => 'impresion.ventas.ticket-58',
             ],
+            'prestamos_vendidos' => [
+                'A4' => 'prestamos.venta-pdf',
+                'TICKET_80' => 'impresion.prestamos_vendidos.ticket-80',
+            ],
+            'compras_prestables' => [
+                'A4' => 'compras.compra-pdf',
+                'TICKET_80' => 'impresion.compras_prestables.ticket-80',
+            ],
             'prestamo_cliente' => [
                 'A4' => 'impresion.prestamos_clientes.a4-2-copias',
                 'A4_COPIA' => 'impresion.prestamos_clientes.a4-2-copias',
@@ -307,6 +315,13 @@ class ImpresionService
                 'A4' => 'impresion.prestamos_proveedores.a4-2-copias',
                 'A4_COPIA' => 'impresion.prestamos_proveedores.a4-2-copias',
                 'TICKET_80' => 'impresion.prestamos_proveedores.ticket-80',
+            ],
+            'devolucion_cliente' => [
+                'A4' => 'impresion.prestamos_clientes.devolucion-a4',
+            ],
+            'devoluciones_cliente_todas' => [
+                'A4' => 'impresion.prestamos_clientes.devoluciones-todas-a4',
+                'TICKET_80' => 'impresion.prestamos_clientes.devoluciones-todas-ticket-80',
             ],
             'compra' => [
                 'A4' => 'impresion.compras.hoja-completa',

@@ -7,6 +7,7 @@ import app from './app'
 import ventas from './ventas'
 import compras from './compras'
 import precios from './precios'
+import clientes from './clientes'
 import cliente from './cliente'
 import pago from './pago'
 import creditos from './creditos'
@@ -20,7 +21,6 @@ import conciliacion from './conciliacion'
 import reportes from './reportes'
 import alertas from './alertas'
 import dashboard from './dashboard'
-import clientes from './clientes'
 import codigosBarra from './codigos-barra'
 /**
 * @see \App\Http\Controllers\ModuloSidebarController::modulosSidebar
@@ -179,7 +179,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     
     dashboardRedirect.form = dashboardRedirectForm
 /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
 export const preventistas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -193,7 +193,7 @@ preventistas.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
 preventistas.url = (options?: RouteQueryOptions) => {
@@ -201,7 +201,7 @@ preventistas.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
 preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -209,7 +209,7 @@ preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
 preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -218,7 +218,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
     const preventistasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -227,7 +227,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
         preventistasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +235,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see [serialized-closure]:2
+ * @see routes/api.php:335
  * @route '/api/preventistas'
  */
         preventistasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -260,6 +260,7 @@ preventistas,
 ventas,
 compras,
 precios,
+clientes,
 cliente,
 pago,
 creditos,
@@ -273,7 +274,6 @@ conciliacion,
 reportes,
 alertas,
 dashboard,
-clientes,
 codigosBarra,
 }
 

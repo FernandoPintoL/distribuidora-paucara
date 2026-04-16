@@ -184,8 +184,11 @@ class PrestableStockService
     /**
      * Registrar préstamo de proveedor
      *
-     * Incrementa: cantidad_en_prestamo_proveedor (deuda)
-     * Incrementa: cantidad_disponible (me llega stock)
+     * IMPORTANTE: Las canastillas del proveedor NO pueden ser prestadas a clientes
+     * Solo se registra la deuda de devolución al proveedor
+     *
+     * Incrementa SOLO: cantidad_en_prestamo_proveedor (deuda de devolución)
+     * NO incrementa: cantidad_disponible (no son canastillas mías)
      */
     public function recibirPrestamoProveedor(int $prestableId, int $almacenId, int $cantidad): bool
     {
@@ -193,7 +196,6 @@ class PrestableStockService
 
         DB::transaction(function () use ($stock, $cantidad) {
             $stock->update([
-                'cantidad_disponible' => $stock->cantidad_disponible + $cantidad,
                 'cantidad_en_prestamo_proveedor' => $stock->cantidad_en_prestamo_proveedor + $cantidad,
             ]);
 
@@ -210,14 +212,20 @@ class PrestableStockService
     /**
      * Devolver canastillas al proveedor
      *
-     * Reduce: cantidad_disponible
-     * Reduce: cantidad_en_prestamo_proveedor
+     * IMPORTANTE: Las canastillas del proveedor son un stock separado
+     * Reducimos SOLO: cantidad_en_prestamo_proveedor
+     * No afecta: cantidad_disponible (no eran nuestras)
+     *
+     * $cantidadDevuelta: En buen estado (se devuelven al proveedor)
+     * $cantidadDañadaParcial: Con daño parcial (se devuelven + se reparan)
+     * $cantidadDañadaTotal: Inutilizables (se cobran a garantía)
      */
-    public function devolverAlProveedor(int $prestableId, int $almacenId, int $cantidad): bool
+    public function devolverAlProveedor(int $prestableId, int $almacenId, int $cantidadDevuelta = 0, int $cantidadDañadaParcial = 0, int $cantidadDañadaTotal = 0): bool
     {
+        $cantidad = $cantidadDevuelta + $cantidadDañadaParcial + $cantidadDañadaTotal;
         $stock = $this->obtenerStock($prestableId, $almacenId);
 
-        // Validar que tenemos para devolver
+        // Validar que tenemos para devolver en préstamo al proveedor
         if ($stock->cantidad_en_prestamo_proveedor < $cantidad) {
             Log::warning('❌ Intento de devolución a proveedor inválida', [
                 'prestable_id' => $prestableId,
@@ -228,27 +236,17 @@ class PrestableStockService
             return false;
         }
 
-        // También validar que tenemos disponible
-        if ($stock->cantidad_disponible < $cantidad) {
-            Log::warning('❌ Stock disponible insuficiente para devolver al proveedor', [
-                'prestable_id' => $prestableId,
-                'almacen_id' => $almacenId,
-                'disponible' => $stock->cantidad_disponible,
-                'solicitado' => $cantidad,
-            ]);
-            return false;
-        }
-
-        DB::transaction(function () use ($stock, $cantidad) {
+        DB::transaction(function () use ($stock, $cantidadDevuelta, $cantidadDañadaParcial, $cantidadDañadaTotal, $cantidad) {
             $stock->update([
-                'cantidad_disponible' => $stock->cantidad_disponible - $cantidad,
                 'cantidad_en_prestamo_proveedor' => $stock->cantidad_en_prestamo_proveedor - $cantidad,
             ]);
 
-            Log::info('✅ Canastillas devueltas al proveedor', [
+            Log::info('✅ Devolución a proveedor registrada', [
                 'prestable_id' => $stock->prestable_id,
                 'almacen_id' => $stock->almacen_id,
-                'cantidad' => $cantidad,
+                'devueltas_buen_estado' => $cantidadDevuelta,
+                'devueltas_daño_parcial' => $cantidadDañadaParcial,
+                'devueltas_daño_total' => $cantidadDañadaTotal,
             ]);
         });
 

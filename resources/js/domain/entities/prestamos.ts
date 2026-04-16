@@ -52,15 +52,38 @@ export interface Prestable extends BaseEntity {
     stocks: PrestableStock[];
 }
 
-export interface DevolucionCliente extends BaseEntity {
+export interface DevolucionClienteDetalle extends BaseEntity {
     id: Id;
+    devolucion_cliente_id: Id;
     prestamo_cliente_detalle_id: Id;
     cantidad_devuelta: number;
     cantidad_dañada_parcial: number;
     cantidad_dañada_total: number;
     monto_cobrado_daño: number;
+    monto_garantia_devuelta: number;
+    // Relaciones
+    detallePrestamoCliente?: {
+        id: Id;
+        prestable_id: Id;
+        cantidad_prestada: number;
+        prestable?: Prestable;
+    };
+}
+
+export interface DevolucionCliente extends BaseEntity {
+    id: Id;
+    prestamo_cliente_id: Id;
     fecha_devolucion: string;
+    monto_cobrado_daño_total: number;
+    monto_garantia_devuelta_total: number;
     observaciones?: string | null;
+    chofer_id?: Id | null;
+    detalles: DevolucionClienteDetalle[];
+    // Relaciones
+    prestamo?: {
+        id: Id;
+        cliente_id: Id;
+    };
 }
 
 export interface PrestamoClienteDetalle extends BaseEntity {
@@ -71,7 +94,9 @@ export interface PrestamoClienteDetalle extends BaseEntity {
     precio_unitario?: number | null;
     precio_prestamo?: number | null;
     estado: EstadoPrestamo;
-    devoluciones: DevolucionCliente[];
+    devolucion_detalles: DevolucionClienteDetalle[];
+    // Legacy compatibility
+    devoluciones?: DevolucionClienteDetalle[];
     // Relaciones
     prestable: Prestable;
 }
@@ -189,13 +214,22 @@ export interface NuevoPrestamoProveedor extends BaseFormData {
     numero_documento?: string;
 }
 
-export interface DatosDevolucionCliente extends BaseFormData {
+export interface DetalleDevolucionCliente {
     prestamo_cliente_detalle_id: Id;
     cantidad_devuelta: number;
     cantidad_dañada_parcial?: number;
     cantidad_dañada_total?: number;
-    observaciones?: string;
+    embases_danados_parcial?: number;
+    embases_danados_total?: number;
+}
+
+export interface DatosDevolucionCliente extends BaseFormData {
+    prestamo_cliente_id: Id;
     fecha_devolucion: string;
+    monto_cobrado_daño_total?: number;
+    observaciones?: string;
+    chofer_id?: Id;
+    detalles: DetalleDevolucionCliente[];
 }
 
 export interface DatosDevolucionProveedor extends BaseFormData {

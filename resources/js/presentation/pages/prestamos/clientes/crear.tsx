@@ -5,6 +5,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Card } from '@/presentation/components/ui/card';
 import SearchSelect from '@/presentation/components/ui/search-select';
 import AsyncSearchSelect from '@/presentation/components/ui/async-search-select';
+import ToastContainer from '@/presentation/components/ui/toast-container';
 import {
     Table,
     TableBody,
@@ -15,6 +16,7 @@ import {
 } from '@/presentation/components/ui/table';
 import prestamoClienteService from '@/infrastructure/services/prestamo-cliente.service';
 import { usePrestables } from '@/stores/usePrestables';
+import { useToast } from '@/presentation/hooks/useToast';
 import type { Prestable } from '@/domain/entities/prestamos';
 import type { SelectOption } from '@/presentation/components/ui/search-select';
 import { Trash2 } from 'lucide-react';
@@ -34,6 +36,7 @@ interface PrestamoItem {
 
 export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Props) {
     const { prestables, loading: loadingPrestables, fetchPrestables } = usePrestables();
+    const { toasts, removeToast, error: toastError, warning: toastWarning, success: toastSuccess } = useToast();
 
     // Opciones para SearchSelect
     const clientesOptions: SelectOption[] = clientes.map((c) => ({
@@ -58,6 +61,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
     const [formData, setFormData] = useState({
         cliente_id: undefined as number | undefined,
         chofer_id: undefined as number | undefined,
+        tipo_prestamo: 'canastillas_embases' as 'canastillas' | 'embases' | 'canastillas_embases',
         es_venta: false,
         venta_id: undefined as number | undefined,
         es_evento: false,
@@ -68,11 +72,6 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
 
     // Lista de prestables agregados
     const [prestablesAgregados, setPrestablesAgregados] = useState<PrestamoItem[]>([]);
-
-    // Filtros para prestables
-    const [mostrarCanastillas, setMostrarCanastillas] = useState(true);
-    const [mostrarEmbasesIndependientes, setMostrarEmbasesIndependientes] = useState(false);
-    const [mostrarSoloEmbases, setMostrarSoloEmbases] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -201,17 +200,23 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
         setError('');
 
         if (!formData.cliente_id) {
-            setError('Selecciona un cliente');
+            const msg = 'Selecciona un cliente';
+            setError(msg);
+            toastError(msg);
             return;
         }
 
         if (formData.es_venta && !formData.venta_id) {
-            setError('Selecciona una venta');
+            const msg = 'Selecciona una venta';
+            setError(msg);
+            toastError(msg);
             return;
         }
 
         if (prestablesAgregados.length === 0) {
-            setError('Agrega al menos un prestable');
+            const msg = 'Agrega al menos un prestable';
+            setError(msg);
+            toastError(msg);
             return;
         }
 
@@ -222,6 +227,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
             const payload = {
                 cliente_id: formData.cliente_id,
                 chofer_id: formData.chofer_id,
+                tipo_prestamo: formData.tipo_prestamo,
                 es_venta: formData.es_venta,
                 venta_id: formData.venta_id,
                 es_evento: formData.es_evento,
@@ -240,6 +246,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
 
             console.log('✅ Respuesta del servidor:', response);
             if (response?.id) {
+                toastSuccess('✅ Préstamo creado exitosamente');
                 setUltimoPrestamoId(response.id);
                 setMostrarModalImpresion(true);
                 setLoading(false);
@@ -248,8 +255,10 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                 console.warn('No se pudo obtener ID del préstamo, redirigiendo...');
                 window.location.href = '/prestamos/clientes';
             }
-        } catch (err) {
-            setError((err as Error).message);
+        } catch (err: any) {
+            const errorMessage = err.response?.data?.message || (err as Error).message || 'Error desconocido';
+            setError(errorMessage);
+            toastError(errorMessage);
             setLoading(false);
         }
     };
@@ -280,9 +289,9 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                             📋 Información del Préstamo
                         </h2>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                             {/* Venta - Primer campo */}
-                            <div className="md:col-span-2">
+                            <div>
                                 <AsyncSearchSelect
                                     label="🛒 Venta (Opcional) - Buscar primero"
                                     placeholder="Buscar venta por número..."
@@ -311,7 +320,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                             />
 
                             <SearchSelect
-                                label="Chofer (Opcional)"
+                                label="Chofer Encargado (Opcional)"
                                 placeholder="Buscar chofer..."
                                 value={formData.chofer_id || ''}
                                 options={choferesOptions}
@@ -323,32 +332,8 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                 }
                                 allowClear
                             />
-
-                            <div>
-                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                    Tipo de Operación *
-                                </label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            checked={!formData.es_venta}
-                                            onChange={() => setFormData({ ...formData, es_venta: false, venta_id: undefined })}
-                                            className="w-4 h-4"
-                                        />
-                                        <span className="text-gray-700 dark:text-gray-300">📦 Préstamo</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            checked={formData.es_venta}
-                                            onChange={() => setFormData({ ...formData, es_venta: true })}
-                                            className="w-4 h-4"
-                                        />
-                                        <span className="text-gray-700 dark:text-gray-300">🛒 Venta</span>
-                                    </label>
-                                </div>
-                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4">                            
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                     Garantía Total (Opcional)
@@ -374,26 +359,6 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                     Escribe la garantía manualmente (Sugerencia: {totalGarantia.toFixed(2)})
                                 </p>
                             </div>
-
-                            <div className="md:col-span-2">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.es_evento}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                es_evento: e.target.checked,
-                                            })
-                                        }
-                                        className="w-5 h-5 cursor-pointer"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        🎉 Este préstamo es para un evento
-                                    </span>
-                                </label>
-                            </div>
-
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                     Fecha de Préstamo *
@@ -425,85 +390,93 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                 />
                             </div>
                         </div>
+                        <div>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.es_evento}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                es_evento: e.target.checked,
+                                            })
+                                        }
+                                        className="w-5 h-5 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        🎉 Este préstamo es para un evento
+                                    </span>
+                                </label>
+                            </div>
                     </Card>
 
                     {/* Sección 2: Prestables Unificado - Selección + Resumen */}
                     <Card className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                        <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">
                             📦 Seleccionar Prestables
                         </h2>
 
-                        {/* Filtro por Tipo */}
-                        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <p className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                                🔍 Filtrar por tipo:
+                        {/* Selección de Tipo de Préstamo */}
+                        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <p className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">
+                                📋 Tipo de Préstamo *
                             </p>
-                            <div className="flex flex-wrap gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
+                            <div className="flex flex-wrap gap-6">
+                                <label className="flex items-center gap-3 cursor-pointer">
                                     <input
-                                        type="checkbox"
-                                        checked={mostrarCanastillas && !mostrarSoloEmbases}
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="canastillas"
+                                        checked={formData.tipo_prestamo === 'canastillas'}
                                         onChange={(e) => {
-                                            setMostrarCanastillas(e.target.checked);
-                                            setMostrarSoloEmbases(false);
-                                        }}
-                                        disabled={mostrarSoloEmbases}
-                                        className="w-4 h-4 cursor-pointer disabled:opacity-50"
-                                    />
-                                    <span className={`text-sm ${mostrarSoloEmbases ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        📦 Canastillas
-                                    </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={mostrarEmbasesIndependientes && !mostrarSoloEmbases}
-                                        onChange={(e) => {
-                                            setMostrarEmbasesIndependientes(e.target.checked);
-                                            setMostrarSoloEmbases(false);
-                                        }}
-                                        disabled={mostrarSoloEmbases}
-                                        className="w-4 h-4 cursor-pointer disabled:opacity-50"
-                                    />
-                                    <span className={`text-sm ${mostrarSoloEmbases ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        🔖 Embases independientes
-                                    </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer border-l pl-4 border-gray-300 dark:border-gray-600">
-                                    <input
-                                        type="checkbox"
-                                        checked={mostrarSoloEmbases}
-                                        onChange={(e) => {
-                                            setMostrarSoloEmbases(e.target.checked);
-                                            if (e.target.checked) {
-                                                setMostrarCanastillas(false);
-                                                setMostrarEmbasesIndependientes(true);
-                                                // Remover canastillas del carrito
-                                                setPrestablesAgregados(
-                                                    prestablesAgregados.filter(item => {
-                                                        const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
-                                                        return prestable?.tipo === 'EMBASES';
-                                                    })
-                                                );
-                                            }
+                                            setFormData({ ...formData, tipo_prestamo: 'canastillas' });
+                                            // Limpiar embases del carrito
+                                            setPrestablesAgregados(
+                                                prestablesAgregados.filter(item => {
+                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    return prestable?.tipo === 'CANASTILLA';
+                                                })
+                                            );
                                         }}
                                         className="w-4 h-4 cursor-pointer"
                                     />
-                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                        🔖 Solo embases
-                                    </span>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">📦 Solo Canastillas</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="embases"
+                                        checked={formData.tipo_prestamo === 'embases'}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, tipo_prestamo: 'embases' });
+                                            // Limpiar canastillas del carrito
+                                            setPrestablesAgregados(
+                                                prestablesAgregados.filter(item => {
+                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    return prestable?.tipo === 'EMBASES';
+                                                })
+                                            );
+                                        }}
+                                        className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">🔖 Solo Embases</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer border-l pl-6 border-blue-300 dark:border-blue-700">
+                                    <input
+                                        type="radio"
+                                        name="tipo_prestamo"
+                                        value="canastillas_embases"
+                                        checked={formData.tipo_prestamo === 'canastillas_embases'}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, tipo_prestamo: 'canastillas_embases' });
+                                        }}
+                                        className="w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">📦+🔖 Canastillas + Embases</span>
                                 </label>
                             </div>
                         </div>
-
-                        {/* Mensaje si no hay filtros seleccionados */}
-                        {!mostrarCanastillas && !mostrarEmbasesIndependientes && (
-                            <div className="p-6 text-center bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-4">
-                                <p className="text-amber-800 dark:text-amber-300">
-                                    ⚠️ Selecciona al menos un tipo de filtro arriba para ver prestables disponibles
-                                </p>
-                            </div>
-                        )}
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Columna Izquierda: Tabla de Prestables Disponibles */}
@@ -530,16 +503,10 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                     ) || 0;
                                                     if (stockTotal <= 0) return false;
 
-                                                    // Si está activado "mostrarSoloEmbases", mostrar TODOS los embases
-                                                    if (mostrarSoloEmbases) {
-                                                        return prestable.tipo === 'EMBASES';
-                                                    }
-
-                                                    if (prestable.tipo === 'CANASTILLA' && mostrarCanastillas) {
-                                                        return true;
-                                                    }
-                                                    if (prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id && mostrarEmbasesIndependientes) {
-                                                        return true;
+                                                    if (formData.tipo_prestamo === 'canastillas') return prestable.tipo === 'CANASTILLA';
+                                                    if (formData.tipo_prestamo === 'embases') return prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id;
+                                                    if (formData.tipo_prestamo === 'canastillas_embases') {
+                                                        return prestable.tipo === 'CANASTILLA' || (prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id);
                                                     }
                                                     return false;
                                                 })
@@ -563,11 +530,10 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                     return (
                                                         <TableRow
                                                             key={prestable.id}
-                                                            className={`border-gray-200 dark:border-gray-700 transition ${
-                                                                estaSeleccionado
+                                                            className={`border-gray-200 dark:border-gray-700 transition ${estaSeleccionado
                                                                     ? 'bg-blue-50 dark:bg-blue-900/20'
                                                                     : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <TableCell className="text-center">
                                                                 <input
@@ -590,18 +556,22 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                             <TableCell className="text-right text-sm">
                                                                 <div className="space-y-1">
                                                                     <div className="text-gray-900 dark:text-white font-medium">
-                                                                        Stock: {stockTotalCanastillas.toLocaleString('es-BO')}
+                                                                        Stock Total: {stockTotalCanastillas.toLocaleString('es-BO')}
                                                                     </div>
+                                                                    {prestable.stocks && prestable.stocks.length > 1 && (
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                            Desglose: {prestable.stocks.map((s: any, idx: number) => `Almacén ${idx + 1}: ${s.cantidad_disponible || 0}`).join(' | ')}
+                                                                        </div>
+                                                                    )}
                                                                     {cantidadSolicitada > 0 && (
                                                                         <>
                                                                             <div className="text-xs text-blue-600 dark:text-blue-400">
                                                                                 Solicitado: {cantidadSolicitada.toLocaleString('es-BO')}
                                                                             </div>
-                                                                            <div className={`text-xs font-semibold ${
-                                                                                tieneStock
+                                                                            <div className={`text-xs font-semibold ${tieneStock
                                                                                     ? 'text-green-600 dark:text-green-400'
                                                                                     : 'text-red-600 dark:text-red-400'
-                                                                            }`}>
+                                                                                }`}>
                                                                                 Sobrante: {stockSobrante.toLocaleString('es-BO')}
                                                                             </div>
                                                                         </>
@@ -618,15 +588,18 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                         if (!p.activo) return false;
                                         const stockTotal = p.stocks?.reduce((sum, stock) => sum + (stock.cantidad_disponible || 0), 0) || 0;
                                         if (stockTotal <= 0) return false;
-                                        if (mostrarSoloEmbases) return p.tipo === 'EMBASES';
-                                        if (p.tipo === 'CANASTILLA' && mostrarCanastillas) return true;
-                                        if (p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id && mostrarEmbasesIndependientes) return true;
+
+                                        if (formData.tipo_prestamo === 'canastillas') return p.tipo === 'CANASTILLA';
+                                        if (formData.tipo_prestamo === 'embases') return p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id;
+                                        if (formData.tipo_prestamo === 'canastillas_embases') {
+                                            return p.tipo === 'CANASTILLA' || (p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id);
+                                        }
                                         return false;
-                                    }).length === 0 && (mostrarCanastillas || mostrarEmbasesIndependientes || mostrarSoloEmbases) && (
-                                        <div className="p-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                                            <p>No hay prestables disponibles</p>
-                                        </div>
-                                    )}
+                                    }).length === 0 && (
+                                            <div className="p-4 text-center text-sm text-gray-600 dark:text-gray-400">
+                                                <p>No hay prestables disponibles</p>
+                                            </div>
+                                        )}
                                 </div>
                             </div>
 
@@ -639,7 +612,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                     </div>
                                 ) : (
                                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                                        {!mostrarSoloEmbases && prestables
+                                        {(formData.tipo_prestamo === 'canastillas' || formData.tipo_prestamo === 'canastillas_embases') && prestables
                                             .filter(p => p.tipo === 'CANASTILLA')
                                             .map(canastilla => {
                                                 const canastillaItem = prestablesAgregados.find(p => p.prestable_id === Number(canastilla.id));
@@ -733,7 +706,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                 const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
                                                 if (prestable?.tipo !== 'EMBASES') return false;
                                                 // En modo "Solo embases", mostrar todos los embases
-                                                if (mostrarSoloEmbases) return true;
+                                                if (formData.tipo_prestamo === 'embases') return true;
                                                 // En modo normal, mostrar solo embases sin relación
                                                 return !(prestable as any).prestable_relacionado_id;
                                             })
@@ -799,6 +772,9 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                     </div>
                 </form>
             </div>
+
+            {/* Toast Container */}
+            <ToastContainer toasts={toasts} onClose={removeToast} />
 
             {/* Modal de Impresión */}
             <OutputSelectionModal

@@ -1171,8 +1171,8 @@ class CompraController extends Controller
         }
 
         // 4. Verificar si el stock ya fue utilizado (vendido)
-        // Esto es más complejo, pero podríamos verificar si los movimientos de salida
-        // superan las entradas, indicando que parte del stock se vendió
+        // ✅ MEJORADO (2026-04-16): Verificar stock total del producto en el almacén (todos los lotes)
+        // no solo el lote específico de la compra
         $movimientos = \App\Models\MovimientoInventario::where('numero_documento', $compra->numero)
             ->where('tipo', \App\Models\MovimientoInventario::TIPO_ENTRADA_COMPRA)
             ->get();
@@ -1181,14 +1181,19 @@ class CompraController extends Controller
             $stockProducto = $movimiento->stockProducto;
             if ($stockProducto) {
                 $cantidadEntrada = abs($movimiento->cantidad);
-                $stockActual     = $stockProducto->cantidad;
+                $producto = $stockProducto->producto;
+                $almacenId = $stockProducto->almacen_id;
 
-                // Si el stock actual es menor que la cantidad original de la compra,
+                // ✅ CORREGIDO: Calcular stock total sumando TODOS los lotes del producto en el almacén
+                $stockTotalAlmacen = \App\Models\StockProducto::where('producto_id', $producto->id)
+                    ->where('almacen_id', $almacenId)
+                    ->sum('cantidad');
+
+                // Si el stock total es menor que la cantidad original de la compra,
                 // significa que parte se vendió
-                if ($stockActual < $cantidadEntrada) {
-                    $producto        = $stockProducto->producto;
-                    $cantidadVendida = $cantidadEntrada - $stockActual;
-                    $errores[]       = "Producto '{$producto->nombre}': se compraron {$cantidadEntrada} unidades pero {$cantidadVendida} ya fueron vendidas";
+                if ($stockTotalAlmacen < $cantidadEntrada) {
+                    $cantidadVendida = $cantidadEntrada - $stockTotalAlmacen;
+                    $errores[] = "Producto '{$producto->nombre}': se compraron {$cantidadEntrada} unidades pero {$cantidadVendida} ya fueron vendidas (stock disperso en {$almacenId})";
                 }
             }
         }
