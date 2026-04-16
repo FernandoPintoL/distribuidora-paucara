@@ -151,7 +151,7 @@ class EntregaController extends Controller
                 $horaInicio = $turno === 'manana' ? '08:00:00' : '14:00:00';
                 $horaFin    = $turno === 'manana' ? '12:00:00' : '18:00:00';
 
-                $q->whereHas('ventas', fn($ventaQuery) =>
+                return $q->whereHas('ventas', fn($ventaQuery) =>
                     $ventaQuery->whereTime('hora_entrega_comprometida', '>=', $horaInicio)
                               ->whereTime('hora_entrega_comprometida', '<=', $horaFin)
                 );
