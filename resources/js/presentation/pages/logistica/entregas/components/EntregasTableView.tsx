@@ -55,7 +55,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
     const [estadoLogisticaURL, setEstadoLogisticaURL] = useQueryParam('estado_logistica_id', '');
     const [fechaDesdeURL, setFechaDesdeURL] = useQueryParam('fecha_desde', '');
     const [fechaHastaURL, setFechaHastaURL] = useQueryParam('fecha_hasta', '');
-    const [tipoFechaURL, setTipoFechaURL] = useQueryParam('tipo_fecha', 'fecha_entrega_comprometida'); // ✅ NUEVO
+    const [tipoFechaURL, setTipoFechaURL] = useQueryParam('tipo_fecha', 'fecha_programada'); // ✅ NUEVO
     const [turnoURL, setTurnoURL] = useQueryParam('turno', ''); // ✅ NUEVO
     const [mostrarTodasLasFechas, setMostrarTodasLasFechas] = useState(false); // ✅ NUEVO: Estado local para mostrar todas las fechas (default: solo hoy)
 
@@ -70,7 +70,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         estado_logistica_id: estadoLogisticaURL,
         fecha_desde: fechaDesdeURL,
         fecha_hasta: fechaHastaURL,
-        tipo_fecha: tipoFechaURL as 'created_at' | 'fecha_entrega_comprometida', // ✅ NUEVO
+        tipo_fecha: tipoFechaURL as 'created_at' | 'fecha_programada', // ✅ NUEVO
         turno: turnoURL as 'manana' | 'tarde' | '', // ✅ NUEVO
     });
 
@@ -132,7 +132,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         if (estadoLogisticaFinal) params.append('estado_logistica_id', estadoLogisticaFinal);
         if (fechaDesdeFinal) params.append('fecha_desde', fechaDesdeFinal);
         if (fechaHastaFinal) params.append('fecha_hasta', fechaHastaFinal);
-        if (tipoFechaFinal && tipoFechaFinal !== 'fecha_entrega_comprometida') params.append('tipo_fecha', tipoFechaFinal); // ✅ NUEVO
+        if (tipoFechaFinal && tipoFechaFinal !== 'fecha_programada') params.append('tipo_fecha', tipoFechaFinal); // ✅ NUEVO
         if (turnoFinal) params.append('turno', turnoFinal); // ✅ NUEVO
 
         // Navegar con nuevos filtros
@@ -152,7 +152,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
             estado_logistica_id: '',
             fecha_desde: '',
             fecha_hasta: '',
-            tipo_fecha: 'fecha_entrega_comprometida', // ✅ NUEVO
+            tipo_fecha: 'fecha_programada', // ✅ NUEVO
             turno: '', // ✅ NUEVO
         });
         setEstadoURL('TODOS');
@@ -164,7 +164,7 @@ export function EntregasTableView({ entregas, vehiculos = [], choferes = [], loc
         setEstadoLogisticaURL('');
         setFechaDesdeURL('');
         setFechaHastaURL('');
-        setTipoFechaURL('fecha_entrega_comprometida'); // ✅ NUEVO
+        setTipoFechaURL('fecha_programada'); // ✅ NUEVO
         setTurnoURL(''); // ✅ NUEVO
         setMostrarTodasLasFechas(false);
 

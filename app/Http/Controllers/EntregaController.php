@@ -83,7 +83,7 @@ class EntregaController extends Controller
             'estado'              => $request->input('estado'),
             'fecha_desde'         => $request->input('fecha_desde'),
             'fecha_hasta'         => $request->input('fecha_hasta'),
-            'tipo_fecha'          => $request->input('tipo_fecha', 'fecha_entrega_comprometida'), // ✅ NUEVO: created_at | fecha_entrega_comprometida
+            'tipo_fecha'          => $request->input('tipo_fecha', 'fecha_programada'), // ✅ NUEVO: created_at | fecha_programada
             'turno'               => $request->input('turno', ''), // ✅ NUEVO: manana | tarde
             'chofer_id'           => $request->input('chofer_id'),
             'vehiculo_id'         => $request->input('vehiculo_id'),
@@ -114,9 +114,9 @@ class EntregaController extends Controller
                 fn($q) => $q  // Si hay fechas, turno o búsqueda, continuar sin filtro de created_at
             )
             ->when($filtros['estado'], fn($q, $estado) => $q->where('estado', $estado))
-            // ✅ NUEVO: Filtrado por tipo_fecha (created_at o fecha_entrega_comprometida)
+            // ✅ NUEVO: Filtrado por tipo_fecha (created_at o fecha_programada)
             ->when($filtros['fecha_desde'] || $filtros['fecha_hasta'], function ($q) use ($filtros) {
-                $tipoFecha = $filtros['tipo_fecha'] ?? 'fecha_entrega_comprometida';
+                $tipoFecha = $filtros['tipo_fecha'] ?? 'fecha_programada';
                 $fechaDesde = $filtros['fecha_desde'];
                 $fechaHasta = $filtros['fecha_hasta'];
 
@@ -132,18 +132,16 @@ class EntregaController extends Controller
                         $q->whereDate('created_at', '<=', $fechaHasta);
                     }
                 } else {
-                    // Filtrar por fecha_entrega_comprometida (en ventas)
-                    \Log::info('📅 Filtrando por fecha_entrega_comprometida en ventas:');
-                    $q->whereHas('ventas', function ($ventaQuery) use ($fechaDesde, $fechaHasta) {
-                        if ($fechaDesde) {
-                            \Log::info('  - desde: ' . $fechaDesde);
-                            $ventaQuery->whereDate('fecha_entrega_comprometida', '>=', $fechaDesde);
-                        }
-                        if ($fechaHasta) {
-                            \Log::info('  - hasta: ' . $fechaHasta);
-                            $ventaQuery->whereDate('fecha_entrega_comprometida', '<=', $fechaHasta);
-                        }
-                    });
+                    // Filtrar por fecha_programada (en entregas)
+                    \Log::info('📅 Filtrando por fecha_programada en entregas:');
+                    if ($fechaDesde) {
+                        \Log::info('  - desde: ' . $fechaDesde);
+                        $q->whereDate('fecha_programada', '>=', $fechaDesde);
+                    }
+                    if ($fechaHasta) {
+                        \Log::info('  - hasta: ' . $fechaHasta);
+                        $q->whereDate('fecha_programada', '<=', $fechaHasta);
+                    }
                 }
                 return $q;
             })

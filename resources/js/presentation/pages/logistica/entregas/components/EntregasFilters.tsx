@@ -19,7 +19,7 @@ export interface FiltrosEntregas {
     estado_logistica_id?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
-    tipo_fecha?: 'created_at' | 'fecha_entrega_comprometida'; // ✅ NUEVO
+    tipo_fecha?: 'created_at' | 'fecha_programada'; // ✅ NUEVO
     turno?: 'manana' | 'tarde' | ''; // ✅ NUEVO
 }
 
@@ -86,7 +86,7 @@ export function EntregasFilters({
             },
             filtros.fecha_desde && { label: 'Desde', value: filtros.fecha_desde },
             filtros.fecha_hasta && { label: 'Hasta', value: filtros.fecha_hasta },
-            filtros.tipo_fecha && filtros.tipo_fecha !== 'fecha_entrega_comprometida' && { label: 'Tipo Fecha', value: filtros.tipo_fecha === 'created_at' ? 'Creación' : 'Comprometida' }, // ✅ NUEVO
+            filtros.tipo_fecha && filtros.tipo_fecha !== 'fecha_programada' && { label: 'Tipo Fecha', value: filtros.tipo_fecha === 'created_at' ? 'Creación' : 'Programada' }, // ✅ NUEVO
             filtros.turno && { label: 'Turno', value: filtros.turno === 'manana' ? 'Mañana' : 'Tarde' }, // ✅ NUEVO
         ].filter(Boolean);
     }, [filtros, choferes, vehiculos, localidades, estadosLogisticos]);
@@ -334,13 +334,13 @@ export function EntregasFilters({
                                 <input
                                     type="radio"
                                     name="tipo_fecha"
-                                    value="fecha_entrega_comprometida"
+                                    value="fecha_programada"
                                     checked={filtros.tipo_fecha !== 'created_at'}
-                                    onChange={() => onFilterChange('tipo_fecha', 'fecha_entrega_comprometida')}
+                                    onChange={() => onFilterChange('tipo_fecha', 'fecha_programada')}
                                     disabled={isLoading}
                                     className="w-4 h-4"
                                 />
-                                <span className="text-sm">📅 Fecha Comprometida</span>
+                                <span className="text-sm">📅 Fecha Programada</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input

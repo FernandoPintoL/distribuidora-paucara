@@ -492,7 +492,7 @@ export default function PrestablesIndex() {
                             )}
 
                             {/* Precios */}
-                            {/* <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
                                     💰 Precios
                                 </h3>
@@ -518,10 +518,10 @@ export default function PrestablesIndex() {
                                         </div>
                                     ))}
                                 </div>
-                            </div> */}
+                            </div>
 
                             {/* Condiciones */}
-                            {/* <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
                                     🔒 Condiciones Individuales
                                 </h3>
@@ -587,7 +587,7 @@ export default function PrestablesIndex() {
                                         />
                                     </div>
                                 </div>
-                            </div> */}
+                            </div>
 
                         <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                             <DialogClose asChild>
