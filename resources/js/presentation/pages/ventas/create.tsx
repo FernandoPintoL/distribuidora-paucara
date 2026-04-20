@@ -300,6 +300,13 @@ export default function VentaForm() {
         );
     }, [data.monto_pagado_inicial]);
 
+    useEffect(() => {
+        console.log('🚚 [VentaForm] requiere_envio cambió:', {
+            requiere_envio: data.requiere_envio,
+            direccion_cliente_id: data.direccion_cliente_id,
+        });
+    }, [data.requiere_envio, data.direccion_cliente_id]);
+
     // ✅ NUEVO: Auto-seleccionar Fernando Santander cuando preventistas se cargan
     useEffect(() => {
         if (!isEditing && preventistas.length > 0 && !data.preventista_id) {
@@ -1012,6 +1019,7 @@ export default function VentaForm() {
             ...data,
             // ✅ IMPORTANTE: Asegurar que estos campos se envíen explícitamente
             requiere_envio: data.requiere_envio ?? false,
+            direccion_cliente_id: data.requiere_envio ? (data.direccion_cliente_id ?? null) : null,
             tipo_pago_id: data.tipo_pago_id ?? 1,  // ✅ NUEVO: Tipo de pago seleccionado
             politica_pago: politicaPagoFinal,  // ✅ MODIFICADO: Usar politica_pago calculada
             estado_pago: data.estado_pago ?? 'PAGADO',
@@ -1070,6 +1078,14 @@ export default function VentaForm() {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const method = isEditing && venta ? 'PUT' : 'POST';
             const url = isEditing && venta ? `/ventas/${venta.id}` : '/ventas';
+
+            console.log('🚚 [VentaForm] Estado final antes de enviar:', {
+                requiere_envio: submitData.requiere_envio,
+                direccion_cliente_id: submitData.direccion_cliente_id,
+                cliente_id: submitData.cliente_id,
+                entrega_id: submitData.entrega_id,
+                politica_pago: submitData.politica_pago,
+            });
 
             // ✅ NUEVO: Log detallado de lo que se envía al backend
             const requestBody = JSON.stringify(submitData);
@@ -1353,7 +1369,10 @@ export default function VentaForm() {
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setData('requiere_envio', true)}
+                                        onClick={() => {
+                                            console.log('🚚 [VentaForm] Seleccionado requiere_envio = true');
+                                            setData('requiere_envio', true);
+                                        }}
                                         className={`flex-1 px-3 py-1.5 rounded-lg border-2 font-semibold text-xs transition-all ${
                                             data.requiere_envio
                                                 ? 'border-green-600 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
@@ -1364,7 +1383,10 @@ export default function VentaForm() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setData('requiere_envio', false)}
+                                        onClick={() => {
+                                            setData('requiere_envio', false);
+                                            setData('direccion_cliente_id', null);
+                                        }}
                                         className={`flex-1 px-3 py-1.5 rounded-lg border-2 font-semibold text-xs transition-all ${
                                             !data.requiere_envio
                                                 ? 'border-red-600 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 shadow-sm'
