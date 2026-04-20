@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
-use App\Models\Proveedor;
 use App\Models\Prestable;
+use App\Models\PrestableStock;
+use App\Models\Proveedor;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -50,7 +51,7 @@ class PrestamosInertiaController extends Controller
     public function clientesCrear(): Response
     {
         $clientes = Cliente::where('activo', true)
-            ->select('id', 'razon_social', 'nombre')
+            ->select('id', 'razon_social', 'nombre', 'telefono')
             ->orderBy('razon_social')
             ->get();
 
@@ -110,9 +111,72 @@ class PrestamosInertiaController extends Controller
             ->limit(100)
             ->get();
 
+        // Cargar todos los prestables activos (canastillas y embases), aunque no tengan stock.
+        // El stock se suma solo desde almacenes marcados como proveedor.
+        $almacenesProveedor = \App\Models\AlmacenPrestable::query()
+            ->where('es_proveedor', true)
+            ->select('id', 'nombre', 'es_proveedor')
+            ->orderBy('nombre')
+            ->get();
+
+        $stocksPorPrestable = PrestableStock::with([
+                'almacenPrestable:id,nombre,es_proveedor',
+            ])
+            ->whereIn('almacenes_prestables_id', $almacenesProveedor->pluck('id'))
+            ->get()
+            ->groupBy('prestable_id');
+
+        $prestables = Prestable::query()
+            ->select('id', 'nombre', 'codigo', 'tipo', 'capacidad', 'proveedor_id', 'prestable_relacionado_id', 'activo')
+            ->where('activo', true)
+            ->whereIn('tipo', ['CANASTILLA', 'EMBASES'])
+            ->orderBy('nombre')
+            ->get()
+            ->map(function ($prestable) use ($stocksPorPrestable, $almacenesProveedor) {
+                $stocks = $stocksPorPrestable->get($prestable->id, collect());
+                $cantidadTotal = (int) $stocks->sum('cantidad_disponible');
+
+                $stocksFormateados = $stocks->map(function ($stock) {
+                    return [
+                        'id' => $stock->id,
+                        'cantidad_disponible' => $stock->cantidad_disponible,
+                        'almacenes_prestables_id' => $stock->almacenes_prestables_id,
+                        'almacen_prestable' => [
+                            'id' => $stock->almacenPrestable?->id,
+                            'nombre' => $stock->almacenPrestable?->nombre,
+                            'es_proveedor' => $stock->almacenPrestable?->es_proveedor,
+                        ],
+                    ];
+                })->values();
+
+                $almacenes = $almacenesProveedor->map(function ($almacen) {
+                    return [
+                        'id' => $almacen->id,
+                        'nombre' => $almacen->nombre,
+                    ];
+                })->values();
+
+                return [
+                    'id' => $prestable->id,
+                    'nombre' => $prestable->nombre,
+                    'codigo' => $prestable->codigo,
+                    'tipo' => $prestable->tipo,
+                    'capacidad' => $prestable->capacidad,
+                    'proveedor_id' => $prestable->proveedor_id,
+                    'prestable_relacionado_id' => $prestable->prestable_relacionado_id,
+                    'activo' => (bool) $prestable->activo,
+                    'cantidad_disponible' => $cantidadTotal,
+                    'stocks' => $stocksFormateados,
+                    'almacenes_proveedor' => $almacenes,
+                ];
+            })
+            ->values();
+
         return Inertia::render('prestamos/proveedores/crear', [
             'proveedores' => $proveedores,
             'compras' => $compras,
+            'almacenes_proveedor' => $almacenesProveedor->map(fn($a) => ['id' => $a->id, 'nombre' => $a->nombre])->values(),
+            'prestables_proveedor' => $prestables,
         ]);
     }
 

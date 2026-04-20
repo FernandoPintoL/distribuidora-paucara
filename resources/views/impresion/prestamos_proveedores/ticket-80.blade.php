@@ -25,6 +25,9 @@
         <p class="text-xs mb-1">
             <strong>Garantía:</strong> Bs {{ number_format($documento->monto_garantia ?? 0, 2) }}
         </p>
+        <p class="text-xs mb-1">
+            <strong>Daño Total Cobrado:</strong> Bs {{ number_format($documento->monto_cobrado_danio_total_impresion ?? 0, 2) }}
+        </p>
 
         <!-- SEPARADOR -->
         <div style="border-top: 1px solid #000; margin: 3px 0;"></div>
@@ -41,6 +44,11 @@
         <p class="text-xs mb-1">
             <strong>Tipo:</strong> {{ $documento->es_compra ? 'COMPRA' : 'PRÉSTAMO' }}
         </p>
+        @if(!empty($documento->almacen_impresion))
+            <p class="text-xs mb-1">
+                <strong>Almacén:</strong> {{ $documento->almacen_impresion->nombre ?? 'N/D' }}
+            </p>
+        @endif
 
         <!-- ESTADO DESTACADO -->
         <p class="text-center text-xs font-bold mb-1" style="padding: 3px; border: 1px solid #000;">
@@ -84,6 +92,7 @@
                         <th style="text-align: left; padding: 2px; font-weight: bold;">Prestable</th>
                         <th style="text-align: center; padding: 2px; font-weight: bold;">Recib</th>
                         <th style="text-align: center; padding: 2px; font-weight: bold;">Dev</th>
+                        <th style="text-align: center; padding: 2px; font-weight: bold;">Dañ</th>
                         <th style="text-align: center; padding: 2px; font-weight: bold;">Pend</th>
                     </tr>
                 </thead>
@@ -92,12 +101,14 @@
                         @php
                             $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
                             $cantidadDevuelta = $detalle->devolucionDetalles->sum('cantidad_devuelta') ?? 0;
+                            $cantidadDaniada = ($detalle->devolucionDetalles->sum('cantidad_dañada_parcial') ?? 0) + ($detalle->devolucionDetalles->sum('cantidad_dañada_total') ?? 0);
                             $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
                         @endphp
                         <tr style="border-bottom: 1px solid #ccc;">
                             <td style="text-align: left; padding: 2px;">{{ substr($detalle->prestable->nombre ?? 'Prestable', 0, 12) }}</td>
                             <td style="text-align: center; padding: 2px;">{{ number_format($cantidadPrestada, 0) }}</td>
                             <td style="text-align: center; padding: 2px;">{{ number_format($cantidadDevuelta, 0) }}</td>
+                            <td style="text-align: center; padding: 2px;">{{ number_format($cantidadDaniada, 0) }}</td>
                             <td style="text-align: center; padding: 2px; font-weight: bold;">{{ number_format($cantidadPendiente, 0) }}</td>
                         </tr>
                     @endforeach
@@ -106,6 +117,10 @@
         @else
             <p class="text-xs text-center">Sin detalles registrados</p>
         @endif
+
+        <p class="text-[10px] text-center mt-1">
+            Cantidad dañada solo informativa, registrada en <code>devolucion_proveedor_detalle</code>.
+        </p>
 
         <!-- SEPARADOR -->
         <div style="border-top: 1px solid #000; margin: 3px 0;"></div>

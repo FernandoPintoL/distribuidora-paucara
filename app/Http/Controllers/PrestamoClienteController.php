@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\PrestamoCliente;
 use App\Services\ImpresionService;
+use App\Services\Prestamos\PrestableStockAdvancedService;
 use App\Services\Prestamos\PrestamoClienteService;
 use App\Services\Prestamos\ValidacionPrestamosService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Models\PrestableStock;
 
 class PrestamoClienteController extends Controller
 {
     public function __construct(
         private PrestamoClienteService $prestamoService,
         private ValidacionPrestamosService $validacionService,
+        private PrestableStockAdvancedService $stockAdvancedService,
         private ImpresionService $impresionService,
     ) {
     }
@@ -28,6 +31,8 @@ class PrestamoClienteController extends Controller
         try {
             $query = PrestamoCliente::with([
                 'detalles.prestable',
+                'detalles.prestable.condiciones',
+                'detalles.prestable.precios',
                 'detalles.devolucionDetalles',
                 'cliente',
                 'chofer',
@@ -87,24 +92,38 @@ class PrestamoClienteController extends Controller
                 ], 422);
             }
 
-            // Validar stock para cada detalle - Usar almacén 3 para canastillas
-            $almacenId = 3;
             $detalles = $request->input('detalles', []);
 
-            Log::info('🏭 Validando stock para detalles', [
-                'almacen_id' => $almacenId,
-                'cantidad_detalles' => count($detalles)
+            Log::info('🏭 Validando stock consolidado para detalles', [
+                'cantidad_detalles' => count($detalles),
             ]);
 
             foreach ($detalles as $i => $detalle) {
-                $stockValido = $this->validacionService->puedoPrestar(
-                    $detalle['prestable_id'],
-                    $almacenId,
-                    $detalle['cantidad']
-                );
+                $almacenesIds = array_values(array_filter(array_map('intval', (array) ($detalle['almacenes_ids'] ?? []))));
+                if (count($almacenesIds) === 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Detalle {$i}: Debes seleccionar al menos un almacén",
+                    ], 422);
+                }
+
+                $cantidadDisponible = (int) PrestableStock::where('prestable_id', (int) $detalle['prestable_id'])
+                    ->whereIn('almacenes_prestables_id', $almacenesIds)
+                    ->sum('cantidad_disponible');
+
+                $stockValido = [
+                    'valido' => $cantidadDisponible >= (int) $detalle['cantidad'],
+                    'mensaje' => $cantidadDisponible >= (int) $detalle['cantidad']
+                        ? 'OK'
+                        : "Stock insuficiente en almacenes seleccionados. Disponible: {$cantidadDisponible}, solicitado: {$detalle['cantidad']}",
+                ];
 
                 if (!$stockValido['valido']) {
-                    Log::warning('⚠️ Stock insuficiente en detalle ' . $i, ['mensaje' => $stockValido['mensaje']]);
+                    Log::warning('⚠️ Stock insuficiente en detalle ' . $i, [
+                        'mensaje' => $stockValido['mensaje'],
+                        'prestable_id' => $detalle['prestable_id'],
+                        'cantidad_disponible_consolidada' => $cantidadDisponible,
+                    ]);
                     return response()->json([
                         'success' => false,
                         'message' => "Detalle {$i}: " . $stockValido['mensaje'],
@@ -127,7 +146,7 @@ class PrestamoClienteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $prestamo->load(['detalles.prestable', 'cliente', 'chofer']),
+                'data' => $prestamo->load(['detalles.prestable', 'detalles.prestable.condiciones', 'detalles.prestable.precios', 'cliente', 'chofer']),
                 'message' => 'Préstamo creado exitosamente',
             ], 201);
         } catch (\Exception $e) {
@@ -145,6 +164,8 @@ class PrestamoClienteController extends Controller
         try {
             $prestamo->load([
                 'detalles.prestable',
+                'detalles.prestable.condiciones',
+                'detalles.prestable.precios',
                 'detalles.devolucionDetalles',
                 'cliente',
                 'chofer',

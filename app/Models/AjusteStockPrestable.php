@@ -15,7 +15,7 @@ class AjusteStockPrestable extends Model
     protected $fillable = [
         'prestable_id',
         'prestable_stock_id',
-        'almacen_id',
+        'almacenes_prestables_id',
         'usuario_id',
         'cantidad_disponible_antes',
         'cantidad_en_prestamo_cliente_antes',
@@ -56,11 +56,11 @@ class AjusteStockPrestable extends Model
     }
 
     /**
-     * Almacén donde ocurrió el ajuste
+     * Almacén de prestables donde ocurrió el ajuste
      */
-    public function almacen(): BelongsTo
+    public function almacenPrestable(): BelongsTo
     {
-        return $this->belongsTo(Almacen::class);
+        return $this->belongsTo(AlmacenPrestable::class, 'almacenes_prestables_id');
     }
 
     /**

@@ -14,6 +14,8 @@ class PrestamoCliente extends Model
         'cliente_id',
         'venta_id',
         'chofer_id',
+        'telefono_cliente_1',
+        'telefono_cliente_2',
         'tipo_prestamo',
         'es_venta',
         'es_evento',

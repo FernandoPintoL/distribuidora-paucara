@@ -1186,4 +1186,12 @@ class Producto extends Model
         // Ej: 150 Bs/caja ÷ 100 = 1.50 Bs/tableta
         return (float) $precioProducto->precio / (float) $conversion->factor_conversion;
     }
+
+    /**
+     * Prestables que están relacionados con este producto
+     */
+    public function prestablesRelacionados()
+    {
+        return $this->hasMany(ProductoRelacionadoPrestable::class);
+    }
 }

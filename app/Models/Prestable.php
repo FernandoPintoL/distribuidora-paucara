@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Prestable extends Model
 {
@@ -101,5 +102,25 @@ class Prestable extends Model
     public function prestamosProveedor(): HasMany
     {
         return $this->hasMany(PrestamoProveedor::class);
+    }
+
+    /**
+     * Productos relacionados a este prestable
+     */
+    public function productosRelacionados(): HasMany
+    {
+        return $this->hasMany(ProductoRelacionadoPrestable::class);
+    }
+
+    /**
+     * Último detalle de compra confirmado para precio referencial dinámico.
+     */
+    public function ultimoDetalleCompra(): HasOne
+    {
+        return $this->hasOne(CompraPrestableDetalle::class)
+            ->whereHas('compraPrestable', function ($q) {
+                $q->where('estado', 'CONFIRMADA');
+            })
+            ->latestOfMany('id');
     }
 }

@@ -1225,7 +1225,10 @@ export default function ProformasShow({ item: proforma, tiposPrecio = [], almace
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     'X-Requested-With': 'XMLHttpRequest', // ✅ Indica que es AJAX
                 },
-                body: JSON.stringify(paymentData),
+                body: JSON.stringify({
+                    ...paymentData,
+                    ...coordinacionData, // ✅ Incluir datos de coordinación para actualizar proforma
+                }),
             });
 
             // ✅ Detectar redirects

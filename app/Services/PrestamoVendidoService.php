@@ -62,7 +62,7 @@ class PrestamoVendidoService
         try {
             // Verificar que existe stock disponible
             $stock = PrestableStock::where('prestable_id', $prestableId)
-                ->where('almacen_id', $almacenId)
+                ->where('almacenes_prestables_id', $almacenId)
                 ->firstOrFail();
 
             if ($stock->cantidad_disponible < $cantidad) {
@@ -76,7 +76,7 @@ class PrestamoVendidoService
             $detalle = PrestamoVendidoDetalle::create([
                 'prestamo_vendido_id' => $venta->id,
                 'prestable_id' => $prestableId,
-                'almacen_id' => $almacenId,
+                'almacenes_prestables_id' => $almacenId,
                 'cantidad' => $cantidad,
                 'precio_unitario' => $precioUnitario,
                 'subtotal' => $subtotal,
@@ -147,20 +147,20 @@ class PrestamoVendidoService
     {
         // Obtener stock actual
         $stock = PrestableStock::where('prestable_id', $detalle->prestable_id)
-            ->where('almacen_id', $detalle->almacen_id)
+            ->where('almacenes_prestables_id', $detalle->almacenes_prestables_id)
             ->firstOrFail();
 
         // Verificar stock disponible
         if ($stock->cantidad_disponible < $detalle->cantidad) {
             throw new \Exception(
-                "Stock insuficiente para {$stock->prestable->nombre} en {$stock->almacen->nombre}"
+                "Stock insuficiente para {$stock->prestable->nombre} en {$stock->almacenPrestable->nombre}"
             );
         }
 
         // Valores antes
         $disponibleAntes = $stock->cantidad_disponible;
         $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-        $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+        $prestamoProveedorAntes = $stock->cantidad_que_debo_devolver;
 
         // Actualizar stock (restar de disponible)
         $disponibleDespues = $disponibleAntes - $detalle->cantidad;
@@ -171,7 +171,7 @@ class PrestamoVendidoService
         // Registrar movimiento
         $this->movimientoService->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $detalle->almacen_id,
+            'almacenes_prestables_id' => $detalle->almacenes_prestables_id,
             'usuario_id' => $venta->usuario_id,
             'tipo' => 'VENTA_PRESTABLE',
             'cantidad' => -$detalle->cantidad,
@@ -244,13 +244,13 @@ class PrestamoVendidoService
     private function revertirDetalleVenta(PrestamoVendido $venta, PrestamoVendidoDetalle $detalle): void
     {
         $stock = PrestableStock::where('prestable_id', $detalle->prestable_id)
-            ->where('almacen_id', $detalle->almacen_id)
+            ->where('almacenes_prestables_id', $detalle->almacenes_prestables_id)
             ->firstOrFail();
 
         // Capturar valores antes de la reversión
         $disponibleAntes = $stock->cantidad_disponible;
         $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-        $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+        $prestamoProveedorAntes = $stock->cantidad_que_debo_devolver;
 
         // Restaurar cantidad disponible (revertir la venta)
         $disponibleDespues = $disponibleAntes + $detalle->cantidad;
@@ -262,7 +262,7 @@ class PrestamoVendidoService
         // Registrar movimiento de anulación (cantidad positiva porque revierte la resta de venta)
         $this->movimientoService->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $detalle->almacen_id,
+            'almacenes_prestables_id' => $detalle->almacenes_prestables_id,
             'usuario_id' => $venta->usuario_id,
             'tipo' => 'ANULACION_VENTA_PRESTABLE',
             'cantidad' => $detalle->cantidad, // Positiva = revierte el decremento de venta

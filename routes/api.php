@@ -96,6 +96,14 @@ Route::get('/almacenes', function () {
     ]);
 });
 
+// ✅ NUEVO: Endpoint para cargar almacenes de prestables
+Route::get('/almacenes-prestables', function () {
+    return response()->json([
+        'success' => true,
+        'data' => \App\Models\AlmacenPrestable::where('activo', true)->get()
+    ]);
+});
+
 // ✅ NUEVO: Endpoints para Políticas de Pago
 Route::get('/politicas-pago', [ApiPoliticaPagoController::class, 'index']);
 Route::get('/politicas-pago/disponibles/{clienteId}', [ApiPoliticaPagoController::class, 'disponibles']);
@@ -1474,6 +1482,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/proveedor/deudas', [ReportesController::class, 'reporteDeudas']);
         Route::get('/deudas-proveedores', [ReportesController::class, 'reporteDeudas']);
         Route::get('/resumen-prestamos', [ReportesController::class, 'reporteResumen']);
+
+        // ✨ NUEVO: Reportes Consolidados (stock por almacén + mezcla inteligente)
+        Route::prefix('prestables')->group(function () {
+            Route::get('/stock-detalle', [\App\Http\Controllers\Prestamos\ReportesConsolidadosController::class, 'stockDetallado']);
+            Route::get('/stock-por-almacen', [\App\Http\Controllers\Prestamos\ReportesConsolidadosController::class, 'stockPorAlmacen']);
+            Route::get('/deuda-proveedores', [\App\Http\Controllers\Prestamos\ReportesConsolidadosController::class, 'deudaProveedores']);
+            Route::get('/resumen-general', [\App\Http\Controllers\Prestamos\ReportesConsolidadosController::class, 'resumenGeneral']);
+        });
     });
 });
 

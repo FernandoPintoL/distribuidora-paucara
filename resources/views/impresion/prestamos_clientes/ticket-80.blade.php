@@ -167,7 +167,7 @@
                     <tr style="border-bottom: 1px solid #000;">
                         <th style="text-align: left; padding: 2px; font-weight: bold;">Prestable</th>
                         <th style="text-align: center; padding: 2px; font-weight: bold;">B</th>
-                        <th style="text-align: center; padding: 2px; font-weight: bold;">P</th>
+                        {{-- <th style="text-align: center; padding: 2px; font-weight: bold;">P</th> --}}
                         <th style="text-align: center; padding: 2px; font-weight: bold;">T</th>
                     </tr>
                 </thead>
@@ -176,7 +176,7 @@
                         <tr style="border-bottom: 1px solid #ccc;">
                             <td style="text-align: left; padding: 2px;">{{ substr($dev->detallePrestamoCliente->prestable->nombre ?? 'N/D', 0, 10) }}</td>
                             <td style="text-align: center; padding: 2px; font-weight: bold;">{{ $dev->cantidad_devuelta ?? 0 }}</td>
-                            <td style="text-align: center; padding: 2px;">{{ $dev->cantidad_dañada_parcial ?? 0 }}</td>
+                            {{-- <td style="text-align: center; padding: 2px;">{{ $dev->cantidad_dañada_parcial ?? 0 }}</td> --}}
                             <td style="text-align: center; padding: 2px;">{{ $dev->cantidad_dañada_total ?? 0 }}</td>
                         </tr>
                     @endforeach

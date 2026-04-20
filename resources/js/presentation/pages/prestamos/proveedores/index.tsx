@@ -25,7 +25,7 @@ import {
     DropdownMenuTrigger,
 } from '@/presentation/components/ui/dropdown-menu';
 import prestamoProveedorService from '@/infrastructure/services/prestamo-proveedor.service';
-import type { PrestamoProveedor, EstadoPrestamo, DatosDevolucionProveedor } from '@/domain/entities/prestamos';
+import type { PrestamoProveedor, EstadoPrestamo } from '@/domain/entities/prestamos';
 import { Plus, RotateCcw, Printer, Eye, Edit, X, History, MoreHorizontal } from 'lucide-react';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 import toast from 'react-hot-toast';
@@ -63,6 +63,50 @@ export default function PrestamosProveedoresIndex() {
         }>,
     });
 
+    const obtenerPrecioDanioPrestable = (detalle: unknown): number => {
+        const detalleRecord = (detalle ?? {}) as Record<string, unknown>;
+        const prestable = (detalleRecord.prestable ?? {}) as Record<string, unknown>;
+        const precios = Array.isArray(prestable.precios) ? prestable.precios as Array<Record<string, unknown>> : [];
+        const condiciones = Array.isArray(prestable.condiciones) ? prestable.condiciones as Array<Record<string, unknown>> : [];
+
+        const precioDanio = precios.find((p) => Boolean(p?.activo) && p?.tipo_precio === 'DAÑO_TOTAL');
+        if (precioDanio?.valor != null) {
+            return Number(precioDanio.valor) || 0;
+        }
+
+        const condicionActiva = condiciones.find((c) => Boolean(c?.activo)) || condiciones[0];
+        if (condicionActiva?.monto_daño_total != null) {
+            return Number(condicionActiva.monto_daño_total) || 0;
+        }
+
+        return 0;
+    };
+
+    const calcularMontoDaniosTotal = (detallesDevolucion: Array<{
+        prestamo_proveedor_detalle_id: number;
+        cantidad_devuelta: number;
+        cantidad_dañada_parcial: number;
+        cantidad_dañada_total: number;
+    }>): number => {
+        const selectedPrestamoRecord = (selectedPrestamo ?? {}) as Record<string, unknown>;
+        const detallesPrestamo = Array.isArray(selectedPrestamoRecord.detalles)
+            ? (selectedPrestamoRecord.detalles as Array<Record<string, unknown>>)
+            : [];
+        if (detallesPrestamo.length === 0) return 0;
+
+        const total = detallesDevolucion.reduce((sum, detalleDev) => {
+            const detallePrestamo = detallesPrestamo.find((d) => Number(d.id) === detalleDev.prestamo_proveedor_detalle_id);
+            if (!detallePrestamo) return sum;
+
+            const precioDanio = obtenerPrecioDanioPrestable(detallePrestamo);
+            const cantidadDanada = (detalleDev.cantidad_dañada_parcial || 0) + (detalleDev.cantidad_dañada_total || 0);
+
+            return sum + (precioDanio * cantidadDanada);
+        }, 0);
+
+        return Number(total.toFixed(2));
+    };
+
     const agregarDetalleADevolucion = (detalleId: number) => {
         const yaExiste = devolucionData.detalles.find(d => d.prestamo_proveedor_detalle_id === detalleId);
         if (!yaExiste) {
@@ -79,13 +123,16 @@ export default function PrestamosProveedoresIndex() {
     };
 
     const actualizarDetalleDevolucion = (detalleId: number, campo: string, valor: number) => {
+        const nuevosDetalles = devolucionData.detalles.map(d =>
+            d.prestamo_proveedor_detalle_id === detalleId
+                ? { ...d, [campo]: valor }
+                : d
+        );
+
         setDevolucionData({
             ...devolucionData,
-            detalles: devolucionData.detalles.map(d =>
-                d.prestamo_proveedor_detalle_id === detalleId
-                    ? { ...d, [campo]: valor }
-                    : d
-            ),
+            detalles: nuevosDetalles,
+            monto_cobrado_daño_total: calcularMontoDaniosTotal(nuevosDetalles),
         });
     };
 
@@ -267,8 +314,9 @@ export default function PrestamosProveedoresIndex() {
                                             <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📤 Prestado</th>
                                             <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📥 Devuelto</th>
                                             <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⏳ Faltante</th>
+                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">💲 P. Daño</th>
                                             <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">✏️ Devolviendo</th>
-                                            <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔴 D.Parcial</th>
+                                            {/* <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔴 D.Parcial</th> */}
                                             <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⚫ D.Total</th>
                                         </tr>
                                     </thead>
@@ -292,6 +340,7 @@ export default function PrestamosProveedoresIndex() {
                                                 const cantidadYaDevuelta = (detalle.devolucion_detalles || detalle.devolucionDetalles)?.reduce((sum: number, d: any) =>
                                                     sum + (d.cantidad_devuelta + d.cantidad_dañada_parcial + d.cantidad_dañada_total), 0) || 0;
                                                 const cantidadFaltante = detalle.cantidad_prestada - cantidadYaDevuelta;
+                                                const precioDanio = obtenerPrecioDanioPrestable(detalle);
                                                 const detalleAct = devolucionData.detalles.find(d => d.prestamo_proveedor_detalle_id === detalle.id);
 
                                                 console.log(`📊 ${detalle.prestable?.nombre}: Prestado=${detalle.cantidad_prestada}, YaDevuelto=${cantidadYaDevuelta}, Faltante=${cantidadFaltante}`);
@@ -344,6 +393,7 @@ export default function PrestamosProveedoresIndex() {
                                                     setDevolucionData({
                                                         ...devolucionData,
                                                         detalles: nuevosDetalles,
+                                                        monto_cobrado_daño_total: calcularMontoDaniosTotal(nuevosDetalles),
                                                     });
                                                 };
 
@@ -353,6 +403,7 @@ export default function PrestamosProveedoresIndex() {
                                                     <td className="px-3 py-2 text-center text-gray-700 dark:text-gray-300">{detalle.cantidad_prestada}</td>
                                                     <td className="px-3 py-2 text-center text-green-600 dark:text-green-400 font-bold">{cantidadYaDevuelta}</td>
                                                     <td className="px-3 py-2 text-center text-orange-600 dark:text-orange-400 font-bold">{cantidadFaltante}</td>
+                                                    <td className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Bs {precioDanio.toFixed(2)}</td>
                                                     <td className="px-3 py-2 text-center">
                                                         {cantidadFaltante > 0 ? (
                                                             <input
@@ -378,7 +429,7 @@ export default function PrestamosProveedoresIndex() {
                                                             <span className="text-gray-400">-</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-3 py-2 text-center">
+                                                    {/* <td className="px-3 py-2 text-center">
                                                         {detalleAct || (detalle.prestable?.tipo === 'EMBASE' && detalleEmbaseAct) ? (
                                                             <input
                                                                 type="number"
@@ -396,7 +447,7 @@ export default function PrestamosProveedoresIndex() {
                                                         ) : (
                                                             <span className="text-gray-400">-</span>
                                                         )}
-                                                    </td>
+                                                    </td> */}
                                                     <td className="px-3 py-2 text-center">
                                                         {detalleAct || (detalle.prestable?.tipo === 'EMBASE' && detalleEmbaseAct) ? (
                                                             <input
@@ -435,12 +486,7 @@ export default function PrestamosProveedoresIndex() {
                                         min="0"
                                         step="0.01"
                                         value={devolucionData.monto_cobrado_daño_total}
-                                        onChange={(e) =>
-                                            setDevolucionData({
-                                                ...devolucionData,
-                                                monto_cobrado_daño_total: Number(e.target.value),
-                                            })
-                                        }
+                                        readOnly
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 text-lg font-semibold"
                                     />
                                 </div>
@@ -540,6 +586,9 @@ export default function PrestamosProveedoresIndex() {
                                     <TableRow className="border-gray-200 dark:border-gray-700">
                                         <TableHead className="text-gray-900 dark:text-gray-100 w-16">Folio</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Proveedor</TableHead>
+                                        <TableHead className="text-right text-gray-900 dark:text-gray-100">Total</TableHead>
+                                        <TableHead className="text-right text-gray-900 dark:text-gray-100">Devueltas</TableHead>
+                                        <TableHead className="text-right text-gray-900 dark:text-gray-100">Pendientes</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Garantía</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Fecha Préstamo</TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">Plazo</TableHead>
@@ -549,13 +598,33 @@ export default function PrestamosProveedoresIndex() {
                                 </TableHeader>
                                 <TableBody>
                                     {prestamos.map((p) => {
-                                        const cantidadTotal = p.detalles?.reduce((sum: number, d: any) => sum + (d.cantidad_prestada || 0), 0) || 0;
-                                        const prestabesNombres = p.detalles?.map((d: any) => d.prestable?.nombre).join(', ') || p.prestable?.nombre || 'N/D';
+                                        const cantidadTotal = p.detalles?.reduce((sum: number, d: unknown) => {
+                                            const detalle = d as Record<string, unknown>;
+                                            const cantidadPrestada = Number(detalle.cantidad_prestada || 0);
+                                            return sum + cantidadPrestada;
+                                        }, 0) || 0;
+                                        const cantidadDevuelta = p.detalles?.reduce((sum: number, d: unknown) => {
+                                            const detalle = d as Record<string, unknown>;
+                                            const devoluciones = (detalle.devolucion_detalles || detalle.devolucionDetalles || []) as unknown[];
+                                            const devueltoDetalle = devoluciones.reduce((subtotal: number, dev: unknown) => {
+                                                const detalleDev = dev as Record<string, number | undefined>;
+                                                return subtotal +
+                                                    (detalleDev.cantidad_devuelta || 0) +
+                                                    (detalleDev.cantidad_dañada_parcial || 0) +
+                                                    (detalleDev.cantidad_dañada_total || 0);
+                                            }, 0);
+
+                                            return sum + devueltoDetalle;
+                                        }, 0) || 0;
+                                        const cantidadPendiente = Math.max(0, cantidadTotal - cantidadDevuelta);
 
                                         return (
                                             <TableRow key={p.id} className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                                                 <TableCell className="text-gray-900 dark:text-gray-100 font-semibold">#{p.id}</TableCell>
                                                 <TableCell className="text-gray-900 dark:text-gray-100">{p.proveedor?.nombre || p.proveedor?.razon_social}</TableCell>
+                                                <TableCell className="text-right text-gray-900 dark:text-gray-100 font-semibold">{cantidadTotal}</TableCell>
+                                                <TableCell className="text-right text-green-700 dark:text-green-400 font-semibold">{cantidadDevuelta}</TableCell>
+                                                <TableCell className="text-right text-orange-700 dark:text-orange-400 font-semibold">{cantidadPendiente}</TableCell>
                                                 <TableCell className="text-gray-900 dark:text-gray-100">Bs {p.monto_garantia}</TableCell>
                                                 <TableCell className="text-gray-900 dark:text-gray-100">
                                                     {new Date(p.fecha_prestamo).toLocaleDateString('es-ES')}
@@ -722,7 +791,10 @@ export default function PrestamosProveedoresIndex() {
                 {/* Modal de Detalles del Préstamo */}
                 {selectedPrestamoDetalles && (
                     <Dialog open={showDetallesModal} onOpenChange={setShowDetallesModal}>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent
+                            style={{ width: '90vw', maxWidth: '90vw' }}
+                            className="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 p-2"
+                        >
                             <DialogHeader>
                                 <DialogTitle>Detalles del Préstamo #{selectedPrestamoDetalles.id}</DialogTitle>
                                 <DialogDescription>
@@ -797,12 +869,44 @@ export default function PrestamosProveedoresIndex() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    {detalle.devoluciones && detalle.devoluciones.length > 0 && (
+                                                    {(() => {
+                                                        const devoluciones = detalle.devoluciones || detalle.devolucion_detalles || detalle.devolucionDetalles || [];
+                                                        const totalDevuelto = devoluciones.reduce((sum: number, dev: any) => sum + (Number(dev.cantidad_devuelta) || 0), 0);
+                                                        const totalDaniado = devoluciones.reduce((sum: number, dev: any) => {
+                                                            return sum + (Number(dev.cantidad_dañada_parcial) || 0) + (Number(dev.cantidad_dañada_total) || 0);
+                                                        }, 0);
+                                                        const pendiente = Math.max(0, Number(detalle.cantidad_prestada || 0) - totalDevuelto);
+
+                                                        return (
+                                                            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                                                                <div className="rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2">
+                                                                    <p className="text-gray-500 dark:text-gray-400 text-xs">Devuelto</p>
+                                                                    <p className="font-semibold text-green-700 dark:text-green-400">{totalDevuelto}</p>
+                                                                </div>
+                                                                <div className="rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2">
+                                                                    <p className="text-gray-500 dark:text-gray-400 text-xs">Dañado total</p>
+                                                                    <p className="font-semibold text-red-700 dark:text-red-400">{totalDaniado}</p>
+                                                                </div>
+                                                                <div className="rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2">
+                                                                    <p className="text-gray-500 dark:text-gray-400 text-xs">Pendiente</p>
+                                                                    <p className="font-semibold text-orange-700 dark:text-orange-400">{pendiente}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {(detalle.devoluciones || detalle.devolucion_detalles || detalle.devolucionDetalles) && (detalle.devoluciones || detalle.devolucion_detalles || detalle.devolucionDetalles).length > 0 && (
                                                         <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                                                            {detalle.devoluciones.map((dev: any, devIdx: number) => (
-                                                                <p key={devIdx}>
-                                                                    Devolución {devIdx + 1}: {dev.cantidad_devuelta} unidades - {new Date(dev.fecha_devolucion).toLocaleDateString('es-ES')}
-                                                                </p>
+                                                            {(detalle.devoluciones || detalle.devolucion_detalles || detalle.devolucionDetalles).map((dev: any, devIdx: number) => (
+                                                                <div key={devIdx} className="mt-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1">
+                                                                    <p>
+                                                                        Devolución {devIdx + 1}: {Number(dev.cantidad_devuelta) || 0} devueltas
+                                                                        {(() => {
+                                                                            const totalDaniado = (Number(dev.cantidad_dañada_parcial) || 0) + (Number(dev.cantidad_dañada_total) || 0);
+                                                                            return totalDaniado > 0 ? ` | Dañado: ${totalDaniado}` : '';
+                                                                        })()}
+                                                                        {' '}- {new Date(dev.fecha_devolucion).toLocaleDateString('es-ES')}
+                                                                    </p>
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     )}

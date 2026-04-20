@@ -9,6 +9,7 @@ use App\Services\ImpresionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CompraPrestableController extends Controller
@@ -126,7 +127,8 @@ class CompraPrestableController extends Controller
                 'observaciones' => 'nullable|string|max:1000',
                 'detalles' => 'nullable|array',
                 'detalles.*.prestable_id' => 'required|exists:prestables,id',
-                'detalles.*.almacen_id' => 'required|exists:almacenes,id',
+                'detalles.*.almacen_id' => 'nullable|integer',
+                'detalles.*.almacenes_prestables_id' => 'nullable|integer',
                 'detalles.*.cantidad' => 'required|integer|min:1',
                 'detalles.*.precio_unitario' => 'required|numeric|min:0',
                 'detalles.*.observaciones' => 'nullable|string|max:500',
@@ -144,10 +146,19 @@ class CompraPrestableController extends Controller
             // Si hay detalles, agregarlos y confirmar compra inmediatamente
             if (!empty($validated['detalles'])) {
                 foreach ($validated['detalles'] as $detalle) {
+                    $almacenId = $detalle['almacen_id'] ?? $detalle['almacenes_prestables_id'] ?? null;
+                    if (!$almacenId) {
+                        throw new \Exception('Detalle inválido: almacén requerido');
+                    }
+                    $existeAlmacenPrestable = DB::table('almacenes_prestables')->where('id', (int) $almacenId)->exists();
+                    if (!$existeAlmacenPrestable) {
+                        throw new \Exception("Detalle inválido: almacén prestable {$almacenId} no existe");
+                    }
+
                     $this->service->agregarDetalle(
                         compra: $compra,
                         prestableId: $detalle['prestable_id'],
-                        almacenId: $detalle['almacen_id'],
+                        almacenId: (int) $almacenId,
                         cantidad: $detalle['cantidad'],
                         precioUnitario: $detalle['precio_unitario'],
                         observaciones: $detalle['observaciones'] ?? null,
@@ -189,16 +200,33 @@ class CompraPrestableController extends Controller
 
             $validated = $request->validate([
                 'prestable_id' => 'required|exists:prestables,id',
-                'almacen_id' => 'required|exists:almacenes,id',
+                'almacen_id' => 'nullable|integer',
+                'almacenes_prestables_id' => 'nullable|integer',
                 'cantidad' => 'required|integer|min:1',
                 'precio_unitario' => 'required|numeric|min:0',
                 'observaciones' => 'nullable|string|max:500',
             ]);
 
+            $almacenId = $validated['almacen_id'] ?? $validated['almacenes_prestables_id'] ?? null;
+            if (!$almacenId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'almacen_id o almacenes_prestables_id es requerido',
+                ], 422);
+            }
+
+            $existeAlmacenPrestable = DB::table('almacenes_prestables')->where('id', (int) $almacenId)->exists();
+            if (!$existeAlmacenPrestable) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Almacén prestable {$almacenId} no existe",
+                ], 422);
+            }
+
             $detalle = $this->service->agregarDetalle(
                 compra: $compra,
                 prestableId: $validated['prestable_id'],
-                almacenId: $validated['almacen_id'],
+                almacenId: (int) $almacenId,
                 cantidad: $validated['cantidad'],
                 precioUnitario: $validated['precio_unitario'],
                 observaciones: $validated['observaciones'] ?? null,

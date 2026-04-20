@@ -78,6 +78,21 @@ class PrestamosModulosSeeder extends Seeder
             ]
         );
 
+        ModuloSidebar::firstOrCreate(
+            ['titulo' => 'Gestión de Prestables', 'modulo_padre_id' => $moduloPrestamos->id],
+            [
+                'ruta' => '/prestamos/prestables',
+                'icono' => 'Boxes',
+                'descripcion' => 'Administración de prestables por cliente, evento y proveedor',
+                'orden' => 4,
+                'activo' => true,
+                'es_submenu' => true,
+                'categoria' => 'operaciones',
+                'visible_dashboard' => false,
+                'permisos' => [],
+            ]
+        );
+
         $this->command->info('✅ Módulos de Préstamos creados exitosamente');
     }
 }

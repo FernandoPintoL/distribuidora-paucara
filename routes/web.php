@@ -772,7 +772,11 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::prefix('prestamos')->name('prestamos.')->middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [\App\Http\Controllers\PrestamosInertiaController::class, 'index'])->name('index');
         Route::get('prestables', [\App\Http\Controllers\PrestamosInertiaController::class, 'prestables'])->name('prestables');
-        Route::get('stock', [\App\Http\Controllers\PrestamosInertiaController::class, 'stock'])->name('stock');
+
+        // Stock routes
+        Route::get('stock', [\App\Http\Controllers\Prestamos\StockController::class, 'stock'])->name('stock');
+        Route::get('stock/clientes', [\App\Http\Controllers\Prestamos\StockController::class, 'stockClientes'])->name('stock.clientes');
+        Route::get('stock/proveedores', [\App\Http\Controllers\Prestamos\StockController::class, 'stockProveedores'])->name('stock.proveedores');
         Route::get('ajustes/historial', fn() => Inertia::render('prestamos/ajustes/historial'))->name('ajustes.historial');
         Route::get('ajustes/movimientos', fn() => Inertia::render('prestamos/ajustes/movimientos'))->name('ajustes.movimientos');
         Route::get('ventas', fn() => Inertia::render('prestamos/ventas/listado'))->name('ventas.listado');

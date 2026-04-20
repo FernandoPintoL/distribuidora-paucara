@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\AlmacenPrestable;
 
 class CompraPrestableDetalle extends Model
 {
@@ -12,7 +13,7 @@ class CompraPrestableDetalle extends Model
     protected $fillable = [
         'compra_prestable_id',
         'prestable_id',
-        'almacen_id',
+        'almacenes_prestables_id',
         'cantidad',
         'precio_unitario',
         'subtotal',
@@ -45,11 +46,43 @@ class CompraPrestableDetalle extends Model
     }
 
     /**
-     * Almacén donde se va a guardar el prestable
+     * Almacén de prestables donde se va a guardar el prestable
      */
     public function almacen(): BelongsTo
     {
-        return $this->belongsTo(Almacen::class);
+        return $this->belongsTo(AlmacenPrestable::class, 'almacenes_prestables_id');
+    }
+
+    /**
+     * Alias de compatibilidad para código legado.
+     */
+    public function getAlmacenesPrestablesIdAttribute(): ?int
+    {
+        return $this->attributes['almacenes_prestables_id'] ?? null;
+    }
+
+    /**
+     * Alias de compatibilidad para código legado.
+     */
+    public function setAlmacenesPrestablesIdAttribute($value): void
+    {
+        $this->attributes['almacenes_prestables_id'] = $value;
+    }
+
+    /**
+     * Alias de compatibilidad para payloads/lecturas antiguas con almacen_id.
+     */
+    public function getAlmacenIdAttribute(): ?int
+    {
+        return $this->attributes['almacenes_prestables_id'] ?? null;
+    }
+
+    /**
+     * Alias de compatibilidad para payloads/lecturas antiguas con almacen_id.
+     */
+    public function setAlmacenIdAttribute($value): void
+    {
+        $this->attributes['almacenes_prestables_id'] = $value;
     }
 
     // ==================== MÉTODOS ====================
@@ -76,6 +109,6 @@ class CompraPrestableDetalle extends Model
      */
     public function scopePorAlmacen($query, int $almacenId)
     {
-        return $query->where('almacen_id', $almacenId);
+        return $query->where('almacenes_prestables_id', $almacenId);
     }
 }

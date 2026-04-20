@@ -1,8 +1,10 @@
+import ReportesConsolidadosController from './ReportesConsolidadosController'
 import DashboardController from './DashboardController'
 import StockController from './StockController'
 import AlertasController from './AlertasController'
 const Prestamos = {
-    DashboardController,
+    ReportesConsolidadosController,
+DashboardController,
 StockController,
 AlertasController,
 }

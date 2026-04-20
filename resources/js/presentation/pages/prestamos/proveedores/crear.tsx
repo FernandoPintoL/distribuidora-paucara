@@ -24,6 +24,20 @@ import { OutputSelectionModal } from '@/presentation/components/impresion/Output
 interface Props {
     proveedores: Array<{ id: number; nombre: string; razon_social?: string }>;
     compras: Array<{ id: number; numero: string; proveedor_id: number; proveedor?: { id: number; nombre: string; razon_social?: string } }>;
+    productos?: Array<{ id: number; nombre: string; sku: string; proveedor_id: number; cantidad_disponible: number }>;
+    almacenes_proveedor?: Array<{ id: number; nombre: string }>;
+    prestables_proveedor?: Array<{
+        id: number;
+        nombre: string;
+        codigo?: string;
+        tipo: string;
+        capacidad?: number;
+        proveedor_id?: number | null;
+        prestable_relacionado_id?: number | null;
+        activo?: boolean;
+        cantidad_disponible: number;
+        stocks?: Array<{ id: number; cantidad_disponible: number; almacenes_prestables_id: number }>;
+    }>;
 }
 
 interface PrestamoItem {
@@ -32,8 +46,18 @@ interface PrestamoItem {
     prestable?: Prestable;
 }
 
-export default function CrearPrestamoProveedor({ proveedores, compras }: Props) {
+export default function CrearPrestamoProveedor({ proveedores, compras, productos = [], almacenes_proveedor = [], prestables_proveedor = [] }: Props) {
     const { prestables, loading: loadingPrestables, fetchPrestables } = usePrestables();
+    const prestablesVisibles = (prestables_proveedor.length > 0 ? prestables_proveedor : prestables) as any[];
+
+    const resumenPayloadPrestables = prestablesVisibles.map((p) => ({
+        id: p.id,
+        nombre: p.nombre,
+        tipo: p.tipo,
+        activo: p.activo,
+        cantidad_disponible: p.cantidad_disponible,
+        stocks_count: Array.isArray(p.stocks) ? p.stocks.length : 0,
+    }));
 
     // Opciones para SearchSelect
     const proveedoresOptions: SelectOption[] = proveedores.map((p) => ({
@@ -42,7 +66,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
         description: p.razon_social,
     }));
 
-    const prestablesOptions: SelectOption[] = prestables.map((p) => ({
+    const prestablesOptions: SelectOption[] = prestablesVisibles.map((p) => ({
         value: p.id,
         label: p.nombre,
         description: p.codigo,
@@ -51,6 +75,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
     // Estado principal del préstamo
     const [formData, setFormData] = useState({
         proveedor_id: undefined as number | undefined,
+        almacen_prestable_id: undefined as number | undefined,
         es_compra: false,
         compra_id: undefined as number | undefined,
         tipo_prestamo: 'canastillas_embases' as 'canastillas' | 'embases' | 'canastillas_embases',
@@ -69,8 +94,10 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
     const [ultimoPrestamoId, setUltimoPrestamoId] = useState<number | null>(null);
 
     useEffect(() => {
-        fetchPrestables();
-    }, []);
+        if (prestables_proveedor.length === 0) {
+            fetchPrestables();
+        }
+    }, [prestables_proveedor.length, fetchPrestables]);
 
 
     function getDateAdd7Days() {
@@ -150,9 +177,9 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
 
     const handleEliminarPrestable = (prestable_id: number) => {
         // Si es una canastilla, eliminar también sus embases relacionados
-        const prestable = prestables.find(p => Number(p.id) === prestable_id);
+        const prestable = prestablesVisibles.find(p => Number(p.id) === prestable_id);
         if (prestable?.tipo === 'CANASTILLA') {
-            const embasesRelacionados = prestables.filter(
+            const embasesRelacionados = prestablesVisibles.filter(
                 p => p.tipo === 'EMBASES' && (p as any).prestable_relacionado_id === prestable_id
             );
             const idsAEliminar = [prestable_id, ...embasesRelacionados.map(e => e.id)];
@@ -167,7 +194,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
     };
 
     const handleCambiarCantidad = (prestable_id: number, nueva_cantidad: number) => {
-        const prestable = prestables.find(p => Number(p.id) === prestable_id);
+        const prestable = prestablesVisibles.find(p => Number(p.id) === prestable_id);
 
         setPrestablesAgregados(prestablesAgregados.map(item => {
             if (item.prestable_id === prestable_id) {
@@ -195,7 +222,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
 
         // Si es canastilla, agregar automáticamente sus embases relacionados
         if (prestable.tipo === 'CANASTILLA') {
-            const embasesRelacionados = prestables.filter(
+            const embasesRelacionados = prestablesVisibles.filter(
                 p => p.tipo === 'EMBASES' && (p as any).prestable_relacionado_id === Number(prestable.id)
             );
 
@@ -227,6 +254,11 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
             return;
         }
 
+        if (!formData.almacen_prestable_id) {
+            setError('Selecciona un almacén donde llegará el préstamo');
+            return;
+        }
+
         if (prestablesAgregados.length === 0) {
             setError('Agrega al menos un prestable');
             return;
@@ -238,6 +270,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
             // Enviar todos los prestables en un único llamado con formato de detalles
             const payload = {
                 proveedor_id: formData.proveedor_id,
+                almacen_prestable_id: formData.almacen_prestable_id,
                 es_compra: formData.es_compra,
                 compra_id: formData.compra_id,
                 fecha_prestamo: formData.fecha_prestamo,
@@ -262,7 +295,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                     closeOnClick: true,
                     pauseOnHover: true,
                 });
-                setUltimoPrestamoId(response.id);
+                setUltimoPrestamoId(Number(response.id));
                 setMostrarModalImpresion(true);
                 setLoading(false);
             } else {
@@ -343,7 +376,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                         </h2>
 
                         {/* Fila: Compra y Proveedor - 2 Columnas */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Columna 1: Compra (REQUERIDA) */}
                             <div>
                                 <AsyncSearchSelect
@@ -382,9 +415,14 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                     placeholder="Se cargará automáticamente..."
                                     value={formData.proveedor_id || ''}
                                     options={proveedoresOptions}
-                                    onChange={(id) =>
-                                        setFormData({ ...formData, proveedor_id: id ? Number(id) : undefined })
-                                    }
+                                    onChange={(id) => {
+                                        setFormData({
+                                            ...formData,
+                                            proveedor_id: id ? Number(id) : undefined,
+                                        });
+                                        // Limpiar prestables seleccionados al cambiar proveedor
+                                        setPrestablesAgregados([]);
+                                    }}
                                     disabled={!formData.compra_id}
                                     required
                                 />
@@ -392,6 +430,36 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                     <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                                         <p className="text-xs text-green-700 dark:text-green-300">
                                             ✅ Proveedor: <span className="font-medium">{proveedores.find(p => p.id === formData.proveedor_id)?.nombre}</span>
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Fila: Almacén Proveedor - INDEPENDIENTE */}
+                            <div>
+                                <SearchSelect
+                                    label="📦 Almacén del Proveedor *"
+                                    placeholder="Selecciona el almacén donde llegará el préstamo..."
+                                    value={formData.almacen_prestable_id || ''}
+                                    options={(almacenes_proveedor || []).map((almacen) => ({
+                                        value: almacen.id,
+                                        label: almacen.nombre,
+                                    }))}
+                                    onChange={(id) => {
+                                        setFormData({
+                                            ...formData,
+                                            almacen_prestable_id: id ? Number(id) : undefined
+                                        });
+                                        // Limpiar prestables agregados al cambiar almacén
+                                        // ya que pueden no estar disponibles en el nuevo almacén
+                                        setPrestablesAgregados([]);
+                                    }}
+                                    required
+                                />
+                                {formData.almacen_prestable_id && (
+                                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                                            ✅ Almacén: <span className="font-medium">{(almacenes_proveedor || []).find(a => a.id === formData.almacen_prestable_id)?.nombre}</span>
                                         </p>
                                     </div>
                                 )}
@@ -481,7 +549,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                             // Limpiar embases del carrito
                                             setPrestablesAgregados(
                                                 prestablesAgregados.filter(item => {
-                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    const prestable = prestablesVisibles.find(p => Number(p.id) === item.prestable_id);
                                                     return prestable?.tipo === 'CANASTILLA';
                                                 })
                                             );
@@ -501,7 +569,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                             // Limpiar canastillas del carrito
                                             setPrestablesAgregados(
                                                 prestablesAgregados.filter(item => {
-                                                    const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                    const prestable = prestablesVisibles.find(p => Number(p.id) === item.prestable_id);
                                                     return prestable?.tipo === 'EMBASES';
                                                 })
                                             );
@@ -542,14 +610,9 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {prestables
+                                            {prestablesVisibles
                                                 .filter((prestable) => {
                                                     if (!prestable.activo) return false;
-                                                    const stockTotal = prestable.stocks?.reduce(
-                                                        (sum, stock) => sum + (stock.cantidad_disponible || 0),
-                                                        0
-                                                    ) || 0;
-                                                    if (stockTotal <= 0) return false;
 
                                                     // Filtrar por tipo_prestamo
                                                     if (formData.tipo_prestamo === 'canastillas') return prestable.tipo === 'CANASTILLA';
@@ -586,8 +649,8 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                                         <TableRow
                                                             key={prestable.id}
                                                             className={`border-gray-200 dark:border-gray-700 transition ${estaSeleccionado
-                                                                    ? 'bg-blue-50 dark:bg-blue-900/20'
-                                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                                                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
                                                                 }`}
                                                         >
                                                             <TableCell className="text-center">
@@ -631,10 +694,8 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                         </TableBody>
                                     </Table>
 
-                                    {prestables.filter((p) => {
+                                    {prestablesVisibles.filter((p) => {
                                         if (!p.activo) return false;
-                                        const stockTotal = p.stocks?.reduce((sum, stock) => sum + (stock.cantidad_disponible || 0), 0) || 0;
-                                        if (stockTotal <= 0) return false;
                                         if (formData.tipo_prestamo === 'canastillas') return p.tipo === 'CANASTILLA';
                                         if (formData.tipo_prestamo === 'embases') return p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id;
                                         if (formData.tipo_prestamo === 'canastillas_embases') {
@@ -647,6 +708,15 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                                 <p>No hay prestables disponibles</p>
                                             </div>
                                         )}
+
+                                    {/* <details className="mt-3 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-3 text-xs text-gray-700 dark:text-gray-300">
+                                        <summary className="cursor-pointer font-semibold">
+                                            Debug: payload prestables desde backend ({resumenPayloadPrestables.length})
+                                        </summary>
+                                        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap">
+                                            {JSON.stringify(resumenPayloadPrestables, null, 2)}
+                                        </pre>
+                                    </details> */}
                                 </div>
                             </div>
 
@@ -667,11 +737,11 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                     </div>
                                 ) : (
                                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                                        {(formData.tipo_prestamo === 'canastillas' || formData.tipo_prestamo === 'canastillas_embases') && prestables
+                                        {(formData.tipo_prestamo === 'canastillas' || formData.tipo_prestamo === 'canastillas_embases') && prestablesVisibles
                                             .filter(p => p.tipo === 'CANASTILLA')
                                             .map(canastilla => {
                                                 const canastillaItem = prestablesAgregados.find(p => p.prestable_id === Number(canastilla.id));
-                                                const embasesRelacionados = prestables.filter(
+                                                const embasesRelacionados = prestablesVisibles.filter(
                                                     p => p.tipo === 'EMBASES' && (p as any).prestable_relacionado_id === Number(canastilla.id)
                                                 );
 
@@ -758,7 +828,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                         {/* Embases Independientes / Modo Solo Embases */}
                                         {prestablesAgregados
                                             .filter(item => {
-                                                const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                const prestable = prestablesVisibles.find(p => Number(p.id) === item.prestable_id);
                                                 if (prestable?.tipo !== 'EMBASES') return false;
                                                 // En modo "embases", mostrar todos los embases
                                                 if (formData.tipo_prestamo === 'embases') return true;
@@ -766,7 +836,7 @@ export default function CrearPrestamoProveedor({ proveedores, compras }: Props) 
                                                 return !(prestable as any).prestable_relacionado_id;
                                             })
                                             .map(item => {
-                                                const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+                                                const prestable = prestablesVisibles.find(p => Number(p.id) === item.prestable_id);
                                                 if (!prestable) return null;
 
                                                 return (

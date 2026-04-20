@@ -7,6 +7,9 @@ use App\Models\PrestamoClienteDetalle;
 use App\Models\DevolucionCliente;
 use App\Models\DevolucionClienteDetalle;
 use App\Models\PrestableCondicion;
+use App\Models\PrestableStock;
+use App\Models\AlmacenPrestable;
+use App\Services\Prestamos\PrestableStockAdvancedService;
 use App\Services\MovimientoPrestableService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,11 +22,17 @@ use Illuminate\Support\Facades\Log;
 class PrestamoClienteService
 {
     private PrestableStockService $stockService;
+    private PrestableStockAdvancedService $stockAdvancedService;
     private MovimientoPrestableService $movimientoService;
 
-    public function __construct(PrestableStockService $stockService, MovimientoPrestableService $movimientoService)
+    public function __construct(
+        PrestableStockService $stockService,
+        PrestableStockAdvancedService $stockAdvancedService,
+        MovimientoPrestableService $movimientoService
+    )
     {
         $this->stockService = $stockService;
+        $this->stockAdvancedService = $stockAdvancedService;
         $this->movimientoService = $movimientoService;
     }
 
@@ -65,6 +74,8 @@ class PrestamoClienteService
                     'cliente_id' => $datos['cliente_id'],
                     'venta_id' => $datos['venta_id'] ?? null,
                     'chofer_id' => $datos['chofer_id'] ?? null,
+                    'telefono_cliente_1' => $datos['telefono_cliente_1'] ?? null,
+                    'telefono_cliente_2' => $datos['telefono_cliente_2'] ?? null,
                     'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
                     'es_venta' => $datos['es_venta'],
                     'es_evento' => $datos['es_evento'] ?? false,
@@ -75,8 +86,6 @@ class PrestamoClienteService
                     'estado' => 'ACTIVO',
                 ]);
 
-                // Crear detalles y actualizar stock
-                $almacenId = 3; // Almacén para canastillas
                 $detalles = $datos['detalles'] ?? [];
 
                 foreach ($detalles as $detalle) {
@@ -89,53 +98,62 @@ class PrestamoClienteService
                         'estado' => 'ACTIVO',
                     ]);
 
-                    // Obtener stock antes de actualizar
-                    $stock = $this->stockService->obtenerStock($detalle['prestable_id'], $almacenId);
-                    $disponibleAntes = $stock->cantidad_disponible;
-                    $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-                    $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
-                    $vendidaAntes = $stock->cantidad_vendida;
+                    $almacenesIds = array_values(array_filter(array_map('intval', (array)($detalle['almacenes_ids'] ?? []))));
 
-                    // Actualizar stock para cada detalle
-                    if ($datos['es_venta']) {
-                        $this->stockService->venderAlCliente(
-                            $detalle['prestable_id'],
-                            $almacenId,
-                            $detalle['cantidad']
+                    if (count($almacenesIds) > 0) {
+                        $resultadoConsumo = $this->consumirStockDesdeAlmacenesSeleccionados(
+                            (int) $detalle['prestable_id'],
+                            (int) $detalle['cantidad'],
+                            $almacenesIds,
+                            (bool) $datos['es_venta']
+                        );
+                    } elseif ($datos['es_venta']) {
+                        $resultadoConsumo = $this->stockAdvancedService->consumirDisponibleInteligente(
+                            (int) $detalle['prestable_id'],
+                            (int) $detalle['cantidad']
                         );
                     } else {
-                        $this->stockService->prestarAlCliente(
-                            $detalle['prestable_id'],
-                            $almacenId,
-                            $detalle['cantidad']
+                        $resultadoConsumo = $this->stockAdvancedService->prestarAlClienteInteligente(
+                            (int) $detalle['prestable_id'],
+                            (int) $detalle['cantidad']
                         );
                     }
 
-                    // Obtener stock después de actualizar
-                    $stock->refresh();
+                    if (!($resultadoConsumo['exito'] ?? false)) {
+                        throw new \Exception($resultadoConsumo['mensaje'] ?? 'Error consumiendo stock');
+                    }
 
-                    // Registrar movimiento
-                    $this->movimientoService->registrarMovimiento([
-                        'prestable_stock_id' => $stock->id,
-                        'almacen_id' => $almacenId,
-                        'usuario_id' => auth()->id(),
-                        'tipo' => $datos['es_venta'] ? 'SALIDA' : 'CONSUMO_RESERVA',
-                        'cantidad' => $datos['es_venta'] ? -$detalle['cantidad'] : -$detalle['cantidad'],
-                        'disponible_anterior' => $disponibleAntes,
-                        'prestamo_cliente_anterior' => $prestamoClienteAntes,
-                        'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
-                        'vendida_anterior' => $vendidaAntes,
-                        'disponible_posterior' => $stock->cantidad_disponible,
-                        'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
-                        'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
-                        'vendida_posterior' => $stock->cantidad_vendida,
-                        'categoria_afectada' => $datos['es_venta'] ? 'vendida' : 'prestamo_cliente',
-                        'motivo' => $datos['es_venta'] ? 'Venta a cliente' : 'Préstamo a cliente',
-                        'numero_referencia' => $prestamo->id,
-                        'referencia_tipo' => 'PRESTAMO_CLIENTE',
-                        'referencia_id' => $prestamo->id,
-                        'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
-                    ]);
+                    foreach (($resultadoConsumo['detalles_por_almacen'] ?? []) as $detalleAlmacen) {
+                        $stock = $this->stockService->obtenerStock(
+                            (int) $detalle['prestable_id'],
+                            (int) $detalleAlmacen['almacen_id']
+                        );
+
+                        $cantidadMovida = (int) $detalleAlmacen['cantidad'];
+                        $disponiblePosterior = $stock->cantidad_disponible;
+                        $prestamoClientePosterior = $stock->cantidad_prestamo_cliente_activo;
+                        $prestamoProveedorPosterior = $stock->cantidad_prestamo_proveedor_activo;
+
+                        $this->movimientoService->registrarMovimiento([
+                            'prestable_stock_id' => $stock->id,
+                            'almacenes_prestables_id' => $detalleAlmacen['almacen_id'],
+                            'usuario_id' => auth()->id(),
+                            'tipo' => $datos['es_venta'] ? 'SALIDA' : 'CONSUMO_RESERVA',
+                            'cantidad' => -$cantidadMovida,
+                            'disponible_anterior' => $disponiblePosterior + $cantidadMovida,
+                            'prestamo_cliente_anterior' => $prestamoClientePosterior - ($datos['es_venta'] ? 0 : $cantidadMovida),
+                            'prestamo_proveedor_anterior' => $prestamoProveedorPosterior,
+                            'disponible_posterior' => $disponiblePosterior,
+                            'prestamo_cliente_posterior' => $prestamoClientePosterior,
+                            'prestamo_proveedor_posterior' => $prestamoProveedorPosterior,
+                            'categoria_afectada' => $datos['es_venta'] ? 'vendida' : 'prestamo_cliente',
+                            'motivo' => $datos['es_venta'] ? 'Venta a cliente' : 'Préstamo a cliente',
+                            'numero_referencia' => $prestamo->id,
+                            'referencia_tipo' => 'PRESTAMO_CLIENTE',
+                            'referencia_id' => $prestamo->id,
+                            'tipo_prestamo' => $datos['tipo_prestamo'] ?? 'canastillas_embases',
+                        ]);
+                    }
                 }
 
                 Log::info('✅ Préstamo creado', [
@@ -154,6 +172,77 @@ class PrestamoClienteService
                 'datos' => $datos,
             ]);
             return false;
+        }
+    }
+
+    /**
+     * Consumir stock SOLO desde los almacenes seleccionados por el usuario.
+     */
+    private function consumirStockDesdeAlmacenesSeleccionados(
+        int $prestableId,
+        int $cantidad,
+        array $almacenesIds,
+        bool $esVenta
+    ): array {
+        try {
+            return DB::transaction(function () use ($prestableId, $cantidad, $almacenesIds, $esVenta) {
+                $cantidadRestante = $cantidad;
+                $detallesPorAlmacen = [];
+
+                foreach ($almacenesIds as $almacenId) {
+                    if ($cantidadRestante <= 0) {
+                        break;
+                    }
+
+                    $stock = PrestableStock::where('prestable_id', $prestableId)
+                        ->where('almacenes_prestables_id', $almacenId)
+                        ->first();
+
+                    if (!$stock || (int) $stock->cantidad_disponible <= 0) {
+                        continue;
+                    }
+
+                    $cantidadATomar = min($cantidadRestante, (int) $stock->cantidad_disponible);
+
+                    if ($esVenta) {
+                        $stock->update([
+                            'cantidad_disponible' => $stock->cantidad_disponible - $cantidadATomar,
+                        ]);
+                    } else {
+                        $stock->update([
+                            'cantidad_disponible' => $stock->cantidad_disponible - $cantidadATomar,
+                            'cantidad_prestamo_cliente_activo' => $stock->cantidad_prestamo_cliente_activo + $cantidadATomar,
+                        ]);
+                    }
+
+                    $almacen = AlmacenPrestable::find($almacenId);
+                    $detallesPorAlmacen[] = [
+                        'almacen_id' => $almacenId,
+                        'almacen_nombre' => $almacen?->nombre ?? ('Almacén #' . $almacenId),
+                        'cantidad' => $cantidadATomar,
+                    ];
+
+                    $cantidadRestante -= $cantidadATomar;
+                }
+
+                if ($cantidadRestante > 0) {
+                    throw new \Exception("Stock insuficiente en almacenes seleccionados. Solicitado: {$cantidad}, disponible: " . ($cantidad - $cantidadRestante));
+                }
+
+                return [
+                    'exito' => true,
+                    'cantidad_consumida' => $cantidad,
+                    'detalles_por_almacen' => $detallesPorAlmacen,
+                    'advertencias' => [],
+                    'mensaje' => 'Consumo completado desde almacenes seleccionados',
+                ];
+            });
+        } catch (\Exception $e) {
+            return [
+                'exito' => false,
+                'mensaje' => $e->getMessage(),
+                'advertencias' => [],
+            ];
         }
     }
 
@@ -188,8 +277,6 @@ class PrestamoClienteService
                     throw new \Exception('Préstamo no encontrado');
                 }
 
-                $almacenId = 3; // Almacén para canastillas
-
                 // Crear encabezado de devolución
                 $devolucion = DevolucionCliente::create([
                     'prestamo_cliente_id' => $datos['prestamo_cliente_id'],
@@ -215,6 +302,8 @@ class PrestamoClienteService
                     $cantidadDañadaParcial = $detalleData['cantidad_dañada_parcial'] ?? 0;
                     $cantidadDañadaTotal = $detalleData['cantidad_dañada_total'] ?? 0;
                     $cantidadTotal = $cantidadDevuelta + $cantidadDañadaParcial + $cantidadDañadaTotal;
+                    // Regla de negocio: lo dañado se registra para auditoría/cobro, pero NO mueve stock
+                    $cantidadParaStock = $cantidadDevuelta;
 
                     // Calcular cuánto ya ha sido devuelto previamente
                     $cantidadYaDevuelta = $detalle->devolucionDetalles()
@@ -230,6 +319,9 @@ class PrestamoClienteService
                     if ($cantidadTotal > $cantidadRestante) {
                         throw new \Exception("Cantidad a devolver ({$cantidadTotal}) excede cantidad restante ({$cantidadRestante}) para detalle {$detalleData['prestamo_cliente_detalle_id']}. Ya devuelto: {$cantidadYaDevuelta}");
                     }
+
+                    // Resolver almacén dinámicamente para evitar hardcode inválido (ej. id=3 inexistente)
+                    $almacenId = $this->resolverAlmacenIdParaPrestable($detalle->prestable_id);
 
                     // Obtener condiciones para calcular garantía devuelta
                     $condicion = PrestableCondicion::where('prestable_id', $detalle->prestable_id)->first();
@@ -264,44 +356,46 @@ class PrestamoClienteService
                     // Obtener stock ANTES de devolver
                     $stock = $this->stockService->obtenerStock($detalle->prestable_id, $almacenId);
                     $disponibleAntes = $stock->cantidad_disponible;
-                    $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-                    $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
-                    $vendidaAntes = $stock->cantidad_vendida;
+                    $prestamoClienteActivoAntes = $stock->cantidad_prestamo_cliente_activo;
+                    $prestamoProveedorActivoAntes = $stock->cantidad_prestamo_proveedor_activo;
+                    $prestamoEventoActivoAntes = $stock->cantidad_prestamo_evento_activo;
 
                     // Actualizar stock
-                    $this->stockService->devolverDelCliente(
-                        $detalle->prestable_id,
-                        $almacenId,
-                        $cantidadDevuelta,
-                        $cantidadDañadaParcial,
-                        $cantidadDañadaTotal
-                    );
+                    if ($cantidadParaStock > 0) {
+                        $this->stockService->devolverDelCliente(
+                            $detalle->prestable_id,
+                            $almacenId,
+                            $cantidadParaStock,
+                            0,
+                            0
+                        );
+                    }
 
                     // Obtener stock DESPUÉS de devolver
                     $stock->refresh();
 
                     // Registrar movimiento de devolución
-                    $this->movimientoService->registrarMovimiento([
-                        'prestable_stock_id' => $stock->id,
-                        'almacen_id' => $almacenId,
-                        'usuario_id' => auth()->id(),
-                        'tipo' => 'ENTRADA',
-                        'cantidad' => $cantidadTotal,
-                        'disponible_anterior' => $disponibleAntes,
-                        'prestamo_cliente_anterior' => $prestamoClienteAntes,
-                        'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
-                        'vendida_anterior' => $vendidaAntes,
-                        'disponible_posterior' => $stock->cantidad_disponible,
-                        'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
-                        'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
-                        'vendida_posterior' => $stock->cantidad_vendida,
-                        'categoria_afectada' => 'prestamo_cliente',
-                        'motivo' => 'Devolución de préstamo a cliente',
-                        'numero_referencia' => $prestamo->id,
-                        'referencia_tipo' => 'DEVOLUCIO_CLIENTE',
-                        'referencia_id' => $devolucion->id,
-                        'observaciones' => $datos['observaciones'] ?? null,
-                    ]);
+                    if ($cantidadParaStock > 0) {
+                        $this->movimientoService->registrarMovimiento([
+                            'prestable_stock_id' => $stock->id,
+                            'almacenes_prestables_id' => $almacenId,
+                            'usuario_id' => auth()->id(),
+                            'tipo' => 'ENTRADA',
+                            'cantidad' => $cantidadParaStock,
+                            'disponible_anterior' => $disponibleAntes,
+                            'prestamo_cliente_anterior' => $prestamoClienteActivoAntes,
+                            'prestamo_proveedor_anterior' => $prestamoProveedorActivoAntes,
+                            'disponible_posterior' => $stock->cantidad_disponible,
+                            'prestamo_cliente_posterior' => $stock->cantidad_prestamo_cliente_activo,
+                            'prestamo_proveedor_posterior' => $stock->cantidad_prestamo_proveedor_activo,
+                            'categoria_afectada' => 'prestamo_cliente',
+                            'motivo' => 'Devolución de préstamo a cliente',
+                            'numero_referencia' => $prestamo->id,
+                            'referencia_tipo' => 'DEVOLUCIO_CLIENTE',
+                            'referencia_id' => $devolucion->id,
+                            'observaciones' => $datos['observaciones'] ?? null,
+                        ]);
+                    }
 
                     // Actualizar embases relacionados si existen
                     // ⚠️ Solo si el detalle actual es CANASTILLA, NO si es EMBASE (que ya se procesa por separado)
@@ -350,17 +444,18 @@ class PrestamoClienteService
                             }
 
                             // Obtener stock del embase ANTES
-                            $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenId);
+                            $almacenIdEmbase = $this->resolverAlmacenIdParaPrestable($embase->id);
+                            $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenIdEmbase);
                             $disponibleEmbaseAntes = $stockEmbase->cantidad_disponible;
-                            $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_en_prestamo_cliente;
-                            $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_en_prestamo_proveedor;
-                            $vendidaEmbaseAntes = $stockEmbase->cantidad_vendida;
+                            $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_prestamo_cliente_activo;
+                            $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_prestamo_proveedor_activo;
+                            $prestamoEventoEmbaseAntes = $stockEmbase->cantidad_prestamo_evento_activo;
 
                             // Actualizar stock del embase (devolver solo los no dañados)
                             if ($embasesADevolver > 0) {
                                 $this->stockService->devolverDelCliente(
                                     $embase->id,
-                                    $almacenId,
+                                    $almacenIdEmbase,
                                     $embasesADevolver,
                                     0,
                                     0
@@ -374,18 +469,16 @@ class PrestamoClienteService
                             if ($embasesADevolver > 0) {
                                 $this->movimientoService->registrarMovimiento([
                                     'prestable_stock_id' => $stockEmbase->id,
-                                    'almacen_id' => $almacenId,
+                                    'almacenes_prestables_id' => $almacenIdEmbase,
                                     'usuario_id' => auth()->id(),
                                     'tipo' => 'ENTRADA',
                                     'cantidad' => $embasesADevolver,
                                     'disponible_anterior' => $disponibleEmbaseAntes,
                                     'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
                                     'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
-                                    'vendida_anterior' => $vendidaEmbaseAntes,
                                     'disponible_posterior' => $stockEmbase->cantidad_disponible,
-                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
-                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
-                                    'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_prestamo_cliente_activo,
+                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_prestamo_proveedor_activo,
                                     'categoria_afectada' => 'prestamo_cliente',
                                     'motivo' => 'Devolución de embase (asociado a canastilla)',
                                     'numero_referencia' => $prestamo->id,
@@ -399,18 +492,16 @@ class PrestamoClienteService
                             if ($embasesDanados > 0) {
                                 $this->movimientoService->registrarMovimiento([
                                     'prestable_stock_id' => $stockEmbase->id,
-                                    'almacen_id' => $almacenId,
+                                    'almacenes_prestables_id' => $almacenIdEmbase,
                                     'usuario_id' => auth()->id(),
                                     'tipo' => 'SALIDA',
                                     'cantidad' => -$embasesDanados,
                                     'disponible_anterior' => $disponibleEmbaseAntes,
                                     'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
                                     'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
-                                    'vendida_anterior' => $vendidaEmbaseAntes,
                                     'disponible_posterior' => $stockEmbase->cantidad_disponible,
-                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
-                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
-                                    'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                    'prestamo_cliente_posterior' => $stockEmbase->cantidad_prestamo_cliente_activo,
+                                    'prestamo_proveedor_posterior' => $stockEmbase->cantidad_prestamo_proveedor_activo,
                                     'categoria_afectada' => 'prestamo_cliente',
                                     'motivo' => 'Pérdida de embases en devolución',
                                     'numero_referencia' => $prestamo->id,
@@ -594,9 +685,6 @@ class PrestamoClienteService
                     throw new \Exception('El préstamo ya está cancelado');
                 }
 
-                // Devolver stock para cada detalle
-                $almacenId = 3; // Almacén para canastillas
-
                 foreach ($prestamo->detalles as $detalle) {
                     // Si el detalle aún no está completamente devuelto, devolver lo que falta
                     if ($detalle->estado !== 'COMPLETAMENTE_DEVUELTO') {
@@ -606,12 +694,14 @@ class PrestamoClienteService
                         $cantidadPendiente = $detalle->cantidad_prestada - $cantidadDevuelta;
 
                         if ($cantidadPendiente > 0) {
+                            $almacenId = $this->resolverAlmacenIdParaPrestable($detalle->prestable_id);
+
                             // Obtener stock ANTES de devolver
                             $stock = $this->stockService->obtenerStock($detalle->prestable_id, $almacenId);
                             $disponibleAntes = $stock->cantidad_disponible;
-                            $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-                            $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
-                            $vendidaAntes = $stock->cantidad_vendida;
+                            $prestamoClienteActivoAntes = $stock->cantidad_prestamo_cliente_activo;
+                            $prestamoProveedorActivoAntes = $stock->cantidad_prestamo_proveedor_activo;
+                            $prestamoEventoActivoAntes = $stock->cantidad_prestamo_evento_activo;
 
                             // Devolver como cantidad en buen estado
                             $this->stockService->devolverDelCliente(
@@ -628,18 +718,16 @@ class PrestamoClienteService
                             // Registrar movimiento de devolución por anulación
                             $this->movimientoService->registrarMovimiento([
                                 'prestable_stock_id' => $stock->id,
-                                'almacen_id' => $almacenId,
+                                'almacenes_prestables_id' => $almacenId,
                                 'usuario_id' => auth()->id(),
                                 'tipo' => 'ENTRADA',
                                 'cantidad' => $cantidadPendiente,
                                 'disponible_anterior' => $disponibleAntes,
-                                'prestamo_cliente_anterior' => $prestamoClienteAntes,
-                                'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
-                                'vendida_anterior' => $vendidaAntes,
+                                'prestamo_cliente_anterior' => $prestamoClienteActivoAntes,
+                                'prestamo_proveedor_anterior' => $prestamoProveedorActivoAntes,
                                 'disponible_posterior' => $stock->cantidad_disponible,
-                                'prestamo_cliente_posterior' => $stock->cantidad_en_prestamo_cliente,
-                                'prestamo_proveedor_posterior' => $stock->cantidad_en_prestamo_proveedor,
-                                'vendida_posterior' => $stock->cantidad_vendida,
+                                'prestamo_cliente_posterior' => $stock->cantidad_prestamo_cliente_activo,
+                                'prestamo_proveedor_posterior' => $stock->cantidad_prestamo_proveedor_activo,
                                 'categoria_afectada' => 'prestamo_cliente',
                                 'motivo' => 'Devolución por anulación de préstamo',
                                 'numero_referencia' => $prestamo->id,
@@ -656,16 +744,17 @@ class PrestamoClienteService
                                     $cambioEmbases = $cantidadPendiente * ($prestable->capacidad ?? 1);
 
                                     // Obtener stock del embase ANTES
-                                    $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenId);
+                                    $almacenIdEmbase = $this->resolverAlmacenIdParaPrestable($embase->id);
+                                    $stockEmbase = $this->stockService->obtenerStock($embase->id, $almacenIdEmbase);
                                     $disponibleEmbaseAntes = $stockEmbase->cantidad_disponible;
-                                    $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_en_prestamo_cliente;
-                                    $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_en_prestamo_proveedor;
-                                    $vendidaEmbaseAntes = $stockEmbase->cantidad_vendida;
+                                    $prestamoClienteEmbaseAntes = $stockEmbase->cantidad_prestamo_cliente_activo;
+                                    $prestamoProveedorEmbaseAntes = $stockEmbase->cantidad_prestamo_proveedor_activo;
+                                    $prestamoEventoEmbaseAntes = $stockEmbase->cantidad_prestamo_evento_activo;
 
                                     // Actualizar stock del embase (devolver)
                                     $this->stockService->devolverDelCliente(
                                         $embase->id,
-                                        $almacenId,
+                                        $almacenIdEmbase,
                                         $cambioEmbases,
                                         0,
                                         0
@@ -677,18 +766,16 @@ class PrestamoClienteService
                                     // Registrar movimiento del embase
                                     $this->movimientoService->registrarMovimiento([
                                         'prestable_stock_id' => $stockEmbase->id,
-                                        'almacen_id' => $almacenId,
+                                        'almacenes_prestables_id' => $almacenIdEmbase,
                                         'usuario_id' => auth()->id(),
                                         'tipo' => 'ENTRADA',
                                         'cantidad' => $cambioEmbases,
                                         'disponible_anterior' => $disponibleEmbaseAntes,
                                         'prestamo_cliente_anterior' => $prestamoClienteEmbaseAntes,
                                         'prestamo_proveedor_anterior' => $prestamoProveedorEmbaseAntes,
-                                        'vendida_anterior' => $vendidaEmbaseAntes,
                                         'disponible_posterior' => $stockEmbase->cantidad_disponible,
-                                        'prestamo_cliente_posterior' => $stockEmbase->cantidad_en_prestamo_cliente,
-                                        'prestamo_proveedor_posterior' => $stockEmbase->cantidad_en_prestamo_proveedor,
-                                        'vendida_posterior' => $stockEmbase->cantidad_vendida,
+                                        'prestamo_cliente_posterior' => $stockEmbase->cantidad_prestamo_cliente_activo,
+                                        'prestamo_proveedor_posterior' => $stockEmbase->cantidad_prestamo_proveedor_activo,
                                         'categoria_afectada' => 'prestamo_cliente',
                                         'motivo' => 'Devolución de embase por anulación de préstamo',
                                         'numero_referencia' => $prestamo->id,
@@ -741,5 +828,43 @@ class PrestamoClienteService
             ]);
             return false;
         }
+    }
+
+    /**
+     * Resolver almacén válido para operar un prestable en devoluciones/anulaciones.
+     * Prioridad:
+     * 1) Almacén donde actualmente hay préstamo cliente activo.
+     * 2) Cualquier almacén con stock registrado para el prestable.
+     * 3) Primer almacén activo de distribuidora.
+     */
+    private function resolverAlmacenIdParaPrestable(int $prestableId): int
+    {
+        $stockConPrestamoActivo = PrestableStock::where('prestable_id', $prestableId)
+            ->where('cantidad_prestamo_cliente_activo', '>', 0)
+            ->orderByDesc('cantidad_prestamo_cliente_activo')
+            ->first();
+
+        if ($stockConPrestamoActivo) {
+            return (int) $stockConPrestamoActivo->almacenes_prestables_id;
+        }
+
+        $stockExistente = PrestableStock::where('prestable_id', $prestableId)
+            ->orderByDesc('cantidad_disponible')
+            ->first();
+
+        if ($stockExistente) {
+            return (int) $stockExistente->almacenes_prestables_id;
+        }
+
+        $almacenActivo = AlmacenPrestable::where('activo', true)
+            ->where('es_proveedor', false)
+            ->orderBy('id')
+            ->first();
+
+        if (!$almacenActivo) {
+            throw new \Exception('No hay almacenes prestables activos de distribuidora para registrar devoluciones.');
+        }
+
+        return (int) $almacenActivo->id;
     }
 }

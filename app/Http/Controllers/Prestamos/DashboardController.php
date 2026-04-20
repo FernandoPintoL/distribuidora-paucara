@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Prestamos;
 
 use App\Http\Controllers\Controller;
-use App\Models\Almacen;
+use App\Models\AlmacenPrestable;
 use App\Models\PrestamoCliente;
 use App\Models\PrestamoProveedor;
 use App\Models\PrestableStock;
@@ -56,13 +56,13 @@ class DashboardController extends Controller
             ->count();
 
         // Obtener distribución de stock
-        $stocks = PrestableStock::where('almacen_id', $almacenCanastillasEmbases)->get();
+        $stocks = PrestableStock::where('almacenes_prestables_id', $almacenCanastillasEmbases)->get();
 
         $distribucion = [
             'disponible' => $stocks->sum('cantidad_disponible'),
-            'en_prestamo' => $stocks->sum('cantidad_en_prestamo_cliente') + $stocks->sum('cantidad_en_prestamo_proveedor'),
+            'en_prestamo' => $stocks->sum('cantidad_en_prestamo_cliente') + $stocks->sum('cantidad_que_debo_devolver'),
             'vendido' => $stocks->sum('cantidad_vendida'),
-            'deuda_proveedores' => $stocks->sum('cantidad_en_prestamo_proveedor'),
+            'deuda_proveedores' => $stocks->sum('cantidad_que_debo_devolver'),
         ];
 
         // Obtener préstamos vencidos

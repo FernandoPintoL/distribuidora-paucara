@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AlmacenPrestable;
+use App\Models\MovimientoPrestable;
 use App\Models\PrestamoProveedor;
 use App\Services\ImpresionService;
 use App\Services\Prestamos\PrestamoProveedorService;
@@ -64,11 +66,12 @@ class PrestamoProveedorController extends Controller
                 'proveedor_id' => 'required|exists:proveedores,id',
                 'compra_id' => 'nullable|exists:compras,id',
                 'es_compra' => 'required|boolean',
+                'almacen_prestable_id' => 'required|exists:almacenes_prestables,id',
                 'monto_garantia' => 'nullable|numeric|min:0',
                 'fecha_prestamo' => 'required|date',
                 'fecha_esperada_devolucion' => 'nullable|date|after_or_equal:fecha_prestamo',
                 'observaciones' => 'nullable|string|max:1000',
-                // ✅ NUEVO: Validación para múltiples detalles
+                // ✅ Validación para múltiples detalles
                 'detalles' => 'required|array|min:1',
                 'detalles.*.prestable_id' => 'required|exists:prestables,id',
                 'detalles.*.cantidad' => 'required|integer|min:1',
@@ -76,6 +79,7 @@ class PrestamoProveedorController extends Controller
 
             Log::info('✅ Validación exitosa para préstamo de proveedor', [
                 'proveedor_id' => $validated['proveedor_id'],
+                'almacen_prestable_id' => $validated['almacen_prestable_id'],
                 'detalles_count' => count($validated['detalles']),
             ]);
 
@@ -106,7 +110,13 @@ class PrestamoProveedorController extends Controller
     public function show(PrestamoProveedor $prestamo): JsonResponse
     {
         try {
-            $prestamo->load(['detalles.prestable', 'proveedor', 'detalles.devolucionDetalles', 'devoluciones.detalles']);
+            $prestamo->load([
+                'detalles.prestable.precios',
+                'detalles.prestable.condiciones',
+                'proveedor',
+                'detalles.devolucionDetalles',
+                'devoluciones.detalles',
+            ]);
             $resumen = $this->prestamoService->obtenerResumen($prestamo->id);
 
             return response()->json([
@@ -127,7 +137,7 @@ class PrestamoProveedorController extends Controller
     public function registrarDevolucion(Request $request, PrestamoProveedor $prestamo): JsonResponse
     {
         try {
-            // Validar datos de devolución
+            // ✅ SIMPLIFICADO: cantidad_devuelta es el TOTAL, cantidad_dañada_total es solo información
             $validated = $request->validate([
                 'fecha_devolucion' => 'required|date',
                 'monto_cobrado_daño_total' => 'nullable|numeric|min:0',
@@ -135,7 +145,6 @@ class PrestamoProveedorController extends Controller
                 'detalles' => 'required|array|min:1',
                 'detalles.*.prestamo_proveedor_detalle_id' => 'required|exists:prestamo_proveedor_detalle,id',
                 'detalles.*.cantidad_devuelta' => 'required|integer|min:0',
-                'detalles.*.cantidad_dañada_parcial' => 'nullable|integer|min:0',
                 'detalles.*.cantidad_dañada_total' => 'nullable|integer|min:0',
             ]);
 
@@ -232,6 +241,28 @@ class PrestamoProveedorController extends Controller
 
         // Cargar relaciones necesarias para la impresión
         $prestamo->load(['detalles.prestable', 'detalles.devolucionDetalles', 'proveedor', 'compra', 'devoluciones.detalles']);
+
+        // Resolver almacén asociado al préstamo desde el movimiento registrado
+        $movimiento = MovimientoPrestable::query()
+            ->where('referencia_tipo', 'PRESTAMO_PROVEEDOR')
+            ->where('referencia_id', $prestamo->id)
+            ->latest('id')
+            ->first();
+
+        $almacen = null;
+
+        if ($movimiento?->almacenes_prestables_id) {
+            $almacen = AlmacenPrestable::query()
+                ->select('id', 'nombre')
+                ->find($movimiento->almacenes_prestables_id);
+        }
+
+        // Atributo dinámico para usar en las vistas de impresión
+        $prestamo->setAttribute('almacen_impresion', $almacen);
+
+        // Monto cobrado por daños (acumulado de todas las devoluciones del préstamo)
+        $montoCobradoDanioTotal = (float) ($prestamo->devoluciones?->sum('monto_cobrado_daño_total') ?? 0);
+        $prestamo->setAttribute('monto_cobrado_danio_total_impresion', $montoCobradoDanioTotal);
 
         // Generar PDF usando el tipo de documento "prestamo_proveedor"
         $pdf = $this->impresionService->generarPDF('prestamo_proveedor', $prestamo, $formato);

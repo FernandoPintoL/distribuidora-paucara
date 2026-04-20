@@ -191,6 +191,7 @@ export default function PermisosIndex() {
               >
                 Usuarios
               </button>
+
               <button
                 onClick={() => handleTabChange('roles')}
                 className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'roles'
@@ -200,6 +201,7 @@ export default function PermisosIndex() {
               >
                 Roles
               </button>
+
               <button
                 onClick={() => handleTabChange('permisos')}
                 className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'permisos'
@@ -209,6 +211,7 @@ export default function PermisosIndex() {
               >
                 Permisos
               </button>
+              
               <button
                 onClick={() => handleTabChange('modulos')}
                 className={`px-6 py-4 font-medium text-center transition whitespace-nowrap ${activeTab === 'modulos'

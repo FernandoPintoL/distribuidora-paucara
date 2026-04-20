@@ -7,8 +7,11 @@ import { Badge } from '@/presentation/components/ui/badge';
 
 interface Movimiento {
     id: number;
-    prestable_stock: { prestable_id: number; prestable: { nombre: string; codigo: string } };
-    almacen: { id: number; nombre: string };
+    prestable_stock: {
+        prestable_id: number;
+        prestable: { nombre: string; codigo: string };
+        almacen_prestable: { id: number; nombre: string };
+    };
     usuario: { id: number; name: string };
     tipo: 'AJUSTE_DIRECTO' | 'AJUSTE_RELATIVO' | 'ENTRADA' | 'SALIDA' | 'CONSUMO_RESERVA' | 'DISTRIBUCION_RESERVA' | 'LIBERACION_RESERVA';
     cantidad: number;
@@ -25,6 +28,7 @@ interface Movimiento {
     observaciones: string | null;
     numero_referencia: string | null;
     referencia_tipo: string | null;
+    referencia_id?: number | null;
     anulado: boolean;
     created_at: string;
 }
@@ -72,7 +76,9 @@ export default function MovimientosPrestables() {
             });
 
             const result = await response.json();
+            console.log('📡 Respuesta del backend:', result);
             if (result.success) {
+                console.log('✅ Movimientos cargados:', result.data);
                 setMovimientos(result.data);
             }
         } catch (error) {
@@ -245,15 +251,15 @@ export default function MovimientosPrestables() {
                                         >
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                                                 {new Date(movimiento.created_at).toLocaleString('es-ES')}
-                                                <p>{movimiento.usuario.name}</p>
+                                                <p>{movimiento.usuario?.name || 'Sin usuario'}</p>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                                        {movimiento.prestable_stock.prestable.nombre}
+                                                        {movimiento.prestable_stock?.prestable?.nombre || 'Sin prestable'}
                                                     </span>
                                                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                        {movimiento.prestable_stock.prestable.codigo}
+                                                        {movimiento.prestable_stock?.prestable?.codigo || '-'}
                                                     </span>
                                                 </div>
                                             </td>
@@ -268,7 +274,7 @@ export default function MovimientosPrestables() {
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                                                {movimiento.almacen.nombre}
+                                                {movimiento.prestable_stock?.almacen_prestable?.nombre || '-'}
                                             </td>
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                                                 {movimiento.referencia_id ? (

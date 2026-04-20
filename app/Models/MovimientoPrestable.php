@@ -14,7 +14,7 @@ class MovimientoPrestable extends Model
 
     protected $fillable = [
         'prestable_stock_id',
-        'almacen_id',
+        'almacenes_prestables_id',
         'usuario_id',
         'tipo',
         'cantidad',
@@ -54,14 +54,6 @@ class MovimientoPrestable extends Model
     public function prestableStock(): BelongsTo
     {
         return $this->belongsTo(PrestableStock::class, 'prestable_stock_id');
-    }
-
-    /**
-     * Relación con Almacen
-     */
-    public function almacen(): BelongsTo
-    {
-        return $this->belongsTo(Almacen::class, 'almacen_id');
     }
 
     /**
@@ -136,7 +128,7 @@ class MovimientoPrestable extends Model
      */
     public function scopePorAlmacen($query, int $almacenId)
     {
-        return $query->where('almacen_id', $almacenId);
+        return $query->where('almacenes_prestables_id', $almacenId);
     }
 
     /**

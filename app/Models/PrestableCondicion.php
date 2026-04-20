@@ -12,7 +12,6 @@ class PrestableCondicion extends Model
     protected $fillable = [
         'prestable_id',
         'monto_garantia',
-        'monto_daño_parcial',
         'monto_daño_total',
         'descripcion_daño',
         'activo',
@@ -20,7 +19,6 @@ class PrestableCondicion extends Model
 
     protected $casts = [
         'monto_garantia' => 'decimal:2',
-        'monto_daño_parcial' => 'decimal:2',
         'monto_daño_total' => 'decimal:2',
         'activo' => 'boolean',
     ];

@@ -23,7 +23,7 @@ import { Trash2 } from 'lucide-react';
 import { OutputSelectionModal } from '@/presentation/components/impresion/OutputSelectionModal';
 
 interface Props {
-    clientes: Array<{ id: number; nombre: string; razon_social?: string }>;
+    clientes: Array<{ id: number; nombre: string; razon_social?: string; telefono?: string | null }>;
     choferes: Array<{ id: number; nombre: string }>;
     ventas: Array<{ id: number; numero: string; cliente_id: number; cliente?: { id: number; nombre: string; razon_social?: string } }>;
 }
@@ -31,6 +31,7 @@ interface Props {
 interface PrestamoItem {
     prestable_id: number;
     cantidad: number;
+    almacenes_ids: number[];
     prestable?: Prestable;
 }
 
@@ -61,6 +62,8 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
     const [formData, setFormData] = useState({
         cliente_id: undefined as number | undefined,
         chofer_id: undefined as number | undefined,
+        telefono_cliente_1: '',
+        telefono_cliente_2: '',
         tipo_prestamo: 'canastillas_embases' as 'canastillas' | 'embases' | 'canastillas_embases',
         es_venta: false,
         venta_id: undefined as number | undefined,
@@ -88,6 +91,54 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
         date.setDate(date.getDate() + 7);
         return date.toISOString().split('T')[0];
     }
+
+    const obtenerTelefonoCliente = (clienteId?: number) => {
+        if (!clienteId) return '';
+        const cliente = clientes.find((c) => c.id === clienteId);
+        return (cliente?.telefono || '').trim();
+    };
+
+    const getStockDisponibleTotal = (prestable: Prestable) => {
+        return (prestable.stocks || []).reduce(
+            (sum, stock) => sum + Number(stock.cantidad_disponible || 0),
+            0
+        );
+    };
+
+    const getAlmacenesConStock = (prestable: Prestable) => {
+        return (prestable.stocks || [])
+            .filter((stock: any) => Number(stock.cantidad_disponible || 0) > 0)
+            .map((stock: any) => ({
+                id: Number(stock.almacenes_prestables_id || stock.almacen_id),
+                nombre: stock?.almacen_prestable?.nombre || stock?.almacenPrestable?.nombre || `Almacén ${stock.almacenes_prestables_id || stock.almacen_id}`,
+                stock: Number(stock.cantidad_disponible || 0),
+            }))
+            .filter((item: any) => Number(item.id) > 0);
+    };
+
+    const getStockDisponibleEnAlmacenes = (prestable: Prestable, almacenesIds: number[]) => {
+        const ids = new Set((almacenesIds || []).map(Number));
+        return (prestable.stocks || []).reduce((sum, stock: any) => {
+            const almacenId = Number(stock.almacenes_prestables_id || stock.almacen_id);
+            if (!ids.has(almacenId)) return sum;
+            return sum + Number(stock.cantidad_disponible || 0);
+        }, 0);
+    };
+
+    const handleToggleAlmacen = (prestableId: number, almacenId: number, checked: boolean) => {
+        setPrestablesAgregados(prev => prev.map(item => {
+            if (item.prestable_id !== prestableId) return item;
+
+            const actuales = new Set((item.almacenes_ids || []).map(Number));
+            if (checked) {
+                actuales.add(almacenId);
+            } else {
+                actuales.delete(almacenId);
+            }
+
+            return { ...item, almacenes_ids: Array.from(actuales) };
+        }));
+    };
 
     const handleFechaPrestamo = (fecha: string) => {
         const date = new Date(fecha);
@@ -118,11 +169,15 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
             });
             const data = await response.json();
             const ventaData = data.data || data;
+            const clienteId = ventaData.cliente_id || formData.cliente_id;
+            const telefonoVenta = (ventaData?.cliente?.telefono || '').trim();
+            const telefonoCliente = telefonoVenta || obtenerTelefonoCliente(clienteId);
 
             setFormData({
                 ...formData,
                 venta_id: ventaId,
-                cliente_id: ventaData.cliente_id || formData.cliente_id,
+                cliente_id: clienteId,
+                telefono_cliente_1: telefonoCliente,
             });
         } catch (error) {
             console.error('Error obteniendo venta:', error);
@@ -171,6 +226,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
             {
                 prestable_id: Number(prestable.id),
                 cantidad: 1,
+                almacenes_ids: getAlmacenesConStock(prestable).map((a) => a.id),
                 prestable,
             },
         ];
@@ -178,7 +234,9 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
         // Si es canastilla, agregar automáticamente sus embases relacionados
         if (prestable.tipo === 'CANASTILLA') {
             const embasesRelacionados = prestables.filter(
-                p => p.tipo === 'EMBASES' && (p as any).prestable_relacionado_id === Number(prestable.id)
+                p => p.tipo === 'EMBASES'
+                    && (p as any).prestable_relacionado_id === Number(prestable.id)
+                    && getStockDisponibleTotal(p) > 0
             );
 
             embasesRelacionados.forEach(embase => {
@@ -187,6 +245,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                 nuevosItems.push({
                     prestable_id: Number(embase.id),
                     cantidad: cantidadEmbasesAutomatica,
+                    almacenes_ids: getAlmacenesConStock(embase).map((a) => a.id),
                     prestable: embase,
                 });
             });
@@ -220,6 +279,26 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
             return;
         }
 
+        for (const item of prestablesAgregados) {
+            const prestable = prestables.find(p => Number(p.id) === item.prestable_id);
+            if (!prestable) continue;
+
+            if (!item.almacenes_ids || item.almacenes_ids.length === 0) {
+                const msg = `Selecciona al menos un almacén para ${prestable.nombre}`;
+                setError(msg);
+                toastError(msg);
+                return;
+            }
+
+            const stockSeleccionado = getStockDisponibleEnAlmacenes(prestable, item.almacenes_ids);
+            if (item.cantidad > stockSeleccionado) {
+                const msg = `Stock insuficiente en almacenes seleccionados para ${prestable.nombre}. Disponible: ${stockSeleccionado}, solicitado: ${item.cantidad}`;
+                setError(msg);
+                toastError(msg);
+                return;
+            }
+        }
+
         setLoading(true);
 
         try {
@@ -227,6 +306,8 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
             const payload = {
                 cliente_id: formData.cliente_id,
                 chofer_id: formData.chofer_id,
+                telefono_cliente_1: formData.telefono_cliente_1.trim() || undefined,
+                telefono_cliente_2: formData.telefono_cliente_2.trim() || undefined,
                 tipo_prestamo: formData.tipo_prestamo,
                 es_venta: formData.es_venta,
                 venta_id: formData.venta_id,
@@ -238,6 +319,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                 detalles: prestablesAgregados.map(item => ({
                     prestable_id: item.prestable_id,
                     cantidad: item.cantidad,
+                    almacenes_ids: item.almacenes_ids,
                 })),
             };
 
@@ -313,9 +395,15 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                 placeholder="Buscar cliente..."
                                 value={formData.cliente_id || ''}
                                 options={clientesOptions}
-                                onChange={(id) =>
-                                    setFormData({ ...formData, cliente_id: id ? Number(id) : undefined })
-                                }
+                                onChange={(id) => {
+                                    const clienteId = id ? Number(id) : undefined;
+                                    const telefonoCliente = obtenerTelefonoCliente(clienteId);
+                                    setFormData({
+                                        ...formData,
+                                        cliente_id: clienteId,
+                                        telefono_cliente_1: telefonoCliente || formData.telefono_cliente_1,
+                                    });
+                                }}
                                 required
                             />
 
@@ -333,7 +421,46 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                 allowClear
                             />
                         </div>
-                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4">                            
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                    Teléfono Cliente 1 (Opcional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.telefono_cliente_1}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            telefono_cliente_1: e.target.value,
+                                        })
+                                    }
+                                    maxLength={25}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Ej: 71234567"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                    Teléfono Cliente 2 (Opcional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.telefono_cliente_2}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            telefono_cliente_2: e.target.value,
+                                        })
+                                    }
+                                    maxLength={25}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Ej: 76543210"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                     Garantía Total (Opcional)
@@ -390,24 +517,24 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                 />
                             </div>
                         </div>
-                        <div>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.es_evento}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                es_evento: e.target.checked,
-                                            })
-                                        }
-                                        className="w-5 h-5 cursor-pointer"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        🎉 Este préstamo es para un evento
-                                    </span>
-                                </label>
-                            </div>
+                        {/* <div>
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.es_evento}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            es_evento: e.target.checked,
+                                        })
+                                    }
+                                    className="w-5 h-5 cursor-pointer"
+                                />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    🎉 Este préstamo es para un evento
+                                </span>
+                            </label>
+                        </div> */}
                     </Card>
 
                     {/* Sección 2: Prestables Unificado - Selección + Resumen */}
@@ -497,11 +624,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                             {prestables
                                                 .filter((prestable) => {
                                                     if (!prestable.activo) return false;
-                                                    const stockTotal = prestable.stocks?.reduce(
-                                                        (sum, stock) => sum + (stock.cantidad_disponible || 0),
-                                                        0
-                                                    ) || 0;
-                                                    if (stockTotal <= 0) return false;
+                                                    if (getStockDisponibleTotal(prestable) <= 0) return false;
 
                                                     if (formData.tipo_prestamo === 'canastillas') return prestable.tipo === 'CANASTILLA';
                                                     if (formData.tipo_prestamo === 'embases') return prestable.tipo === 'EMBASES' && !(prestable as any).prestable_relacionado_id;
@@ -514,25 +637,29 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                     const estaSeleccionado = prestablesAgregados.some(
                                                         (p) => p.prestable_id === Number(prestable.id)
                                                     );
-                                                    const stockTotalCanastillas = prestable.stocks?.reduce(
-                                                        (sum, stock) => sum + (stock.cantidad_disponible || 0),
-                                                        0
-                                                    ) || 0;
+                                                    const stockTotalPrestable = getStockDisponibleTotal(prestable);
 
                                                     // Calcular cantidad solicitada
-                                                    const cantidadSolicitada = prestablesAgregados.find(
+                                                    const itemSeleccionado = prestablesAgregados.find(
                                                         p => p.prestable_id === Number(prestable.id)
-                                                    )?.cantidad || 0;
+                                                    );
+                                                    const cantidadSolicitada = itemSeleccionado?.cantidad || 0;
+                                                    const stockBaseSeleccionado = itemSeleccionado
+                                                        ? getStockDisponibleEnAlmacenes(prestable, itemSeleccionado.almacenes_ids)
+                                                        : stockTotalPrestable;
+                                                    const usaStockPorAlmacenes = Boolean(itemSeleccionado?.almacenes_ids?.length);
+                                                    const stockMostrado = usaStockPorAlmacenes ? stockBaseSeleccionado : stockTotalPrestable;
 
-                                                    const stockSobrante = stockTotalCanastillas - cantidadSolicitada;
+                                                    const stockSobrante = stockBaseSeleccionado - cantidadSolicitada;
                                                     const tieneStock = stockSobrante >= 0;
+                                                    const almacenesDisponibles = getAlmacenesConStock(prestable);
 
                                                     return (
                                                         <TableRow
                                                             key={prestable.id}
                                                             className={`border-gray-200 dark:border-gray-700 transition ${estaSeleccionado
-                                                                    ? 'bg-blue-50 dark:bg-blue-900/20'
-                                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                                                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
                                                                 }`}
                                                         >
                                                             <TableCell className="text-center">
@@ -552,15 +679,36 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                             <TableCell className="text-gray-900 dark:text-white">
                                                                 <p className="text-sm font-medium">{prestable.nombre}</p>
                                                                 <p className="text-xs text-gray-500">{prestable.codigo}</p>
+                                                                {almacenesDisponibles.length > 0 && (
+                                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                                        {almacenesDisponibles.map((almacen) => {
+                                                                            const checked = Boolean(itemSeleccionado?.almacenes_ids?.includes(almacen.id));
+                                                                            return (
+                                                                                <label
+                                                                                    key={`${prestable.id}-${almacen.id}`}
+                                                                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded border text-xs ${checked ? 'bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300' : 'bg-gray-50 border-gray-300 text-gray-700 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-300'} ${!estaSeleccionado ? 'opacity-60' : ''}`}
+                                                                                >
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={checked}
+                                                                                        disabled={!estaSeleccionado}
+                                                                                        onChange={(e) => handleToggleAlmacen(Number(prestable.id), almacen.id, e.target.checked)}
+                                                                                    />
+                                                                                    <span>{almacen.nombre} | {almacen.stock}</span>
+                                                                                </label>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="text-right text-sm">
                                                                 <div className="space-y-1">
                                                                     <div className="text-gray-900 dark:text-white font-medium">
-                                                                        Stock Total: {stockTotalCanastillas.toLocaleString('es-BO')}
+                                                                        {usaStockPorAlmacenes ? 'Stock seleccionados' : 'Stock Total'}: {stockMostrado.toLocaleString('es-BO')}
                                                                     </div>
-                                                                    {prestable.stocks && prestable.stocks.length > 1 && (
+                                                                    {usaStockPorAlmacenes && (
                                                                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                            Desglose: {prestable.stocks.map((s: any, idx: number) => `Almacén ${idx + 1}: ${s.cantidad_disponible || 0}`).join(' | ')}
+                                                                            Stock total: {stockTotalPrestable.toLocaleString('es-BO')}
                                                                         </div>
                                                                     )}
                                                                     {cantidadSolicitada > 0 && (
@@ -569,8 +717,8 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                                                                 Solicitado: {cantidadSolicitada.toLocaleString('es-BO')}
                                                                             </div>
                                                                             <div className={`text-xs font-semibold ${tieneStock
-                                                                                    ? 'text-green-600 dark:text-green-400'
-                                                                                    : 'text-red-600 dark:text-red-400'
+                                                                                ? 'text-green-600 dark:text-green-400'
+                                                                                : 'text-red-600 dark:text-red-400'
                                                                                 }`}>
                                                                                 Sobrante: {stockSobrante.toLocaleString('es-BO')}
                                                                             </div>
@@ -586,8 +734,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
 
                                     {prestables.filter((p) => {
                                         if (!p.activo) return false;
-                                        const stockTotal = p.stocks?.reduce((sum, stock) => sum + (stock.cantidad_disponible || 0), 0) || 0;
-                                        if (stockTotal <= 0) return false;
+                                        if (getStockDisponibleTotal(p) <= 0) return false;
 
                                         if (formData.tipo_prestamo === 'canastillas') return p.tipo === 'CANASTILLA';
                                         if (formData.tipo_prestamo === 'embases') return p.tipo === 'EMBASES' && !(p as any).prestable_relacionado_id;
@@ -597,7 +744,7 @@ export default function CrearPrestamoCliente({ clientes, choferes, ventas }: Pro
                                         return false;
                                     }).length === 0 && (
                                             <div className="p-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                                                <p>No hay prestables disponibles</p>
+                                                <p>No hay prestables registrados</p>
                                             </div>
                                         )}
                                 </div>

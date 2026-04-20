@@ -40,6 +40,21 @@ export interface PrestableStock extends BaseEntity {
     cantidad_vendida: number;
 }
 
+export interface ProductoRelacionadoPrestable extends BaseEntity {
+    id: Id;
+    prestable_id: Id;
+    producto_id: Id;
+    descripcion?: string | null;
+    es_principal: boolean;
+    orden: number;
+    // Relaciones
+    producto?: {
+        id: Id;
+        nombre: string;
+        sku?: string;
+    };
+}
+
 export interface Prestable extends BaseEntity {
     id: Id;
     nombre: string;
@@ -50,6 +65,9 @@ export interface Prestable extends BaseEntity {
     precios: PrestablePrice[];
     condiciones: PrestableCondicion;
     stocks: PrestableStock[];
+    productosRelacionados?: ProductoRelacionadoPrestable[];
+    prestablePadre?: Prestable | null;
+    embasesRelacionados?: Prestable[];
 }
 
 export interface DevolucionClienteDetalle extends BaseEntity {
@@ -106,6 +124,8 @@ export interface PrestamoCliente extends BaseEntity {
     cliente_id: Id;
     chofer_id?: Id | null;
     venta_id?: Id | null;
+    telefono_cliente_1?: string | null;
+    telefono_cliente_2?: string | null;
     es_venta: boolean;
     es_evento?: boolean;
     monto_garantia: number;
@@ -173,20 +193,33 @@ export interface NuevoPrestable extends BaseFormData {
     codigo: string;
     tipo: TipoPrestable;
     capacidad?: number;
+    producto_id?: Id;
+    proveedor_id?: Id;
+    prestable_relacionado_id?: Id;
+    descripcion?: string;
+    crear_embase_asociado?: boolean;
+    productos_relacionados?: {
+        producto_id: Id;
+        es_principal?: boolean;
+    }[];
     precios: {
-        tipo: TipoPrecio;
-        precio: number;
+        tipo_precio: string;
+        valor: number;
+    }[];
+    precios_embase?: {
+        tipo_precio: string;
+        valor: number;
     }[];
     condiciones: {
         monto_garantia: number;
-        monto_daño_parcial: number;
-        monto_daño_total: number;
+        monto_daño_total?: number;
     };
 }
 
 export interface NuevoPrestamoClienteDetalle {
     prestable_id: Id;
     cantidad: number;
+    almacenes_ids: Id[];
     precio_unitario?: number;
     precio_prestamo?: number;
 }
@@ -195,6 +228,8 @@ export interface NuevoPrestamoCliente extends BaseFormData {
     cliente_id: Id;
     chofer_id?: Id;
     venta_id?: Id;
+    telefono_cliente_1?: string;
+    telefono_cliente_2?: string;
     es_venta: boolean;
     es_evento?: boolean;
     fecha_prestamo: string;
@@ -205,13 +240,18 @@ export interface NuevoPrestamoCliente extends BaseFormData {
 }
 
 export interface NuevoPrestamoProveedor extends BaseFormData {
-    prestable_id: Id;
     proveedor_id: Id;
-    cantidad: number;
+    almacen_prestable_id: Id;
+    compra_id?: Id;
     es_compra: boolean;
-    precio_unitario?: number;
+    monto_garantia?: number;
     fecha_prestamo: string;
-    numero_documento?: string;
+    fecha_esperada_devolucion?: string;
+    observaciones?: string;
+    detalles: Array<{
+        prestable_id: Id;
+        cantidad: number;
+    }>;
 }
 
 export interface DetalleDevolucionCliente {

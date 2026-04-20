@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
 export const listado = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -14,7 +14,7 @@ listado.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
 listado.url = (options?: RouteQueryOptions) => {
@@ -22,7 +22,7 @@ listado.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
 listado.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -30,7 +30,7 @@ listado.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
 listado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -39,7 +39,7 @@ listado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
     const listadoForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -48,7 +48,7 @@ listado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
         listadoForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -56,7 +56,7 @@ listado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:783
+ * @see routes/web.php:787
  * @route '/prestamos/compras'
  */
         listadoForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -71,7 +71,7 @@ listado.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     
     listado.form = listadoForm
 /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
 export const crear = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -85,7 +85,7 @@ crear.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
 crear.url = (options?: RouteQueryOptions) => {
@@ -93,7 +93,7 @@ crear.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
 crear.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -101,7 +101,7 @@ crear.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
 crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -110,7 +110,7 @@ crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
     const crearForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -119,7 +119,7 @@ crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
         crearForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -127,7 +127,7 @@ crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/web.php:784
+ * @see routes/web.php:788
  * @route '/prestamos/compras/crear'
  */
         crearForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -143,7 +143,7 @@ crear.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     crear.form = crearForm
 /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
 export const show = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -158,7 +158,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
 show.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -191,7 +191,7 @@ show.url = (args: { compra: number | { id: number } } | [compra: number | { id: 
 
 /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
 show.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -200,7 +200,7 @@ show.get = (args: { compra: number | { id: number } } | [compra: number | { id: 
 })
 /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
 show.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -210,7 +210,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
 
     /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
     const showForm = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -220,7 +220,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
 
             /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
         showForm.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -229,7 +229,7 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
         })
             /**
 * @see \App\Http\Controllers\CompraPrestableController::show
- * @see app/Http/Controllers/CompraPrestableController.php:78
+ * @see app/Http/Controllers/CompraPrestableController.php:79
  * @route '/prestamos/compras/{compra}'
  */
         showForm.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

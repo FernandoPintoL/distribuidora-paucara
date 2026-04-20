@@ -36,6 +36,7 @@ import CompraPrestableController from './CompraPrestableController'
 import PrestamoClienteController from './PrestamoClienteController'
 import PrestamoProveedorController from './PrestamoProveedorController'
 import ReportesController from './ReportesController'
+import Prestamos from './Prestamos'
 import VentaPublicController from './VentaPublicController'
 import PublicStockController from './PublicStockController'
 import DashboardController from './DashboardController'
@@ -79,7 +80,6 @@ import TipoAjusteInventarioController from './TipoAjusteInventarioController'
 import InventarioInicialController from './InventarioInicialController'
 import ReservaStockController from './ReservaStockController'
 import Inventario from './Inventario'
-import Prestamos from './Prestamos'
 import PrestamosInertiaController from './PrestamosInertiaController'
 import Web from './Web'
 import VendedorController from './VendedorController'
@@ -135,6 +135,7 @@ CompraPrestableController,
 PrestamoClienteController,
 PrestamoProveedorController,
 ReportesController,
+Prestamos,
 VentaPublicController,
 PublicStockController,
 DashboardController,
@@ -178,7 +179,6 @@ TipoAjusteInventarioController,
 InventarioInicialController,
 ReservaStockController,
 Inventario,
-Prestamos,
 PrestamosInertiaController,
 Web,
 VendedorController,

@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import stock from './stock'
 import ajustes from './ajustes'
 import ventas from './ventas'
 import compras from './compras'
@@ -84,7 +85,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     dashboard.form = dashboardForm
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
 export const prestables = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -99,7 +100,7 @@ prestables.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
 prestables.url = (options?: RouteQueryOptions) => {
@@ -108,7 +109,7 @@ prestables.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
 prestables.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -117,7 +118,7 @@ prestables.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
 prestables.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -127,7 +128,7 @@ prestables.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
     const prestablesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -137,7 +138,7 @@ prestables.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
         prestablesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -146,7 +147,7 @@ prestables.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PrestamosInertiaController::prestables
- * @see app/Http/Controllers/PrestamosInertiaController.php:26
+ * @see app/Http/Controllers/PrestamosInertiaController.php:27
  * @route '/prestamos/prestables'
  */
         prestablesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -240,7 +241,7 @@ stock.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     stock.form = stockForm
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
 export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -255,7 +256,7 @@ reportes.definition = {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
 reportes.url = (options?: RouteQueryOptions) => {
@@ -264,7 +265,7 @@ reportes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
 reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -273,7 +274,7 @@ reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
 reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -283,7 +284,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
     const reportesForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -293,7 +294,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
         reportesForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -302,7 +303,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\PrestamosInertiaController::reportes
- * @see app/Http/Controllers/PrestamosInertiaController.php:162
+ * @see app/Http/Controllers/PrestamosInertiaController.php:226
  * @route '/prestamos/reportes'
  */
         reportesForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

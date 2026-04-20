@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -20,14 +20,22 @@ import {
     DialogFooter,
     DialogClose,
 } from '@/presentation/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@/presentation/components/ui/dropdown-menu';
 import { useToastNotifications } from '@/application/hooks/use-toast-notifications';
 import prestableService from '@/infrastructure/services/prestable.service';
 import type { Prestable, NuevoPrestable, TipoPrestable } from '@/domain/entities/prestamos';
-import { Plus, Edit2, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, MoreVertical } from 'lucide-react';
 
 export default function PrestablesIndex() {
     console.log('🔧 COMPONENT MOUNTED: PrestablesIndex');
     const { showNotification } = useToastNotifications();
+    const submissionLockRef = useRef(false); // Ref para prevenir race conditions
+    const submissionTimerRef = useRef<NodeJS.Timeout | null>(null); // Ref para timer de lock
     const [prestables, setPrestables] = useState<Prestable[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -46,7 +54,8 @@ export default function PrestablesIndex() {
     }, [showForm]);
     const [productos, setProductos] = useState<Array<{ id: number; nombre: string; sku?: string }>>([]);
     const [canastillas, setCanastillas] = useState<Array<{ id: number; nombre: string; codigo: string }>>([]);
-    const [formData, setFormData] = useState<Partial<NuevoPrestable & { activo?: boolean; prestable_relacionado_id?: number; crear_embase_asociado?: boolean }>>({
+    const [isSubmitting, setIsSubmitting] = useState(false); // ✨ Flag para prevenir submit duplicado
+    const [formData, setFormData] = useState<Partial<NuevoPrestable & { activo?: boolean; prestable_relacionado_id?: number; crear_embase_asociado?: boolean; precios_embase?: Array<{ tipo_precio: string; valor: number }>; productos_relacionados?: Array<{ producto_id: number; es_principal?: boolean }> }>>({
         nombre: '',
         codigo: '',
         tipo: 'CANASTILLA' as TipoPrestable,
@@ -55,13 +64,21 @@ export default function PrestablesIndex() {
         prestable_relacionado_id: undefined,
         activo: true,
         crear_embase_asociado: false, // ✨ NUEVO: Flag para crear embase junto con canastilla
+        productos_relacionados: [], // ✨ NUEVO: Productos relacionados
         precios: [
+            { tipo_precio: 'COMPRA', valor: 0 },
             { tipo_precio: 'PRESTAMO', valor: 0 },
             { tipo_precio: 'VENTA', valor: 0 },
+            { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
+        ],
+        precios_embase: [
+            { tipo_precio: 'COMPRA', valor: 0 },
+            { tipo_precio: 'PRESTAMO', valor: 0 },
+            { tipo_precio: 'VENTA', valor: 0 },
+            { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
         ],
         condiciones: {
             monto_garantia: 0,
-            monto_daño_parcial: 0,
             monto_daño_total: 0,
         },
     });
@@ -109,7 +126,30 @@ export default function PrestablesIndex() {
 
     const handleCreateOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('🚀 INICIANDO CREATE/UPDATE...');
+
+        // ✨ Prevenir submit duplicado: usar ref para lock inmediato + timer para bloqueo posterior
+        if (isSubmitting || submissionLockRef.current) {
+            console.log('⏸️ Submit ya en progreso, ignorando... (isSubmitting:', isSubmitting, ', lock:', submissionLockRef.current, ')');
+            return;
+        }
+
+        // Bloquear inmediatamente y mantener bloqueado por 3 segundos para prevenir resubmissions
+        submissionLockRef.current = true;
+        setIsSubmitting(true);
+        console.log('🚀 INICIANDO CREATE/UPDATE... Bloqueando por 3 segundos para prevenir duplicados');
+
+        // Limpiar timer anterior si existe
+        if (submissionTimerRef.current) {
+            clearTimeout(submissionTimerRef.current);
+        }
+
+        // Timer para liberar lock después de 3 segundos (previene doble submit incluso si hay delays)
+        submissionTimerRef.current = setTimeout(() => {
+            submissionLockRef.current = false;
+            submissionTimerRef.current = null;
+            console.log('🔓 Submission lock liberado después de timeout');
+        }, 3000);
+
         console.log('📋 FormData completo:', formData);
         console.log('📋 FormData precios:', formData.precios);
         console.log('📋 FormData condiciones:', formData.condiciones);
@@ -144,13 +184,15 @@ export default function PrestablesIndex() {
                 prestable_relacionado_id: undefined,
                 activo: true,
                 crear_embase_asociado: false, // ✨ Reset del checkbox
+                productos_relacionados: [], // ✨ Reset productos relacionados
                 precios: [
+                    { tipo_precio: 'COMPRA', valor: 0 },
                     { tipo_precio: 'PRESTAMO', valor: 0 },
                     { tipo_precio: 'VENTA', valor: 0 },
+                    { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
                 ],
                 condiciones: {
                     monto_garantia: 0,
-                    monto_daño_parcial: 0,
                     monto_daño_total: 0,
                 },
             });
@@ -167,6 +209,10 @@ export default function PrestablesIndex() {
                 type: 'error',
             });
             console.error('Error al guardar:', error);
+        } finally {
+            // No limpiar el lock aquí - dejar que el timer lo haga (3 segundos)
+            // Esto previene resubmissions incluso si hay timing issues
+            setIsSubmitting(false);
         }
     };
 
@@ -178,30 +224,34 @@ export default function PrestablesIndex() {
         const preciosMapeados =
             prestable.precios && prestable.precios.length > 0
                 ? prestable.precios.map((p) => ({
-                      id: p.id,
-                      tipo_precio: p.tipo_precio,
-                      valor: Number(p.valor),
-                  }))
+                    id: p.id,
+                    tipo_precio: p.tipo_precio,
+                    valor: Number(p.valor),
+                }))
                 : [
-                      { tipo_precio: 'PRESTAMO', valor: 0 },
-                      { tipo_precio: 'VENTA', valor: 0 },
-                  ];
+                    { tipo_precio: 'PRESTAMO', valor: 0 },
+                    { tipo_precio: 'VENTA', valor: 0 },
+                ];
 
         console.log('✅ Precios mapeados:', preciosMapeados);
 
         const condicionesData =
             prestable.condiciones && prestable.condiciones.length > 0
                 ? {
-                      id: prestable.condiciones[0].id,
-                      monto_garantia: Number(prestable.condiciones[0].monto_garantia || 0),
-                      monto_daño_parcial: Number(prestable.condiciones[0].monto_daño_parcial || 0),
-                      monto_daño_total: Number(prestable.condiciones[0].monto_daño_total || 0),
-                  }
+                    id: prestable.condiciones[0].id,
+                    monto_garantia: Number(prestable.condiciones[0].monto_garantia || 0),
+                    monto_daño_total: Number(prestable.condiciones[0].monto_daño_total || 0),
+                }
                 : {
-                      monto_garantia: 0,
-                      monto_daño_parcial: 0,
-                      monto_daño_total: 0,
-                  };
+                    monto_garantia: 0,
+                    monto_daño_total: 0,
+                };
+
+        // Mapear productos relacionados
+        const productosRelacionadosMapeados = ((prestable as any).productosRelacionados || []).map((pr: any) => ({
+            producto_id: pr.producto_id,
+            es_principal: pr.es_principal || false,
+        }));
 
         const nuevoFormData = {
             id: prestable.id,
@@ -213,9 +263,26 @@ export default function PrestablesIndex() {
             prestable_relacionado_id: (prestable as any).prestable_relacionado_id,
             activo: prestable.activo,
             descripcion: prestable.descripcion,
+            productos_relacionados: productosRelacionadosMapeados,
             precios: preciosMapeados,
+            precios_embase: [
+                { tipo_precio: 'COMPRA', valor: 0 },
+                { tipo_precio: 'PRESTAMO', valor: 0 },
+                { tipo_precio: 'VENTA', valor: 0 },
+                { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
+            ],
             condiciones: condicionesData,
         };
+
+        // Si es un embase con canastilla relacionada, asegurar que esa canastilla esté en la lista
+        if (prestable.tipo === 'EMBASES' && (prestable as any).prestable_relacionado_id && (prestable as any).prestablePadre) {
+            const canastillaRelacionada = (prestable as any).prestablePadre;
+            const existe = canastillas.some(c => c.id === canastillaRelacionada.id);
+            if (!existe && canastillaRelacionada.id) {
+                console.log('🔗 Agregando canastilla relacionada a la lista:', canastillaRelacionada);
+                setCanastillas(prev => [canastillaRelacionada, ...prev]);
+            }
+        }
 
         console.log('🔄 Nuevo FormData:', nuevoFormData);
         setFormData(nuevoFormData);
@@ -298,13 +365,21 @@ export default function PrestablesIndex() {
                                 prestable_relacionado_id: undefined,
                                 activo: true,
                                 crear_embase_asociado: false, // ✨ Reset del checkbox
+                                productos_relacionados: [], // ✨ Reset productos relacionados
                                 precios: [
+                                    { tipo_precio: 'COMPRA', valor: 0 },
                                     { tipo_precio: 'PRESTAMO', valor: 0 },
                                     { tipo_precio: 'VENTA', valor: 0 },
+                                    { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
+                                ],
+                                precios_embase: [
+                                    { tipo_precio: 'COMPRA', valor: 0 },
+                                    { tipo_precio: 'PRESTAMO', valor: 0 },
+                                    { tipo_precio: 'VENTA', valor: 0 },
+                                    { tipo_precio: 'DAÑO_TOTAL', valor: 0 },
                                 ],
                                 condiciones: {
                                     monto_garantia: 0,
-                                    monto_daño_parcial: 0,
                                     monto_daño_total: 0,
                                 },
                             });
@@ -322,10 +397,12 @@ export default function PrestablesIndex() {
                         </DialogHeader>
 
                         <form onSubmit={handleCreateOrUpdate} className="space-y-4 px-6 pb-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
+                            {/* Primera fila: Código, Nombre, Tipo */}
+                            <div className="flex items-end gap-4">
+                                {/* Código - Pequeño */}
+                                <div className="w-1/5">
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                        Código <span className="text-xs text-gray-500">(opcional - se autogenera)</span>
+                                        Código <span className="text-xs text-gray-500">(opcional)</span>
                                     </label>
                                     <input
                                         type="text"
@@ -333,12 +410,13 @@ export default function PrestablesIndex() {
                                         onChange={(e) =>
                                             setFormData({ ...formData, codigo: e.target.value })
                                         }
-                                        placeholder="Dejar vacío para generar automáticamente: CANT-{ID}"
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Auto..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                     />
                                 </div>
 
-                                <div>
+                                {/* Nombre - Grande */}
+                                <div className="flex-1">
                                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                         Nombre *
                                     </label>
@@ -352,19 +430,22 @@ export default function PrestablesIndex() {
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
-                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                                            Tipo de Prestable *
-                                        </label>
-                                        <div className="flex flex-col sm:flex-row gap-6">
+
+                                {/* Radio Buttons - Derecha */}
+                                <div className="w-2/5 pb-1">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-4">
+                                            <label className="text-sm font-medium mb-0 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                                Tipo * {(formData as any).id && <span className="text-xs text-gray-500">(no editable)</span>}
+                                            </label>
                                             {(['CANASTILLA', 'EMBASES'] as const).map((tipo) => (
-                                                <div key={tipo} className="flex items-center">
+                                                <div key={tipo} className="flex items-center gap-2">
                                                     <input
                                                         type="radio"
                                                         id={`tipo-${tipo}`}
                                                         name="tipo"
                                                         value={tipo}
+                                                        disabled={(formData as any).id ? true : false}
                                                         checked={formData.tipo === tipo}
                                                         onChange={(e) =>
                                                             setFormData({
@@ -372,64 +453,51 @@ export default function PrestablesIndex() {
                                                                 tipo: e.target.value as TipoPrestable,
                                                             })
                                                         }
-                                                        className="w-4 h-4 cursor-pointer"
+                                                        className="w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                     />
                                                     <label
                                                         htmlFor={`tipo-${tipo}`}
-                                                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                                                        className={`text-sm font-medium cursor-pointer select-none ${(formData as any).id
+                                                                ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                                                : 'text-gray-700 dark:text-gray-300 cursor-pointer'
+                                                            }`}
                                                     >
                                                         {tipo === 'CANASTILLA' ? '📦 Canastilla' : '🔖 Embases'}
                                                     </label>
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-
-                                    {formData.tipo === 'CANASTILLA' && (
-                                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                            <input
-                                                type="checkbox"
-                                                id="crear-embase"
-                                                checked={formData.crear_embase_asociado || false}
-                                                onChange={(e) =>
-                                                    setFormData({
-                                                        ...formData,
-                                                        crear_embase_asociado: e.target.checked,
-                                                    })
-                                                }
-                                                className="w-4 h-4 cursor-pointer"
-                                            />
-                                            <label
-                                                htmlFor="crear-embase"
-                                                className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
-                                            >
-                                                🔗 Crear embase asociado automáticamente (EMB-{'{nombre}'})
-                                            </label>
-                                        </div>
-                                    )}
-
-                                    <div>
-                                    <SearchSelect
-                                        label="📦 Producto Relacionado (Opcional)"
-                                        placeholder="Buscar producto..."
-                                        value={(formData as any).producto_id || ''}
-                                        options={productos.map((p) => ({
-                                            value: p.id,
-                                            label: p.nombre,
-                                            description: p.sku,
-                                        }))}
-                                        onChange={(id) =>
-                                            setFormData({
-                                                ...formData,
-                                                producto_id: id ? Number(id) : undefined,
-                                            })
-                                        }
-                                        allowClear
-                                    />
+                                        {formData.tipo === 'CANASTILLA' && (
+                                            <div className="flex items-center gap-2 pt-2 pl-2 border-l-2 border-blue-300 dark:border-blue-700">
+                                                <input
+                                                    type="checkbox"
+                                                    id="crear-embase"
+                                                    checked={formData.crear_embase_asociado || false}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            crear_embase_asociado: e.target.checked,
+                                                        })
+                                                    }
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                                <label
+                                                    htmlFor="crear-embase"
+                                                    className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                                                >
+                                                    🔗 Crear embase
+                                                </label>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Resto del formulario en grid */}
+                            <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
+
                                 {formData.tipo === 'CANASTILLA' && (
-                                    <div className="md:col-span-2">
+                                    <div>
                                         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                             📦 Capacidad (embases por canastilla)
                                         </label>
@@ -447,8 +515,12 @@ export default function PrestablesIndex() {
                                         />
                                     </div>
                                 )}
+
                                 {formData.tipo === 'EMBASES' && (
                                     <div>
+                                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                            Relacionar con canastilla existente
+                                        </label>
                                         <SearchSelect
                                             label="🔗 Relacionar con Canastilla (Opcional)"
                                             placeholder="Buscar canastilla..."
@@ -468,39 +540,130 @@ export default function PrestablesIndex() {
                                         />
                                     </div>
                                 )}
+
+                                {/* Estado Activo - Solo al editar */}
+                                {(formData as any).id && (
+                                    <div className="flex items-center gap-2 p-2">
+                                        <input
+                                            type="checkbox"
+                                            id="activo"
+                                            checked={(formData as any).activo ?? true}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    activo: e.target.checked,
+                                                })
+                                            }
+                                            className="w-4 h-4 cursor-pointer"
+                                        />
+                                        <label htmlFor="activo" className="text-sm font-medium text-green-700 dark:text-green-300 cursor-pointer">
+                                            ✅ Activo
+                                        </label>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Estado Activo - Solo al editar */}
-                            {(formData as any).id && (
-                                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                                    <input
-                                        type="checkbox"
-                                        id="activo"
-                                        checked={(formData as any).activo ?? true}
-                                        onChange={(e) =>
+
+
+                            {/* Productos Relacionados */}
+                            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                                        🔗 Productos Relacionados (Variantes)
+                                    </h3>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => {
+                                            const currentLength = (formData.productos_relacionados || []).length;
                                             setFormData({
                                                 ...formData,
-                                                activo: e.target.checked,
-                                            })
-                                        }
-                                        className="w-4 h-4 cursor-pointer"
-                                    />
-                                    <label htmlFor="activo" className="text-sm font-medium text-green-700 dark:text-green-300 cursor-pointer">
-                                        ✅ Activo
-                                    </label>
+                                                productos_relacionados: [
+                                                    ...(formData.productos_relacionados || []),
+                                                    { producto_id: 0, es_principal: currentLength === 0 } // Principal si es el primero
+                                                ]
+                                            });
+                                        }}
+                                        className="gap-2"
+                                    >
+                                        <Plus size={16} />
+                                        Agregar
+                                    </Button>
                                 </div>
-                            )}
 
-                            {/* Precios */}
+                                {formData.productos_relacionados && formData.productos_relacionados.length > 0 ? (
+                                    <div className="space-y-2 mb-4">
+                                        {formData.productos_relacionados.map((pr: any, idx: number) => (
+                                            <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                {/* Producto */}
+                                                <div className="flex-1">
+                                                    <SearchSelect
+                                                        placeholder="Buscar producto..."
+                                                        value={pr.producto_id || ''}
+                                                        options={productos.map((p) => ({
+                                                            value: p.id,
+                                                            label: p.nombre,
+                                                            description: p.sku,
+                                                        }))}
+                                                        onChange={(id) => {
+                                                            const newPR = [...(formData.productos_relacionados || [])];
+                                                            newPR[idx].producto_id = Number(id || 0);
+                                                            setFormData({ ...formData, productos_relacionados: newPR });
+                                                        }}
+                                                        allowClear
+                                                    />
+                                                </div>
+
+                                                {/* Principal Checkbox */}
+                                                <label className="flex items-center gap-2 whitespace-nowrap cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={pr.es_principal || false}
+                                                        onChange={(e) => {
+                                                            const newPR = [...(formData.productos_relacionados || [])];
+                                                            newPR[idx].es_principal = e.target.checked;
+                                                            setFormData({ ...formData, productos_relacionados: newPR });
+                                                        }}
+                                                        className="w-4 h-4 cursor-pointer"
+                                                    />
+                                                    <span className="text-sm text-gray-700 dark:text-gray-300">⭐ Principal</span>
+                                                </label>
+
+                                                {/* Delete Button */}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => {
+                                                        const newPR = (formData.productos_relacionados || []).filter((_: any, i: number) => i !== idx);
+                                                        setFormData({ ...formData, productos_relacionados: newPR });
+                                                    }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                                        Haz click en "Agregar" para relacionar productos.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Precios - Canastilla */}
                             <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
-                                    💰 Precios
+                                    💰 Precios {formData.tipo === 'CANASTILLA' ? '📦 Canastilla' : '🔖 Embases'}
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {formData.precios?.map((precio, idx) => (
                                         <div key={idx} className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                {precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' : '🛒 Precio Venta'}
+                                                {precio.tipo_precio === 'COMPRA' ? '📦 Precio Compra' :
+                                                    precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' :
+                                                        precio.tipo_precio === 'VENTA' ? '🛒 Precio Venta' :
+                                                            '💥 Precio por Daño Total'}
                                             </label>
                                             <input
                                                 type="number"
@@ -520,12 +683,49 @@ export default function PrestablesIndex() {
                                 </div>
                             </div>
 
+                            {/* Precios - Embase (solo cuando se va a crear) */}
+                            {formData.tipo === 'CANASTILLA' && formData.crear_embase_asociado && (
+                                <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                                    <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
+                                        💰 Precios 🔖 Embase Asociado
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                        Especifica los precios para el embase que se creará automáticamente con la canastilla.
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {(formData as any).precios_embase?.map((precio: any, idx: number) => (
+                                            <div key={idx} className="space-y-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                <label className="block text-sm font-medium text-blue-700 dark:text-blue-300">
+                                                    {precio.tipo_precio === 'COMPRA' ? '📦 Precio Compra' :
+                                                        precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' :
+                                                            precio.tipo_precio === 'VENTA' ? '🛒 Precio Venta' :
+                                                                '💥 Precio por Daño Total'}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={precio.valor === 0 ? '' : precio.valor ?? ''}
+                                                    onChange={(e) => {
+                                                        const newPrecios = [...((formData as any).precios_embase || [])];
+                                                        newPrecios[idx].valor = e.target.value === '' ? 0 : Number(e.target.value);
+                                                        setFormData({ ...formData, precios_embase: newPrecios });
+                                                    }}
+                                                    step="0.01"
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Condiciones */}
-                            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                            {/* <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
                                 <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
                                     🔒 Condiciones Individuales
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                             🔐 Garantía
@@ -539,26 +739,6 @@ export default function PrestablesIndex() {
                                                     condiciones: {
                                                         ...formData.condiciones,
                                                         monto_garantia: e.target.value === '' ? 0 : Number(e.target.value),
-                                                    },
-                                                })
-                                            }
-                                            placeholder="0"
-                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                            ⚠️ Daño Parcial
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={formData.condiciones?.monto_daño_parcial === 0 ? '' : formData.condiciones?.monto_daño_parcial ?? ''}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    condiciones: {
-                                                        ...formData.condiciones,
-                                                        monto_daño_parcial: e.target.value === '' ? 0 : Number(e.target.value),
                                                     },
                                                 })
                                             }
@@ -587,16 +767,18 @@ export default function PrestablesIndex() {
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
-                        <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                            <DialogClose asChild>
-                                <Button type="button" variant="outline">
-                                    Cancelar
+                            <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                                <DialogClose asChild>
+                                    <Button type="button" variant="outline" disabled={isSubmitting}>
+                                        Cancelar
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? '⏳ Guardando...' : 'Guardar'}
                                 </Button>
-                            </DialogClose>
-                            <Button type="submit">Guardar</Button>
-                        </DialogFooter>
+                            </DialogFooter>
                         </form>
                     </DialogContent>
                 </Dialog>
@@ -731,6 +913,53 @@ export default function PrestablesIndex() {
                                     </div>
                                 )}
 
+                                {/* Productos Relacionados */}
+                                {(prestableToView as any).productosRelacionados && (prestableToView as any).productosRelacionados.length > 0 && (
+                                    <div className="col-span-1 md:col-span-2 lg:col-span-3 border-b border-gray-200 dark:border-gray-700 pb-4">
+                                        <h3 className="font-semibold text-lg mb-3 text-gray-900 dark:text-white">
+                                            🔗 Productos Relacionados (Variantes)
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {(prestableToView as any).productosRelacionados.map((pr: any) => (
+                                                <div
+                                                    key={pr.id}
+                                                    className={`p-4 rounded-lg border ${pr.es_principal
+                                                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-start gap-2 mb-2">
+                                                        {pr.es_principal && (
+                                                            <span className="text-2xl">⭐</span>
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <p className={`text-sm font-medium ${pr.es_principal
+                                                                ? 'text-yellow-600 dark:text-yellow-400'
+                                                                : 'text-gray-600 dark:text-gray-400'
+                                                                }`}>
+                                                                {pr.es_principal ? 'Principal' : 'Variante'}
+                                                            </p>
+                                                            <p className={`font-semibold text-gray-900 dark:text-white break-words`}>
+                                                                {pr.producto?.nombre || `#${pr.producto_id}`}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {pr.producto?.sku && (
+                                                        <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                                                            SKU: {pr.producto.sku}
+                                                        </p>
+                                                    )}
+                                                    {pr.descripcion && (
+                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
+                                                            {pr.descripcion}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Canastilla Relacionada (si es EMBASES) */}
                                 {(prestableToView as any).prestable_padre && (
                                     <div className="col-span-1 border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -767,7 +996,10 @@ export default function PrestablesIndex() {
                                                     className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                                                 >
                                                     <span className="text-gray-700 dark:text-gray-300 font-medium">
-                                                        {precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' : '🛒 Precio Venta'}
+                                                        {precio.tipo_precio === 'COMPRA' ? '📦 Precio Compra' :
+                                                            precio.tipo_precio === 'PRESTAMO' ? '💰 Precio Préstamo' :
+                                                                precio.tipo_precio === 'VENTA' ? '🛒 Precio Venta' :
+                                                                    '💥 Precio por Daño Total'}
                                                     </span>
                                                     <span className="font-bold text-gray-900 dark:text-white">
                                                         Bs {Number(precio.valor).toFixed(2)}
@@ -792,12 +1024,6 @@ export default function PrestablesIndex() {
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                <span className="text-gray-700 dark:text-gray-300">Daño Parcial</span>
-                                                <span className="font-bold text-gray-900 dark:text-white">
-                                                    Bs {Number(prestableToView.condiciones[0].monto_daño_parcial).toFixed(2)}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                 <span className="text-gray-700 dark:text-gray-300">Daño Total</span>
                                                 <span className="font-bold text-gray-900 dark:text-white">
                                                     Bs {Number(prestableToView.condiciones[0].monto_daño_total).toFixed(2)}
@@ -815,11 +1041,10 @@ export default function PrestablesIndex() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-700 dark:text-gray-300">Activo:</span>
                                         <span
-                                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                                                prestableToView.activo
+                                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${prestableToView.activo
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                                     : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                            }`}
+                                                }`}
                                         >
                                             {prestableToView.activo ? '✅ Sí' : '❌ No'}
                                         </span>
@@ -882,10 +1107,16 @@ export default function PrestablesIndex() {
                                             Nombre
                                         </TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">
-                                            Código
+                                            Código/Tipo
+                                        </TableHead>
+                                        {/* <TableHead className="text-gray-900 dark:text-gray-100">
+                                            📦 Producto
+                                        </TableHead> */}
+                                        <TableHead className="text-gray-900 dark:text-gray-100">
+                                            🔗 Relacionado
                                         </TableHead>
                                         <TableHead className="text-gray-900 dark:text-gray-100">
-                                            Tipo
+                                            🔗 Productos Relacionados
                                         </TableHead>
                                         {/* <TableHead className="text-gray-900 dark:text-gray-100">
                                             Precio Préstamo
@@ -917,12 +1148,50 @@ export default function PrestablesIndex() {
                                                 {p.nombre}
                                             </TableCell>
                                             <TableCell className="text-gray-700 dark:text-gray-300">
-                                                {p.codigo}
-                                            </TableCell>
-                                            <TableCell>
+                                                <p>
+                                                    {p.codigo}    
+                                                </p>
+                                                
                                                 <span className="inline-flex px-1 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                                     {p.tipo}
                                                 </span>
+                                            </TableCell>
+                                            {/* <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
+                                                {p.producto ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <span>📦</span>
+                                                        <span>{p.producto.nombre}</span>
+                                                        {p.producto.sku && <span className="text-gray-500 dark:text-gray-400 text-xs">({p.producto.sku})</span>}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400 dark:text-gray-500 italic">-</span>
+                                                )}
+                                            </TableCell> */}
+                                            <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
+                                                {p.tipo === 'EMBASES' && (p as any).prestablePadre ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <span>📦</span>
+                                                        <span>{(p as any).prestablePadre.nombre}</span>
+                                                        <span className="text-gray-500 dark:text-gray-400 text-xs font-mono">({(p as any).prestablePadre.codigo})</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400 dark:text-gray-500 italic">-</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-gray-700 dark:text-gray-300 text-sm">
+                                                {(p as any).productosRelacionados && (p as any).productosRelacionados.length > 0 ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        {(p as any).productosRelacionados.map((pr: any) => (
+                                                            <span key={pr.id} className="flex items-center gap-1 text-xs">
+                                                                {pr.es_principal && <span className="text-yellow-500">⭐</span>}
+                                                                <span>{pr.producto?.nombre || `#${pr.producto_id}`}</span>
+                                                                {pr.producto?.sku && <span className="text-gray-500 dark:text-gray-400">({pr.producto.sku})</span>}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 dark:text-gray-500 italic">-</span>
+                                                )}
                                             </TableCell>
                                             {/*<TableCell className="text-gray-900 dark:text-gray-100 font-medium">
                                                 Bs {Number(p.precios?.find((pr) => pr.tipo_precio === 'PRESTAMO')?.valor || 0).toFixed(2)}
@@ -935,34 +1204,36 @@ export default function PrestablesIndex() {
                                             </TableCell> */}
                                             <TableCell>
                                                 <span
-                                                    className={`inline-flex px-2 py-1 rounded-full text-sm font-medium ${
-                                                        p.activo
+                                                    className={`inline-flex px-2 py-1 rounded-full text-sm font-medium ${p.activo
                                                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                                             : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {p.activo ? '✅ Activo' : '❌ Inactivo'}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <button
-                                                    onClick={() => handleView(p)}
-                                                    className="p-1 hover:bg-blue-200 dark:hover:bg-blue-900/30 rounded transition text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                                >
-                                                    <Eye size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEdit(p)}
-                                                    className="p-1 hover:bg-blue-200 dark:hover:bg-blue-900/30 rounded transition text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(p)}
-                                                    className="p-1 hover:bg-red-200 dark:hover:bg-red-900/30 rounded transition text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                                                            <MoreVertical size={18} />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuItem onClick={() => handleView(p)} className="cursor-pointer flex items-center gap-2">
+                                                            <Eye size={16} />
+                                                            <span>Ver detalles</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleEdit(p)} className="cursor-pointer flex items-center gap-2">
+                                                            <Edit2 size={16} />
+                                                            <span>Editar</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleDeleteClick(p)} className="cursor-pointer flex items-center gap-2 text-red-600 dark:text-red-400">
+                                                            <Trash2 size={16} />
+                                                            <span>Eliminar</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}

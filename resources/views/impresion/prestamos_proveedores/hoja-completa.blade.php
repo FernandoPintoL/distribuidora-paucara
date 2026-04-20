@@ -39,6 +39,14 @@
                     {{ $documento->es_compra ? 'COMPRA' : 'PRÉSTAMO' }}
                 </td>
             </tr>
+            @if(!empty($documento->almacen_impresion))
+                <tr>
+                    <td colspan="2">
+                        <strong>Almacén:</strong>
+                        {{ $documento->almacen_impresion->nombre ?? 'N/D' }}
+                    </td>
+                </tr>
+            @endif
             @if($documento->compra)
                 <tr>
                     <td colspan="2">
@@ -57,6 +65,7 @@
                     <th class="text-left">Prestable</th>
                     <th class="text-right">Cantidad recibida</th>
                     <th class="text-right">Cantidad devuelta</th>
+                    <th class="text-right">Cantidad dañada</th>
                     <th class="text-right">Cantidad pendiente</th>
                 </tr>
             </thead>
@@ -66,6 +75,7 @@
                         @php
                             $cantidadPrestada = $detalle->cantidad_prestada ?? 0;
                             $cantidadDevuelta = $detalle->devolucionDetalles->sum('cantidad_devuelta') ?? 0;
+                            $cantidadDaniada = ($detalle->devolucionDetalles->sum('cantidad_dañada_parcial') ?? 0) + ($detalle->devolucionDetalles->sum('cantidad_dañada_total') ?? 0);
                             $cantidadPendiente = $cantidadPrestada - $cantidadDevuelta;
                         @endphp
                         <tr>
@@ -79,19 +89,26 @@
                                 {{ number_format($cantidadDevuelta, 0) }}
                             </td>
                             <td class="text-right">
+                                {{ number_format($cantidadDaniada, 0) }}
+                            </td>
+                            <td class="text-right">
                                 {{ number_format($cantidadPendiente, 0) }}
                             </td>
                         </tr>
                     @endforeach
                 @else
                     <tr>
-                        <td colspan="4" class="text-center">
+                        <td colspan="5" class="text-center">
                             Sin detalles registrados
                         </td>
                     </tr>
                 @endif
             </tbody>
         </table>
+
+        <p class="text-xs mb-4">
+            <strong>Nota:</strong> La cantidad dañada es solo informativa y proviene de <code>devolucion_proveedor_detalle</code>.
+        </p>
 
         <h2 class="text-base font-semibold mb-2">Información adicional</h2>
 
@@ -100,6 +117,12 @@
                 <td>
                     <strong>Garantía:</strong>
                     Bs {{ number_format($documento->monto_garantia ?? 0, 2) }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>Daño Total Cobrado:</strong>
+                    Bs {{ number_format($documento->monto_cobrado_danio_total_impresion ?? 0, 2) }}
                 </td>
             </tr>
             <tr>

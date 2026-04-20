@@ -126,7 +126,7 @@ class PrestamoVendidoController extends Controller
                 'observaciones' => 'nullable|string|max:1000',
                 'detalles' => 'nullable|array',
                 'detalles.*.prestable_id' => 'required|exists:prestables,id',
-                'detalles.*.almacen_id' => 'required|exists:almacenes,id',
+                'detalles.*.almacenes_prestables_id' => 'required|exists:almacenes_prestables,id',
                 'detalles.*.cantidad' => 'required|integer|min:1',
                 'detalles.*.precio_unitario' => 'required|numeric|min:0',
                 'detalles.*.observaciones' => 'nullable|string|max:500',
@@ -147,7 +147,7 @@ class PrestamoVendidoController extends Controller
                     $this->service->agregarDetalle(
                         venta: $venta,
                         prestableId: $detalle['prestable_id'],
-                        almacenId: $detalle['almacen_id'],
+                        almacenId: $detalle['almacenes_prestables_id'],
                         cantidad: $detalle['cantidad'],
                         precioUnitario: $detalle['precio_unitario'],
                         observaciones: $detalle['observaciones'] ?? null,
@@ -189,7 +189,7 @@ class PrestamoVendidoController extends Controller
 
             $validated = $request->validate([
                 'prestable_id' => 'required|exists:prestables,id',
-                'almacen_id' => 'required|exists:almacenes,id',
+                'almacenes_prestables_id' => 'required|exists:almacenes_prestables,id',
                 'cantidad' => 'required|integer|min:1',
                 'precio_unitario' => 'required|numeric|min:0',
                 'observaciones' => 'nullable|string|max:500',
@@ -198,7 +198,7 @@ class PrestamoVendidoController extends Controller
             $detalle = $this->service->agregarDetalle(
                 venta: $venta,
                 prestableId: $validated['prestable_id'],
-                almacenId: $validated['almacen_id'],
+                almacenId: $validated['almacenes_prestables_id'],
                 cantidad: $validated['cantidad'],
                 precioUnitario: $validated['precio_unitario'],
                 observaciones: $validated['observaciones'] ?? null,

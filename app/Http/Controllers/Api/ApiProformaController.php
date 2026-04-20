@@ -2905,6 +2905,31 @@ class ApiProformaController extends Controller
                     }
                 }
 
+                // ✅ NUEVO: Actualizar proforma con datos de coordinación si se proporcionan
+                if ($request->has('fecha_entrega_confirmada') || $request->has('hora_entrega_confirmada')) {
+                    $datosCoordinacion = [];
+
+                    if ($request->filled('fecha_entrega_confirmada')) {
+                        $datosCoordinacion['fecha_entrega_confirmada'] = $request->input('fecha_entrega_confirmada');
+                    }
+
+                    if ($request->filled('hora_entrega_confirmada')) {
+                        $datosCoordinacion['hora_entrega_confirmada'] = $request->input('hora_entrega_confirmada');
+                    }
+
+                    if ($request->filled('hora_entrega_confirmada_fin')) {
+                        $datosCoordinacion['hora_entrega_confirmada_fin'] = $request->input('hora_entrega_confirmada_fin');
+                    }
+
+                    if (!empty($datosCoordinacion)) {
+                        $proforma->update($datosCoordinacion);
+                        Log::info('✅ [convertirAVenta] Proforma actualizada con datos de coordinación', [
+                            'proforma_id' => $proforma->id,
+                            'datos_coordinacion' => $datosCoordinacion,
+                        ]);
+                    }
+                }
+
                 // ✅ NUEVO (2026-04-05): Si está PENDIENTE, aprobarlo automáticamente antes de convertir
                 // Esto combina PASO 1 (aprobar) + PASO 2 (convertir) en UNA transacción
                 if ($proforma->estado === 'PENDIENTE') {

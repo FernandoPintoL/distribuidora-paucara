@@ -38,12 +38,12 @@ class ReportesController extends Controller
     public function reporteStock(Request $request): JsonResponse
     {
         try {
-            $almacenId = $request->integer('almacen_id') ?? auth()->user()->empresa->almacen_id ?? 1;
+            $almacenId = $request->integer('almacenes_prestables_id') ?? auth()->user()->empresa->almacenes_prestables_id ?? 1;
 
-            $stocks = PrestableStock::where('almacen_id', $almacenId)
+            $stocks = PrestableStock::where('almacenes_prestables_id', $almacenId)
                 ->with(['prestable' => function ($q) {
                     $q->select('id', 'nombre', 'codigo', 'tipo', 'capacidad');
-                }, 'almacen'])
+                }, 'almacenPrestable'])
                 ->get()
                 ->map(function ($stock) {
                     return [
@@ -53,18 +53,18 @@ class ReportesController extends Controller
                         'prestable_tipo' => $stock->prestable->tipo,
                         'cantidad_disponible' => $stock->cantidad_disponible,
                         'cantidad_en_prestamo_cliente' => $stock->cantidad_en_prestamo_cliente,
-                        'cantidad_en_prestamo_proveedor' => $stock->cantidad_en_prestamo_proveedor,
+                        'cantidad_que_debo_devolver' => $stock->cantidad_que_debo_devolver,
                         'cantidad_vendida' => $stock->cantidad_vendida,
                         'cantidad_total' => $stock->cantidad_disponible +
                                            $stock->cantidad_en_prestamo_cliente +
-                                           $stock->cantidad_en_prestamo_proveedor +
+                                           $stock->cantidad_que_debo_devolver +
                                            $stock->cantidad_vendida,
                     ];
                 });
 
             return response()->json([
                 'success' => true,
-                'almacen_id' => $almacenId,
+                'almacenes_prestables_id' => $almacenId,
                 'data' => $stocks,
             ]);
         } catch (\Exception $e) {
@@ -80,10 +80,10 @@ class ReportesController extends Controller
     public function reporteStockBajo(Request $request): JsonResponse
     {
         try {
-            $almacenId = $request->integer('almacen_id') ?? auth()->user()->empresa->almacen_id ?? 1;
+            $almacenId = $request->integer('almacenes_prestables_id') ?? auth()->user()->empresa->almacenes_prestables_id ?? 1;
             $limite = $request->integer('limite', 10);
 
-            $stockBajo = PrestableStock::where('almacen_id', $almacenId)
+            $stockBajo = PrestableStock::where('almacenes_prestables_id', $almacenId)
                 ->where('cantidad_disponible', '<', $limite)
                 ->with(['prestable' => function ($q) {
                     $q->select('id', 'nombre', 'codigo', 'tipo');
@@ -97,7 +97,7 @@ class ReportesController extends Controller
                         'cantidad_disponible' => $stock->cantidad_disponible,
                         'cantidad_total' => $stock->cantidad_disponible +
                                            $stock->cantidad_en_prestamo_cliente +
-                                           $stock->cantidad_en_prestamo_proveedor,
+                                           $stock->cantidad_que_debo_devolver,
                     ];
                 });
 
@@ -120,22 +120,22 @@ class ReportesController extends Controller
     public function stockBajoPrestables(Request $request): JsonResponse
     {
         try {
-            $almacenId = $request->integer('almacen_id') ?? auth()->user()->empresa->almacen_id ?? 1;
+            $almacenId = $request->integer('almacenes_prestables_id') ?? auth()->user()->empresa->almacenes_prestables_id ?? 1;
             $limite = $request->integer('limite', 10);
 
             // Obtener prestables con stock bajo
             $prestables = Prestable::whereHas('stocks', function ($q) use ($almacenId, $limite) {
-                $q->where('almacen_id', $almacenId)
+                $q->where('almacenes_prestables_id', $almacenId)
                   ->where('cantidad_disponible', '<', $limite);
             })
             ->with(['stocks' => function ($q) use ($almacenId) {
-                $q->where('almacen_id', $almacenId);
+                $q->where('almacenes_prestables_id', $almacenId);
             }])
             ->get();
 
             return response()->json([
                 'success' => true,
-                'almacen_id' => $almacenId,
+                'almacenes_prestables_id' => $almacenId,
                 'limite' => $limite,
                 'data' => $prestables,
             ]);
@@ -285,23 +285,23 @@ class ReportesController extends Controller
     public function reporteResumen(Request $request): JsonResponse
     {
         try {
-            $almacenId = $request->integer('almacen_id') ?? auth()->user()->empresa->almacen_id ?? 1;
+            $almacenId = $request->integer('almacenes_prestables_id') ?? auth()->user()->empresa->almacenes_prestables_id ?? 1;
 
             // Total de canastillas en el sistema
-            $totalCanastillas = PrestableStock::where('almacen_id', $almacenId)
-                ->sum(DB::raw('cantidad_disponible + cantidad_en_prestamo_cliente + cantidad_en_prestamo_proveedor + cantidad_vendida'));
+            $totalCanastillas = PrestableStock::where('almacenes_prestables_id', $almacenId)
+                ->sum(DB::raw('cantidad_disponible + cantidad_en_prestamo_cliente + cantidad_que_debo_devolver + cantidad_vendida'));
 
             // Stock disponible
-            $stockDisponible = PrestableStock::where('almacen_id', $almacenId)->sum('cantidad_disponible');
+            $stockDisponible = PrestableStock::where('almacenes_prestables_id', $almacenId)->sum('cantidad_disponible');
 
             // En préstamo a clientes
-            $enPrestamoClientes = PrestableStock::where('almacen_id', $almacenId)->sum('cantidad_en_prestamo_cliente');
+            $enPrestamoClientes = PrestableStock::where('almacenes_prestables_id', $almacenId)->sum('cantidad_en_prestamo_cliente');
 
             // Deuda a proveedores
-            $deudeaProveedores = PrestableStock::where('almacen_id', $almacenId)->sum('cantidad_en_prestamo_proveedor');
+            $deudeaProveedores = PrestableStock::where('almacenes_prestables_id', $almacenId)->sum('cantidad_que_debo_devolver');
 
             // Vendido
-            $vendido = PrestableStock::where('almacen_id', $almacenId)->sum('cantidad_vendida');
+            $vendido = PrestableStock::where('almacenes_prestables_id', $almacenId)->sum('cantidad_vendida');
 
             // Préstamos activos
             $prestamosActivosClientes = PrestamoCliente::where('estado', 'ACTIVO')->count();

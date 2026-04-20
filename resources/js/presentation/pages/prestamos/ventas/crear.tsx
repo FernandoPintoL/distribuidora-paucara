@@ -9,7 +9,7 @@ import { Search, X, CheckCircle, Trash2, AlertCircle } from 'lucide-react';
 interface DetalleLocal {
     id: string; // ID temporal único
     prestable_id: number;
-    almacen_id: number;
+    almacenes_prestables_id: number;
     cantidad: number;
     precio_unitario: number;
     subtotal: number;
@@ -23,9 +23,51 @@ interface Prestable {
     codigo: string;
     tipo?: string;
     capacidad?: number;
-    stocks?: Array<{ almacen_id: number; almacen?: { id: number; nombre: string }; cantidad_disponible: number }>;
-    embasesRelacionados?: Array<{ id: number; nombre: string; codigo: string; tipo?: string; capacidad?: number; stocks?: Array<{ almacen_id: number; almacen?: { id: number; nombre: string }; cantidad_disponible: number }> }>;
+    precios?: Array<{
+        tipo_precio?: string;
+        valor?: number;
+        activo?: boolean;
+    }>;
+    stocks?: Array<{
+        almacen_id?: number;
+        almacenes_prestables_id?: number;
+        almacen?: { id: number; nombre: string };
+        almacen_prestable?: { id: number; nombre: string };
+        almacenPrestable?: { id: number; nombre: string };
+        cantidad_disponible: number;
+    }>;
+    embasesRelacionados?: Array<{
+        id: number;
+        nombre: string;
+        codigo: string;
+        tipo?: string;
+        capacidad?: number;
+        stocks?: Array<{
+            almacen_id?: number;
+            almacenes_prestables_id?: number;
+            almacen?: { id: number; nombre: string };
+            almacen_prestable?: { id: number; nombre: string };
+            almacenPrestable?: { id: number; nombre: string };
+            cantidad_disponible: number;
+        }>;
+    }>;
 }
+
+interface AlmacenPrestableOption {
+    id: number;
+    nombre: string;
+    stock: number;
+}
+
+const getPrecioVentaPrestable = (prestable?: Prestable): number => {
+    if (!prestable) return 0;
+
+    const precioVenta = (prestable.precios || []).find(
+        (p) => String(p?.tipo_precio || '').toUpperCase() === 'VENTA' && p?.activo !== false
+    );
+
+    return Number(precioVenta?.valor || 0);
+};
 
 interface Cliente {
     id: number;
@@ -135,9 +177,65 @@ export default function CrearVentaPrestable() {
         }
     };
 
+    const getAlmacenesConStock = (prestable?: Prestable): AlmacenPrestableOption[] => {
+        const almacenesMap = new Map<number, AlmacenPrestableOption>();
+
+        (prestable?.stocks || []).forEach((stock) => {
+            const stockDisponible = Number(stock.cantidad_disponible || 0);
+            if (stockDisponible <= 0) return;
+
+            const almacenId = Number(stock.almacenes_prestables_id || stock.almacen_id || 0);
+            if (almacenId <= 0) return;
+
+            const nombre =
+                stock.almacen_prestable?.nombre ||
+                stock.almacenPrestable?.nombre ||
+                stock.almacen?.nombre ||
+                `Almacén ${almacenId}`;
+
+            const acumulado = almacenesMap.get(almacenId);
+            if (acumulado) {
+                acumulado.stock += stockDisponible;
+                almacenesMap.set(almacenId, acumulado);
+            } else {
+                almacenesMap.set(almacenId, {
+                    id: almacenId,
+                    nombre,
+                    stock: stockDisponible,
+                });
+            }
+        });
+
+        return Array.from(almacenesMap.values());
+    };
+
+    const getAlmacenesDetalle = (prestableId: number): AlmacenPrestableOption[] => {
+        const prestable = prestables.find((p) => p.id === prestableId);
+        return getAlmacenesConStock(prestable);
+    };
+
+    const actualizarAlmacenDetalle = (detalleId: string, nuevoAlmacenId: number) => {
+        setDetalles((prev) =>
+            prev.map((d) => {
+                if (d.id !== detalleId) return d;
+
+                const almacenSeleccionado =
+                    getAlmacenesDetalle(d.prestable_id).find((a) => a.id === nuevoAlmacenId) ||
+                    { id: nuevoAlmacenId, nombre: `Almacén ${nuevoAlmacenId}`, stock: 0 };
+
+                return {
+                    ...d,
+                    almacenes_prestables_id: nuevoAlmacenId,
+                    almacen: { id: almacenSeleccionado.id, nombre: almacenSeleccionado.nombre },
+                };
+            })
+        );
+    };
+
     const seleccionarPrestable = (prestable: Prestable) => {
         // Validar que tenga stock
-        const almacenConStock = prestable.stocks?.find((s) => (s.cantidad_disponible ?? 0) > 0);
+        const almacenesDisponibles = getAlmacenesConStock(prestable);
+        const almacenConStock = almacenesDisponibles[0];
         if (!almacenConStock) {
             alert('❌ Este prestable no tiene stock disponible');
             return;
@@ -148,42 +246,45 @@ export default function CrearVentaPrestable() {
         console.log('🔗 Embases relacionados:', prestable.embasesRelacionados);
 
         const nuevosDetalles: DetalleLocal[] = [];
+        const precioVentaPrestable = getPrecioVentaPrestable(prestable);
 
         // Agregar el prestable seleccionado
         const nuevoDetalle: DetalleLocal = {
             id: Date.now().toString(),
             prestable_id: prestable.id,
-            almacen_id: almacenConStock.almacen_id,
+            almacenes_prestables_id: almacenConStock.id,
             cantidad: 1,
-            precio_unitario: 0,
-            subtotal: 0,
+            precio_unitario: precioVentaPrestable,
+            subtotal: precioVentaPrestable,
             prestable: {
                 id: prestable.id,
                 nombre: prestable.nombre,
                 codigo: prestable.codigo,
             },
-            almacen: almacenConStock.almacen,
+            almacen: { id: almacenConStock.id, nombre: almacenConStock.nombre },
         };
         nuevosDetalles.push(nuevoDetalle);
 
         // Si tiene embases relacionados, agregarlos automáticamente
         if (prestable.embasesRelacionados && prestable.embasesRelacionados.length > 0) {
             prestable.embasesRelacionados.forEach((embase) => {
-                const almacenEmbase = embase.stocks?.find((s) => (s.cantidad_disponible ?? 0) > 0);
+                const almacenesEmbase = getAlmacenesConStock(embase as Prestable);
+                const almacenEmbase = almacenesEmbase[0];
                 if (almacenEmbase) {
+                    const precioVentaEmbase = getPrecioVentaPrestable(embase as Prestable);
                     const detalleEmbase: DetalleLocal = {
                         id: (Date.now() + Math.random()).toString(),
                         prestable_id: embase.id,
-                        almacen_id: almacenEmbase.almacen_id,
+                        almacenes_prestables_id: almacenEmbase.id,
                         cantidad: 1, // 1 embase por canastilla
-                        precio_unitario: 0,
-                        subtotal: 0,
+                        precio_unitario: precioVentaEmbase,
+                        subtotal: precioVentaEmbase,
                         prestable: {
                             id: embase.id,
                             nombre: embase.nombre,
                             codigo: embase.codigo,
                         },
-                        almacen: almacenEmbase.almacen,
+                        almacen: { id: almacenEmbase.id, nombre: almacenEmbase.nombre },
                     };
                     nuevosDetalles.push(detalleEmbase);
                     console.log('✅ Embase agregado automáticamente:', embase.nombre);
@@ -191,7 +292,7 @@ export default function CrearVentaPrestable() {
             });
         }
 
-        setDetalles([...detalles, ...nuevosDetalles]);
+        setDetalles((prev) => [...prev, ...nuevosDetalles]);
         setBusqueda('');
         setSugerencias([]);
         setShowSugerencias(false);
@@ -237,7 +338,7 @@ export default function CrearVentaPrestable() {
             // Preparar detalles para enviar (sin el ID temporal)
             const detallesParaEnviar = detalles.map((d) => ({
                 prestable_id: d.prestable_id,
-                almacen_id: d.almacen_id,
+                almacenes_prestables_id: d.almacenes_prestables_id,
                 cantidad: d.cantidad,
                 precio_unitario: d.precio_unitario,
             }));
@@ -395,7 +496,22 @@ export default function CrearVentaPrestable() {
                                             </p>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                            {detalle.almacen?.nombre ?? '—'}
+                                            <select
+                                                value={detalle.almacenes_prestables_id}
+                                                onChange={(e) =>
+                                                    actualizarAlmacenDetalle(
+                                                        detalle.id,
+                                                        Number(e.target.value)
+                                                    )
+                                                }
+                                                className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                                            >
+                                                {getAlmacenesDetalle(detalle.prestable_id).map((almacen) => (
+                                                    <option key={`${detalle.id}-${almacen.id}`} value={almacen.id}>
+                                                        {almacen.nombre} | Stock: {almacen.stock}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </td>
                                         <td className="px-4 py-3">
                                             <input

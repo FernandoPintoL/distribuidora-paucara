@@ -11,6 +11,7 @@
             box-sizing: border-box;
         }
         body {
+                            <th class="text-right">Dañ</th>
             font-family: Arial, sans-serif;
             background: white;
             padding: 0;
@@ -19,12 +20,14 @@
             width: 29.7cm;
             height: 21cm;
             background: white;
+                                $cantidadDaniada = ($detalle->devolucionDetalles->sum('cantidad_dañada_parcial') ?? 0) + ($detalle->devolucionDetalles->sum('cantidad_dañada_total') ?? 0);
             page-break-after: always;
             padding: 0;
         }
         .copia {
             width: 47%;
             padding: 10px;
+                                <td class="text-right">{{ number_format($cantidadDaniada, 0) }}</td>
             box-sizing: border-box;
             border-right: 2px dashed #999;
             font-size: 11px;
@@ -33,6 +36,10 @@
             float: left;
             margin-right: 1%;
         }
+
+            <div class="observaciones">
+                <strong>Nota:</strong> La cantidad dañada es solo informativa y proviene de <code>devolucion_proveedor_detalle</code>.
+            </div>
         .copia:last-child {
             border-right: none;
             float: right;
@@ -152,6 +159,9 @@
             <div class="info-row">
                 <strong>Garantía:</strong> Bs {{ number_format($documento->monto_garantia ?? 0, 2) }}
             </div>
+            <div class="info-row">
+                <strong>Daño Total Cobrado:</strong> Bs {{ number_format($documento->monto_cobrado_danio_total_impresion ?? 0, 2) }}
+            </div>
 
             <!-- Fechas -->
             <div class="info-row">
@@ -165,6 +175,11 @@
             <div class="info-row">
                 <strong>Tipo:</strong> {{ $documento->es_compra ? 'COMPRA' : 'PRÉSTAMO' }}
             </div>
+            @if(!empty($documento->almacen_impresion))
+                <div class="info-row">
+                    <strong>Almacén:</strong> {{ $documento->almacen_impresion->nombre ?? 'N/D' }}
+                </div>
+            @endif
 
             <!-- Estado -->
             <div class="estado-box">{{ $estadoClass }}</div>
@@ -262,6 +277,9 @@
             <div class="info-row">
                 <strong>Garantía:</strong> Bs {{ number_format($documento->monto_garantia ?? 0, 2) }}
             </div>
+            <div class="info-row">
+                <strong>Daño Total Cobrado:</strong> Bs {{ number_format($documento->monto_cobrado_danio_total_impresion ?? 0, 2) }}
+            </div>
 
             <!-- Fechas -->
             <div class="info-row">
@@ -275,6 +293,11 @@
             <div class="info-row">
                 <strong>Tipo:</strong> {{ $documento->es_compra ? 'COMPRA' : 'PRÉSTAMO' }}
             </div>
+            @if(!empty($documento->almacen_impresion))
+                <div class="info-row">
+                    <strong>Almacén:</strong> {{ $documento->almacen_impresion->nombre ?? 'N/D' }}
+                </div>
+            @endif
 
             <!-- Estado -->
             <div class="estado-box">{{ $estadoClass }}</div>

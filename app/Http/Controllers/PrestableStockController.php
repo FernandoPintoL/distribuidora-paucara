@@ -18,25 +18,25 @@ class PrestableStockController extends Controller
     {
         try {
             $stocks = $prestable->stocks()
-                ->with('almacen:id,nombre')
+                ->with('almacenPrestable:id,nombre')
                 ->get()
                 ->map(function ($stock) use ($prestable) {
                     return [
                         'id' => $stock->id,
-                        'almacen_id' => $stock->almacen_id,
-                        'almacen' => $stock->almacen,
+                        'almacenes_prestables_id' => $stock->almacenes_prestables_id,
+                        'almacenPrestable' => $stock->almacenPrestable,
                         'cantidad_disponible' => $stock->cantidad_disponible,
                         'cantidad_en_prestamo_cliente' => $stock->cantidad_en_prestamo_cliente,
-                        'cantidad_en_prestamo_proveedor' => $stock->cantidad_en_prestamo_proveedor,
+                        'cantidad_que_debo_devolver' => $stock->cantidad_que_debo_devolver,
                         'cantidad_vendida' => $stock->cantidad_vendida,
                         // Calcular totales considerando capacidad
                         'total_unidades' => $this->calcularUnidades($stock->cantidad_disponible, $prestable->capacidad),
                         'total_en_prestamo_cliente' => $this->calcularUnidades($stock->cantidad_en_prestamo_cliente, $prestable->capacidad),
-                        'total_en_prestamo_proveedor' => $this->calcularUnidades($stock->cantidad_en_prestamo_proveedor, $prestable->capacidad),
+                        'total_en_prestamo_proveedor' => $this->calcularUnidades($stock->cantidad_que_debo_devolver, $prestable->capacidad),
                         'total_vendida' => $this->calcularUnidades($stock->cantidad_vendida, $prestable->capacidad),
                         'total_general' => $this->calcularUnidades(
                             $stock->cantidad_disponible + $stock->cantidad_en_prestamo_cliente +
-                            $stock->cantidad_en_prestamo_proveedor + $stock->cantidad_vendida,
+                            $stock->cantidad_que_debo_devolver + $stock->cantidad_vendida,
                             $prestable->capacidad
                         ),
                     ];
@@ -68,7 +68,7 @@ class PrestableStockController extends Controller
             $validated = $request->validate([
                 'cantidad_disponible' => 'nullable|integer|min:0',
                 'cantidad_en_prestamo_cliente' => 'nullable|integer|min:0',
-                'cantidad_en_prestamo_proveedor' => 'nullable|integer|min:0',
+                'cantidad_que_debo_devolver' => 'nullable|integer|min:0',
                 'cantidad_vendida' => 'nullable|integer|min:0',
             ]);
 
@@ -95,18 +95,18 @@ class PrestableStockController extends Controller
     {
         try {
             $validated = $request->validate([
-                'almacen_id' => 'required|exists:almacenes,id|unique:prestable_stock,almacen_id,NULL,id,prestable_id,' . $prestable->id,
+                'almacenes_prestables_id' => 'required|exists:almacenes_prestables,id|unique:prestable_stock,almacenes_prestables_id,NULL,id,prestable_id,' . $prestable->id,
                 'cantidad_disponible' => 'nullable|integer|min:0',
                 'cantidad_en_prestamo_cliente' => 'nullable|integer|min:0',
-                'cantidad_en_prestamo_proveedor' => 'nullable|integer|min:0',
+                'cantidad_que_debo_devolver' => 'nullable|integer|min:0',
                 'cantidad_vendida' => 'nullable|integer|min:0',
             ]);
 
             $stock = $prestable->stocks()->create([
-                'almacen_id' => $validated['almacen_id'],
+                'almacenes_prestables_id' => $validated['almacenes_prestables_id'],
                 'cantidad_disponible' => $validated['cantidad_disponible'] ?? 0,
                 'cantidad_en_prestamo_cliente' => $validated['cantidad_en_prestamo_cliente'] ?? 0,
-                'cantidad_en_prestamo_proveedor' => $validated['cantidad_en_prestamo_proveedor'] ?? 0,
+                'cantidad_que_debo_devolver' => $validated['cantidad_que_debo_devolver'] ?? 0,
                 'cantidad_vendida' => $validated['cantidad_vendida'] ?? 0,
             ]);
 

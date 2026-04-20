@@ -8,7 +8,7 @@ import { Badge } from '@/presentation/components/ui/badge';
 interface Ajuste {
     id: number;
     prestable: { id: number; nombre: string; codigo: string };
-    almacen: { id: number; nombre: string };
+    almacen_prestable: { id: number; nombre: string };
     usuario: { id: number; name: string };
     cantidad_disponible_antes: number;
     cantidad_en_prestamo_cliente_antes: number;
@@ -66,13 +66,18 @@ export default function HistorialAjustes() {
     };
 
     const handleReimprimir = (ajuste: Ajuste) => {
+        if (!ajuste.prestable?.id) {
+            console.error('Prestable no disponible');
+            return;
+        }
+
         const documentoUrl = new URL(
             `/api/prestables/${ajuste.prestable.id}/ajuste-documento`,
             window.location.origin
         );
 
         documentoUrl.searchParams.append('fecha', new Date(ajuste.created_at).toLocaleString('es-ES'));
-        documentoUrl.searchParams.append('almacen', ajuste.almacen.nombre);
+        documentoUrl.searchParams.append('almacen', ajuste.almacen_prestable?.nombre || 'N/A');
 
         // Valores antes
         documentoUrl.searchParams.append('disponible_antes', ajuste.cantidad_disponible_antes.toString());
@@ -97,7 +102,7 @@ export default function HistorialAjustes() {
     };
 
     return (
-        <AppLayout breadcrumbs={[{ label: 'Préstamos', href: '/prestamos' }, { label: 'Historial de Ajustes' }]}>
+        <AppLayout breadcrumbs={[{ title: 'Préstamos', href: '/prestamos' }, { title: 'Historial de Ajustes', href: '/prestamos/ajustes/historial' }]}>
             <Head title="Historial de Ajustes de Stock" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
@@ -186,15 +191,15 @@ export default function HistorialAjustes() {
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                                        {ajuste.prestable.nombre}
+                                                        {ajuste.prestable?.nombre || 'Sin prestable'}
                                                     </span>
                                                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                        {ajuste.prestable.codigo}
+                                                        {ajuste.prestable?.codigo || '-'}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                                                {ajuste.almacen.nombre}
+                                                {ajuste.almacen_prestable?.nombre || '-'}
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <span
@@ -208,7 +213,7 @@ export default function HistorialAjustes() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                                                {ajuste.usuario.name}
+                                                {ajuste.usuario?.name || 'Sin usuario'}
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <Button

@@ -19,7 +19,7 @@ class MovimientoPrestableService
         try {
             $movimiento = MovimientoPrestable::create([
                 'prestable_stock_id' => $data['prestable_stock_id'],
-                'almacen_id' => $data['almacen_id'],
+                'almacenes_prestables_id' => $data['almacenes_prestables_id'],
                 'usuario_id' => $data['usuario_id'] ?? auth()->id(),
                 'tipo' => $data['tipo'],
                 'cantidad' => $data['cantidad'] ?? 0,
@@ -81,7 +81,7 @@ class MovimientoPrestableService
 
         return $this->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $almacenId,
+            'almacenes_prestables_id' => $almacenId,
             'usuario_id' => auth()->id(),
             'tipo' => 'AJUSTE_DIRECTO',
             'cantidad' => $totalDespues - $totalAntes,
@@ -113,21 +113,28 @@ class MovimientoPrestableService
         ?string $observaciones = null,
         ?int $ajusteId = null,
     ): MovimientoPrestable {
+        // Compatibilidad: aceptar categorías legacy y normalizarlas.
+        $categoriaNormalizada = match ($categoria) {
+            'prestamo_cliente_activo' => 'prestamo_cliente',
+            'prestamo_proveedor_activo' => 'prestamo_proveedor',
+            default => $categoria,
+        };
+
         // Valores antes
         $disponibleAntes = $stock->cantidad_disponible;
-        $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-        $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
-        $vendidaAntes = $stock->cantidad_vendida;
+        $prestamoClienteAntes = $stock->cantidad_prestamo_cliente_activo;
+        $prestamoProveedorAntes = $stock->cantidad_prestamo_proveedor_activo;
+        $vendidaAntes = 0;
 
         // Valores después (con el ajuste aplicado)
-        $disponibleDespues = $disponibleAntes + (($categoria === 'disponible') ? $cantidad : 0);
-        $prestamoClienteDespues = $prestamoClienteAntes + (($categoria === 'prestamo_cliente') ? $cantidad : 0);
-        $prestamoProveedorDespues = $prestamoProveedorAntes + (($categoria === 'prestamo_proveedor') ? $cantidad : 0);
-        $vendidaDespues = $vendidaAntes + (($categoria === 'vendida') ? $cantidad : 0);
+        $disponibleDespues = $disponibleAntes + (($categoriaNormalizada === 'disponible') ? $cantidad : 0);
+        $prestamoClienteDespues = $prestamoClienteAntes + (($categoriaNormalizada === 'prestamo_cliente') ? $cantidad : 0);
+        $prestamoProveedorDespues = $prestamoProveedorAntes + (($categoriaNormalizada === 'prestamo_proveedor') ? $cantidad : 0);
+        $vendidaDespues = 0;
 
         return $this->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $almacenId,
+            'almacenes_prestables_id' => $almacenId,
             'usuario_id' => auth()->id(),
             'tipo' => 'AJUSTE_RELATIVO',
             'cantidad' => $cantidad,
@@ -139,7 +146,7 @@ class MovimientoPrestableService
             'prestamo_cliente_posterior' => $prestamoClienteDespues,
             'prestamo_proveedor_posterior' => $prestamoProveedorDespues,
             'vendida_posterior' => $vendidaDespues,
-            'categoria_afectada' => $categoria,
+            'categoria_afectada' => $categoriaNormalizada,
             'motivo' => $motivo,
             'observaciones' => $observaciones,
             'numero_referencia' => $ajusteId ? "AJUSTE-{$ajusteId}" : null,
@@ -182,8 +189,8 @@ class MovimientoPrestableService
             $query->where('prestable_stock_id', $filtros['prestable_stock_id']);
         }
 
-        if (isset($filtros['almacen_id'])) {
-            $query->where('almacen_id', $filtros['almacen_id']);
+        if (isset($filtros['almacenes_prestables_id'])) {
+            $query->where('almacenes_prestables_id', $filtros['almacenes_prestables_id']);
         }
 
         if (isset($filtros['usuario_id'])) {

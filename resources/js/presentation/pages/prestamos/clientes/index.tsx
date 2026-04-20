@@ -86,10 +86,88 @@ export default function PrestamosClientesIndex() {
         detalles: [] as Array<{
             prestamo_cliente_detalle_id: number;
             cantidad_devuelta: number;
-            cantidad_dañada_parcial: number;
             cantidad_dañada_total: number;
         }>,
     });
+
+    const obtenerMontoGarantia = (detalle: any): number => {
+        const condiciones = detalle?.prestable?.condiciones;
+        if (!condiciones) return 0;
+
+        if (Array.isArray(condiciones)) {
+            return Number(condiciones?.[0]?.monto_garantia || 0);
+        }
+
+        return Number(condiciones?.monto_garantia || 0);
+    };
+
+    const obtenerMontoDanioTotal = (detalle: any): number => {
+        const normalizarTipoPrecio = (tipo: unknown): string => {
+            return String(tipo || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/\s+/g, '_')
+                .trim();
+        };
+
+        const precios = Array.isArray(detalle?.prestable?.precios) ? detalle.prestable.precios : [];
+        const precioDanio = precios.find((p: any) => {
+            const tipoPrecio = normalizarTipoPrecio(p?.tipo_precio);
+            return tipoPrecio === 'DANO_TOTAL' || (tipoPrecio.includes('DANO') && tipoPrecio.includes('TOTAL'));
+        });
+        if (precioDanio?.valor != null) {
+            return Number(precioDanio.valor) || 0;
+        }
+
+        const condiciones = detalle?.prestable?.condiciones;
+        if (!condiciones) return 0;
+
+        if (Array.isArray(condiciones)) {
+            const condicionActiva = condiciones.find((c: any) => Boolean(c?.activo)) || condiciones?.[0];
+            return Number(condicionActiva?.monto_daño_total || 0);
+        }
+
+        return Number(condiciones?.monto_daño_total || 0);
+    };
+
+    useEffect(() => {
+        if (!selectedPrestamo) return;
+
+        console.group(`🧪 Modal Devolución - Préstamo #${selectedPrestamo.id}`);
+        console.log('📦 selectedPrestamo completo:', selectedPrestamo);
+        console.log('📦 detalles recibidos:', selectedPrestamo.detalles);
+        (selectedPrestamo.detalles || []).forEach((detalle: any, index: number) => {
+            const condiciones = detalle?.prestable?.condiciones;
+            const montoDanio = Array.isArray(condiciones)
+                ? Number(condiciones?.[0]?.monto_daño_total || 0)
+                : Number(condiciones?.monto_daño_total || 0);
+            const montoDanioFallbackPrecios = obtenerMontoDanioTotal(detalle);
+
+            console.log(`🔎 Detalle[${index}]`, {
+                detalle_id: detalle?.id,
+                prestable_id: detalle?.prestable?.id,
+                prestable_nombre: detalle?.prestable?.nombre,
+                condiciones,
+                monto_danio_total_detectado: montoDanio,
+                monto_danio_total_final_usado: montoDanioFallbackPrecios,
+            });
+        });
+        console.groupEnd();
+
+        const montoTotalDanios = devolucionData.detalles.reduce((sum, det) => {
+            const detallePrestamo = selectedPrestamo.detalles?.find((d: any) => d.id === det.prestamo_cliente_detalle_id);
+            const montoDanioUnitario = obtenerMontoDanioTotal(detallePrestamo);
+            return sum + (Number(det.cantidad_dañada_total || 0) * montoDanioUnitario);
+        }, 0);
+
+        if (Number(devolucionData.monto_cobrado_daño_total) !== Number(montoTotalDanios)) {
+            setDevolucionData(prev => ({
+                ...prev,
+                monto_cobrado_daño_total: Number(montoTotalDanios.toFixed(2)),
+            }));
+        }
+    }, [devolucionData.detalles, devolucionData.monto_cobrado_daño_total, selectedPrestamo]);
 
     const agregarDetalleADevolucion = (detalleId: number) => {
         const yaExiste = devolucionData.detalles.find(d => d.prestamo_cliente_detalle_id === detalleId);
@@ -99,7 +177,6 @@ export default function PrestamosClientesIndex() {
                 detalles: [...devolucionData.detalles, {
                     prestamo_cliente_detalle_id: detalleId,
                     cantidad_devuelta: 0,
-                    cantidad_dañada_parcial: 0,
                     cantidad_dañada_total: 0,
                 }],
             });
@@ -161,7 +238,13 @@ export default function PrestamosClientesIndex() {
                 fecha_devolucion: devolucionData.fecha_devolucion,
                 monto_cobrado_daño_total: devolucionData.monto_cobrado_daño_total,
                 observaciones: devolucionData.observaciones,
-                detalles: devolucionData.detalles,
+                detalles: devolucionData.detalles.map((d) => ({
+                    prestamo_cliente_detalle_id: d.prestamo_cliente_detalle_id,
+                    // El backend suma devuelta + dañada_total, por eso enviamos devuelta neta (sin dañados)
+                    cantidad_devuelta: Math.max(0, Number(d.cantidad_devuelta || 0) - Number(d.cantidad_dañada_total || 0)),
+                    cantidad_dañada_parcial: 0,
+                    cantidad_dañada_total: Number(d.cantidad_dañada_total || 0),
+                })),
             };
 
             console.log('📤 Enviando devolución:', payload);
@@ -555,6 +638,15 @@ export default function PrestamosClientesIndex() {
                                     })}
                                 </div> */}
                                 <form onSubmit={handleRegistrarDevolucion} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="p-3 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
+                                        <p className="text-xs text-emerald-700 dark:text-emerald-300">Garantía del préstamo</p>
+                                        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                                            Bs {Number(selectedPrestamo?.monto_garantia || 0).toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+
                                 {/* Tabla Editable de Devoluciones */}
                                 <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                                     <table className="w-full text-sm">
@@ -565,8 +657,10 @@ export default function PrestamosClientesIndex() {
                                                 <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">📥 Devuelto</th>
                                                 <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⏳ Faltante</th>
                                                 <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">✏️ Devolviendo</th>
-                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔴 D.Parcial</th>
                                                 <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">⚫ D.Total</th>
+                                                {/* <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🔐 Garantía</th> */}
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">💸 Daño unit.</th>
+                                                <th className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white">🧮 Subtotal daño</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -575,6 +669,9 @@ export default function PrestamosClientesIndex() {
                                                     sum + (d.cantidad_devuelta + d.cantidad_dañada_parcial + d.cantidad_dañada_total), 0) || 0;
                                                 const cantidadFaltante = detalle.cantidad_prestada - cantidadYaDevuelta;
                                                 const detalleAct = devolucionData.detalles.find(d => d.prestamo_cliente_detalle_id === detalle.id);
+                                                const montoGarantia = obtenerMontoGarantia(detalle);
+                                                const montoDanioUnitario = obtenerMontoDanioTotal(detalle);
+                                                const montoDanioFila = Number(detalleAct?.cantidad_dañada_total || 0) * montoDanioUnitario;
 
                                                 return (
                                                     <tr key={detalle.id} className={`border-b border-gray-200 dark:border-gray-700 ${cantidadFaltante > 0 ? 'hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900 opacity-60'}`}>
@@ -611,9 +708,8 @@ export default function PrestamosClientesIndex() {
                                                                                     );
                                                                                 } else if (cantidadEmbases > 0) {
                                                                                     detallesActualizados = [...detallesActualizados, {
-                                                                                        prestamo_cliente_detalle_id: detalleEmbases.id,
+                                                                                        prestamo_cliente_detalle_id: Number(detalleEmbases.id),
                                                                                         cantidad_devuelta: cantidadEmbases,
-                                                                                        cantidad_dañada_parcial: 0,
                                                                                         cantidad_dañada_total: 0,
                                                                                     }];
                                                                                 }
@@ -631,35 +727,11 @@ export default function PrestamosClientesIndex() {
                                                                                 : [...detallesActualizados, {
                                                                                     prestamo_cliente_detalle_id: detalle.id,
                                                                                     cantidad_devuelta: cantidad,
-                                                                                    cantidad_dañada_parcial: 0,
                                                                                     cantidad_dañada_total: 0,
                                                                                   }],
                                                                         });
                                                                     }}
                                                                     className="w-full px-2 py-1 border border-blue-400 dark:border-blue-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center font-bold focus:ring-2 focus:ring-blue-500"
-                                                                />
-                                                            ) : (
-                                                                <span className="text-gray-400">-</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-center">
-                                                            {detalleAct ? (
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max={detalleAct.cantidad_devuelta || 0}
-                                                                    value={detalleAct.cantidad_dañada_parcial || 0}
-                                                                    onChange={(e) => {
-                                                                        setDevolucionData({
-                                                                            ...devolucionData,
-                                                                            detalles: devolucionData.detalles.map(d =>
-                                                                                d.prestamo_cliente_detalle_id === detalle.id
-                                                                                    ? { ...d, cantidad_dañada_parcial: Number(e.target.value) }
-                                                                                    : d
-                                                                            ),
-                                                                        });
-                                                                    }}
-                                                                    className="w-full px-2 py-1 border border-yellow-400 dark:border-yellow-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-yellow-500"
                                                                 />
                                                             ) : (
                                                                 <span className="text-gray-400">-</span>
@@ -688,6 +760,15 @@ export default function PrestamosClientesIndex() {
                                                                 <span className="text-gray-400">-</span>
                                                             )}
                                                         </td>
+                                                        {/* <td className="px-3 py-2 text-center text-emerald-700 dark:text-emerald-300 font-semibold">
+                                                            Bs {montoGarantia.toFixed(2)}
+                                                        </td> */}
+                                                        <td className="px-3 py-2 text-center text-blue-700 dark:text-blue-300 font-semibold">
+                                                            Bs {montoDanioUnitario.toFixed(2)}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-center text-red-700 dark:text-red-300 font-semibold">
+                                                            Bs {montoDanioFila.toFixed(2)}
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
@@ -706,12 +787,7 @@ export default function PrestamosClientesIndex() {
                                                 min="0"
                                                 step="0.01"
                                                 value={devolucionData.monto_cobrado_daño_total}
-                                                onChange={(e) =>
-                                                    setDevolucionData({
-                                                        ...devolucionData,
-                                                        monto_cobrado_daño_total: Number(e.target.value),
-                                                    })
-                                                }
+                                                readOnly
                                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 text-lg font-semibold"
                                             />
                                         </div>
@@ -937,9 +1013,23 @@ export default function PrestamosClientesIndex() {
                                                             </DropdownMenuItem>
                                                             {(p.estado === 'ACTIVO' || p.estado === 'PARCIALMENTE_DEVUELTO') && (
                                                                 <DropdownMenuItem
-                                                                    onSelect={() => {
-                                                                        setSelectedPrestamo(p);
-                                                                        setShowDevolucionModal(true);
+                                                                    onSelect={async () => {
+                                                                        try {
+                                                                            console.group(`📥 Abrir modal devolución - préstamo #${p.id}`);
+                                                                            console.log('📋 préstamo desde listado (getAll):', p);
+                                                                            console.log('📋 detalles desde listado (getAll):', p.detalles);
+
+                                                                            const prestamoActualizado = await prestamoClienteService.getById(Number(p.id));
+                                                                            console.log('✅ préstamo recargado (getById):', prestamoActualizado);
+                                                                            console.log('✅ detalles recargados (getById):', (prestamoActualizado as any)?.detalles);
+                                                                            console.groupEnd();
+
+                                                                            setSelectedPrestamo(prestamoActualizado as PrestamoCliente);
+                                                                            setShowDevolucionModal(true);
+                                                                        } catch (error) {
+                                                                            console.error('❌ Error recargando préstamo para devolución:', error);
+                                                                            addToast('Error cargando datos completos del préstamo', 'error');
+                                                                        }
                                                                     }}
                                                                 >
                                                                     <RotateCcw size={16} />

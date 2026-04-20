@@ -12,7 +12,7 @@ class PrestamoVendidoDetalle extends Model
     protected $fillable = [
         'prestamo_vendido_id',
         'prestable_id',
-        'almacen_id',
+        'almacenes_prestables_id',
         'cantidad',
         'precio_unitario',
         'subtotal',
@@ -45,11 +45,35 @@ class PrestamoVendidoDetalle extends Model
     }
 
     /**
-     * Almacén del cual se sacó el prestable
+     * Almacén de prestables del cual se sacó el prestable
+     */
+    public function almacenPrestable(): BelongsTo
+    {
+        return $this->belongsTo(AlmacenPrestable::class, 'almacenes_prestables_id');
+    }
+
+    /**
+     * Alias para compatibilidad con código que usa detalles.almacen.
      */
     public function almacen(): BelongsTo
     {
-        return $this->belongsTo(Almacen::class);
+        return $this->almacenPrestable();
+    }
+
+    /**
+     * Alias de compatibilidad para payloads/lecturas antiguas con almacen_id.
+     */
+    public function getAlmacenIdAttribute(): ?int
+    {
+        return $this->attributes['almacenes_prestables_id'] ?? null;
+    }
+
+    /**
+     * Alias de compatibilidad para payloads/lecturas antiguas con almacen_id.
+     */
+    public function setAlmacenIdAttribute($value): void
+    {
+        $this->attributes['almacenes_prestables_id'] = $value;
     }
 
     // ==================== MÉTODOS ====================
@@ -76,6 +100,6 @@ class PrestamoVendidoDetalle extends Model
      */
     public function scopePorAlmacen($query, int $almacenId)
     {
-        return $query->where('almacen_id', $almacenId);
+        return $query->where('almacenes_prestables_id', $almacenId);
     }
 }

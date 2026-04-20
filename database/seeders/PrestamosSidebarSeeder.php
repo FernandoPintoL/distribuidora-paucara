@@ -52,13 +52,13 @@ class PrestamosSidebarSeeder extends Seeder
                 'orden' => 1,
                 'permisos' => ['prestamos.index'],
             ],
-            /* [
+            [
                 'titulo' => 'Prestables',
                 'ruta' => '/prestamos/prestables',
                 'icono' => 'Package2',
                 'orden' => 2,
                 'permisos' => ['prestamos.prestables'],
-            ], */
+            ],
             [
                 'titulo' => 'Stock',
                 'ruta' => '/prestamos/stock',
@@ -93,6 +93,14 @@ class PrestamosSidebarSeeder extends Seeder
                 'icono' => 'ShoppingCart',
                 'orden' => 7,
                 'permisos' => ['prestamos.ventas.listado'],
+            ],
+            // Gestion de alertas para la ruta ->> prestamos/alertas
+            [
+                'titulo' => 'Alertas',
+                'ruta' => '/prestamos/alertas',
+                'icono' => 'AlertCircle',
+                'orden' => 8,
+                'permisos' => ['prestamos.alertas'],
             ],
             [
                 'titulo' => 'Historial de Ajustes',

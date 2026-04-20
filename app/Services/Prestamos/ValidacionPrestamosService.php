@@ -20,7 +20,7 @@ class ValidacionPrestamosService
     public function puedoPrestar(int $prestableId, int $almacenId, int $cantidad): array
     {
         $stock = PrestableStock::where('prestable_id', $prestableId)
-            ->where('almacen_id', $almacenId)
+            ->where('almacenes_prestables_id', $almacenId)
             ->first();
 
         if (!$stock) {
@@ -158,19 +158,18 @@ class ValidacionPrestamosService
 
         if (!$condicion) {
             return [
-                'monto_daño_parcial_total' => 0,
                 'monto_daño_total_total' => 0,
                 'monto_total_daño' => 0,
             ];
         }
 
-        $montoDañoParcialTotal = $cantidadDañadaParcial * $condicion->monto_daño_parcial;
-        $montoDañoTotalTotal = $cantidadDañadaTotal * $condicion->monto_daño_total;
+        // Sumar daño parcial y daño total en una sola cantidad para calcular daño total
+        $cantidadDañadaCompleta = $cantidadDañadaParcial + $cantidadDañadaTotal;
+        $montoDañoTotalTotal = $cantidadDañadaCompleta * $condicion->monto_daño_total;
 
         return [
-            'monto_daño_parcial_total' => $montoDañoParcialTotal,
             'monto_daño_total_total' => $montoDañoTotalTotal,
-            'monto_total_daño' => $montoDañoParcialTotal + $montoDañoTotalTotal,
+            'monto_total_daño' => $montoDañoTotalTotal,
         ];
     }
 
@@ -216,6 +215,17 @@ class ValidacionPrestamosService
                         $errores[] = "detalles[{$i}].cantidad debe ser > 0";
                     }
                 }
+
+                if (!isset($detalle['almacenes_ids']) || !is_array($detalle['almacenes_ids']) || count($detalle['almacenes_ids']) === 0) {
+                    $errores[] = "detalles[{$i}].almacenes_ids requerido (al menos 1 almacén)";
+                } else {
+                    foreach ($detalle['almacenes_ids'] as $j => $almacenId) {
+                        $id = is_string($almacenId) ? intval($almacenId) : $almacenId;
+                        if (!is_int($id) || $id <= 0) {
+                            $errores[] = "detalles[{$i}].almacenes_ids[{$j}] debe ser un id válido";
+                        }
+                    }
+                }
             }
         }
 
@@ -250,6 +260,23 @@ class ValidacionPrestamosService
                 }
             } elseif (!is_bool($esEvento) && !is_int($esEvento)) {
                 $errores[] = 'es_evento debe ser boolean';
+            }
+        }
+
+        // Validar teléfonos (opcionales)
+        if (isset($datos['telefono_cliente_1']) && !is_null($datos['telefono_cliente_1'])) {
+            if (!is_string($datos['telefono_cliente_1'])) {
+                $errores[] = 'telefono_cliente_1 debe ser texto';
+            } elseif (mb_strlen(trim($datos['telefono_cliente_1'])) > 25) {
+                $errores[] = 'telefono_cliente_1 no debe exceder 25 caracteres';
+            }
+        }
+
+        if (isset($datos['telefono_cliente_2']) && !is_null($datos['telefono_cliente_2'])) {
+            if (!is_string($datos['telefono_cliente_2'])) {
+                $errores[] = 'telefono_cliente_2 debe ser texto';
+            } elseif (mb_strlen(trim($datos['telefono_cliente_2'])) > 25) {
+                $errores[] = 'telefono_cliente_2 no debe exceder 25 caracteres';
             }
         }
 

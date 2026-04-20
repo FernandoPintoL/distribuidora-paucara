@@ -68,7 +68,7 @@ class CompraPrestableService
             $detalle = CompraPrestableDetalle::create([
                 'compra_prestable_id' => $compra->id,
                 'prestable_id' => $prestableId,
-                'almacen_id' => $almacenId,
+                'almacenes_prestables_id' => $almacenId,
                 'cantidad' => $cantidad,
                 'precio_unitario' => $precioUnitario,
                 'subtotal' => $subtotal,
@@ -141,43 +141,51 @@ class CompraPrestableService
         $stock = PrestableStock::firstOrCreate(
             [
                 'prestable_id' => $detalle->prestable_id,
-                'almacen_id' => $detalle->almacen_id,
+                'almacenes_prestables_id' => $detalle->almacenes_prestables_id,
             ],
             [
                 'cantidad_disponible' => 0,
-                'cantidad_en_prestamo_cliente' => 0,
-                'cantidad_en_prestamo_proveedor' => 0,
+                'cantidad_prestamo_cliente_activo' => 0,
+                'cantidad_prestamo_cliente_devuelto' => 0,
+                'cantidad_prestamo_evento_activo' => 0,
+                'cantidad_prestamo_evento_devuelto' => 0,
+                'cantidad_prestamo_proveedor_activo' => 0,
+                'cantidad_prestamo_proveedor_devuelto' => 0,
             ]
         );
 
-        // Valores antes
-        $disponibleAntes = $stock->cantidad_disponible;
-        $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-        $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+        $stockAntes = $this->snapshotStock($stock);
 
         // Actualizar stock (agregar a disponible)
-        $disponibleDespues = $disponibleAntes + $detalle->cantidad;
+        $disponibleDespues = $stockAntes['cantidad_disponible'] + $detalle->cantidad;
         $stock->update([
             'cantidad_disponible' => $disponibleDespues,
         ]);
+        $stock->refresh();
+        $stockDespues = $this->snapshotStock($stock);
 
-        // Registrar movimiento (tipo COMPRA_PRESTABLE para identificar específicamente que vino de compra)
+        // Registrar movimiento con tipo específico de compra
         $this->movimientoService->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $detalle->almacen_id,
+            'almacenes_prestables_id' => $detalle->almacenes_prestables_id,
             'usuario_id' => $compra->usuario_id,
             'tipo' => 'COMPRA_PRESTABLE',
             'cantidad' => $detalle->cantidad,
-            'disponible_anterior' => $disponibleAntes,
-            'prestamo_cliente_anterior' => $prestamoClienteAntes,
-            'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
+            'disponible_anterior' => $stockAntes['cantidad_disponible'],
+            'prestamo_cliente_anterior' => $stockAntes['cantidad_prestamo_cliente_activo'],
+            'prestamo_proveedor_anterior' => $stockAntes['cantidad_prestamo_proveedor_activo'],
             'vendida_anterior' => 0,
-            'disponible_posterior' => $disponibleDespues,
-            'prestamo_cliente_posterior' => $prestamoClienteAntes,
-            'prestamo_proveedor_posterior' => $prestamoProveedorAntes,
+            'disponible_posterior' => $stockDespues['cantidad_disponible'],
+            'prestamo_cliente_posterior' => $stockDespues['cantidad_prestamo_cliente_activo'],
+            'prestamo_proveedor_posterior' => $stockDespues['cantidad_prestamo_proveedor_activo'],
             'vendida_posterior' => 0,
             'categoria_afectada' => 'disponible',
             'motivo' => 'Compra de prestable',
+            'observaciones' => json_encode([
+                'operacion' => 'COMPRA_PRESTABLE',
+                'stock_antes' => $stockAntes,
+                'stock_despues' => $stockDespues,
+            ], JSON_UNESCAPED_UNICODE),
             'numero_referencia' => $compra->numero_compra,
             'referencia_tipo' => 'COMPRA_PRESTABLE',
             'referencia_id' => $compra->id,
@@ -187,6 +195,8 @@ class CompraPrestableService
             'compra_id' => $compra->id,
             'prestable_id' => $detalle->prestable_id,
             'cantidad' => $detalle->cantidad,
+            'stock_antes' => $stockAntes,
+            'stock_despues' => $stockDespues,
         ]);
     }
 
@@ -237,38 +247,42 @@ class CompraPrestableService
     private function revertirDetalleCompra(CompraPrestable $compra, CompraPrestableDetalle $detalle): void
     {
         $stock = PrestableStock::where('prestable_id', $detalle->prestable_id)
-            ->where('almacen_id', $detalle->almacen_id)
+            ->where('almacenes_prestables_id', $detalle->almacenes_prestables_id)
             ->firstOrFail();
 
-        // Capturar valores antes de la reversión
-        $disponibleAntes = $stock->cantidad_disponible;
-        $prestamoClienteAntes = $stock->cantidad_en_prestamo_cliente;
-        $prestamoProveedorAntes = $stock->cantidad_en_prestamo_proveedor;
+        $stockAntes = $this->snapshotStock($stock);
 
         // Restaurar cantidad disponible (revertir la compra)
-        $disponibleDespues = $disponibleAntes - $detalle->cantidad;
+        $disponibleDespues = $stockAntes['cantidad_disponible'] - $detalle->cantidad;
 
         $stock->update([
             'cantidad_disponible' => $disponibleDespues,
         ]);
+        $stock->refresh();
+        $stockDespues = $this->snapshotStock($stock);
 
-        // Registrar movimiento de anulación (cantidad negativa porque es un decremento)
+        // Registrar movimiento de anulación con tipo específico
         $this->movimientoService->registrarMovimiento([
             'prestable_stock_id' => $stock->id,
-            'almacen_id' => $detalle->almacen_id,
+            'almacenes_prestables_id' => $detalle->almacenes_prestables_id,
             'usuario_id' => $compra->usuario_id,
             'tipo' => 'ANULACION_COMPRA_PRESTABLE',
             'cantidad' => -$detalle->cantidad, // Negativa = reversión del incremento de compra
-            'disponible_anterior' => $disponibleAntes,
-            'prestamo_cliente_anterior' => $prestamoClienteAntes,
-            'prestamo_proveedor_anterior' => $prestamoProveedorAntes,
+            'disponible_anterior' => $stockAntes['cantidad_disponible'],
+            'prestamo_cliente_anterior' => $stockAntes['cantidad_prestamo_cliente_activo'],
+            'prestamo_proveedor_anterior' => $stockAntes['cantidad_prestamo_proveedor_activo'],
             'vendida_anterior' => 0,
-            'disponible_posterior' => $disponibleDespues,
-            'prestamo_cliente_posterior' => $prestamoClienteAntes,
-            'prestamo_proveedor_posterior' => $prestamoProveedorAntes,
+            'disponible_posterior' => $stockDespues['cantidad_disponible'],
+            'prestamo_cliente_posterior' => $stockDespues['cantidad_prestamo_cliente_activo'],
+            'prestamo_proveedor_posterior' => $stockDespues['cantidad_prestamo_proveedor_activo'],
             'vendida_posterior' => 0,
             'categoria_afectada' => 'disponible',
             'motivo' => 'Anulación de compra de prestable',
+            'observaciones' => json_encode([
+                'operacion' => 'ANULACION_COMPRA_PRESTABLE',
+                'stock_antes' => $stockAntes,
+                'stock_despues' => $stockDespues,
+            ], JSON_UNESCAPED_UNICODE),
             'numero_referencia' => $compra->numero_compra,
             'referencia_tipo' => 'ANULACION_COMPRA_PRESTABLE',
             'referencia_id' => $compra->id,
@@ -278,9 +292,26 @@ class CompraPrestableService
             'compra_id' => $compra->id,
             'prestable_id' => $detalle->prestable_id,
             'cantidad' => $detalle->cantidad,
-            'disponible_antes' => $disponibleAntes,
-            'disponible_despues' => $disponibleDespues,
+            'stock_antes' => $stockAntes,
+            'stock_despues' => $stockDespues,
         ]);
+    }
+
+    /**
+     * Snapshot consistente del estado de stock para trazabilidad de movimientos.
+     */
+    private function snapshotStock(PrestableStock $stock): array
+    {
+        return [
+            'cantidad_disponible' => (int) ($stock->cantidad_disponible ?? 0),
+            'cantidad_prestamo_cliente_activo' => (int) ($stock->cantidad_prestamo_cliente_activo ?? 0),
+            'cantidad_prestamo_cliente_devuelto' => (int) ($stock->cantidad_prestamo_cliente_devuelto ?? 0),
+            'cantidad_prestamo_evento_activo' => (int) ($stock->cantidad_prestamo_evento_activo ?? 0),
+            'cantidad_prestamo_evento_devuelto' => (int) ($stock->cantidad_prestamo_evento_devuelto ?? 0),
+            'cantidad_prestamo_proveedor_activo' => (int) ($stock->cantidad_prestamo_proveedor_activo ?? 0),
+            'cantidad_prestamo_proveedor_devuelto' => (int) ($stock->cantidad_prestamo_proveedor_devuelto ?? 0),
+            'total_general' => (int) $stock->getTotalGeneralAttribute(),
+        ];
     }
 
     /**
