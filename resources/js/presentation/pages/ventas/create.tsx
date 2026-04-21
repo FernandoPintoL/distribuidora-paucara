@@ -14,6 +14,7 @@ import { useClienteSearch } from '@/infrastructure/hooks/use-api-search';
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente';
 import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable';
 import EntregaSearchSelector from '@/presentation/components/entregas/EntregaSearchSelector';
+import FormularioPagosVenta from '@/presentation/components/FormularioPagosVenta';
 
 // Importar servicios adicionales
 import { NotificationService } from '@/infrastructure/services/notification.service';
@@ -299,6 +300,15 @@ export default function VentaForm() {
             data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
         );
     }, [data.monto_pagado_inicial]);
+
+    // ✅ NUEVO (2026-04-21): Estado para múltiples pagos por venta
+    interface Pago {
+        id: string;
+        tipo_pago_id: number;
+        monto: number;
+        tipo_pago_nombre?: string;
+    }
+    const [pagos, setPagos] = useState<Pago[]>([]);
 
     useEffect(() => {
         console.log('🚚 [VentaForm] requiere_envio cambió:', {
@@ -1074,6 +1084,14 @@ export default function VentaForm() {
             })
         };
 
+        // ✅ NUEVO (2026-04-21): Agregar pagos desglosados si existen
+        if (pagos.length > 0) {
+            (submitData as any).pagos = pagos.map(p => ({
+                tipo_pago_id: p.tipo_pago_id,
+                monto: p.monto
+            }));
+        }
+
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const method = isEditing && venta ? 'PUT' : 'POST';
@@ -1667,6 +1685,15 @@ export default function VentaForm() {
                                 <span className="text-gray-900 dark:text-white">Total:</span>
                                 <span className="text-gray-900 dark:text-white text-right">{formatCurrencyMinimalDecimals(data.total)}</span>
                             </div>
+
+                            {/* ✅ NUEVO (2026-04-21): Formulario de múltiples pagos */}
+                            <FormularioPagosVenta
+                                tiposPago={tiposPagoSeguro}
+                                totalVenta={data.total}
+                                pagosRegistrados={pagos}
+                                onPagosChange={setPagos}
+                                disabled={isSubmitting}
+                            />
 
                             {data.monto_pagado_inicial > 0 && (
                                 <>
