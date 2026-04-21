@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Models\Venta;
 use App\Services\ComboStockService;
 use App\Services\Venta\VentaService;
+use App\Services\PagoVentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ class VentaController extends Controller
         private \App\Services\PrinterService $printerService,
         private \App\Services\ExcelExportService $excelExportService,
         private \App\Services\CajaAbiertaService $cajaAbiertaService,
+        private PagoVentaService $pagoVentaService,
     ) {
         // ✅ ACTUALIZADO: Permisos solo para peticiones web, NO para API
         // Los clientes móviles acceden a sus propias ventas (filtradas por cliente_id autenticado)
@@ -532,6 +534,29 @@ class VentaController extends Controller
 
             // 3. Delegar al Service (ÚNICA lógica de negocio)
             $ventaDTO = $this->ventaService->crear($dto, $cajaId);
+
+            // ✅ NUEVO (2026-04-21): Registrar múltiples pagos si vienen en el request
+            if ($request->has('pagos') && is_array($request->input('pagos')) && !empty($request->input('pagos'))) {
+                try {
+                    // Obtener la venta creada para registrar pagos
+                    $ventaCreada = Venta::findOrFail($ventaDTO->id);
+
+                    // Registrar los pagos en detalles_pago_venta
+                    $this->pagoVentaService->registrarPagos($ventaCreada, $request->input('pagos'));
+
+                    Log::info('✅ Pagos registrados para venta', [
+                        'venta_id' => $ventaCreada->id,
+                        'venta_numero' => $ventaCreada->numero,
+                        'cantidad_pagos' => count($request->input('pagos')),
+                    ]);
+                } catch (\Exception $e) {
+                    // Log del error pero no fallar la creación de venta
+                    Log::error('⚠️ Error al registrar pagos para venta', [
+                        'venta_id' => $ventaDTO->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             // 3.5 Imprimir ticket en impresora térmica
             try {
