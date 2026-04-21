@@ -212,6 +212,11 @@ class Venta extends Model
         return $this->hasMany(Pago::class);
     }
 
+    public function detallesPagoVenta()
+    {
+        return $this->hasMany(DetallePagoVenta::class);
+    }
+
     public function cuentaPorCobrar()
     {
         return $this->hasOne(CuentaPorCobrar::class);

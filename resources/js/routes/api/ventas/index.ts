@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
+import pagos from './pagos'
 /**
 * @see \App\Http\Controllers\VentaController::registrarPago
  * @see app/Http/Controllers/VentaController.php:1031
@@ -1119,6 +1120,7 @@ search,
 confirmarPickupCliente,
 confirmarPickupEmpleado,
 registrarEnCaja,
+pagos,
 index,
 store,
 show,

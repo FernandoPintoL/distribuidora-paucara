@@ -14,6 +14,7 @@ import ApiProformaController from './ApiProformaController'
 import ReservaProformaController from './ReservaProformaController'
 import EntregaController from './EntregaController'
 import ApiVentaController from './ApiVentaController'
+import PagoVentaController from './PagoVentaController'
 import TipoOperacionController from './TipoOperacionController'
 import PrecioRangoProductoController from './PrecioRangoProductoController'
 import GeocodingController from './GeocodingController'
@@ -48,6 +49,7 @@ ApiProformaController,
 ReservaProformaController,
 EntregaController,
 ApiVentaController,
+PagoVentaController,
 TipoOperacionController,
 PrecioRangoProductoController,
 GeocodingController,

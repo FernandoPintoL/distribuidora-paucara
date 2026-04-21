@@ -48,6 +48,7 @@ use App\Http\Controllers\PrecioController;
 use App\Http\Controllers\ComboController;
 use App\Http\Controllers\ConciliacionCajaController;
 use App\Http\Controllers\PrestableController;
+use App\Http\Controllers\Api\PagoVentaController;
 use App\Http\Controllers\PrestamoVendidoController;
 use App\Http\Controllers\CompraPrestableController;
 use App\Http\Controllers\PrestableStockController;
@@ -547,6 +548,19 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
         Route::post('{venta}/registrar-en-caja', [ApiVentaController::class, 'registrarEnCaja'])
             ->name('api.ventas.registrar-en-caja')
             ->middleware('permission:cajas.transacciones');
+
+        // ✅ NUEVO: Gestión de pagos de venta (efectivo + transferencia + etc.)
+        Route::post('{venta}/pagos/registrar', [PagoVentaController::class, 'registrarPagos'])
+            ->name('api.ventas.pagos.registrar');
+
+        Route::get('{venta}/pagos/resumen', [PagoVentaController::class, 'obtenerResumen'])
+            ->name('api.ventas.pagos.resumen');
+
+        Route::get('{venta}/pagos/detalle', [PagoVentaController::class, 'obtenerDetalle'])
+            ->name('api.ventas.pagos.detalle');
+
+        Route::get('pagos/reporte-caja', [PagoVentaController::class, 'reporteCaja'])
+            ->name('api.ventas.pagos.reporte-caja');
     });
 
     Route::apiResource('ventas', VentaController::class)->names('api.ventas');
