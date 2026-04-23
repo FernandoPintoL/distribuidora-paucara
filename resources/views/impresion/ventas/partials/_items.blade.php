@@ -37,25 +37,15 @@
                     @if($detalle->producto->codigo)
                         <br><small style="color: #666;">Código: {{ $detalle->producto->codigo }}</small>
                     @endif
-                    {{-- ✅ NUEVO: Mostrar items del combo si existen --}}
-                    @if($esCombo && count($itemsSeleccionados) > 0)
+                    {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo desde las relaciones cargadas --}}
+                    @if($esCombo && $detalle->producto->comboItems && $detalle->producto->comboItems->count() > 0)
                         <br><small style="color: #999; margin-top: 4px;">
-                            <strong>Items ({{ count($itemsSeleccionados) }}):</strong><br>
-                            @foreach($itemsSeleccionados as $item)
+                            @foreach($detalle->producto->comboItems as $comboItem)
                                 @php
-                                    $itemProducto = $documento->detalles
-                                        ->flatMap(fn($d) => $d->producto->comboItems ?? [])
-                                        ->firstWhere('producto_id', $item['producto_id'])
-                                        ?->producto;
-
-                                    // ✅ NUEVO: Calcular cantidad total = combo cantidad × item cantidad base
-                                    $cantidadTotal = ($item['cantidad'] ?? 0) * ($detalle->cantidad ?? 1);
+                                    // Calcular cantidad total = combo cantidad × cantidad del componente en el combo
+                                    $cantidadComponente = $detalle->cantidad * $comboItem->cantidad;
                                 @endphp
-                                └─ {{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}
-                                @if($item['cantidad'] ?? false)
-                                    ({{ number_format($cantidadTotal, 0) }} u)
-                                @endif
-                                <br>
+                                └─ {{ $comboItem->producto->nombre }} ({{ number_format($cantidadComponente, 0) }} u)<br>
                             @endforeach
                         </small>
                     @endif
@@ -111,30 +101,21 @@
                 </td>
             </tr>
 
-            {{-- ITEMS DEL COMBO SI EXISTEN --}}
-            @if($esCombo && count($itemsSeleccionados) > 0)
-                @foreach($itemsSeleccionados as $item)
+            {{-- COMPONENTES DEL COMBO (2026-04-23) --}}
+            @if($esCombo && $detalle->producto->comboItems && $detalle->producto->comboItems->count() > 0)
+                @foreach($detalle->producto->comboItems as $comboItem)
                     @php
-                        $itemProducto = $documento->detalles
-                            ->flatMap(fn($d) => $d->producto->comboItems ?? [])
-                            ->firstWhere('producto_id', $item['producto_id'])
-                            ?->producto;
-
-                        // ✅ NUEVO: Calcular cantidad total = combo cantidad × item cantidad base
-                        $cantidadTotal = ($item['cantidad'] ?? 0) * ($detalle->cantidad ?? 1);
+                        $cantidadComponente = $detalle->cantidad * $comboItem->cantidad;
                     @endphp
                     <tr>
-                        <td style="width: 12%; text-align: center; padding: 2px 0; font-size: 12px;">
-                            @if($item['cantidad'] ?? false)
-                                {{ number_format($cantidadTotal, 0) }}
-                            @endif
+                        <td style="width: 12%; text-align: center; padding: 2px 0; font-size: 11px;">
+                            {{ number_format($cantidadComponente, 0) }}
                         </td>
-                        <td style="width: 50%; text-align: left; padding: 2px 4px; font-size: 12px;">
-                            <strong>{{ $itemProducto?->nombre ?? 'Producto #' . $item['producto_id'] }}</strong>
+                        <td style="width: 50%; text-align: left; padding: 2px 4px; font-size: 11px;">
+                                {{ $comboItem->producto->nombre }}
                         </td>
                     </tr>
                 @endforeach
-                
             @endif
 
             @endforeach
@@ -167,23 +148,15 @@
             </td>
         </tr>
 
-        {{-- ✅ NUEVO: Mostrar items del combo si existen --}}
-        @if($esCombo && count($itemsSeleccionados) > 0)
-            <tr>
-                <td colspan="2" style="padding-left: 8px; font-size: 6px; color: #666;">
-                    Items ({{ count($itemsSeleccionados) }}):
-                </td>
-            </tr>
-            @foreach($itemsSeleccionados as $item)
+        {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo --}}
+        @if($esCombo && $detalle->producto->comboItems && $detalle->producto->comboItems->count() > 0)
+            @foreach($detalle->producto->comboItems as $comboItem)
                 @php
-                    $itemProducto = $documento->detalles
-                        ->flatMap(fn($d) => $d->producto->comboItems ?? [])
-                        ->firstWhere('producto_id', $item['producto_id'])
-                        ?->producto;
+                    $cantidadComponente = $detalle->cantidad * $comboItem->cantidad;
                 @endphp
                 <tr>
-                    <td colspan="2" style="padding-left: 14px; font-size: 6px;">
-                        └ {{ Str::limit($itemProducto?->nombre ?? 'Producto #' . $item['producto_id'], 20) }}
+                    <td colspan="2" style="padding-left: 14px; font-size: 7px;">
+                        └ {{ Str::limit($comboItem->producto->nombre, 22) }} ({{ number_format($cantidadComponente, 0) }} u)
                     </td>
                 </tr>
             @endforeach

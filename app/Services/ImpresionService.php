@@ -577,6 +577,14 @@ class ImpresionService
             'accessToken',
         ]);
 
+        // ✅ NUEVO (2026-04-23): Cargar componentes de combos en los detalles
+        // Para cada detalle, si el producto es un combo, cargar sus items
+        foreach ($venta->detalles as $detalle) {
+            if ($detalle->producto->es_combo) {
+                $detalle->load('producto.comboItems.producto');
+            }
+        }
+
         // ✅ DEBUG: Log para verificar la carga de proforma y usuarioCreador
         \Log::info('🖨️ [ImpresionService::imprimirVenta] Relaciones cargadas', [
             'venta_id'           => $venta->id,
@@ -615,6 +623,14 @@ class ImpresionService
             'direccionCliente',
             'accessToken',
         ]);
+
+        // ✅ NUEVO (2026-04-23): Cargar componentes de combos en los detalles
+        // Para cada detalle, si el producto es un combo, cargar sus items
+        foreach ($venta->detalles as $detalle) {
+            if ($detalle->producto->es_combo) {
+                $detalle->load('producto.comboItems.producto');
+            }
+        }
 
         // ✅ NUEVO: Usar vista específica para farmacia si el formato es TICKET_80
         if ($formato === 'TICKET_80') {
