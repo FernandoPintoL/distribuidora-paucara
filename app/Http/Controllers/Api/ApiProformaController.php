@@ -2997,54 +2997,67 @@ class ApiProformaController extends Controller
                         $cantidad = $detalle->cantidad;
 
                         if ($producto->es_combo) {
-                            // Para COMBOS con reservas activas:
-                            $reservasDelProducto = $proforma->reservas()
-                                ->whereHas('stockProducto', function ($q) use ($producto) {
-                                    $q->where('producto_id', $producto->id);
-                                })
-                                ->where('estado', 'ACTIVA')
-                                ->sum('cantidad_reservada');
+                            // Para COMBOS: Validar COMPONENTES del combo, no el combo en sí
+                            // Las reservas están en los componentes, no en el combo padre
+                            $componentesCombo = $producto->comboItems()->get();
 
-                            if ($reservasDelProducto > 0) {
-                                // Hay reservas: validar que sean suficientes
-                                if ($reservasDelProducto < $cantidad) {
-                                    $productosConStockInsuficiente[] = [
-                                        'producto_id' => $producto->id,
-                                        'producto' => $producto->nombre . ' (COMBO)',
-                                        'requerido' => $cantidad,
-                                        'disponible' => $reservasDelProducto,
-                                        'faltante' => $cantidad - $reservasDelProducto,
-                                        'tipo' => 'RESERVAS_INSUFICIENTES',
-                                    ];
-                                    Log::warning('⚠️  Reservas insuficientes para COMBO', [
-                                        'producto_id' => $producto->id,
-                                        'nombre' => $producto->nombre,
-                                        'requerido' => $cantidad,
-                                        'reservado' => $reservasDelProducto,
-                                        'proforma_id' => $proforma->id,
-                                    ]);
-                                }
-                            } else {
-                                // NO hay reservas: validar capacidad de combo
-                                $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
-                                $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+                            foreach ($componentesCombo as $componenteItem) {
+                                $componenteProducto = $componenteItem->producto;
+                                // Cantidad del componente necesaria = cantidad_del_combo * cantidad_del_componente_en_combo
+                                $cantidadComponenteRequerida = $cantidad * $componenteItem->cantidad;
 
-                                if ($capacidadDisponible < $cantidad) {
-                                    $productosConStockInsuficiente[] = [
-                                        'producto_id' => $producto->id,
-                                        'producto' => $producto->nombre . ' (COMBO)',
-                                        'requerido' => $cantidad,
-                                        'disponible' => $capacidadDisponible,
-                                        'faltante' => $cantidad - $capacidadDisponible,
-                                        'tipo' => 'CAPACIDAD_COMBO_INSUFICIENTE',
-                                    ];
-                                    Log::warning('⚠️  Capacidad de COMBO insuficiente (sin reservas)', [
-                                        'producto_id' => $producto->id,
-                                        'nombre' => $producto->nombre,
-                                        'requerido' => $cantidad,
-                                        'disponible' => $capacidadDisponible,
-                                        'proforma_id' => $proforma->id,
-                                    ]);
+                                // Buscar reservas del COMPONENTE en esta proforma
+                                $reservasDelComponente = $proforma->reservas()
+                                    ->whereHas('stockProducto', function ($q) use ($componenteProducto) {
+                                        $q->where('producto_id', $componenteProducto->id);
+                                    })
+                                    ->where('estado', 'ACTIVA')
+                                    ->sum('cantidad_reservada');
+
+                                if ($reservasDelComponente > 0) {
+                                    // Hay reservas: validar que sean suficientes
+                                    if ($reservasDelComponente < $cantidadComponenteRequerida) {
+                                        $productosConStockInsuficiente[] = [
+                                            'producto_id' => $componenteProducto->id,
+                                            'producto' => $componenteProducto->nombre . ' (componente de ' . $producto->nombre . ')',
+                                            'requerido' => $cantidadComponenteRequerida,
+                                            'disponible' => $reservasDelComponente,
+                                            'faltante' => $cantidadComponenteRequerida - $reservasDelComponente,
+                                            'tipo' => 'RESERVAS_INSUFICIENTES_COMBO',
+                                        ];
+                                        Log::warning('⚠️  Reservas insuficientes para COMPONENTE DE COMBO', [
+                                            'combo_id' => $producto->id,
+                                            'combo_nombre' => $producto->nombre,
+                                            'componente_id' => $componenteProducto->id,
+                                            'componente_nombre' => $componenteProducto->nombre,
+                                            'requerido' => $cantidadComponenteRequerida,
+                                            'reservado' => $reservasDelComponente,
+                                            'proforma_id' => $proforma->id,
+                                        ]);
+                                    }
+                                } else {
+                                    // NO hay reservas: validar stock disponible del componente
+                                    $stockDisponibleComponente = $componenteProducto->stock()->sum('cantidad_disponible');
+
+                                    if ($stockDisponibleComponente < $cantidadComponenteRequerida) {
+                                        $productosConStockInsuficiente[] = [
+                                            'producto_id' => $componenteProducto->id,
+                                            'producto' => $componenteProducto->nombre . ' (componente de ' . $producto->nombre . ')',
+                                            'requerido' => $cantidadComponenteRequerida,
+                                            'disponible' => $stockDisponibleComponente,
+                                            'faltante' => $cantidadComponenteRequerida - $stockDisponibleComponente,
+                                            'tipo' => 'STOCK_INSUFICIENTE_COMPONENTE_COMBO',
+                                        ];
+                                        Log::warning('⚠️  Stock insuficiente para COMPONENTE DE COMBO (sin reservas)', [
+                                            'combo_id' => $producto->id,
+                                            'combo_nombre' => $producto->nombre,
+                                            'componente_id' => $componenteProducto->id,
+                                            'componente_nombre' => $componenteProducto->nombre,
+                                            'requerido' => $cantidadComponenteRequerida,
+                                            'disponible' => $stockDisponibleComponente,
+                                            'proforma_id' => $proforma->id,
+                                        ]);
+                                    }
                                 }
                             }
                         } else {
@@ -3145,25 +3158,36 @@ class ApiProformaController extends Controller
                         $cantidad = $detalle->cantidad;
 
                         if ($producto->es_combo) {
-                            // Para COMBOS: Validar capacidad
-                            $capacidad = $comboStockService->obtenerStockProducto($producto->id, $almacenId);
-                            $capacidadDisponible = $capacidad['capacidad'] ?? 0;
+                            // Para COMBOS: Validar COMPONENTES del combo, no el combo en sí
+                            $componentesCombo = $producto->comboItems()->get();
 
-                            if ($capacidadDisponible < $cantidad) {
-                                $productosConStockInsuficiente[] = [
-                                    'producto_id' => $producto->id,
-                                    'producto' => $producto->nombre . ' (COMBO)',
-                                    'requerido' => $cantidad,
-                                    'disponible' => $capacidadDisponible,
-                                    'faltante' => $cantidad - $capacidadDisponible,
-                                ];
-                                Log::warning('⚠️  Stock insuficiente para COMBO', [
-                                    'producto_id' => $producto->id,
-                                    'nombre' => $producto->nombre,
-                                    'requerido' => $cantidad,
-                                    'disponible' => $capacidadDisponible,
-                                    'proforma_id' => $proforma->id,
-                                ]);
+                            foreach ($componentesCombo as $componenteItem) {
+                                $componenteProducto = $componenteItem->producto;
+                                // Cantidad del componente necesaria = cantidad_del_combo * cantidad_del_componente_en_combo
+                                $cantidadComponenteRequerida = $cantidad * $componenteItem->cantidad;
+
+                                // Validar stock disponible del componente
+                                $stockDisponibleComponente = $componenteProducto->stock()->sum('cantidad_disponible');
+
+                                if ($stockDisponibleComponente < $cantidadComponenteRequerida) {
+                                    $productosConStockInsuficiente[] = [
+                                        'producto_id' => $componenteProducto->id,
+                                        'producto' => $componenteProducto->nombre . ' (componente de ' . $producto->nombre . ')',
+                                        'requerido' => $cantidadComponenteRequerida,
+                                        'disponible' => $stockDisponibleComponente,
+                                        'faltante' => $cantidadComponenteRequerida - $stockDisponibleComponente,
+                                        'tipo' => 'STOCK_INSUFICIENTE_COMPONENTE_COMBO',
+                                    ];
+                                    Log::warning('⚠️  Stock insuficiente para COMPONENTE DE COMBO', [
+                                        'combo_id' => $producto->id,
+                                        'combo_nombre' => $producto->nombre,
+                                        'componente_id' => $componenteProducto->id,
+                                        'componente_nombre' => $componenteProducto->nombre,
+                                        'requerido' => $cantidadComponenteRequerida,
+                                        'disponible' => $stockDisponibleComponente,
+                                        'proforma_id' => $proforma->id,
+                                    ]);
+                                }
                             }
                         } else {
                             // Para PRODUCTOS SIMPLES: Validar stock disponible

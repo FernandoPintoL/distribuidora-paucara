@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -36,9 +37,6 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Un solo sector genérico por almacén
-            $table->unique(['almacen_id', 'es_generico'], 'uq_almacen_sector_generico');
-
             // Nombre único dentro del almacén
             $table->unique(['almacen_id', 'nombre'], 'uq_almacen_sector_nombre');
 
@@ -46,6 +44,10 @@ return new class extends Migration
             // Nota: es_generico ya tiene index() en la definición del campo (línea 30)
             $table->index('almacen_id');
         });
+
+        // Crear índice único CONDICIONAL: un solo sector genérico por almacén
+        // Solo aplica cuando es_generico=true, permitiendo múltiples sectores no-genéricos
+        DB::statement('CREATE UNIQUE INDEX uq_almacen_sector_generico ON sectores (almacen_id) WHERE es_generico = true');
     }
 
     /**
@@ -53,6 +55,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Eliminar el índice único personalizado si existe
+        DB::statement('DROP INDEX IF EXISTS uq_almacen_sector_generico');
         Schema::dropIfExists('sectores');
     }
 };

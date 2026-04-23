@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
         $this->call(EmpresaSeeder::class);
         $this->call(CoreCatalogSeeder::class);
         $this->call(AlmacenesUbicacionSeeder::class);
+        // ✅ NUEVO: Poblar almacenes_prestables desde almacenes
+        $this->call(PopulateAlmacenesPrestablesSeeder::class);
         // Asignar almacenes a empresas (antes de que se usen para búsquedas)
         $this->call(AssignAlmacenesToEmpresasSeeder::class);
         // ✅ NUEVO: Crear sectores para almacenes

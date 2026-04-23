@@ -20,21 +20,27 @@ class PrestableStockSeeder extends Seeder
         foreach ($prestables as $prestable) {
             PrestableStock::create([
                 'prestable_id' => $prestable->id,
-                'almacen_id' => 1, // Almacén default
+                'almacenes_prestables_id' => 1, // Almacén default
                 'cantidad_disponible' => $this->cantidadInicial($prestable->codigo),
-                'cantidad_en_prestamo_cliente' => 0,
-                'cantidad_en_prestamo_proveedor' => 0,
-                'cantidad_vendida' => 0,
+                'cantidad_prestamo_cliente_activo' => 0,
+                'cantidad_prestamo_cliente_devuelto' => 0,
+                'cantidad_prestamo_evento_activo' => 0,
+                'cantidad_prestamo_evento_devuelto' => 0,
+                'cantidad_prestamo_proveedor_activo' => 0,
+                'cantidad_prestamo_proveedor_devuelto' => 0,
             ]);
 
             // Crear también para almacén 2 si existe
             PrestableStock::create([
                 'prestable_id' => $prestable->id,
-                'almacen_id' => 2,
-                'cantidad_disponible' => $this->cantidadInicial($prestable->codigo) / 2,
-                'cantidad_en_prestamo_cliente' => 0,
-                'cantidad_en_prestamo_proveedor' => 0,
-                'cantidad_vendida' => 0,
+                'almacenes_prestables_id' => 2,
+                'cantidad_disponible' => intval($this->cantidadInicial($prestable->codigo) / 2),
+                'cantidad_prestamo_cliente_activo' => 0,
+                'cantidad_prestamo_cliente_devuelto' => 0,
+                'cantidad_prestamo_evento_activo' => 0,
+                'cantidad_prestamo_evento_devuelto' => 0,
+                'cantidad_prestamo_proveedor_activo' => 0,
+                'cantidad_prestamo_proveedor_devuelto' => 0,
             ]);
         }
     }

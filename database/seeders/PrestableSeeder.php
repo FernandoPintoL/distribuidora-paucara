@@ -43,7 +43,6 @@ class PrestableSeeder extends Seeder
         PrestableCondicion::create([
             'prestable_id' => $prestable1->id,
             'monto_garantia' => 100.00,
-            'monto_daño_parcial' => 50.00,
             'monto_daño_total' => 150.00,
             'activo' => true,
         ]);
@@ -77,7 +76,6 @@ class PrestableSeeder extends Seeder
         PrestableCondicion::create([
             'prestable_id' => $prestable2->id,
             'monto_garantia' => 150.00,
-            'monto_daño_parcial' => 75.00,
             'monto_daño_total' => 250.00,
             'activo' => true,
         ]);
@@ -111,7 +109,6 @@ class PrestableSeeder extends Seeder
         PrestableCondicion::create([
             'prestable_id' => $prestable3->id,
             'monto_garantia' => 200.00,
-            'monto_daño_parcial' => 100.00,
             'monto_daño_total' => 350.00,
             'activo' => true,
         ]);
@@ -145,7 +142,6 @@ class PrestableSeeder extends Seeder
         PrestableCondicion::create([
             'prestable_id' => $prestable4->id,
             'monto_garantia' => 80.00,
-            'monto_daño_parcial' => 40.00,
             'monto_daño_total' => 180.00,
             'activo' => true,
         ]);
@@ -179,7 +175,6 @@ class PrestableSeeder extends Seeder
         PrestableCondicion::create([
             'prestable_id' => $prestable5->id,
             'monto_garantia' => 200.00,
-            'monto_daño_parcial' => 100.00,
             'monto_daño_total' => 320.00,
             'activo' => true,
         ]);
