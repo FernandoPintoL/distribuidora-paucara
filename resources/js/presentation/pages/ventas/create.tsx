@@ -1687,13 +1687,13 @@ export default function VentaForm() {
                             </div>
 
                             {/* ✅ NUEVO (2026-04-21): Formulario de múltiples pagos */}
-                            <FormularioPagosVenta
+                            {/* <FormularioPagosVenta
                                 tiposPago={tiposPagoSeguro}
                                 totalVenta={data.total}
                                 pagosRegistrados={pagos}
                                 onPagosChange={setPagos}
                                 disabled={isSubmitting}
-                            />
+                            /> */}
 
                             {data.monto_pagado_inicial > 0 && (
                                 <>
