@@ -19,6 +19,21 @@ class ImpresionEntregaService
         // Recorrer todas las ventas asignadas a la entrega
         foreach ($entrega->ventas as $venta) {
             foreach ($venta->detalles as $detalle) {
+                // ✅ NUEVO (2026-04-23): Obtener componentes del combo si es combo
+                $esCombo = $detalle->producto->es_combo === true || $detalle->producto->es_combo === 1;
+                $componentes = [];
+
+                if ($esCombo && $detalle->producto->comboItems && $detalle->producto->comboItems->count() > 0) {
+                    foreach ($detalle->producto->comboItems as $comboItem) {
+                        $cantidadComponente = $detalle->cantidad * $comboItem->cantidad;
+                        $componentes[] = [
+                            'producto_nombre' => $comboItem->producto->nombre,
+                            'cantidad' => $cantidadComponente,
+                            'unidad' => $comboItem->producto->unidad?->nombre ?? 'UND',
+                        ];
+                    }
+                }
+
                 $productos->push([
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
@@ -31,6 +46,8 @@ class ImpresionEntregaService
                     'precio_unitario' => $detalle->precio_unitario,
                     'subtotal' => $detalle->subtotal,
                     'unidad_medida' => $detalle->producto?->unidad?->nombre ?? 'UND',  // ✅ CORREGIDO: unidad (no unidadMedida)
+                    'es_combo' => $esCombo,  // ✅ NUEVO: Indicar si es combo
+                    'componentes' => $componentes,  // ✅ NUEVO: Lista de componentes del combo
                 ]);
             }
         }
@@ -50,6 +67,8 @@ class ImpresionEntregaService
         return $productosGenerico->groupBy('producto_id')->map(function ($items, $productoId) {
             $primerItem = $items->first();
 
+            // ✅ NUEVO (2026-04-23): Preservar información de combo y componentes del primer item
+            // Ya que todos los items del mismo producto_id tendrán los mismos componentes
             return [
                 'producto_id' => $productoId,
                 'producto_nombre' => $primerItem['producto_nombre'],
@@ -60,6 +79,8 @@ class ImpresionEntregaService
                 'subtotal_total' => $items->sum('subtotal'),
                 'cantidad_ventas' => $items->count(), // Cuántos items de este producto hay en la entrega
                 'ventas' => $items->pluck('venta_numero')->unique()->join(', '),
+                'es_combo' => $primerItem['es_combo'],  // ✅ NUEVO: Indicar si es combo
+                'componentes' => $primerItem['componentes'],  // ✅ NUEVO: Componentes del combo
             ];
         })->values();
     }

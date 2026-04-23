@@ -21,9 +21,17 @@
                 <tr style="border-bottom: 1px solid #ddd; @if($itemNum % 2 === 0)background: #f9f9f9;@endif">
                     <td style="padding: 8px; font-size: 12px; box-sizing: border-box; overflow: hidden; word-wrap: break-word; text-align: center; border-right: 1px solid #eee;">{{ $itemNum }}</td>
                     <td style="padding: 8px; font-size: 12px; box-sizing: border-box; overflow: hidden; word-wrap: break-word;">
-                        <strong style="font-size: 13px; display: block;">{{ $producto['producto_nombre'] }}</strong>
+                        <strong style="font-size: 13px; display: block;">@if($producto['es_combo']) 📦 @endif {{ $producto['producto_nombre'] }}</strong>
                         @if($producto['codigo_producto'])
                             <span style="color: #999; font-size: 10px;">{{ $producto['codigo_producto'] }}</span>
+                        @endif
+                        {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo --}}
+                        @if($producto['es_combo'] && !empty($producto['componentes']))
+                            <div style="color: #666; font-size: 10px; margin-top: 4px;">
+                                @foreach($producto['componentes'] as $componente)
+                                    └─ {{ $componente['producto_nombre'] }} ({{ number_format($componente['cantidad'], 0) }} {{ $componente['unidad'] }})<br>
+                                @endforeach
+                            </div>
                         @endif
                     </td>
                     <td style="padding: 8px; font-size: 12px; text-align: center; box-sizing: border-box; overflow: hidden; word-wrap: break-word;">

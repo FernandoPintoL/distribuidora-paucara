@@ -188,10 +188,21 @@
                     @forelse($productosGenerico as $producto)
                         <tr>
                             <td class="text-center" style="font-size: 10px;">{{ $loop->iteration }}</td>
-                            <td>{{ substr($producto['producto_nombre'], 0, 18) }}</td>
+                            <td>@if($producto['es_combo']) 📦 @endif{{ substr($producto['producto_nombre'], 0, 18) }}</td>
                             <td class="text-right">{{ number_format($producto['cantidad_total'], 1) }}</td>
                             <td class="text-right">{{ number_format($producto['subtotal_total'], 2) }}</td>
                         </tr>
+                        {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo --}}
+                        @if($producto['es_combo'] && !empty($producto['componentes']))
+                            @foreach($producto['componentes'] as $componente)
+                            <tr style="font-size: 10px; background-color: #f9f9f9;">
+                                <td></td>
+                                <td style="padding-left: 15px;">└─ {{ substr($componente['producto_nombre'], 0, 20) }}</td>
+                                <td class="text-right">{{ number_format($componente['cantidad'], 1) }}</td>
+                                <td></td>
+                            </tr>
+                            @endforeach
+                        @endif
                     @empty
                         <tr>
                             <td colspan="4" class="text-center">Sin productos</td>
@@ -403,10 +414,21 @@
                     @forelse($productosGenerico as $producto)
                         <tr>
                             <td class="text-center" style="font-size: 10px;">{{ $loop->iteration }}</td>
-                            <td>{{ substr($producto['producto_nombre'], 0, 18) }}</td>
+                            <td>@if($producto['es_combo']) 📦 @endif{{ substr($producto['producto_nombre'], 0, 18) }}</td>
                             <td class="text-right">{{ number_format($producto['cantidad_total'], 1) }}</td>
                             <td class="text-right">{{ number_format($producto['subtotal_total'], 2) }}</td>
                         </tr>
+                        {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo --}}
+                        @if($producto['es_combo'] && !empty($producto['componentes']))
+                            @foreach($producto['componentes'] as $componente)
+                            <tr style="font-size: 10px; background-color: #f9f9f9;">
+                                <td></td>
+                                <td style="padding-left: 15px;">└─ {{ substr($componente['producto_nombre'], 0, 20) }}</td>
+                                <td class="text-right">{{ number_format($componente['cantidad'], 1) }}</td>
+                                <td></td>
+                            </tr>
+                            @endforeach
+                        @endif
                     @empty
                         <tr>
                             <td colspan="4" class="text-center">Sin productos</td>

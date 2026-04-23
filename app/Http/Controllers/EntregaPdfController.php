@@ -72,6 +72,16 @@ class EntregaPdfController extends Controller
                 'reportes',
             ]);
 
+            // ✅ NUEVO (2026-04-23): Cargar componentes de combos en los detalles de ventas
+            // Para cada venta en la entrega, para cada detalle, si el producto es combo, cargar sus items
+            foreach ($entrega->ventas as $venta) {
+                foreach ($venta->detalles as $detalle) {
+                    if ($detalle->producto->es_combo) {
+                        $detalle->load('producto.comboItems.producto');
+                    }
+                }
+            }
+
             // ✅ IMPORTANTE: Cargar entregador manualmente usando query builder
             // Debido a un comportamiento de Eloquent, las formas estándar (load/with) no funcionan
             // El problema es que load() anterior CACHE una relación entregador vacía

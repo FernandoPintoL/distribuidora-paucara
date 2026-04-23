@@ -105,10 +105,20 @@
         <tbody>
             @forelse($productosGenerico as $producto)
             <tr style="border-bottom: 1px dotted #999;">
-                <td style="padding: 1px 0;">{{ substr($producto['producto_nombre'], 0, 25) }}</td>
+                <td style="padding: 1px 0;">@if($producto['es_combo']) @endif{{ substr($producto['producto_nombre'], 0, 22) }}</td>
                 <td style="padding: 1px 0; text-align: center; width: 15%;"> {{ number_format($producto['cantidad_total'], 1) }}</td>
                 <td style="padding: 1px 0; text-align: right; width: 20%; font-size: 12px; font-weight: bold;">{{ number_format($producto['subtotal_total'], 2) }}</td>
             </tr>
+            {{-- ✅ NUEVO (2026-04-23): Mostrar componentes del combo --}}
+            @if($producto['es_combo'] && !empty($producto['componentes']))
+                @foreach($producto['componentes'] as $componente)
+                <tr style="border-bottom: 1px dotted #ccc;">
+                    <td style="padding: 1px 0; padding-left: 8px; font-size: 11px;">{{ substr($componente['producto_nombre'], 0, 20) }}</td>
+                    <td style="padding: 1px 0; text-align: center; width: 15%; font-size: 11px;">{{ number_format($componente['cantidad'], 1) }}</td>
+                    <td style="padding: 1px 0; text-align: right; width: 20%;"></td>
+                </tr>
+                @endforeach
+            @endif
             @empty
             <tr>
                 <td colspan="3" style="text-align: center; padding: 4px; color: #999;">Sin productos</td>
