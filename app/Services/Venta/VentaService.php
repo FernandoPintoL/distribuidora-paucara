@@ -375,6 +375,43 @@ class VentaService
                 'cantidad_detalles' => count($dto->detalles),
             ]);
 
+            // ✅ NUEVO: Recalcular peso_total_estimado considerando combos
+            // Si el DTO no vino con peso o vino con 0, calcular desde detalles
+            if (($dto->peso_total_estimado ?? 0) <= 0) {
+                $pesoTotalCalculado = 0;
+                $detallesCreados = $venta->detalles()->get();
+
+                foreach ($detallesCreados as $detalle) {
+                    // Si el detalle tiene combo_items_seleccionados, calcular peso desde los items del combo
+                    if (!empty($detalle->combo_items_seleccionados) && is_array($detalle->combo_items_seleccionados)) {
+                        $pesoCombo = 0;
+                        foreach ($detalle->combo_items_seleccionados as $comboItem) {
+                            if (isset($comboItem['producto_id'])) {
+                                $productoCombo = \App\Models\Producto::find($comboItem['producto_id']);
+                                if ($productoCombo) {
+                                    $pesoCombo += (float) ($productoCombo->peso_unitario ?? 0);
+                                }
+                            }
+                        }
+                        $pesoTotalCalculado += $pesoCombo * (float) $detalle->cantidad;
+                    } else {
+                        // Producto normal (no es combo o combo vacío)
+                        $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                        $pesoTotalCalculado += $pesoProd * (float) $detalle->cantidad;
+                    }
+                }
+
+                Log::info("📊 [VentaService::crear] Peso recalculado para venta {$venta->id}: {$pesoTotalCalculado} kg (considerando combos)", [
+                    'venta_id' => $venta->id,
+                    'peso_anterior' => $dto->peso_total_estimado ?? 0,
+                    'peso_calculado' => $pesoTotalCalculado,
+                    'tiene_combos' => count(array_filter($detallesCreados->all(), fn($d) => !empty($d->combo_items_seleccionados))) > 0,
+                ]);
+
+                // Actualizar peso en la venta
+                $venta->update(['peso_total_estimado' => $pesoTotalCalculado]);
+            }
+
             // 3.3 Consumir stock usando VentaDistribucionService (centralizado FIFO)
             // ✅ NUEVO (2026-02-11): Usar VentaDistribucionService centralizado
             Log::debug('🔄 [VentaService::crear] Procesando salida de stock con VentaDistribucionService', [

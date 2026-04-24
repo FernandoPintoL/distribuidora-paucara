@@ -406,12 +406,30 @@ class EntregaController extends Controller
                 $pesoTotalEstimado = (float) ($venta->peso_total_estimado ?? 0);
                 if ($pesoTotalEstimado === 0.0 && $venta->detalles?->count() > 0) {
                     // Calcular peso desde detalles: suma(cantidad * peso_producto)
+                    // ✅ MEJORADO: Considerar pesos de productos dentro de combos
                     $pesoTotalEstimado = $venta->detalles->reduce(function ($carry, $detalle) {
-                        $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
-                        return $carry + ((float) $detalle->cantidad * $pesoProd);
+                        // Si el detalle contiene combo_items_seleccionados, calcular peso desde los items del combo
+                        if (!empty($detalle->combo_items_seleccionados) && is_array($detalle->combo_items_seleccionados)) {
+                            // Sumar peso de cada producto seleccionado en el combo
+                            $pesoCombo = 0;
+                            foreach ($detalle->combo_items_seleccionados as $comboItem) {
+                                if (isset($comboItem['producto_id'])) {
+                                    $productoCombo = \App\Models\Producto::find($comboItem['producto_id']);
+                                    if ($productoCombo) {
+                                        $pesoCombo += (float) ($productoCombo->peso_unitario ?? 0);
+                                    }
+                                }
+                            }
+                            // Multiplicar por la cantidad del combo (cada unidad del combo contiene estos productos)
+                            return $carry + ($pesoCombo * (float) $detalle->cantidad);
+                        } else {
+                            // Producto normal (no es combo o combo vacío)
+                            $pesoProd = (float) ($detalle->producto?->peso_unitario ?? 0);
+                            return $carry + ((float) $detalle->cantidad * $pesoProd);
+                        }
                     }, 0);
 
-                    \Log::info("📊 [EntregaController] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg");
+                    \Log::info("📊 [EntregaController] Peso recalculado para venta {$venta->id}: {$pesoTotalEstimado} kg (considerar combos)");
                 }
 
                 // Obtener dirección: prioridad venta -> cliente principal -> primera dirección cliente

@@ -542,10 +542,26 @@ class ProformaService
 
             // ✅ NUEVO: Calcular peso total desde detalles
             // Fórmula: pesoTotal = Σ(cantidad × peso_producto)
+            // ✅ MEJORADO: Considerar pesos de productos dentro de combos
             $pesoTotal = 0;
             foreach ($proforma->detalles as $detalle) {
-                $pesoProducto  = $detalle->producto?->peso ?? 0;
-                $pesoTotal    += $detalle->cantidad * $pesoProducto;
+                // Si el detalle contiene combo_items_seleccionados, calcular peso desde los items del combo
+                if (!empty($detalle->combo_items_seleccionados) && is_array($detalle->combo_items_seleccionados)) {
+                    $pesoCombo = 0;
+                    foreach ($detalle->combo_items_seleccionados as $comboItem) {
+                        if (isset($comboItem['producto_id'])) {
+                            $productoCombo = \App\Models\Producto::find($comboItem['producto_id']);
+                            if ($productoCombo) {
+                                $pesoCombo += (float) ($productoCombo->peso_unitario ?? 0);
+                            }
+                        }
+                    }
+                    $pesoTotal += $pesoCombo * (float) $detalle->cantidad;
+                } else {
+                    // Producto normal (no es combo o combo vacío)
+                    $pesoProducto  = $detalle->producto?->peso ?? 0;
+                    $pesoTotal    += $detalle->cantidad * $pesoProducto;
+                }
             }
 
             Log::info('📦 [ProformaService::convertirAVenta] Detalles preparados', [
