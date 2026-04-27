@@ -1163,18 +1163,23 @@ class ProductoController extends Controller
         }
 
         // ✅ FILTROS HABILITADOS (2026-03-17):
-        // 1. Stock > 0 en el almacén
-        // 2. Precio de venta activo > 0
-        // 3. Productos activos
-        // 4. Productos visibles en app (✨ NUEVO - 2026-03-22)
+        // 1. Stock > 0 en el almacén (para productos normales)
+        // 2. Precio de venta activo > 0 (para productos normales)
+        // 3. Combos: solo requieren ser activos y visibles (su capacidad se calcula dinámicamente)
+        // 4. Productos activos
+        // 5. Productos visibles en app (✨ NUEVO - 2026-03-22)
         $query = $query
             ->when($categoriaId, fn($q) => $q->where('categoria_id', $categoriaId))
             ->when($marcaId, fn($q) => $q->where('marca_id', $marcaId))
             ->when($proveedorId, fn($q) => $q->where('proveedor_id', $proveedorId))
-            // ✅ COMBOS: No requieren stock ni precio (línea 1131)
+            // ✅ MEJORADO (2026-04-24): COMBOS NO requieren stock record
+            // Los combos son productos virtuales, su disponibilidad se calcula desde sus componentes
             ->where(function ($q) use ($almacenId, $tipoPrecioVentaId) {
-                // Combos: solo deben ser activos y visibles
-                $q->where('es_combo', true)
+                // Combos: deben ser activos y visibles
+                // Su capacidad se calcula dinámicamente en ComboStockService
+                $q->where(function ($comboQ) {
+                    $comboQ->where('es_combo', true);
+                })
                     // O productos normales: con stock y precio
                     ->orWhere(function ($subQ) use ($almacenId, $tipoPrecioVentaId) {
                         $subQ->where('es_combo', false)
