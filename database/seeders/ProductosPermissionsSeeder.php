@@ -11,12 +11,13 @@ class ProductosPermissionsSeeder extends Seeder
     /**
      * Crea los permisos para la gestión de productos
      *
-     * ✅ NOTA (2026-04-29): Permisos sincronizados con backend y frontend
+     * ✅ NUEVO (2026-03-30): Permisos para gestión de productos
      * - Estrategia: TODOS PUEDEN por defecto, solo remover a usuarios específicos
      *
      * Permisos:
-     * 1. productos.manage: Gestionar productos (crear, editar, eliminar, importar)
-     * 2. ver_precio_costo: Ver precio de costo en listados y formularios
+     * 1. ver_precio_costo: Ver precio de costo en listados y formularios
+     * 2. productos.edit: Editar productos (acceso a formulario de edición)
+     * 3. productos.delete: Eliminar productos
      */
     public function run(): void
     {
@@ -28,12 +29,16 @@ class ProductosPermissionsSeeder extends Seeder
         // ============================================
         $permisos = [
             [
-                'name' => 'productos.manage',
-                'description' => 'Permite gestionar productos (crear, editar, eliminar, importar, ver precios de costo)'
-            ],
-            [
                 'name' => 'ver_precio_costo',
                 'description' => 'Permite ver el precio de costo de productos en listado, tabla y formularios'
+            ],
+            [
+                'name' => 'productos.edit',
+                'description' => 'Permite editar productos y acceder al formulario de edición'
+            ],
+            [
+                'name' => 'productos.delete',
+                'description' => 'Permite eliminar productos del sistema'
             ],
         ];
 
@@ -82,8 +87,9 @@ class ProductosPermissionsSeeder extends Seeder
         $this->command->line('');
         $this->command->line('   php artisan tinker');
         $this->command->line('   >>> $user = User::find(ID_DEL_USUARIO)');
-        $this->command->line('   >>> $user->revokePermissionTo("productos.manage")    # No gestionar productos');
         $this->command->line('   >>> $user->revokePermissionTo("ver_precio_costo")    # No ver precio costo');
+        $this->command->line('   >>> $user->revokePermissionTo("productos.edit")      # No editar');
+        $this->command->line('   >>> $user->revokePermissionTo("productos.delete")    # No eliminar');
         $this->command->line('');
     }
 }

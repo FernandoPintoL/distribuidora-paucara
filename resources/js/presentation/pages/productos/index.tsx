@@ -22,10 +22,9 @@ interface ProductosIndexProps {
 export default function ProductosIndex({ productos, filters, categorias, marcas, proveedores }: ProductosIndexProps) {
   const { can } = useAuth(); // ✅ Obtener permisos del usuario
 
-  // ✅ Permisos - Usar productos.manage (consistente con backend)
-  const puedeGestionar = can('productos.manage');
-  const puedeEditar = puedeGestionar;
-  const puedeEliminar = puedeGestionar;
+  // ✅ Permisos separados por acción (NO bloquear listado)
+  const puedeEditar = can('productos.edit');
+  const puedeEliminar = can('productos.delete');
 
   // 📊 LOG: Ver datos que llegan del backend
   console.log('📦 [ProductosIndex] Datos del Backend:', {
@@ -39,7 +38,6 @@ export default function ProductosIndex({ productos, filters, categorias, marcas,
 
   // 🔐 LOG: Ver permisos del usuario
   console.log('🔐 [ProductosIndex] Permisos del Usuario:', {
-    puedeGestionar,
     puedeEditar,
     puedeEliminar,
     verPrecioCosto: can('ver_precio_costo'),
