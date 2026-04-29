@@ -234,6 +234,49 @@ class CajaController extends Controller
             // ✅ NUEVO (2026-03-09): Obtener sumatoria de DEVOLUCION
             $sumatorialDevoluciones = (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0);
 
+            // ✅ NUEVO: Obtener desglose de pagos desglosados por tipo de pago
+            $detallesPagoDesglosado = [];
+            $totalDetallesPago = 0;
+
+            // Obtener IDs de ventas registradas en esta caja abierta
+            $ventasEnCaja = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
+                ->where('user_id', $usuarioDestino->id)
+                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
+                ->whereIn('tipo_operacion_id', function($q) {
+                    $q->select('id')->from('tipo_operacion_caja')
+                      ->whereIn('codigo', ['VENTA', 'CREDITO']);
+                })
+                ->pluck('venta_id')
+                ->filter() // Filtrar valores nulos
+                ->unique()
+                ->toArray();
+
+            if (!empty($ventasEnCaja)) {
+                // Obtener detalles de pago agrupados por tipo de pago
+                $detallesPagoBrutos = \App\Models\DetallePagoVenta::whereIn('venta_id', $ventasEnCaja)
+                    ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
+                    ->select(
+                        'detalles_pago_venta.tipo_pago_id',
+                        'tipos_pago.nombre',
+                        'tipos_pago.codigo',
+                        \DB::raw('SUM(detalles_pago_venta.monto) as total_monto'),
+                        \DB::raw('COUNT(detalles_pago_venta.id) as cantidad')
+                    )
+                    ->groupBy('detalles_pago_venta.tipo_pago_id', 'tipos_pago.nombre', 'tipos_pago.codigo')
+                    ->get();
+
+                foreach ($detallesPagoBrutos as $detalle) {
+                    $detallesPagoDesglosado[] = [
+                        'tipo_pago_id' => (int) $detalle->tipo_pago_id,
+                        'tipo'         => $detalle->nombre,
+                        'codigo'       => $detalle->codigo,
+                        'total'        => (float) $detalle->total_monto,
+                        'cantidad'     => (int) $detalle->cantidad,
+                    ];
+                    $totalDetallesPago += (float) $detalle->total_monto;
+                }
+            }
+
             $datosResumen = [
                 'apertura'              => $montoApertura,
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
@@ -255,6 +298,9 @@ class CajaController extends Controller
                 'sumatorialServicio'    => $sumatorialServicio,     // ✅ NUEVO (2026-03-09): Servicios
                 'sumatorialCompras'     => $sumatorialCompras,      // ✅ NUEVO (2026-02-20): Compras a proveedores
                 'sumatorialAnulaciones' => $sumatorialAnulaciones,
+                // ✅ NUEVO: Desglose de pagos desglosados por tipo de pago
+                'detallesPagoDesglosado' => $detallesPagoDesglosado,
+                'totalDetallesPago'     => (float) $totalDetallesPago,
             ];
 
             Log::info('💰 [CajaController] Resumen de caja calculado', [
@@ -284,6 +330,9 @@ class CajaController extends Controller
             'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
             'ventasCreditoTotales'      => $datosResumen ? $datosResumen['ventasCreditoTotales'] ?? 0 : 0,  // ✅ NUEVO
             'sumatorialCompras'         => $datosResumen ? $datosResumen['sumatorialCompras'] ?? 0 : 0,  // ✅ NUEVO (2026-02-20)
+            // ✅ NUEVO: Desglose de pagos por tipo de pago (detalles_pago_venta)
+            'detallesPagoDesglosado'    => $datosResumen ? $datosResumen['detallesPagoDesglosado'] ?? [] : [],
+            'totalDetallesPago'         => $datosResumen ? $datosResumen['totalDetallesPago'] ?? 0 : 0,
         ]);
     }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import type { StockFilterOptions } from '@/domain/entities/reportes';
 
 const ALL_VALUE = 'all';
@@ -8,6 +9,7 @@ interface FilterState {
   categoria_id: string;
   stock_bajo: boolean;
   stock_alto: boolean;
+  busqueda: string;
 }
 
 /**
@@ -25,6 +27,7 @@ export function useStockActualFilters(
     categoria_id: initialFilters.categoria_id?.toString() || ALL_VALUE,
     stock_bajo: initialFilters.stock_bajo || false,
     stock_alto: initialFilters.stock_alto || false,
+    busqueda: initialFilters.busqueda || '',
   });
 
   /**
@@ -38,17 +41,20 @@ export function useStockActualFilters(
     if (paramsRaw.almacen_id === ALL_VALUE) delete paramsRaw.almacen_id;
     if (paramsRaw.categoria_id === ALL_VALUE) delete paramsRaw.categoria_id;
 
-    // Convertir booleanos a string para URLSearchParams
+    // Convertir booleanos a string y filtrar valores vacíos
     const params = Object.fromEntries(
       Object.entries(paramsRaw)
         .filter(([, v]) => v !== '' && v !== false)
         .map(([k, v]) => [k, String(v)])
     );
 
+    console.log('📊 handleFilter - formData:', formData);
+    console.log('📊 handleFilter - params finales:', params);
+
     if (onNavigate) {
       onNavigate(params);
     } else {
-      window.location.href = `/reportes/inventario/stock-actual?${new URLSearchParams(params).toString()}`;
+      router.get('/reportes/inventario/stock-actual', params, { preserveScroll: true });
     }
   };
 
@@ -61,12 +67,13 @@ export function useStockActualFilters(
       categoria_id: ALL_VALUE,
       stock_bajo: false,
       stock_alto: false,
+      busqueda: '',
     });
 
     if (onNavigate) {
       onNavigate({});
     } else {
-      window.location.href = '/reportes/inventario/stock-actual';
+      router.get('/reportes/inventario/stock-actual', {}, { preserveScroll: true });
     }
   };
 

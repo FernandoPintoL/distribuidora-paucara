@@ -281,6 +281,7 @@ export interface StockFilterOptions {
   categoria_id?: number;
   stock_bajo?: boolean;
   stock_alto?: boolean;
+  busqueda?: string;
 }
 
 export interface StockPaginatedData {

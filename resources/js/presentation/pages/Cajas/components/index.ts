@@ -10,3 +10,4 @@ export { CajaEstadoCard } from './caja-estado-card';
 export { MovimientosDelDiaTable } from './movimientos-del-dia-table';
 export { HistorialAperturasTable } from './historial-aperturas-table';
 export { ResumenCajaCard } from './resumen-caja-card';
+export { DesglosePageosCard } from './desglose-pagos-card';

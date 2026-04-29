@@ -32,10 +32,8 @@ class ReporteVentasController extends Controller
             $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')
                 ->value('id');
 
-            // Construir query para obtener productos vendidos
-            // ✅ CORREGIDO: La relación es ventas.proforma_id (no proformas.venta_id)
-            // ✅ CORREGIDO: La tabla es detalle_proformas (no proforma_detalles)
-            $query = DB::table('proformas')
+            // ✅ NUEVO (2026-04-28): Query 1 - Productos vendidos DIRECTAMENTE
+            $productosDirectos = DB::table('proformas')
                 ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
                 ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
                 ->join('productos', 'detalle_proformas.producto_id', '=', 'productos.id')
@@ -55,21 +53,87 @@ class ReporteVentasController extends Controller
 
             // Filtro por usuario creador
             if ($request->filled('usuario_creador_id')) {
-                $query->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+                $productosDirectos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
             } elseif ($user->hasRole('Preventista')) {
-                $query->where('proformas.usuario_creador_id', $user->id);
+                $productosDirectos->where('proformas.usuario_creador_id', $user->id);
             }
 
             // Filtro por cliente
             if ($request->filled('cliente_id')) {
-                $query->where('proformas.cliente_id', $request->cliente_id);
+                $productosDirectos->where('proformas.cliente_id', $request->cliente_id);
             }
 
-            $productos = $query->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
-                ->orderBy('productos.nombre', 'asc')
-                ->get()
-                ->map(function ($item) {
-                    return [
+            $productosDirectos = $productosDirectos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // ✅ NUEVO (2026-04-28): Query 2 - Productos dentro de COMBOS vendidos
+            // Cuando se vende un combo, los productos dentro del combo también se venden
+            // cantidad_producto = cantidad_combo * cantidad_en_combo_items
+            $productosEnCombos = DB::table('proformas')
+                ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('combo_items', 'detalle_proformas.producto_id', '=', 'combo_items.combo_id')
+                ->join('productos', 'combo_items.producto_id', '=', 'productos.id')
+                ->select(
+                    'productos.id',
+                    'productos.nombre as producto_nombre',
+                    'productos.sku as producto_codigo',
+                    // Multiplicar cantidad del combo por cantidad del item en el combo
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2))) as cantidad_total'),
+                    // Precio promedio del item en el combo
+                    DB::raw('AVG(CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as precio_promedio'),
+                    // Total = cantidad_combo * cantidad_item * precio_item
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2)) * CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as total_venta'),
+                    'proformas.usuario_creador_id'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
+
+            // Aplicar los mismos filtros a los combos
+            if ($request->filled('usuario_creador_id')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $user->id);
+            }
+
+            if ($request->filled('cliente_id')) {
+                $productosEnCombos->where('proformas.cliente_id', $request->cliente_id);
+            }
+
+            $productosEnCombos = $productosEnCombos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // ✅ NUEVO (2026-04-28): Combinar resultados y agregar por producto
+            $productosCombinados = collect();
+
+            // Agregar productos directos
+            foreach ($productosDirectos as $item) {
+                $productosCombinados->push([
+                    'id' => $item->id,
+                    'nombre' => $item->producto_nombre,
+                    'codigo' => $item->producto_codigo,
+                    'cantidad_total' => (float) $item->cantidad_total,
+                    'precio_promedio' => (float) $item->precio_promedio,
+                    'total_venta' => (float) $item->total_venta,
+                    'usuario_creador_id' => $item->usuario_creador_id,
+                ]);
+            }
+
+            // Agregar productos de combos
+            foreach ($productosEnCombos as $item) {
+                $existe = $productosCombinados->firstWhere('id', $item->id);
+                if ($existe) {
+                    // Si el producto ya existe (también fue vendido directo), sumar cantidades
+                    $existe['cantidad_total'] += (float) $item->cantidad_total;
+                    $existe['total_venta'] += (float) $item->total_venta;
+                    // Recalcular precio promedio ponderado
+                    $cantidadTotal = $existe['cantidad_total'];
+                    $existe['precio_promedio'] = $cantidadTotal > 0 ? $existe['total_venta'] / $cantidadTotal : 0;
+                } else {
+                    // Si no existe, agregarlo
+                    $productosCombinados->push([
                         'id' => $item->id,
                         'nombre' => $item->producto_nombre,
                         'codigo' => $item->producto_codigo,
@@ -77,8 +141,54 @@ class ReporteVentasController extends Controller
                         'precio_promedio' => (float) $item->precio_promedio,
                         'total_venta' => (float) $item->total_venta,
                         'usuario_creador_id' => $item->usuario_creador_id,
-                    ];
-                });
+                    ]);
+                }
+            }
+
+            $productos = $productosCombinados->sortBy('nombre')->values();
+
+            // ✅ NUEVO (2026-04-28): Agregar datos de movimientos de inventario (anterior y posterior)
+            $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
+                // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
+                $movimientoAnterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'asc')
+                    ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
+                    ->first();
+
+                // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
+                $movimientoPosterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'desc')
+                    ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
+                    ->first();
+
+                // Si no hay movimientos en el período, traer el último movimiento antes del período
+                if (!$movimientoAnterior) {
+                    $movimientoAnterior = DB::table('movimientos_inventario')
+                        ->where('producto_id', $producto['id'])
+                        ->whereDate('created_at', '<', $fechaDesde)
+                        ->orderBy('created_at', 'desc')
+                        ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
+                        ->first();
+                }
+
+                return [
+                    ...$producto,
+                    // Datos ANTERIORES
+                    'total_anterior' => (float) ($movimientoAnterior?->cantidad_total_anterior ?? 0),
+                    'disponible_anterior' => (float) ($movimientoAnterior?->cantidad_disponible_anterior ?? 0),
+                    'reservado_anterior' => (float) ($movimientoAnterior?->cantidad_reservada_anterior ?? 0),
+                    // Datos POSTERIORES
+                    'total_posterior' => (float) ($movimientoPosterior?->cantidad_total_posterior ?? 0),
+                    'disponible_posterior' => (float) ($movimientoPosterior?->cantidad_disponible_posterior ?? 0),
+                    'reservado_posterior' => (float) ($movimientoPosterior?->cantidad_reservada_posterior ?? 0),
+                ];
+            });
 
             // Calcular totales
             $totales = [
@@ -693,8 +803,9 @@ class ReporteVentasController extends Controller
             // Obtener el ID del estado APROBADO
             $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
 
-            // Construir query (igual al método imprimirReporte)
-            $query = DB::table('proformas')
+            // ✅ ACTUALIZADO (2026-04-28): Considerar productos directos y dentro de combos
+            // Query 1: Productos directos
+            $productosDirectos = DB::table('proformas')
                 ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
                 ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
                 ->join('productos', 'detalle_proformas.producto_id', '=', 'productos.id')
@@ -713,20 +824,75 @@ class ReporteVentasController extends Controller
                 ->whereNotNull('ventas.proforma_id');
 
             if ($request->filled('usuario_creador_id')) {
-                $query->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+                $productosDirectos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
             } elseif ($user->hasRole('Preventista')) {
-                $query->where('proformas.usuario_creador_id', $user->id);
+                $productosDirectos->where('proformas.usuario_creador_id', $user->id);
             }
 
             if ($request->filled('cliente_id')) {
-                $query->where('proformas.cliente_id', $request->cliente_id);
+                $productosDirectos->where('proformas.cliente_id', $request->cliente_id);
             }
 
-            $productos = $query->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
-                ->orderBy('productos.nombre', 'asc')
-                ->get()
-                ->map(function ($item) {
-                    return [
+            $productosDirectos = $productosDirectos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // Query 2: Productos dentro de combos
+            $productosEnCombos = DB::table('proformas')
+                ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('combo_items', 'detalle_proformas.producto_id', '=', 'combo_items.combo_id')
+                ->join('productos', 'combo_items.producto_id', '=', 'productos.id')
+                ->select(
+                    'productos.id',
+                    'productos.nombre as producto_nombre',
+                    'productos.sku as producto_codigo',
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2))) as cantidad_total'),
+                    DB::raw('AVG(CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as precio_promedio'),
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2)) * CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as total_venta'),
+                    'proformas.usuario_creador_id'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
+
+            if ($request->filled('usuario_creador_id')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $user->id);
+            }
+
+            if ($request->filled('cliente_id')) {
+                $productosEnCombos->where('proformas.cliente_id', $request->cliente_id);
+            }
+
+            $productosEnCombos = $productosEnCombos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // Combinar resultados
+            $productosCombinados = collect();
+
+            foreach ($productosDirectos as $item) {
+                $productosCombinados->push([
+                    'id' => $item->id,
+                    'nombre' => $item->producto_nombre,
+                    'codigo' => $item->producto_codigo,
+                    'cantidad_total' => (float) $item->cantidad_total,
+                    'precio_promedio' => (float) $item->precio_promedio,
+                    'total_venta' => (float) $item->total_venta,
+                    'usuario_creador_id' => $item->usuario_creador_id,
+                ]);
+            }
+
+            foreach ($productosEnCombos as $item) {
+                $existe = $productosCombinados->firstWhere('id', $item->id);
+                if ($existe) {
+                    $existe['cantidad_total'] += (float) $item->cantidad_total;
+                    $existe['total_venta'] += (float) $item->total_venta;
+                    $cantidadTotal = $existe['cantidad_total'];
+                    $existe['precio_promedio'] = $cantidadTotal > 0 ? $existe['total_venta'] / $cantidadTotal : 0;
+                } else {
+                    $productosCombinados->push([
                         'id' => $item->id,
                         'nombre' => $item->producto_nombre,
                         'codigo' => $item->producto_codigo,
@@ -734,8 +900,54 @@ class ReporteVentasController extends Controller
                         'precio_promedio' => (float) $item->precio_promedio,
                         'total_venta' => (float) $item->total_venta,
                         'usuario_creador_id' => $item->usuario_creador_id,
-                    ];
-                });
+                    ]);
+                }
+            }
+
+            $productos = $productosCombinados->sortBy('nombre')->values();
+
+            // ✅ NUEVO (2026-04-28): Agregar datos de movimientos de inventario (anterior y posterior)
+            $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
+                // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
+                $movimientoAnterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'asc')
+                    ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
+                    ->first();
+
+                // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
+                $movimientoPosterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'desc')
+                    ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
+                    ->first();
+
+                // Si no hay movimientos en el período, traer el último movimiento antes del período
+                if (!$movimientoAnterior) {
+                    $movimientoAnterior = DB::table('movimientos_inventario')
+                        ->where('producto_id', $producto['id'])
+                        ->whereDate('created_at', '<', $fechaDesde)
+                        ->orderBy('created_at', 'desc')
+                        ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
+                        ->first();
+                }
+
+                return [
+                    ...$producto,
+                    // Datos ANTERIORES
+                    'total_anterior' => (float) ($movimientoAnterior?->cantidad_total_anterior ?? 0),
+                    'disponible_anterior' => (float) ($movimientoAnterior?->cantidad_disponible_anterior ?? 0),
+                    'reservado_anterior' => (float) ($movimientoAnterior?->cantidad_reservada_anterior ?? 0),
+                    // Datos POSTERIORES
+                    'total_posterior' => (float) ($movimientoPosterior?->cantidad_total_posterior ?? 0),
+                    'disponible_posterior' => (float) ($movimientoPosterior?->cantidad_disponible_posterior ?? 0),
+                    'reservado_posterior' => (float) ($movimientoPosterior?->cantidad_reservada_posterior ?? 0),
+                ];
+            });
 
             // Obtener información del usuario si está filtrado
             $usuarioNombre = null;
@@ -890,8 +1102,9 @@ class ReporteVentasController extends Controller
             // Obtener el ID del estado APROBADO
             $estadoAprobadoId = EstadoDocumento::where('codigo', 'APROBADO')->value('id');
 
-            // Construir query para obtener productos vendidos (igual al método anterior)
-            $query = DB::table('proformas')
+            // ✅ ACTUALIZADO (2026-04-28): Considerar productos directos y dentro de combos
+            // Query 1: Productos directos
+            $productosDirectos = DB::table('proformas')
                 ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
                 ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
                 ->join('productos', 'detalle_proformas.producto_id', '=', 'productos.id')
@@ -909,23 +1122,76 @@ class ReporteVentasController extends Controller
                 ->whereDate('ventas.created_at', '<=', $fechaHasta)
                 ->whereNotNull('ventas.proforma_id');
 
-            // Filtro por usuario creador
             if ($request->filled('usuario_creador_id')) {
-                $query->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+                $productosDirectos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
             } elseif ($user->hasRole('Preventista')) {
-                $query->where('proformas.usuario_creador_id', $user->id);
+                $productosDirectos->where('proformas.usuario_creador_id', $user->id);
             }
 
-            // Filtro por cliente
             if ($request->filled('cliente_id')) {
-                $query->where('proformas.cliente_id', $request->cliente_id);
+                $productosDirectos->where('proformas.cliente_id', $request->cliente_id);
             }
 
-            $productos = $query->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
-                ->orderBy('productos.nombre', 'asc')
-                ->get()
-                ->map(function ($item) {
-                    return [
+            $productosDirectos = $productosDirectos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // Query 2: Productos dentro de combos
+            $productosEnCombos = DB::table('proformas')
+                ->join('ventas', 'ventas.proforma_id', '=', 'proformas.id')
+                ->join('detalle_proformas', 'proformas.id', '=', 'detalle_proformas.proforma_id')
+                ->join('combo_items', 'detalle_proformas.producto_id', '=', 'combo_items.combo_id')
+                ->join('productos', 'combo_items.producto_id', '=', 'productos.id')
+                ->select(
+                    'productos.id',
+                    'productos.nombre as producto_nombre',
+                    'productos.sku as producto_codigo',
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2))) as cantidad_total'),
+                    DB::raw('AVG(CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as precio_promedio'),
+                    DB::raw('SUM(CAST(detalle_proformas.cantidad AS DECIMAL(15,2)) * CAST(combo_items.cantidad AS DECIMAL(15,2)) * CAST(combo_items.precio_unitario AS DECIMAL(15,2))) as total_venta'),
+                    'proformas.usuario_creador_id'
+                )
+                ->where('ventas.estado_documento_id', $estadoAprobadoId)
+                ->whereDate('ventas.created_at', '>=', $fechaDesde)
+                ->whereDate('ventas.created_at', '<=', $fechaHasta)
+                ->whereNotNull('ventas.proforma_id');
+
+            if ($request->filled('usuario_creador_id')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $request->usuario_creador_id);
+            } elseif ($user->hasRole('Preventista')) {
+                $productosEnCombos->where('proformas.usuario_creador_id', $user->id);
+            }
+
+            if ($request->filled('cliente_id')) {
+                $productosEnCombos->where('proformas.cliente_id', $request->cliente_id);
+            }
+
+            $productosEnCombos = $productosEnCombos->groupBy('productos.id', 'productos.nombre', 'productos.sku', 'proformas.usuario_creador_id')
+                ->get();
+
+            // Combinar resultados
+            $productosCombinados = collect();
+
+            foreach ($productosDirectos as $item) {
+                $productosCombinados->push([
+                    'id' => $item->id,
+                    'nombre' => $item->producto_nombre,
+                    'codigo' => $item->producto_codigo,
+                    'cantidad_total' => (float) $item->cantidad_total,
+                    'precio_promedio' => (float) $item->precio_promedio,
+                    'total_venta' => (float) $item->total_venta,
+                    'usuario_creador_id' => $item->usuario_creador_id,
+                ]);
+            }
+
+            foreach ($productosEnCombos as $item) {
+                $existe = $productosCombinados->firstWhere('id', $item->id);
+                if ($existe) {
+                    $existe['cantidad_total'] += (float) $item->cantidad_total;
+                    $existe['total_venta'] += (float) $item->total_venta;
+                    $cantidadTotal = $existe['cantidad_total'];
+                    $existe['precio_promedio'] = $cantidadTotal > 0 ? $existe['total_venta'] / $cantidadTotal : 0;
+                } else {
+                    $productosCombinados->push([
                         'id' => $item->id,
                         'nombre' => $item->producto_nombre,
                         'codigo' => $item->producto_codigo,
@@ -933,8 +1199,54 @@ class ReporteVentasController extends Controller
                         'precio_promedio' => (float) $item->precio_promedio,
                         'total_venta' => (float) $item->total_venta,
                         'usuario_creador_id' => $item->usuario_creador_id,
-                    ];
-                });
+                    ]);
+                }
+            }
+
+            $productos = $productosCombinados->sortBy('nombre')->values();
+
+            // ✅ NUEVO (2026-04-28): Agregar datos de movimientos de inventario (anterior y posterior)
+            $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
+                // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
+                $movimientoAnterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'asc')
+                    ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
+                    ->first();
+
+                // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
+                $movimientoPosterior = DB::table('movimientos_inventario')
+                    ->where('producto_id', $producto['id'])
+                    ->whereDate('created_at', '>=', $fechaDesde)
+                    ->whereDate('created_at', '<=', $fechaHasta)
+                    ->orderBy('created_at', 'desc')
+                    ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
+                    ->first();
+
+                // Si no hay movimientos en el período, traer el último movimiento antes del período
+                if (!$movimientoAnterior) {
+                    $movimientoAnterior = DB::table('movimientos_inventario')
+                        ->where('producto_id', $producto['id'])
+                        ->whereDate('created_at', '<', $fechaDesde)
+                        ->orderBy('created_at', 'desc')
+                        ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
+                        ->first();
+                }
+
+                return [
+                    ...$producto,
+                    // Datos ANTERIORES
+                    'total_anterior' => (float) ($movimientoAnterior?->cantidad_total_anterior ?? 0),
+                    'disponible_anterior' => (float) ($movimientoAnterior?->cantidad_disponible_anterior ?? 0),
+                    'reservado_anterior' => (float) ($movimientoAnterior?->cantidad_reservada_anterior ?? 0),
+                    // Datos POSTERIORES
+                    'total_posterior' => (float) ($movimientoPosterior?->cantidad_total_posterior ?? 0),
+                    'disponible_posterior' => (float) ($movimientoPosterior?->cantidad_disponible_posterior ?? 0),
+                    'reservado_posterior' => (float) ($movimientoPosterior?->cantidad_reservada_posterior ?? 0),
+                ];
+            });
 
             // Calcular totales
             $totales = [

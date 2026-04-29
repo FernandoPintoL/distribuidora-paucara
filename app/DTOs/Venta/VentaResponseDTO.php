@@ -50,6 +50,47 @@ class VentaResponseDTO extends BaseDTO
     ) {}
 
     /**
+     * Enriquecer combo items con datos del producto
+     * Toma los combo_items_seleccionados (que solo tienen IDs) y agrega nombre y SKU del producto
+     */
+    private static function enrichComboItems(array $comboItems): array
+    {
+        if (empty($comboItems)) {
+            return [];
+        }
+
+        // Obtener IDs únicos de productos
+        $productoIds = array_column($comboItems, 'producto_id');
+
+        if (empty($productoIds)) {
+            return [];
+        }
+
+        // Cargar todos los productos de una vez (eficiencia)
+        $productos = \App\Models\Producto::whereIn('id', array_unique($productoIds))
+            ->get(['id', 'nombre', 'sku'])
+            ->keyBy('id');
+
+        // Enriquecer cada combo item con los datos del producto
+        return array_map(function ($item) use ($productos) {
+            $producto = $productos->get($item['producto_id']);
+
+            return [
+                'combo_item_id' => $item['combo_item_id'] ?? null,
+                'producto_id' => $item['producto_id'],
+                'cantidad' => $item['cantidad'],
+                'incluido' => $item['incluido'] ?? true,
+                // ✅ NUEVO: Datos del producto
+                'producto' => $producto ? [
+                    'id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'sku' => $producto->sku,
+                ] : null,
+            ];
+        }, $comboItems);
+    }
+
+    /**
      * Factory: Crear desde Model Eloquent
      */
     public static function fromModel($venta): static
@@ -167,7 +208,7 @@ class VentaResponseDTO extends BaseDTO
                 'precio_unitario' => (float) $det->precio_unitario,
                 'descuento' => (float) ($det->descuento ?? 0),
                 'subtotal' => (float) $det->subtotal,
-                'combo_items_seleccionados' => $det->combo_items_seleccionados ?? [],
+                'combo_items_seleccionados' => static::enrichComboItems($det->combo_items_seleccionados ?? []),
             ])->toArray(),
             created_at: $venta->created_at->toIso8601String(),
             updated_at: $venta->updated_at->toIso8601String(),

@@ -24,6 +24,7 @@ export interface Step1Props {
     stock_maximo?: number | null;
     limite_venta?: number | null; // ✨ NUEVO - Límite de cantidad por venta
     es_fraccionado?: boolean; // ✨ NUEVO
+    es_producto_comida?: boolean; // ✨ NUEVO - Producto de comida/helado sin stock
     principio_activo?: string | null; // ✨ NUEVO - Ingrediente activo para medicamentos
     uso_de_medicacion?: string | null; // ✨ NUEVO - Indicaciones de uso para medicamentos
     visible_app?: boolean; // ✨ NUEVO - Visible en app
@@ -555,6 +556,40 @@ function Step1DatosProducto({
           )}
         </div>
       )}
+
+      {/* 🍦 NUEVA SECCIÓN: Producto de Comida/Helado */}
+      <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/30 dark:to-pink-950/30 border-2 border-orange-200 dark:border-orange-700 rounded-lg shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 pt-0.5">
+            <Checkbox
+              id="es_producto_comida"
+              checked={!!data.es_producto_comida}
+              onCheckedChange={(v) => setData('es_producto_comida', !!v)}
+            />
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="es_producto_comida" className="font-semibold cursor-pointer flex items-center gap-2 text-base">
+              <span>🍦</span> Producto de Comida/Helado
+            </Label>
+            <p className="text-sm text-orange-700 dark:text-orange-300 mt-2 leading-relaxed">
+              Marca este producto si es una comida o helado que se vende sin control de stock.
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1 font-medium">
+              🍨 Ejemplo: Helados, postres, bebidas personalizadas
+            </p>
+          </div>
+        </div>
+        {data.es_producto_comida && (
+          <div className="ml-6 mt-3 p-3 bg-white dark:bg-slate-900 rounded-md border-l-4 border-orange-400 dark:border-orange-600 shadow-sm">
+            <p className="text-sm text-orange-900 dark:text-orange-100 font-medium">
+              💡 <strong>Próximo Paso:</strong> Agrega adicionales (extras) en la pestaña <strong>"Productos de Comida"</strong>
+            </p>
+            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+              Ejemplos: Leche extra (+3Bs), Chocolate (+5Bs), Uvas Pasa (+2Bs)
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* ✨ NUEVA SECCIÓN: Información de Medicamentos (solo para farmacias) */}
       {es_farmacia && (

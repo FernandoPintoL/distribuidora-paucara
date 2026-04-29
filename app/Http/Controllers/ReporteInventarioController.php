@@ -88,6 +88,7 @@ class ReporteInventarioController extends Controller
             'filtros'      => $filtros,
             'almacenes'    => Almacen::orderBy('nombre')->get(['id', 'nombre']),
             'categorias'   => \App\Models\Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'marcas'       => \App\Models\Marca::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
 
@@ -283,6 +284,10 @@ class ReporteInventarioController extends Controller
      */
     public function exportPdf(Request $request)
     {
+        // Aumentar límite de memoria temporalmente para PDF con muchos datos
+        ini_set('memory_limit', '4096M'); // 4GB
+        set_time_limit(300); // 5 minutos de timeout
+
         $tipo = (string) $request->string('tipo');
         $filtros = $request->all();
 
@@ -296,16 +301,25 @@ class ReporteInventarioController extends Controller
             default => throw new \InvalidArgumentException("Tipo de reporte inválido: $tipo"),
         };
 
+        $user = auth()->user();
+        $empresa = null;
+
+        if ($user && $user->empresa_id) {
+            $empresa = \App\Models\Empresa::find($user->empresa_id);
+        }
+
         $html = view("pdf.reportes-inventario.$tipo", [
             'datos' => $datos,
             'fecha_generacion' => now()->format('d/m/Y H:i'),
-            'empresa' => config('app.name'),
+            'empresa' => $empresa?->razon_social ?? 'Sistema',
+            'usuario' => $user?->name ?? 'Sin usuario',
             'filtros' => $filtros,
         ])->render();
 
-        // Usar DomPDF para generar PDF
+        // Usar DomPDF para generar PDF - Landscape para reportes de inventario
+        $orientation = ($tipo === 'stock-actual') ? 'landscape' : 'portrait';
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
-            ->setPaper('A4', 'portrait')
+            ->setPaper('A4', $orientation)
             ->setOption('margin-top', 10)
             ->setOption('margin-bottom', 10)
             ->setOption('margin-left', 10)
@@ -368,43 +382,63 @@ class ReporteInventarioController extends Controller
      */
     private function obtenerDatosStockActual(array $filtros): array
     {
-        // Obtener todos los productos con sus relaciones
-        $query = Producto::with([
-            'categoria',
-            'unidad',
-            'proveedor',
-            'codigosBarra',
-            'precios.tipoPrecio',
-            'stock.almacen'
-        ]);
+        // Usar la misma lógica de filtrado que buscarStock para consistencia
+        $query = StockProducto::with(['producto.marca', 'producto.categoria', 'producto.unidad', 'producto.proveedor', 'producto.codigosBarra', 'producto.precios.tipoPrecio', 'almacen']);
 
-        // Aplicar filtros
-        if (!empty($filtros['categoria_id']) && $filtros['categoria_id'] !== 'all') {
-            $query->where('categoria_id', $filtros['categoria_id']);
+        // Filtro de stock: determinar qué mostrar
+        if ($filtros['sin_stock'] ?? false) {
+            // Si sin_stock es true, mostrar solo con cantidad = 0
+            $query->where('cantidad', '=', 0);
+        } elseif ($filtros['con_stock'] ?? true) {
+            // Si con_stock es true (por defecto), mostrar solo con stock > 0
+            $query->where('cantidad', '>', 0);
         }
 
-        // Ordenar alfabéticamente por nombre
-        $productos = $query->orderBy('nombre', 'asc')->get();
+        // Aplicar filtros
+        if (!empty($filtros['almacen_id'])) {
+            $query->where('almacen_id', $filtros['almacen_id']);
+        }
 
-        // Calcular stock total por almacén
-        $stockPorProductoAlmacen = StockProducto::get()
-            ->groupBy('producto_id')
-            ->map(function ($stocks) {
-                return $stocks->groupBy('almacen_id')
-                    ->map(function ($almacenes) {
-                        return $almacenes->sum('cantidad');
-                    })
-                    ->toArray();
-            })
-            ->toArray();
+        if (!empty($filtros['categoria_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
+                $q->where('categoria_id', $filtros['categoria_id']);
+            });
+        }
 
-        $stockTotalPorProducto = StockProducto::groupBy('producto_id')
-            ->selectRaw('producto_id, SUM(cantidad) as total')
-            ->pluck('total', 'producto_id');
+        if (!empty($filtros['marca_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
+                $q->where('marca_id', $filtros['marca_id']);
+            });
+        }
+
+        // Filtro de búsqueda
+        if (!empty($filtros['busqueda'])) {
+            $busqueda = $filtros['busqueda'];
+            $busquedaBaja = strtolower($busqueda);
+
+            $query->where(function ($q) use ($busqueda, $busquedaBaja) {
+                $q->whereRaw('LOWER(productos.sku) LIKE ?', ["%{$busquedaBaja}%"])
+                    ->orWhereRaw('LOWER(productos.codigo_barras) LIKE ?', ["%{$busquedaBaja}%"]);
+
+                if (is_numeric($busqueda)) {
+                    $q->orWhere('productos.id', (int) $busqueda);
+                }
+
+                $q->orWhereRaw('LOWER(productos.nombre) LIKE ?', ["%{$busquedaBaja}%"]);
+            });
+        }
+
+        $stockProductos = $query
+            ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
+            ->select('stock_productos.*')
+            ->orderBy('productos.nombre', 'asc')
+            ->get();
 
         // Mapear datos para la exportación
         $resultado = [];
-        foreach ($productos as $producto) {
+        foreach ($stockProductos as $stock) {
+            $producto = $stock->producto;
+
             // Obtener todos los tipos de precio y sus valores
             $preciosPorTipo = $producto->precios->mapWithKeys(function ($precio) {
                 $tipoNombre = $precio->tipoPrecio?->nombre ?? 'Desconocido';
@@ -414,77 +448,19 @@ class ReporteInventarioController extends Controller
             // Obtener códigos de barra
             $codigosBarra = $producto->codigosBarra?->pluck('codigo')->join(', ') ?? '-';
 
-            // Stock total del producto en todos los almacenes
-            $stockTotal = $stockTotalPorProducto[$producto->id] ?? 0;
-
-            // Si hay filtro de almacén, mostrar solo ese almacén
-            if (!empty($filtros['almacen_id']) && $filtros['almacen_id'] !== 'all') {
-                $almacenId = (int) $filtros['almacen_id'];
-                $cantidad = $stockPorProductoAlmacen[$producto->id][$almacenId] ?? 0;
-                $almacen = Almacen::find($almacenId)?->nombre ?? 'N/A';
-
-                $precioUnitario = $preciosPorTipo['Venta'] ?? $preciosPorTipo[array_key_first($preciosPorTipo)] ?? 0;
-                $subtotal = $cantidad * $precioUnitario;
-
-                $resultado[] = array_merge([
-                    'id_producto' => $producto->id,
-                    'nombre' => $producto->nombre ?? 'N/A',
-                    'sku' => $producto->sku ?? '-',
-                    'categoria' => $producto->categoria?->nombre ?? 'N/A',
-                    'unidad' => $producto->unidad?->nombre ?? 'N/A',
-                    'proveedor' => $producto->proveedor?->nombre ?? 'N/A',
-                    'codigos_barra' => $codigosBarra,
-                    'almacen' => $almacen,
-                    'cantidad_almacen' => $cantidad,
-                    'stock_total' => $stockTotal,
-                    'precio_unitario' => round($precioUnitario, 2),
-                    'subtotal' => round($subtotal, 2),
-                ], $preciosPorTipo);
-            } else {
-                // Si no hay filtro de almacén, mostrar por cada almacén que tenga stock
-                $stockesPorAlmacen = $stockPorProductoAlmacen[$producto->id] ?? [];
-
-                if (empty($stockesPorAlmacen)) {
-                    // Producto sin stock - mostrar una fila con stock 0
-                    $precioUnitario = $preciosPorTipo['Venta'] ?? $preciosPorTipo[array_key_first($preciosPorTipo)] ?? 0;
-                    $resultado[] = array_merge([
-                        'id_producto' => $producto->id,
-                        'nombre' => $producto->nombre ?? 'N/A',
-                        'sku' => $producto->sku ?? '-',
-                        'categoria' => $producto->categoria?->nombre ?? 'N/A',
-                        'unidad' => $producto->unidad?->nombre ?? 'N/A',
-                        'proveedor' => $producto->proveedor?->nombre ?? 'N/A',
-                        'codigos_barra' => $codigosBarra,
-                        'almacen' => 'Sin stock',
-                        'cantidad_almacen' => 0,
-                        'stock_total' => 0,
-                        'precio_unitario' => round($precioUnitario, 2),
-                        'subtotal' => 0,
-                    ], $preciosPorTipo);
-                } else {
-                    // Mostrar una fila por cada almacén
-                    foreach ($stockesPorAlmacen as $almacenId => $cantidad) {
-                        $almacen = Almacen::find($almacenId)?->nombre ?? 'N/A';
-                        $precioUnitario = $preciosPorTipo['Venta'] ?? $preciosPorTipo[array_key_first($preciosPorTipo)] ?? 0;
-                        $subtotal = $cantidad * $precioUnitario;
-
-                        $resultado[] = array_merge([
-                            'id_producto' => $producto->id,
-                            'nombre' => $producto->nombre ?? 'N/A',
-                            'sku' => $producto->sku ?? '-',
-                            'categoria' => $producto->categoria?->nombre ?? 'N/A',
-                            'unidad' => $producto->unidad?->nombre ?? 'N/A',
-                            'proveedor' => $producto->proveedor?->nombre ?? 'N/A',
-                            'codigos_barra' => $codigosBarra,
-                            'almacen' => $almacen,
-                            'cantidad_almacen' => $cantidad,
-                            'stock_total' => $stockTotal,
-                            'precio_unitario' => round($precioUnitario, 2),
-                            'subtotal' => round($subtotal, 2),
-                        ], $preciosPorTipo);
-                    }
-                }
-            }
+            // Construir fila
+            $resultado[] = array_merge([
+                'id_producto' => $producto->id,
+                'nombre' => $producto->nombre ?? 'N/A',
+                'sku' => $producto->sku ?? '-',
+                'marca' => $producto->marca?->nombre ?? 'N/A',
+                'categoria' => $producto->categoria?->nombre ?? 'N/A',
+                'unidad' => $producto->unidad?->nombre ?? 'N/A',
+                'proveedor' => $producto->proveedor?->nombre ?? 'N/A',
+                'codigos_barra' => $codigosBarra,
+                'almacen' => $stock->almacen?->nombre ?? 'N/A',
+                'stock_total' => round($stock->cantidad, 2),
+            ], $preciosPorTipo);
         }
 
         return $resultado;
@@ -594,5 +570,106 @@ class ReporteInventarioController extends Controller
                 'usuario' => $mov->usuario?->name ?? '-',
             ];
         })->toArray();
+    }
+
+    /**
+     * Búsqueda en tiempo real para stock actual (POST)
+     * POST /reportes/inventario/buscar-stock
+     */
+    public function buscarStock(Request $request): JsonResponse
+    {
+        $filtros = $request->validate([
+            'almacen_id'   => ['nullable', 'exists:almacenes,id'],
+            'categoria_id' => ['nullable', 'exists:categorias,id'],
+            'marca_id'     => ['nullable', 'exists:marcas,id'],
+            'con_stock'    => ['nullable', 'boolean'],
+            'sin_stock'    => ['nullable', 'boolean'],
+            'busqueda'     => ['nullable', 'string', 'max:100'],
+            'page'         => ['nullable', 'integer', 'min:1'],
+            'per_page'     => ['nullable', 'integer', 'in:10,20,50,100'],
+        ]);
+
+        $page = $filtros['page'] ?? 1;
+        $perPage = $filtros['per_page'] ?? 20;
+
+        $query = StockProducto::with(['producto.marca', 'producto.categoria', 'almacen']);
+
+        // Filtro de stock: determinar qué mostrar
+        if ($filtros['sin_stock'] ?? false) {
+            // Si sin_stock es true, mostrar solo con cantidad = 0
+            $query->where('cantidad', '=', 0);
+        } elseif ($filtros['con_stock'] ?? true) {
+            // Si con_stock es true (por defecto), mostrar solo con stock > 0
+            $query->where('cantidad', '>', 0);
+        }
+        // Si ambos son false, mostrar todos
+
+        // Aplicar filtros
+        if (!empty($filtros['almacen_id'])) {
+            $query->where('almacen_id', $filtros['almacen_id']);
+        }
+
+        if (!empty($filtros['categoria_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
+                $q->where('categoria_id', $filtros['categoria_id']);
+            });
+        }
+
+        if (!empty($filtros['marca_id'])) {
+            $query->whereHas('producto', function ($q) use ($filtros) {
+                $q->where('marca_id', $filtros['marca_id']);
+            });
+        }
+
+        if (!empty($filtros['busqueda'])) {
+            $busqueda = $filtros['busqueda'];
+            $busquedaBaja = strtolower($busqueda);
+
+            $query->where(function ($q) use ($busqueda, $busquedaBaja) {
+                // Búsqueda prioritaria: ID, SKU, Código de Barra (case insensitive)
+                $q->whereRaw('LOWER(productos.sku) LIKE ?', ["%{$busquedaBaja}%"])
+                    ->orWhereRaw('LOWER(productos.codigo_barras) LIKE ?', ["%{$busquedaBaja}%"]);
+
+                // Si es numérico, buscar también por ID
+                if (is_numeric($busqueda)) {
+                    $q->orWhere('productos.id', (int) $busqueda);
+                }
+
+                // Segunda prioridad: Nombre (case insensitive)
+                $q->orWhereRaw('LOWER(productos.nombre) LIKE ?', ["%{$busquedaBaja}%"]);
+            });
+        }
+
+        $stock = $query
+            ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
+            ->select('stock_productos.*')
+            ->orderByRaw("
+                CASE
+                    WHEN CAST(productos.id AS TEXT) = ? THEN 1
+                    WHEN LOWER(productos.sku) = LOWER(?) THEN 2
+                    WHEN LOWER(productos.codigo_barras) = LOWER(?) THEN 3
+                    WHEN LOWER(productos.sku) LIKE LOWER(?) THEN 4
+                    WHEN LOWER(productos.codigo_barras) LIKE LOWER(?) THEN 5
+                    ELSE 6
+                END, productos.nombre ASC
+            ", [
+                $filtros['busqueda'] ?? '',
+                $filtros['busqueda'] ?? '',
+                $filtros['busqueda'] ?? '',
+                '%' . ($filtros['busqueda'] ?? '') . '%',
+                '%' . ($filtros['busqueda'] ?? '') . '%',
+            ])
+            ->paginate($perPage, ['stock_productos.*'], 'page', $page);
+
+        return response()->json([
+            'data' => $stock->items(),
+            'pagination' => [
+                'total' => $stock->total(),
+                'per_page' => $stock->perPage(),
+                'current_page' => $stock->currentPage(),
+                'last_page' => $stock->lastPage(),
+                'has_more' => $stock->hasMorePages(),
+            ],
+        ]);
     }
 }

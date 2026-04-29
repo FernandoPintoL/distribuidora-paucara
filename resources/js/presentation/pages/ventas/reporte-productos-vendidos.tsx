@@ -14,6 +14,13 @@ interface Producto {
     precio_promedio: number;
     total_venta: number;
     usuario_creador_id: number;
+    // ✅ NUEVO (2026-04-28): Datos de movimientos de inventario
+    total_anterior: number;
+    disponible_anterior: number;
+    reservado_anterior: number;
+    total_posterior: number;
+    disponible_posterior: number;
+    reservado_posterior: number;
 }
 
 interface Venta {
@@ -224,49 +231,14 @@ export default function ReporteProductosVendidos({
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                                📊 Reporte de Productos Vendidos
+                                📊 Reporte de Productos Vendidosss
                             </h1>
                             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                                 Análisis de productos vendidos en proformas convertidas a ventas aprobadas
                             </p>
                         </div>
                         <div className="flex gap-2 items-center">
-                            {/* ✅ NUEVO: Selector de Impresora */}
-                            {/*{impresoras.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">🖨️ Impresora:</label>
-                                    <select
-                                        value={impresoraSeleccionada}
-                                        onChange={(e) => setImpresoraSeleccionada(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                    >
-                                        {impresoras.map((imp) => (
-                                            <option key={imp} value={imp}>
-                                                {imp}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}{/*
-
-                            {/* ✅ NUEVO: Botón de Imprimir Automático */}
-                            {/*<button
-                                onClick={handleImprimirAutomatico}
-                                disabled={imprimiendo || impresoras.length === 0}
-                                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg font-medium transition"
-                                title="Imprime automáticamente en la impresora seleccionada sin diálogos"
-                            >
-                                {imprimiendo ? '⏳ Imprimiendo...' : '🔥 Automático'}
-                            </button>*/}
-
-                            {/* Botón de Imprimir Directo */}
-                            {/*<button
-                                onClick={handleImprimirDirecto}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
-                                title="Abre el diálogo de impresión para seleccionar tu impresora"
-                            >
-                                🖨️ Directo
-                            </button>*/}
+                            
                             <button
                                 onClick={() => setIsModalOpen(true)}
                                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
@@ -509,44 +481,83 @@ export default function ReporteProductosVendidos({
 
                 {/* Tabla de Productos */}
                 {activeTab === 'productos' && productos.length > 0 ? (
-                    <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 dark:bg-zinc-700">
+                    <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md overflow-x-auto">
+                        <table className="w-full whitespace-nowrap">
+                            <thead className="bg-gray-50 dark:bg-zinc-700 sticky top-0">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                                         Producto
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                                         Código
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                                        Cantidad
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase bg-blue-50 dark:bg-blue-900/20">
+                                        Vendido
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                                        Precio Promedio
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                                        Precio Prom.
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                                         Total Venta
                                     </th>
+                                    {/* ✅ NUEVO (2026-04-28): Stock ANTERIOR */}
+                                    <th colSpan={3} className="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase bg-orange-50 dark:bg-orange-900/20">
+                                        📊 Stock ANTERIOR
+                                    </th>
+                                    {/* ✅ NUEVO (2026-04-28): Stock POSTERIOR */}
+                                    <th colSpan={3} className="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase bg-green-50 dark:bg-green-900/20">
+                                        📊 Stock POSTERIOR
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th colSpan={5} className="px-0"></th>
+                                    {/* Headers sub-niveles ANTERIOR */}
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">Total</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">Disp.</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20">Res.</th>
+                                    {/* Headers sub-niveles POSTERIOR */}
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20">Total</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20">Disp.</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20">Res.</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
                                 {productos.map((producto) => (
                                     <tr key={producto.id} className="hover:bg-gray-50 dark:hover:bg-zinc-700/50">
-                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
                                             {producto.nombre}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                                             {producto.codigo}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white text-right">
+                                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white text-right bg-blue-50/50 dark:bg-blue-900/10">
                                             {producto.cantidad_total.toFixed(2)}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white text-right">
+                                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white text-right">
                                             {formatCurrencyWith2Decimals(producto.precio_promedio)}
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-semibold text-green-600 dark:text-green-400 text-right">
+                                        <td className="px-4 py-3 text-sm font-semibold text-green-600 dark:text-green-400 text-right">
                                             {formatCurrencyWith2Decimals(producto.total_venta)}
+                                        </td>
+                                        {/* Stock ANTERIOR */}
+                                        <td className="px-4 py-3 text-sm text-orange-700 dark:text-orange-300 text-right bg-orange-50/50 dark:bg-orange-900/10 font-medium">
+                                            {Number(producto.total_anterior || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-orange-700 dark:text-orange-300 text-right bg-orange-50/50 dark:bg-orange-900/10">
+                                            {Number(producto.disponible_anterior || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-orange-700 dark:text-orange-300 text-right bg-orange-50/50 dark:bg-orange-900/10">
+                                            {Number(producto.reservado_anterior || 0).toFixed(2)}
+                                        </td>
+                                        {/* Stock POSTERIOR */}
+                                        <td className="px-4 py-3 text-sm text-green-700 dark:text-green-300 text-right bg-green-50/50 dark:bg-green-900/10 font-medium">
+                                            {Number(producto.total_posterior || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-green-700 dark:text-green-300 text-right bg-green-50/50 dark:bg-green-900/10">
+                                            {Number(producto.disponible_posterior || 0).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-green-700 dark:text-green-300 text-right bg-green-50/50 dark:bg-green-900/10">
+                                            {Number(producto.reservado_posterior || 0).toFixed(2)}
                                         </td>
                                     </tr>
                                 ))}

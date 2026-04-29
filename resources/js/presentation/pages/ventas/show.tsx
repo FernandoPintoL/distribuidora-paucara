@@ -355,7 +355,7 @@ export default function VentaShow() {
                                     {venta.detalles.map((detalle) => {
                                         // ✅ NUEVO: Detectar si es combo y tiene items
                                         const esCombo = (detalle.producto as any)?.es_combo === true;
-                                        const comboItems = detalle.combo_items_seleccionados?.filter((item: any) => item.incluido !== false) || [];
+                                        const comboItems = detalle.combo_items_seleccionados || [];
                                         const codigosBarraStr = (detalle.producto as any).codigos_barra && (detalle.producto as any).codigos_barra.length > 0
                                             ? (detalle.producto as any).codigos_barra.map((cb: any) => `${cb.codigo}${cb.es_principal ? ' ★' : ''}`).join(', ')
                                             : '-';
@@ -412,9 +412,19 @@ export default function VentaShow() {
                                                             return (
                                                                 <tr key={`${detalle.id}-item-${idx}`} className="bg-gray-50 dark:bg-zinc-800">
                                                                     <td className="px-6 py-3 pl-12 text-sm text-gray-700 dark:text-gray-300">
-                                                                        └─ Producto #{item.producto_id}
+                                                                        {item.producto ? (
+                                                                            <>
+                                                                                <span className="mr-2">└─</span>
+                                                                                <span className="font-medium">{item.producto.nombre}</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>└─ Producto #{item.producto_id}</>
+                                                                        )}
                                                                     </td>
-                                                                    <td colSpan={4}></td>
+                                                                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                        {item.producto?.sku || '-'}
+                                                                    </td>
+                                                                    <td colSpan={3}></td>
                                                                     <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
                                                                         {formatCurrencyWith2Decimals(cantidadTotal)}
                                                                     </td>

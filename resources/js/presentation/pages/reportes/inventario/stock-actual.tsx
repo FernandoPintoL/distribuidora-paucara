@@ -1,20 +1,41 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import type { StockPageProps } from '@/domain/entities/reportes';
-import { useStockActualFilters } from '@/application/hooks/useStockActualFilters';
+import { useStockRealTimeSearch } from '@/application/hooks/useStockRealTimeSearch';
 import { StockEstadisticasCard } from './stock-actual/components/StockEstadisticasCard';
 import { StockFiltrosCard } from './stock-actual/components/StockFiltrosCard';
 import { StockTable } from './stock-actual/components/StockTable';
 import { ExportButtons } from './stock-actual/components/ExportButtons';
+import { useState, useEffect } from 'react';
+
+interface ReporteProps extends StockPageProps {
+  marcas?: { id: number; nombre: string }[];
+}
 
 export default function ReporteStockActual({
     stock,
     estadisticas,
     filtros,
     almacenes,
-    categorias
-}: StockPageProps) {
-    const { formData, handleFilter, clearFilters, updateField, ALL_VALUE } = useStockActualFilters(filtros);
+    categorias,
+    marcas = []
+}: ReporteProps) {
+    const { filters, results, isLoading, updateFilters, goToPage, changePerPage, clearFilters } = useStockRealTimeSearch(300);
+    const [displayStock, setDisplayStock] = useState(stock);
+
+    // Actualizar displayStock cuando results cambia
+    useEffect(() => {
+        if (results?.data) {
+            setDisplayStock({
+                ...stock,
+                data: results.data,
+                total: results.pagination.total,
+                per_page: results.pagination.per_page,
+                current_page: results.pagination.current_page,
+                last_page: results.pagination.last_page,
+            });
+        }
+    }, [results]);
 
     return (
         <AppLayout breadcrumbs={[
@@ -36,26 +57,31 @@ export default function ReporteStockActual({
                     {/* ✅ NUEVO: Botones de descarga */}
                     <ExportButtons
                         reportType="stock-actual"
-                        filters={formData}
+                        filters={filters}
                     />
                 </div>
 
                 {/* Estadísticas */}
-                <StockEstadisticasCard estadisticas={estadisticas} />
+                {/* <StockEstadisticasCard estadisticas={estadisticas} /> */}
 
                 {/* Filtros */}
                 <StockFiltrosCard
-                    formData={formData}
+                    filters={filters}
                     almacenes={almacenes}
                     categorias={categorias}
-                    ALL_VALUE={ALL_VALUE}
-                    onUpdateField={updateField}
-                    onFilter={handleFilter}
+                    marcas={marcas}
+                    onUpdateField={updateFilters}
                     onClear={clearFilters}
+                    isLoading={isLoading}
                 />
 
                 {/* Tabla de Stock */}
-                <StockTable stock={stock} />
+                <StockTable
+                    stock={displayStock}
+                    isLoading={isLoading}
+                    onPageChange={goToPage}
+                    onPerPageChange={changePerPage}
+                />
             </div>
         </AppLayout>
     );

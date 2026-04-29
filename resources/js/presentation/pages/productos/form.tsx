@@ -35,6 +35,7 @@ const initialProductoData: ProductoFormData = {
   proveedor: null, // ✅ NUEVO: Campo para almacenar el objeto del proveedor
   activo: true,
   es_fraccionado: false, // ✨ NUEVO
+  es_producto_comida: false, // 🍦 NUEVO - Producto de comida/helado sin stock
   stock_minimo: 0,
   stock_maximo: 50,
   limite_venta: null, // ✨ NUEVO
@@ -111,6 +112,7 @@ export default function ProductoForm({
       proveedor: producto.proveedor || null, // ✅ NUEVO: Incluir objeto del proveedor para el displayValue
       activo: producto.activo ?? true,
       es_fraccionado: producto.es_fraccionado ?? false, // ✨ NUEVO
+      es_producto_comida: producto.es_producto_comida ?? false, // 🍦 NUEVO - Producto de comida/helado
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
       limite_venta: producto.limite_venta ?? null, // ✨ NUEVO

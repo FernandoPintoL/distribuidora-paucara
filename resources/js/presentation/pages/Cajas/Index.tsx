@@ -22,7 +22,7 @@ import AperturaCajaModal from '@/presentation/components/AperturaCajaModal';
 import CierreCajaModal from '@/presentation/components/CierreCajaModal';
 import RegistrarMovimientoModal from '@/presentation/components/RegistrarGastoModal';
 import { OutputSelectionModal, type TipoDocumento } from '@/presentation/components/impresion/OutputSelectionModal';
-import { CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable } from './components';
+import { CajaEstadoCard, MovimientosDelDiaTable, HistorialAperturasTable, DesglosePageosCard } from './components';
 import { ResumenCajaCard } from './components/resumen-caja-card';
 import { useCajas } from '@/application/hooks/use-cajas';
 import { toNumber } from '@/lib/cajas.utils';
@@ -196,7 +196,7 @@ export default function Index(props: CajasIndexProps) {
         <AppLayout>
             <Head title={titulo} />
 
-            <div className="py-12">
+            <div className="py-2">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                     {/* ✅ NUEVO: Banner si es vista admin */}
                     {esVistaAdmin && (
@@ -230,6 +230,15 @@ export default function Index(props: CajasIndexProps) {
                     {cajaAbiertaHoy && (
                         <ResumenCajaCard
                             datosResumen={props.datosResumen}
+                            cargando={false}
+                        />
+                    )}
+
+                    {/* ✅ NUEVO: Desglose de Pagos por Tipo de Pago (detalles_pago_venta) */}
+                    {cajaAbiertaHoy && (
+                        <DesglosePageosCard
+                            detallesPagoDesglosado={props.detallesPagoDesglosado}
+                            totalDetallesPago={props.totalDetallesPago || 0}
                             cargando={false}
                         />
                     )}

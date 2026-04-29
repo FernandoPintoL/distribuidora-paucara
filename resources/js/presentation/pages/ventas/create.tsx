@@ -309,6 +309,7 @@ export default function VentaForm() {
         tipo_pago_nombre?: string;
     }
     const [pagos, setPagos] = useState<Pago[]>([]);
+    const formularioPagosRef = useRef<{ agregarFila: () => void }>(null);
 
     useEffect(() => {
         console.log('🚚 [VentaForm] requiere_envio cambió:', {
@@ -317,19 +318,6 @@ export default function VentaForm() {
         });
     }, [data.requiere_envio, data.direccion_cliente_id]);
 
-    // ✅ NUEVO: Auto-seleccionar Fernando Santander cuando preventistas se cargan
-    useEffect(() => {
-        if (!isEditing && preventistas.length > 0 && !data.preventista_id) {
-            const fernando = preventistas.find((p: Preventista) =>
-                p.name.toLowerCase().includes('fernando') &&
-                p.name.toLowerCase().includes('santander')
-            );
-            if (fernando) {
-                setData('preventista_id', fernando.id);
-                console.log('✅ Preventista "Fernando Santander" auto-seleccionado:', fernando);
-            }
-        }
-    }, [preventistas, isEditing, data.preventista_id]);
 
     // ✅ NUEVO: Guardar automáticamente en localStorage con debounce
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1033,6 +1021,7 @@ export default function VentaForm() {
             tipo_pago_id: data.tipo_pago_id ?? 1,  // ✅ NUEVO: Tipo de pago seleccionado
             politica_pago: politicaPagoFinal,  // ✅ MODIFICADO: Usar politica_pago calculada
             estado_pago: data.estado_pago ?? 'PAGADO',
+            preventista_id: data.preventista_id ?? null,  // ✅ ASEGURAR: Null si no está seleccionado
             detalles: detallesWithProducts.map((d, detailIndex) => {
                 // ✅ MODIFICADO: Usar siempre d.precio_unitario (ya contiene valor editado manualmente o del tipo de precio)
                 // NO usar precioRango para no sobrescribir ediciones manuales
@@ -1290,7 +1279,7 @@ export default function VentaForm() {
         ]}>
             <Head title={isEditing ? 'Editar venta' : 'Nueva venta'} />
 
-            <form onSubmit={handleSubmit} className="space-y-6 p-4">
+            <form onSubmit={handleSubmit} className="space-y-6 py-2 px-4">
                 {/* Indicador de verificación de caja */}
                 {cargandoCaja && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-300 rounded-lg p-4">
@@ -1608,7 +1597,8 @@ export default function VentaForm() {
                 {detallesWithProducts.length > 0 && (
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-md ml-auto">
+                        <div className={`grid grid-cols-1 gap-4 max-w-4xl ml-auto ${pagos.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                            {/* Descuento general */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Descuento general
@@ -1631,7 +1621,7 @@ export default function VentaForm() {
                                 />
                             </div>
 
-                            {/* ✅ NUEVO: Monto pagado por el cliente */}
+                            {/* Monto pagado por el cliente */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Monto Pagado
@@ -1642,16 +1632,12 @@ export default function VentaForm() {
                                     min="0"
                                     value={montoPagadoInput}
                                     onChange={(e) => {
-                                        // ✅ MEJORADO: Mantener estado local mientras escribe
-                                        // Permite escribir libremente sin que se pierdan decimales al scrollear
                                         setMontoPagadoInput(e.target.value);
                                     }}
                                     onWheel={(e) => {
-                                        // ✅ NUEVO (2026-02-11): Desactivar scroll para aumentar/disminuir
                                         e.preventDefault();
                                     }}
                                     onBlur={(e) => {
-                                        // ✅ MEJORADO: Guardar a data solo cuando termina de editar
                                         const valor = e.target.value;
                                         const monto = valor === '' ? 0 : parseFloat(valor);
                                         if (!isNaN(monto) && monto >= 0) {
@@ -1662,10 +1648,21 @@ export default function VentaForm() {
                                     placeholder="0.00"
                                 />
                             </div>
+
+                            {/* Desglose de Pagos - Modo Compacto */}
+                            <FormularioPagosVenta
+                                ref={formularioPagosRef}
+                                tiposPago={tiposPagoSeguro}
+                                totalVenta={data.total}
+                                pagosRegistrados={pagos}
+                                onPagosChange={setPagos}
+                                disabled={isSubmitting}
+                                compact={true}
+                            />
                         </div>
 
                         {/* ✅ NUEVO: Resumen completo de la transacción */}
-                        <div className='mt-6'>
+                        <div className='mt-2'>
                             {data.descuento > 0 && (
                                 <>
                                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-700 space-y-2">
@@ -1685,15 +1682,6 @@ export default function VentaForm() {
                                 <span className="text-gray-900 dark:text-white">Total:</span>
                                 <span className="text-gray-900 dark:text-white text-right">{formatCurrencyMinimalDecimals(data.total)}</span>
                             </div>
-
-                            {/* ✅ NUEVO (2026-04-21): Formulario de múltiples pagos */}
-                            {/* <FormularioPagosVenta
-                                tiposPago={tiposPagoSeguro}
-                                totalVenta={data.total}
-                                pagosRegistrados={pagos}
-                                onPagosChange={setPagos}
-                                disabled={isSubmitting}
-                            /> */}
 
                             {data.monto_pagado_inicial > 0 && (
                                 <>
@@ -1732,6 +1720,20 @@ export default function VentaForm() {
                         title="Limpiar el borrador de venta guardado en localStorage"
                     >
                         🗑️ Limpiar borrador
+                    </button>
+
+                    {/* ✅ Botón para agregar forma de pago */}
+                    <button
+                        type="button"
+                        onClick={() => formularioPagosRef.current?.agregarFila()}
+                        disabled={isSubmitting}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+                        title="Agregar nueva forma de pago"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Agregar Pago
                     </button>
 
                     {/* ✅ NUEVO: Botón para refrescar datos desde el servidor */}

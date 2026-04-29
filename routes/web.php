@@ -366,6 +366,25 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     // Excluir 'show' porque lo definiremos después de las rutas específicas
     Route::resource('ventas', \App\Http\Controllers\VentaController::class)->except(['show'])->middleware('caja.abierta');
 
+    // ✨ NUEVO: Ruta para interfaz de venta de comidas/helados
+    Route::get('ventas-comidas', function () {
+        $clientes = \App\Models\Cliente::where('activo', true)
+            ->select('id', 'nombre', 'nit')
+            ->orderBy('nombre')
+            ->get();
+
+        $tiposPago = \App\Models\TipoPago::where('activo', true)
+            ->select('id', 'nombre', 'codigo')
+            ->orderBy('nombre')
+            ->get();
+
+        return inertia('VentasComidas', [
+            'clientes' => $clientes,
+            'tiposPago' => $tiposPago,
+            'auth' => ['user' => auth()->user()],
+        ]);
+    })->name('ventas-comidas.index')->middleware('caja.abierta');
+
     // ==========================================
     // RUTAS DE IMPRESIÓN - VENTAS
     // ==========================================
@@ -973,6 +992,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
         // Reportes de inventario
         Route::prefix('inventario')->name('inventario.')->group(function () {
             Route::get('stock-actual', [\App\Http\Controllers\ReporteInventarioController::class, 'stockActual'])->name('stock-actual');
+            Route::post('buscar-stock', [\App\Http\Controllers\ReporteInventarioController::class, 'buscarStock'])->name('buscar-stock');
             Route::get('vencimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'vencimientos'])->name('vencimientos');
             Route::get('rotacion', [\App\Http\Controllers\ReporteInventarioController::class, 'rotacion'])->name('rotacion');
             Route::get('movimientos', [\App\Http\Controllers\ReporteInventarioController::class, 'movimientos'])->name('movimientos');

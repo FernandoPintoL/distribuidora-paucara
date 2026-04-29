@@ -1552,3 +1552,15 @@ Route::get('/test/cajas/{aperturaCaja}/datos-cierre', function (\App\Models\Aper
         ], 404);
     }
 });
+
+// ✨ NUEVO: Rutas para productos de comida/helados
+Route::prefix('productos-comida')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\AdicionalesProductoController::class, 'productosComida']);
+    Route::get('/{producto}/adicionales', [\App\Http\Controllers\Api\AdicionalesProductoController::class, 'obtenerPorProducto']);
+    Route::post('/adicionales', [\App\Http\Controllers\Api\AdicionalesProductoController::class, 'store']);
+    Route::patch('/adicionales/{adicional}', [\App\Http\Controllers\Api\AdicionalesProductoController::class, 'update']);
+    Route::delete('/adicionales/{adicional}', [\App\Http\Controllers\Api\AdicionalesProductoController::class, 'destroy']);
+});
+
+// ✨ NUEVO: Ruta para crear ventas de comidas/helados
+Route::post('/ventas-comidas', [\App\Http\Controllers\Api\VentasComidasController::class, 'store']);

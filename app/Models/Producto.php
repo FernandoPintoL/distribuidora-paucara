@@ -32,6 +32,7 @@ class Producto extends Model
         'es_alquilable',
         'es_fraccionado',
         'es_combo',
+        'es_producto_comida', // ✨ NUEVO - Producto de comida/helado sin stock
         'categoria_id',
         'marca_id',
         'proveedor_id',
@@ -52,6 +53,7 @@ class Producto extends Model
             'es_alquilable' => 'boolean',
             'es_fraccionado' => 'boolean',
             'es_combo' => 'boolean',
+            'es_producto_comida' => 'boolean', // ✨ NUEVO
             'visible_app' => 'boolean',
             'fecha_creacion' => 'datetime',
             'precio_compra' => 'decimal:2',
@@ -162,6 +164,14 @@ class Producto extends Model
     public function rangosPrecios()
     {
         return $this->hasMany(PrecioRangoCantidadProducto::class, 'producto_id');
+    }
+
+    /**
+     * Relación: Adicionales para productos de comida/helados
+     */
+    public function adicionales()
+    {
+        return $this->hasMany(AdicionalesProducto::class, 'producto_id');
     }
 
     /**

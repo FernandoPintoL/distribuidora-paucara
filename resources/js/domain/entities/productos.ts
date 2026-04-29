@@ -110,6 +110,7 @@ export interface ProductoFormData extends BaseFormData {
   activo?: boolean;
   es_combo?: boolean; // Indica si es un combo de productos
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
+  es_producto_comida?: boolean; // 🍦 NUEVO: Producto de comida/helado sin stock
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
   visible_app?: boolean; // ✨ NUEVO: Visible en app móvil

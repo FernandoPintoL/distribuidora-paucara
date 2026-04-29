@@ -141,7 +141,7 @@ exportarZip.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     exportarZip.form = exportarZipForm
 /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
 export const impresion = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -156,7 +156,7 @@ impresion.definition = {
 
 /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
 impresion.url = (options?: RouteQueryOptions) => {
@@ -165,7 +165,7 @@ impresion.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
 impresion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -174,7 +174,7 @@ impresion.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
 impresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -184,7 +184,7 @@ impresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
     /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
     const impresionForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -194,7 +194,7 @@ impresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
             /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
         impresionForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -203,7 +203,7 @@ impresion.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
         })
             /**
 * @see \App\Http\Controllers\ReporteController::impresion
- * @see app/Http/Controllers/ReporteController.php:115
+ * @see app/Http/Controllers/ReporteController.php:226
  * @route '/reportes/impresion'
  */
         impresionForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

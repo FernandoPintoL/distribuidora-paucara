@@ -25,6 +25,15 @@ interface Venta {
     monto_devuelto: number;
     monto_neto: number;
     estado: string;
+    // ✅ NUEVO (2026-04-28): Tipo de venta (directa o dentro de combo)
+    tipo_venta?: 'DIRECTA' | 'DENTRO DE COMBO';
+    // ✅ NUEVO (2026-04-28): Stock anterior y posterior de movimientos_inventario
+    total_anterior?: number;
+    total_posterior?: number;
+    disponible_anterior?: number;
+    disponible_posterior?: number;
+    reservado_anterior?: number;
+    reservado_posterior?: number;
 }
 
 interface PageProps {
@@ -353,6 +362,20 @@ export default function VentasPorProducto() {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead className="bg-gray-100 dark:bg-slate-700 border-b dark:border-slate-600">
+                                            {/* Header principal */}
+                                            <tr>
+                                                <th colSpan={4} className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white border-r dark:border-slate-600">
+                                                    Datos de Venta
+                                                </th>
+                                                <th colSpan={3} className="px-4 py-3 text-center font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 border-r dark:border-slate-600">
+                                                    📊 Stock ANTERIOR
+                                                </th>
+                                                <th colSpan={1}>-</th>
+                                                <th colSpan={3} className="px-4 py-3 text-center font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border-r dark:border-slate-600">
+                                                    📊 Stock POSTERIOR
+                                                </th>                                                
+                                            </tr>
+                                            {/* Sub-headers */}
                                             <tr>
                                                 <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
                                                     Folio
@@ -363,27 +386,33 @@ export default function VentasPorProducto() {
                                                 <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
                                                     Fecha
                                                 </th>
+                                                <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
+                                                    Tipo
+                                                </th>
+                                                
+                                                {/* Stock ANTERIOR */}
+                                                <th className="px-4 py-3 text-right font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-xs">
+                                                    Total
+                                                </th>
+                                                <th className="px-4 py-3 text-right font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-xs">
+                                                    Disp.
+                                                </th>
+                                                <th className="px-4 py-3 text-right font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 text-xs border-r dark:border-slate-600">
+                                                    Res.
+                                                </th>
                                                 <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
                                                     Cant. Vendida
                                                 </th>
-                                                {/* <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Cant. Devuelta
-                                                </th> */}
-                                                {/* <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Cant. Neta
-                                                </th> */}
-                                                <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Precio Unit.
+                                                {/* Stock POSTERIOR */}
+                                                <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 text-xs">
+                                                    Total
                                                 </th>
-                                                <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Monto Vendido
+                                                <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 text-xs">
+                                                    Disp.
                                                 </th>
-                                                {/* <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Monto Devuelto
-                                                </th> */}
-                                                {/* <th className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                                                    Monto Neto
-                                                </th> */}
+                                                <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 text-xs border-r dark:border-slate-600">
+                                                    Res.
+                                                </th>
                                                 <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-white">
                                                     Estado
                                                 </th>
@@ -404,29 +433,53 @@ export default function VentasPorProducto() {
                                                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                                                         {venta.fecha}
                                                     </td>
-                                                    <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                                                        {venta.cantidad_vendida.toFixed(2)}
-                                                    </td>
-                                                    {/* <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">
-                                                        {venta.cantidad_devuelta.toFixed(2)}
-                                                    </td> */}
-                                                    {/* <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
-                                                        {venta.cantidad_neta.toFixed(2)}
-                                                    </td> */}
-                                                    <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                                                        {formatCurrency(venta.precio_unitario)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                                                        {formatCurrency(venta.monto_vendido)}
-                                                    </td>
-                                                    {/* <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">
-                                                        {formatCurrency(venta.monto_devuelto)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right font-semibold text-blue-600 dark:text-blue-400">
-                                                        {formatCurrency(venta.monto_neto)}
-                                                    </td> */}
+                                                    {/* Tipo de venta */}
                                                     <td className="px-4 py-3">
-                                                        <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-gray-200 rounded">
+                                                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                                                            venta.tipo_venta === 'DENTRO DE COMBO'
+                                                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                                                                : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                                        }`}>
+                                                            {venta.tipo_venta === 'DENTRO DE COMBO' ? '📦 Combo' : '✓ Directa'}
+                                                        </span>
+                                                    </td>
+                                                    
+                                                    {/* Stock ANTERIOR */}
+                                                    <td className="px-4 py-3 text-right text-orange-700 dark:text-orange-300 bg-orange-50/50 dark:bg-orange-950/20 font-semibold">
+                                                        {(venta.total_anterior || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-orange-700 dark:text-orange-300 bg-orange-50/50 dark:bg-orange-950/20">
+                                                        {(venta.disponible_anterior || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-orange-700 dark:text-orange-300 bg-orange-50/50 dark:bg-orange-950/20 border-r dark:border-slate-600">
+                                                        {(venta.reservado_anterior || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-right font-semibold ${
+                                                        venta.cantidad_vendida < 0
+                                                            ? 'text-red-600 dark:text-red-400'
+                                                            : 'text-green-600 dark:text-green-400'
+                                                    }`}>
+                                                        {venta.cantidad_vendida < 0 ? '' : '+'}{venta.cantidad_vendida.toFixed(2)}
+                                                    </td>
+                                                    {/* Stock POSTERIOR */}
+                                                    <td className="px-4 py-3 text-right text-green-700 dark:text-green-300 bg-green-50/50 dark:bg-green-950/20 font-semibold">
+                                                        {(venta.total_posterior || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-green-700 dark:text-green-300 bg-green-50/50 dark:bg-green-950/20">
+                                                        {(venta.disponible_posterior || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-green-700 dark:text-green-300 bg-green-50/50 dark:bg-green-950/20 border-r dark:border-slate-600">
+                                                        {(venta.reservado_posterior || 0).toFixed(2)}
+                                                    </td>
+                                                    {/* Estado */}
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                                                            venta.estado?.toLowerCase() === 'aprobado'
+                                                                ? 'bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                                                : venta.estado?.toLowerCase() === 'anulado'
+                                                                ? 'bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200'
+                                                                : 'bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-gray-200'
+                                                        }`}>
                                                             {venta.estado}
                                                         </span>
                                                     </td>

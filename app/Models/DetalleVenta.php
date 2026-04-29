@@ -33,6 +33,27 @@ class DetalleVenta extends Model
         ];
     }
 
+    public function getComboItemsSeleccionadosAttribute($value)
+    {
+        // Si es null o vacío, retornar array vacío
+        if (empty($value)) {
+            return [];
+        }
+
+        // Si ya es un array, retornarlo
+        if (is_array($value)) {
+            return $value;
+        }
+
+        // Si es un string, intentar parsearlo como JSON
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
     // Relaciones
     public function venta()
     {
