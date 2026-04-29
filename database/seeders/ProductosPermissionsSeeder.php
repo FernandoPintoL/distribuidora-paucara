@@ -29,16 +29,12 @@ class ProductosPermissionsSeeder extends Seeder
         // ============================================
         $permisos = [
             [
+                'name' => 'productos.manage',
+                'description' => 'Permite gestionar productos (crear, editar, eliminar, importar, ver precios de costo)'
+            ],
+            [
                 'name' => 'ver_precio_costo',
                 'description' => 'Permite ver el precio de costo de productos en listado, tabla y formularios'
-            ],
-            [
-                'name' => 'productos.edit',
-                'description' => 'Permite editar productos y acceder al formulario de edición'
-            ],
-            [
-                'name' => 'productos.delete',
-                'description' => 'Permite eliminar productos del sistema'
             ],
         ];
 
