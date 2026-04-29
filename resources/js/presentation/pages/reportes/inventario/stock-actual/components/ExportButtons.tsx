@@ -2,6 +2,7 @@ import { Button } from '@/presentation/components/ui/button';
 import { Download, FileText, Sheet } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 interface ExportButtonsProps {
     reportType: 'stock-actual' | 'vencimientos' | 'rotacion' | 'movimientos';
@@ -71,10 +72,21 @@ export function ExportButtons({ reportType, filters = {} }: ExportButtonsProps) 
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            // Aquí puedes procesar los datos con SheetJS o similar
-            // Por ahora, simplemente mostramos el mensaje
-            toast.success('📊 Datos exportados (implementar descarga Excel)');
+            const { data, filename } = await response.json();
+
+            // Crear workbook y worksheet
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, reportType);
+
+            // Ajustar ancho de columnas
+            const colWidths = Object.keys(data[0] || {}).map(() => 20);
+            worksheet['!cols'] = colWidths.map(width => ({ wch: width }));
+
+            // Descargar archivo
+            XLSX.writeFile(workbook, filename);
+
+            toast.success('📊 Excel descargado exitosamente');
         } catch (error) {
             console.error('Error exportando Excel:', error);
             toast.error('❌ Error al exportar');

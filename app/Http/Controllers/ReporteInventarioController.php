@@ -23,6 +23,7 @@ class ReporteInventarioController extends Controller
             'categoria_id' => ['nullable', 'exists:categorias,id'],
             'stock_bajo'   => ['nullable', 'boolean'],
             'stock_alto'   => ['nullable', 'boolean'],
+            'busqueda'     => ['nullable', 'string', 'max:100'],
         ]);
 
         $query = StockProducto::with(['producto.categoria', 'almacen'])
@@ -53,11 +54,23 @@ class ReporteInventarioController extends Controller
             });
         }
 
+        if (! empty($filtros['busqueda'])) {
+            $query->where(function ($q) use ($filtros) {
+                $busqueda = $filtros['busqueda'];
+                $q->where('productos.nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('productos.sku', 'like', "%{$busqueda}%")
+                    ->orWhere('productos.codigo_barras', 'like', "%{$busqueda}%");
+                if (is_numeric($busqueda)) {
+                    $q->orWhere('productos.id', (int) $busqueda);
+                }
+            });
+        }
+
         $stock = $query
             ->join('productos', 'stock_productos.producto_id', '=', 'productos.id')
             ->select('stock_productos.*')
             ->orderBy('productos.nombre', 'asc')
-            ->paginate(50)
+            ->paginate(20)
             ->withQueryString();
 
         // Estadísticas generales
@@ -355,7 +368,14 @@ class ReporteInventarioController extends Controller
      */
     private function obtenerDatosStockActual(array $filtros): array
     {
-        $query = StockProducto::with(['producto.categoria', 'almacen'])
+        $query = StockProducto::with([
+            'producto.categoria',
+            'producto.unidad',
+            'producto.proveedor',
+            'producto.codigosBarra',
+            'producto.precios.tipoPrecio',
+            'almacen'
+        ])
             ->where('cantidad', '>', 0);
 
         // Aplicar filtros
@@ -371,21 +391,45 @@ class ReporteInventarioController extends Controller
 
         $stocks = $query->orderBy('cantidad', 'desc')->get();
 
-        // Mapear datos para la exportación
-        return $stocks->map(function ($stock) {
-            $producto = $stock->producto;
-            $precio_unitario = $producto->precioVenta?->precio ?? 0;
-            $subtotal = $stock->cantidad * $precio_unitario;
+        // Calcular stock total por producto
+        $stockTotalPorProducto = StockProducto::where('cantidad', '>', 0)
+            ->groupBy('producto_id')
+            ->selectRaw('producto_id, SUM(cantidad) as total')
+            ->pluck('total', 'producto_id');
 
-            return [
+        // Mapear datos para la exportación
+        return $stocks->map(function ($stock) use ($stockTotalPorProducto) {
+            $producto = $stock->producto;
+
+            // Obtener todos los tipos de precio y sus valores
+            $preciosPorTipo = $producto->precios->mapWithKeys(function ($precio) {
+                $tipoNombre = $precio->tipoPrecio?->nombre ?? 'Desconocido';
+                return [$tipoNombre => $precio->precio];
+            })->toArray();
+
+            // Obtener códigos de barra
+            $codigosBarra = $producto->codigosBarra?->pluck('codigo')->join(', ') ?? '-';
+
+            // Stock total del producto en todos los almacenes
+            $stockTotal = $stockTotalPorProducto[$producto->id] ?? 0;
+
+            $precioUnitario = $preciosPorTipo['Venta'] ?? $preciosPorTipo[array_key_first($preciosPorTipo)] ?? 0;
+            $subtotal = $stock->cantidad * $precioUnitario;
+
+            return array_merge([
+                'id_producto' => $producto->id,
                 'nombre' => $producto->nombre ?? 'N/A',
                 'sku' => $producto->sku ?? '-',
                 'categoria' => $producto->categoria?->nombre ?? 'N/A',
+                'unidad' => $producto->unidad?->nombre ?? 'N/A',
+                'proveedor' => $producto->proveedor?->nombre ?? 'N/A',
+                'codigos_barra' => $codigosBarra,
                 'almacen' => $stock->almacen?->nombre ?? 'N/A',
-                'cantidad' => $stock->cantidad,
-                'precio_unitario' => $precio_unitario,
-                'subtotal' => $subtotal,
-            ];
+                'cantidad_almacen' => $stock->cantidad,
+                'stock_total' => $stockTotal,
+                'precio_unitario' => round($precioUnitario, 2),
+                'subtotal' => round($subtotal, 2),
+            ], $preciosPorTipo);
         })->toArray();
     }
 
