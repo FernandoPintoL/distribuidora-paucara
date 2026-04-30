@@ -240,17 +240,31 @@ class CierreCajaService
     private function calcularVentasPorTipoPagoEspecifico(AperturaCaja $aperturaCaja, array $tiposPago): float
     {
         try {
-            return (float) DB::table('movimientos_caja')
+            // ✅ REFACTORIZADO (2026-04-30): Usar detalles_pago_venta como fuente de verdad
+            // Obtiene los montos REALES pagados por tipo, no el total de la venta
+
+            // 1. Obtener IDs de ventas aprobadas en la caja durante el período
+            $ventasIds = DB::table('movimientos_caja')
                 ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
                 ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
                 ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
-                ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
                 ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)
-                ->whereIn('tipos_pago.codigo', $tiposPago)
                 ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
-                ->sum('ventas.total');
+                ->pluck('ventas.id')
+                ->toArray();
+
+            if (empty($ventasIds)) {
+                return 0;
+            }
+
+            // 2. Sumar detalles_pago_venta para esos tipos de pago
+            return (float) DB::table('detalles_pago_venta')
+                ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
+                ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
+                ->whereIn('tipos_pago.codigo', $tiposPago)
+                ->sum('detalles_pago_venta.monto');
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasPorTipoPagoEspecifico]:', [
                 'tipos_pago' => $tiposPago,
@@ -548,25 +562,49 @@ class CierreCajaService
      */
     private function calcularVentasPorTipoPago($movimientos)
     {
-        // ✅ CORREGIDO (2026-02-11): SOLO VENTA (sin CREDITO)
-        $resultado = $movimientos
-            ->filter(function ($mov) {
-                // ✅ Usa estado código en lugar de nombre
-                if (!$this->esVentaAprobada($mov)) return false;
+        // ✅ REFACTORIZADO (2026-04-30): Usar detalles_pago_venta como fuente de verdad
+        // Las ventas pueden tener múltiples tipos de pago. Deben sumarse desde detalles_pago_venta,
+        // NO desde venta.total (que duplicaría los valores)
 
-                $tipoOp = $mov->tipoOperacion?->codigo;
-                // ✅ SOLO VENTA (sin CREDITO que son cuentas por cobrar)
-                return $tipoOp === 'VENTA';
-            })
-            ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
-            ->map(fn($grupo) => [
-                'cantidad' => $grupo->count(),
-                // ✅ CORREGIDO (2026-02-11): Usa ventas.total (no movimientos_caja.monto)
-                'total' => (float) $grupo->sum(fn($m) => $m->venta?->total ?? 0),
-            ]);
+        try {
+            // Obtener IDs de ventas aprobadas en este período
+            $ventasIds = $movimientos
+                ->filter(fn($m) => $this->esVentaAprobada($m) && $m->tipoOperacion?->codigo === 'VENTA')
+                ->pluck('venta_id')
+                ->filter()
+                ->unique()
+                ->toArray();
 
-        Log::info('📊 [calcularVentasPorTipoPago]:', $resultado->toArray());
-        return $resultado;
+            if (empty($ventasIds)) {
+                return collect();
+            }
+
+            // Consultar detalles_pago_venta agrupados por tipo de pago
+            $pagos = DB::table('detalles_pago_venta')
+                ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
+                ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
+                ->select(
+                    'tipos_pago.nombre',
+                    DB::raw('COUNT(detalles_pago_venta.id) as cantidad'),
+                    DB::raw('SUM(detalles_pago_venta.monto) as total')
+                )
+                ->groupBy('tipos_pago.id', 'tipos_pago.nombre')
+                ->get();
+
+            $resultado = [];
+            foreach ($pagos as $pago) {
+                $resultado[$pago->nombre] = [
+                    'cantidad' => (int) $pago->cantidad,
+                    'total' => (float) $pago->total,
+                ];
+            }
+
+            Log::info('📊 [calcularVentasPorTipoPago] (desde detalles_pago_venta):', $resultado);
+            return collect($resultado);
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVentasPorTipoPago]:', ['error' => $e->getMessage()]);
+            return collect();
+        }
     }
 
     /**
