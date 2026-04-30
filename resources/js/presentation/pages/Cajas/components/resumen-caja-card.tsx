@@ -33,6 +33,7 @@ interface DatosResumen {
     sumatorialAnticipos?: number;  // ✅ NUEVO: Desglose de anticipos
     sumatorialCompras?: number;  // ✅ NUEVO: Desglose de compras
     sumatorialAnulaciones?: number;  // ✅ NUEVO: Desglose de anulaciones
+    totalDetallesPago?: number;  // ✅ NUEVO: Dinero real de ventas (desde detalles_pago_venta)
 }
 
 interface ResumenCajaCardProps {
@@ -124,8 +125,8 @@ export function ResumenCajaCard({ datosResumen, cargando = false }: ResumenCajaC
                                         <td className="text-right py-2 px-4 font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(datosResumen.apertura)}</td>
                                     </tr>
                                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                                        <td className="py-2 px-4 text-gray-700 dark:text-gray-300">Total Ventas</td>
-                                        <td className="text-right py-2 px-4 font-semibold text-green-600 dark:text-green-400">{formatCurrency(datosResumen.totalVentas)}</td>
+                                        <td className="py-2 px-4 text-gray-700 dark:text-gray-300">Dinero Pagado (Ventas)</td>
+                                        <td className="text-right py-2 px-4 font-semibold text-green-600 dark:text-green-400">{formatCurrency(datosResumen.totalDetallesPago ?? 0)}</td>
                                     </tr>
                                     {datosResumen.ventasAnuladas > 0 && (
                                         <tr className="border-b border-gray-200 dark:border-gray-700">
