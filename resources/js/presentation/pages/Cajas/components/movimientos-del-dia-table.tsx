@@ -176,6 +176,22 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
         };
     });
 
+    // ✅ CORREGIDO (2026-04-30): Si hay totalDetallesPago pero NO hay movimiento VENTA en movimientosHoy,
+    // agregar un card de VENTA manual (puede ocurrir si los movimientos aún no se crean en backend)
+    const tieneVentaEnTotales = totalesPorTipo.some(t => t.tipo === 'Venta' || t.tipo === 'VENTA');
+    if (totalDetallesPago > 0 && !tieneVentaEnTotales) {
+        totalesPorTipo.unshift({
+            tipo: 'Venta',
+            total: totalDetallesPago,
+            count: detallesPagoDesglosado.length,
+        });
+
+        console.log('💡 [MovimientosDelDiaTable] Agregando card de VENTA manual porque totalDetallesPago > 0', {
+            totalDetallesPago,
+            detallesCount: detallesPagoDesglosado.length,
+        });
+    }
+
     // ✅ NUEVO: Agrupar movimientos por tipo de pago y calcular totales
     const movimientosAgrupadosPorTipoPago = movimientosHoy.reduce((acc: Record<string, any[]>, mov: any) => {
         const tipoPagoNombre = mov.tipo_pago?.nombre || 'Sin tipo de pago';
