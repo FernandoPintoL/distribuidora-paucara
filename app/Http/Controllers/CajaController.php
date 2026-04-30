@@ -185,48 +185,29 @@ class CajaController extends Controller
             $sumatorialAnticipos = (float) ($datosCalculados['sumatorialAnticipos'] ?? 0);
             $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
 
-            // ✅ NUEVO: Obtener desglose de pagos desglosados por tipo de pago (ANTES de calcular totalIngresos)
+            // ✅ ACTUALIZADO (2026-04-30): Usar datos del servicio CON fallback para ventas antiguas
+            // El servicio ya calcula esto con soporte para ventas sin detalles_pago_venta
+            $detallesPagosVentaPorTipo = $datosCalculados['detallesPagosVentaPorTipo'] ?? [];
+
+            // Transformar formato para compatibilidad con frontend
             $detallesPagoDesglosado = [];
             $totalDetallesPago = 0;
 
-            // Obtener IDs de ventas registradas en esta caja abierta
-            $ventasEnCaja = MovimientoCaja::where('caja_id', $cajaAbiertaHoy->caja_id)
-                ->where('user_id', $usuarioDestino->id)
-                ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
-                ->whereIn('tipo_operacion_id', function($q) {
-                    $q->select('id')->from('tipo_operacion_caja')
-                      ->whereIn('codigo', ['VENTA', 'CREDITO']);
-                })
-                ->pluck('venta_id')
-                ->filter() // Filtrar valores nulos
-                ->unique()
-                ->toArray();
-
-            if (!empty($ventasEnCaja)) {
-                // Obtener detalles de pago agrupados por tipo de pago
-                $detallesPagoBrutos = \App\Models\DetallePagoVenta::whereIn('venta_id', $ventasEnCaja)
-                    ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
-                    ->select(
-                        'detalles_pago_venta.tipo_pago_id',
-                        'tipos_pago.nombre',
-                        'tipos_pago.codigo',
-                        \DB::raw('SUM(detalles_pago_venta.monto) as total_monto'),
-                        \DB::raw('COUNT(detalles_pago_venta.id) as cantidad')
-                    )
-                    ->groupBy('detalles_pago_venta.tipo_pago_id', 'tipos_pago.nombre', 'tipos_pago.codigo')
-                    ->get();
-
-                foreach ($detallesPagoBrutos as $detalle) {
-                    $detallesPagoDesglosado[] = [
-                        'tipo_pago_id' => (int) $detalle->tipo_pago_id,
-                        'tipo'         => $detalle->nombre,
-                        'codigo'       => $detalle->codigo,
-                        'total'        => (float) $detalle->total_monto,
-                        'cantidad'     => (int) $detalle->cantidad,
-                    ];
-                    $totalDetallesPago += (float) $detalle->total_monto;
-                }
+            foreach ($detallesPagosVentaPorTipo as $tipo => $datos) {
+                $detallesPagoDesglosado[] = [
+                    'tipo'     => $tipo,
+                    'codigo'   => $datos['codigo'] ?? '',
+                    'total'    => (float) ($datos['total'] ?? 0),
+                    'cantidad' => (int) ($datos['cantidad'] ?? 0),
+                ];
+                $totalDetallesPago += (float) ($datos['total'] ?? 0);
             }
+
+            Log::info('💳 [CajaController@index] Detalles de pago (CON FALLBACK):', [
+                'apertura_id' => $cajaAbiertaHoy->id,
+                'detalles_count' => count($detallesPagoDesglosado),
+                'total_pagos' => $totalDetallesPago,
+            ]);
 
             // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
             $ventasEfectivo = (float) ($datosCalculados['sumatorialVentasEfectivo'] ?? 0);
