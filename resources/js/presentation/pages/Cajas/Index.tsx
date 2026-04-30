@@ -196,8 +196,8 @@ export default function Index(props: CajasIndexProps) {
         <AppLayout>
             <Head title={titulo} />
 
-            <div className="py-2">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div className="px-6 py-4">
+                <div className="space-y-6">
                     {/* ✅ NUEVO: Banner si es vista admin */}
                     {esVistaAdmin && (
                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
@@ -246,7 +246,7 @@ export default function Index(props: CajasIndexProps) {
                     {/* Tabs: Movimientos del Día vs Historial de Cajas */}
                     <Tabs defaultValue="movimientos" className="space-y-6">
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                            <div className="px-6 pt-6 pb-0 flex justify-between items-center">
+                            <div className="px-6 pb-0 flex justify-between items-center">
                                 <TabsList className="bg-transparent border-gray-200 dark:border-gray-700">
                                     <TabsTrigger value="movimientos" className="dark:text-gray-300 dark:hover:text-gray-100">
                                         📊 Movimientos del Día

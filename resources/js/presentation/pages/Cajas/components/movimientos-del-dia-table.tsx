@@ -848,6 +848,10 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
 
                                 console.log('Movimientos del día - Resumen por tipo:', { tipo, total, count, codigo, esIngreso });
 
+                                // ✅ ACTUALIZADO (2026-04-30): Para VENTA, mostrar desglose de tipos de pago
+                                const esVenta = tipo === 'Venta' || tipo === 'VENTA';
+                                const mostrarDesglose = esVenta && detallesPagoDesglosado && detallesPagoDesglosado.length > 0;
+
                                 return (
                                     <div
                                         key={tipo}
@@ -877,9 +881,24 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                                 <p className={`text-lg font-bold mt-2 ${getMovimientoColor(total)}`}>
                                                     {formatCurrency(Math.abs(total))}
                                                 </p>
+
+                                                {/* ✅ NUEVO (2026-04-30): Mostrar desglose de tipos de pago para VENTA */}
+                                                {mostrarDesglose && (
+                                                    <div className="mt-2 space-y-1 border-t border-gray-300 dark:border-gray-600 pt-2">
+                                                        {detallesPagoDesglosado.map((detalle, idx) => (
+                                                            <div key={idx} className="flex justify-between items-center text-xs">
+                                                                <span className="text-gray-600 dark:text-gray-400">{detalle.tipo}</span>
+                                                                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                                                    {formatCurrency(detalle.total)}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                     <span className="inline-block bg-white dark:bg-gray-800 px-2 py-1 rounded">
-                                                        {count} mov.
+                                                        {mostrarDesglose ? `${detallesPagoDesglosado.length} pagos` : `${count} mov.`}
                                                     </span>
                                                 </p>
                                             </div>
