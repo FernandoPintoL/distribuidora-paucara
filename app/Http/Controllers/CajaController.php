@@ -311,6 +311,12 @@ class CajaController extends Controller
             'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
             'ventasCreditoTotales'      => $datosResumen ? $datosResumen['ventasCreditoTotales'] ?? 0 : 0,  // ✅ NUEVO
             'sumatorialCompras'         => $datosResumen ? $datosResumen['sumatorialCompras'] ?? 0 : 0,  // ✅ NUEVO (2026-02-20)
+            // ✅ ACTUALIZADO (2026-04-30): Agregar todos los egresos desglosados que faltaban
+            'sumatorialGastos'          => $datosResumen ? $datosResumen['sumatorialGastos'] ?? 0 : 0,
+            'sumatorialPagosSueldo'     => $datosResumen ? $datosResumen['sumatorialPagosSueldo'] ?? 0 : 0,
+            'sumatorialAnticipos'       => $datosResumen ? $datosResumen['sumatorialAnticipos'] ?? 0 : 0,
+            'sumatorialDevoluciones'    => $datosResumen ? $datosResumen['sumatorialDevoluciones'] ?? 0 : 0,
+            'sumatorialServicio'        => $datosResumen ? $datosResumen['sumatorialServicio'] ?? 0 : 0,
             // ✅ NUEVO: Desglose de pagos por tipo de pago (detalles_pago_venta)
             'detallesPagoDesglosado'    => $datosResumen ? $datosResumen['detallesPagoDesglosado'] ?? [] : [],
             'totalDetallesPago'         => $datosResumen ? $datosResumen['totalDetallesPago'] ?? 0 : 0,
