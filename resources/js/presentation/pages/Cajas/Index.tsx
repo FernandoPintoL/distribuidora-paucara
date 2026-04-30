@@ -235,13 +235,13 @@ export default function Index(props: CajasIndexProps) {
                     )}
 
                     {/* ✅ NUEVO: Desglose de Pagos por Tipo de Pago (detalles_pago_venta) */}
-                    {cajaAbiertaHoy && (
+                    {/* {cajaAbiertaHoy && (
                         <DesglosePageosCard
                             detallesPagoDesglosado={props.detallesPagoDesglosado}
                             totalDetallesPago={props.totalDetallesPago || 0}
                             cargando={false}
                         />
-                    )}
+                    )} */}
 
                     {/* Tabs: Movimientos del Día vs Historial de Cajas */}
                     <Tabs defaultValue="movimientos" className="space-y-6">
@@ -297,6 +297,8 @@ export default function Index(props: CajasIndexProps) {
                                 sumatorialCompras={props.sumatorialCompras}
                                 sumatorialDevoluciones={props.datosResumen?.sumatorialDevoluciones || 0}
                                 sumatorialServicio={props.datosResumen?.sumatorialServicio || 0}
+                                detallesPagoDesglosado={props.detallesPagoDesglosado}
+                                totalDetallesPago={props.totalDetallesPago}
                                 cargandoDatos={false}
                             />
                         </TabsContent>
