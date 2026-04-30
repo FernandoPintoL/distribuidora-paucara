@@ -239,80 +239,33 @@ class VentaService
             // ✅ NOTA: cajaId ya está guardado en $venta->caja_id desde la creación (línea 221)
             // No necesitamos setAttribute(_caja_id) porque update() lo intenta persistir a BD
 
-            // ✅ NUEVO (2026-03-09): Procesar pagos parciales si existen
+            // ✅ REFACTORIZADO (2026-04-30): NO crear MovimientoCaja aquí para pagos desglosados
+            // Los pagos parciales se registran SOLO en detalles_pago_venta
+            // UN SOLO MovimientoCaja se crea con el tipo_pago_id y monto total de la venta
+            // Los detalles de pagos se manejan completamente en detalles_pago_venta
+
             if (!empty($dto->pagos)) {
-                Log::info('💳 [VentaService::crear] Procesando pagos parciales', [
+                Log::info('💳 [VentaService::crear] Pagos desglosados recibi dos (se registran en detalles_pago_venta)', [
                     'venta_id' => $venta->id,
                     'cantidad_pagos' => count($dto->pagos),
                     'total_venta' => $venta->total,
+                    'nota' => 'Los detalles se registran en VentaController mediante PagoVentaService',
                 ]);
 
-                $totalPagosRegistrados = 0;
+                // Calcular total pagado para validación
+                $totalPagosRegistrados = array_sum(array_column($dto->pagos, 'monto'));
 
-                foreach ($dto->pagos as $index => $pago) {
-                    $tipoPagoId = (int) ($pago['tipo_pago_id'] ?? 0);
-                    $montoPago = (float) ($pago['monto'] ?? 0);
-
-                    if ($tipoPagoId > 0 && $montoPago > 0) {
-                        // Crear registro de Pago
-                        // ✅ IMPORTANTE: Setear AMBOS fecha (datetime) y fecha_pago (date)
-                        $pagoRegistro = \App\Models\Pago::create([
-                            'venta_id' => $venta->id,
-                            'tipo_pago_id' => $tipoPagoId,
-                            'monto' => $montoPago,
-                            'fecha' => now(),  // ✅ NUEVO: fecha datetime (momento del registro)
-                            'fecha_pago' => now()->toDateString(),  // fecha date (día del pago)
-                            'numero_pago' => 'PAGO-' . now()->format('Ymd') . '-' . str_pad(random_int(1, 9999), 5, '0', STR_PAD_LEFT),
-                            'estado' => 'REGISTRADO',
-                            'usuario_id' => $dto->usuario_id ?? Auth::id(),
-                            'observaciones' => 'Pago parcial #' . ($index + 1),
-                        ]);
-
-                        Log::debug('✅ [VentaService::crear] Pago parcial creado', [
-                            'pago_id' => $pagoRegistro->id,
-                            'tipo_pago_id' => $tipoPagoId,
-                            'monto' => $montoPago,
-                        ]);
-
-                        // Crear MovimientoCaja para el pago
-                        if ($cajaId) {
-                            \App\Models\MovimientoCaja::create([
-                                'caja_id' => $cajaId,
-                                'user_id' => $dto->usuario_id ?? Auth::id(),
-                                'fecha' => now(),
-                                'monto' => $montoPago,
-                                'numero_documento' => $venta->numero,
-                                'tipo_operacion_id' => \App\Models\TipoOperacionCaja::where('codigo', 'VENTA')->first()?->id ?? 1,
-                                'tipo_pago_id' => $tipoPagoId,
-                                'venta_id' => $venta->id,
-                                'pago_id' => $pagoRegistro->id,
-                                'observaciones' => 'Pago parcial de venta ' . $venta->numero,
-                            ]);
-
-                            Log::debug('✅ [VentaService::crear] MovimientoCaja creado para pago parcial', [
-                                'venta_id' => $venta->id,
-                                'pago_id' => $pagoRegistro->id,
-                                'monto' => $montoPago,
-                                'caja_id' => $cajaId,
-                            ]);
-                        }
-
-                        $totalPagosRegistrados += $montoPago;
-                    }
-                }
-
-                // Si hay pagos parciales, actualizar monto_pagado y monto_pendiente
                 if ($totalPagosRegistrados > 0) {
                     $venta->update([
                         'monto_pagado' => $totalPagosRegistrados,
                         'monto_pendiente' => max(0, $venta->total - $totalPagosRegistrados),
                     ]);
 
-                    Log::info('✅ [VentaService::crear] Montos actualizados después de pagos parciales', [
+                    Log::info('✅ [VentaService::crear] Montos actualizados (pagos se registran en detalles_pago_venta)', [
                         'venta_id' => $venta->id,
-                        'monto_pagado_anterior' => $montoPagado,
-                        'monto_pagado_nuevo' => $totalPagosRegistrados,
+                        'monto_pagado' => $totalPagosRegistrados,
                         'monto_pendiente' => max(0, $venta->total - $totalPagosRegistrados),
+                        'cantidad_pagos_desglosados' => count($dto->pagos),
                     ]);
                 }
             }
