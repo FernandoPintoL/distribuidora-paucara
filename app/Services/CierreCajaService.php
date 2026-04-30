@@ -241,6 +241,7 @@ class CierreCajaService
     {
         try {
             // ✅ REFACTORIZADO (2026-04-30): Usar detalles_pago_venta como fuente de verdad
+            // CON FALLBACK a movimientos_caja para ventas antiguas sin detalles_pago_venta
             // Obtiene los montos REALES pagados por tipo, no el total de la venta
 
             // 1. Obtener IDs de ventas aprobadas en la caja durante el período
@@ -259,12 +260,47 @@ class CierreCajaService
                 return 0;
             }
 
-            // 2. Sumar detalles_pago_venta para esos tipos de pago
-            return (float) DB::table('detalles_pago_venta')
+            // 2️⃣ Intentar obtener desde detalles_pago_venta (ventas nuevas)
+            $montosDetalles = DB::table('detalles_pago_venta')
                 ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
                 ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
                 ->whereIn('tipos_pago.codigo', $tiposPago)
                 ->sum('detalles_pago_venta.monto');
+
+            // 2b. Obtener IDs de ventas que SÍ tienen detalles_pago_venta
+            $ventasConDetalles = DB::table('detalles_pago_venta')
+                ->whereIn('venta_id', $ventasIds)
+                ->pluck('venta_id')
+                ->unique()
+                ->toArray();
+
+            // 3️⃣ FALLBACK: Ventas antiguas sin detalles_pago_venta - usar movimientos_caja
+            $ventasAntiguasIds = array_diff($ventasIds, $ventasConDetalles);
+            $montosAntiguos = 0;
+
+            if (!empty($ventasAntiguasIds)) {
+                Log::warning('⚠️ [calcularVentasPorTipoPagoEspecifico] Usando fallback para ventas antiguas:', [
+                    'cantidad_ventas_antiguas' => count($ventasAntiguasIds),
+                    'tipos_pago' => $tiposPago,
+                ]);
+
+                $montosAntiguos = DB::table('movimientos_caja')
+                    ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                    ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
+                    ->whereIn('movimientos_caja.venta_id', $ventasAntiguasIds)
+                    ->where('tipo_operacion_caja.codigo', 'VENTA')
+                    ->whereIn('tipos_pago.codigo', $tiposPago)
+                    ->sum('movimientos_caja.monto');
+            }
+
+            Log::info('💰 [calcularVentasPorTipoPagoEspecifico] (detalles_pago_venta + fallback):', [
+                'tipos_pago' => $tiposPago,
+                'montos_detalles' => $montosDetalles,
+                'montos_antiguos' => $montosAntiguos,
+                'total' => $montosDetalles + $montosAntiguos,
+            ]);
+
+            return (float) ($montosDetalles + $montosAntiguos);
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasPorTipoPagoEspecifico]:', [
                 'tipos_pago' => $tiposPago,
@@ -563,6 +599,7 @@ class CierreCajaService
     private function calcularVentasPorTipoPago($movimientos)
     {
         // ✅ REFACTORIZADO (2026-04-30): Usar detalles_pago_venta como fuente de verdad
+        // CON FALLBACK a movimientos_caja para ventas antiguas sin detalles_pago_venta
         // Las ventas pueden tener múltiples tipos de pago. Deben sumarse desde detalles_pago_venta,
         // NO desde venta.total (que duplicaría los valores)
 
@@ -579,7 +616,7 @@ class CierreCajaService
                 return collect();
             }
 
-            // Consultar detalles_pago_venta agrupados por tipo de pago
+            // 1️⃣ Intentar obtener desde detalles_pago_venta (ventas nuevas)
             $pagos = DB::table('detalles_pago_venta')
                 ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
                 ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
@@ -592,14 +629,46 @@ class CierreCajaService
                 ->get();
 
             $resultado = [];
+            $ventasConDetalles = [];
             foreach ($pagos as $pago) {
                 $resultado[$pago->nombre] = [
                     'cantidad' => (int) $pago->cantidad,
                     'total' => (float) $pago->total,
                 ];
+                $ventasConDetalles[] = $pago->venta_id ?? null;
             }
 
-            Log::info('📊 [calcularVentasPorTipoPago] (desde detalles_pago_venta):', $resultado);
+            // 2️⃣ FALLBACK: Ventas antiguas sin detalles_pago_venta - usar movimientos_caja
+            $ventasAntiguasIds = array_diff($ventasIds, array_filter($ventasConDetalles));
+            if (!empty($ventasAntiguasIds)) {
+                Log::warning('⚠️ [calcularVentasPorTipoPago] Usando fallback para ventas antiguas:', [
+                    'cantidad_ventas_antiguas' => count($ventasAntiguasIds),
+                ]);
+
+                $pagosAntiguos = $movimientos
+                    ->filter(fn($m) =>
+                        $this->esVentaAprobada($m) &&
+                        $m->tipoOperacion?->codigo === 'VENTA' &&
+                        in_array($m->venta_id, $ventasAntiguasIds)
+                    )
+                    ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
+                    ->map(fn($grupo) => [
+                        'cantidad' => $grupo->count(),
+                        'total' => (float) $grupo->sum(fn($m) => $m->monto),
+                    ]);
+
+                foreach ($pagosAntiguos as $tipo => $datos) {
+                    if (!isset($resultado[$tipo])) {
+                        $resultado[$tipo] = $datos;
+                    } else {
+                        // Agregar al total existente
+                        $resultado[$tipo]['cantidad'] += $datos['cantidad'];
+                        $resultado[$tipo]['total'] += $datos['total'];
+                    }
+                }
+            }
+
+            Log::info('📊 [calcularVentasPorTipoPago] (detalles_pago_venta + fallback):', $resultado);
             return collect($resultado);
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasPorTipoPago]:', ['error' => $e->getMessage()]);
@@ -1228,6 +1297,7 @@ class CierreCajaService
 
     /**
      * ✅ NUEVO (2026-04-30): Calcular pagos de ventas agrupados por tipo desde detalles_pago_venta
+     * CON FALLBACK a movimientos_caja para ventas antiguas sin detalles_pago_venta
      * Esta es la FUENTE DE VERDAD para dinero real que entró por ventas
      *
      * Obtiene TODAS las ventas de esta caja en el período y suma sus detalles_pago_venta
@@ -1252,7 +1322,7 @@ class CierreCajaService
                 return [];
             }
 
-            // Obtener detalles de pago agrupados por tipo de pago
+            // 1️⃣ Intentar obtener desde detalles_pago_venta (ventas nuevas)
             $pagos = DB::table('detalles_pago_venta')
                 ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
                 ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
@@ -1266,17 +1336,65 @@ class CierreCajaService
                 ->get();
 
             $resultado = [];
+            $ventasConDetalles = [];
             foreach ($pagos as $pago) {
                 $resultado[$pago->nombre] = [
                     'codigo' => $pago->codigo,
                     'cantidad' => (int) $pago->cantidad,
                     'total' => (float) $pago->total,
                 ];
+                // Registrar que esta venta tiene detalles
+                // Nota: Necesitamos obtener las ventas con detalles para el fallback
             }
 
-            Log::info('💳 [calcularDetallesPagosVentaPorTipo]:', [
+            // 2️⃣ Obtener IDs de ventas que SÍ tienen detalles_pago_venta
+            $ventasConDetallesIds = DB::table('detalles_pago_venta')
+                ->whereIn('venta_id', $ventasIds)
+                ->pluck('venta_id')
+                ->unique()
+                ->toArray();
+
+            // 3️⃣ FALLBACK: Ventas antiguas sin detalles_pago_venta - usar movimientos_caja
+            $ventasAntiguasIds = array_diff($ventasIds, $ventasConDetallesIds);
+            if (!empty($ventasAntiguasIds)) {
+                Log::warning('⚠️ [calcularDetallesPagosVentaPorTipo] Usando fallback para ventas antiguas:', [
+                    'cantidad_ventas_antiguas' => count($ventasAntiguasIds),
+                ]);
+
+                $pagosAntiguos = DB::table('movimientos_caja')
+                    ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                    ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
+                    ->whereIn('movimientos_caja.venta_id', $ventasAntiguasIds)
+                    ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
+                    ->select(
+                        'tipos_pago.nombre',
+                        'tipos_pago.codigo',
+                        DB::raw('SUM(movimientos_caja.monto) as total'),
+                        DB::raw('COUNT(movimientos_caja.id) as cantidad')
+                    )
+                    ->groupBy('tipos_pago.id', 'tipos_pago.nombre', 'tipos_pago.codigo')
+                    ->get();
+
+                foreach ($pagosAntiguos as $pago) {
+                    if (!isset($resultado[$pago->nombre])) {
+                        $resultado[$pago->nombre] = [
+                            'codigo' => $pago->codigo,
+                            'cantidad' => (int) $pago->cantidad,
+                            'total' => (float) $pago->total,
+                        ];
+                    } else {
+                        // Agregar al total existente
+                        $resultado[$pago->nombre]['cantidad'] += (int) $pago->cantidad;
+                        $resultado[$pago->nombre]['total'] += (float) $pago->total;
+                    }
+                }
+            }
+
+            Log::info('💳 [calcularDetallesPagosVentaPorTipo] (detalles_pago_venta + fallback):', [
                 'apertura_id' => $aperturaCaja->id,
                 'ventas_count' => count($ventasIds),
+                'ventas_con_detalles' => count($ventasConDetallesIds),
+                'ventas_antiguas' => count($ventasAntiguasIds),
                 'datos' => $resultado,
             ]);
 
