@@ -185,56 +185,7 @@ class CajaController extends Controller
             $sumatorialAnticipos = (float) ($datosCalculados['sumatorialAnticipos'] ?? 0);
             $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
 
-            // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
-            $ventasEfectivo = (float) ($datosCalculados['sumatorialVentasEfectivo'] ?? 0);
-
-            // ✅ NUEVO (2026-03-09): Obtener sumatoria de SERVICIO para incluir en totalIngresos
-            $sumatorialServicio = (float) ($datosCalculados['sumatorialServicio'] ?? 0);
-
-            // ✅ FÓRMULA CORRECTA: Apertura + VentasEfectivo + PagosCrédito + Servicios - TotalEgresos
-            // Esto excluye las ventas a crédito que no generan efectivo
-            // ✅ ACTUALIZADO (2026-03-09): Incluir Servicios como entrada de efectivo
-            $totalIngresos = $ventasEfectivo + $pagosCredito + $sumatorialServicio;  // EFECTIVO/TRANSFERENCIA + Pagos CxC + Servicios
-            // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
-            $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
-            $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
-
-            // Construir listado de ventas por tipo de pago (solo aprobadas)
-            $ventasPorTipoPago = [];
-            $movimientosPorTipo = $datosCalculados['movimientosPorTipoPago'] ?? [];
-            foreach ($movimientosPorTipo as $tipo => $datos) {
-                $ventasPorTipoPago[] = [
-                    'tipo'  => $tipo,
-                    'total' => (float) ($datos['total'] ?? 0),
-                    'cantidad' => (int) ($datos['cantidad'] ?? 0),
-                ];
-            }
-
-            // ✅ NUEVO: Construir listado de pagos a crédito por tipo de pago
-            $pagosCreditoPorTipoPago = $datosCalculados['pagosCreditoPorTipoPago'] ?? [];
-
-            // ✅ NUEVO: Calcular sumatoria de pagos a crédito por tipo de pago
-            $sumatoriaPagosCreditoPorTipo = [];
-            $totalPagosCreditoPorTipos = 0;
-            foreach ($pagosCreditoPorTipoPago as $pago) {
-                $sumatoriaPagosCreditoPorTipo[] = [
-                    'tipo'  => $pago['tipo'] ?? 'Sin tipo',
-                    'total' => (float) ($pago['total'] ?? 0),
-                    'cantidad' => (int) ($pago['cantidad'] ?? 0),
-                ];
-                $totalPagosCreditoPorTipos += (float) ($pago['total'] ?? 0);
-            }
-
-            // ✅ Obtener anulaciones del servicio (referencial)
-            $sumatorialAnulaciones = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
-
-            // ✅ NUEVO (2026-02-20): Obtener sumatoria de compras del servicio
-            $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
-
-            // ✅ NUEVO (2026-03-09): Obtener sumatoria de DEVOLUCION
-            $sumatorialDevoluciones = (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0);
-
-            // ✅ NUEVO: Obtener desglose de pagos desglosados por tipo de pago
+            // ✅ NUEVO: Obtener desglose de pagos desglosados por tipo de pago (ANTES de calcular totalIngresos)
             $detallesPagoDesglosado = [];
             $totalDetallesPago = 0;
 
@@ -277,6 +228,55 @@ class CajaController extends Controller
                 }
             }
 
+            // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
+            $ventasEfectivo = (float) ($datosCalculados['sumatorialVentasEfectivo'] ?? 0);
+
+            // ✅ NUEVO (2026-03-09): Obtener sumatoria de SERVICIO para incluir en totalIngresos
+            $sumatorialServicio = (float) ($datosCalculados['sumatorialServicio'] ?? 0);
+
+            // ✅ FÓRMULA CORRECTA: Usar totalDetallesPago (desde detalles_pago_venta) que es la FUENTE DE VERDAD
+            // Esto incluye TODAS las ventas pagadas por cualquier tipo de pago (EFECTIVO + TRANSFERENCIA + etc)
+            // ✅ ACTUALIZADO (2026-04-29): Usar totalDetallesPago en lugar de ventasEfectivo (que estaba duplicando)
+            $totalIngresos = $totalDetallesPago + $pagosCredito + $sumatorialServicio;  // Pagos reales por tipo + Pagos CxC + Servicios
+            // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
+            $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
+            $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
+
+            // Construir listado de ventas por tipo de pago (solo aprobadas)
+            $ventasPorTipoPago = [];
+            $movimientosPorTipo = $datosCalculados['movimientosPorTipoPago'] ?? [];
+            foreach ($movimientosPorTipo as $tipo => $datos) {
+                $ventasPorTipoPago[] = [
+                    'tipo'  => $tipo,
+                    'total' => (float) ($datos['total'] ?? 0),
+                    'cantidad' => (int) ($datos['cantidad'] ?? 0),
+                ];
+            }
+
+            // ✅ NUEVO: Construir listado de pagos a crédito por tipo de pago
+            $pagosCreditoPorTipoPago = $datosCalculados['pagosCreditoPorTipoPago'] ?? [];
+
+            // ✅ NUEVO: Calcular sumatoria de pagos a crédito por tipo de pago
+            $sumatoriaPagosCreditoPorTipo = [];
+            $totalPagosCreditoPorTipos = 0;
+            foreach ($pagosCreditoPorTipoPago as $pago) {
+                $sumatoriaPagosCreditoPorTipo[] = [
+                    'tipo'  => $pago['tipo'] ?? 'Sin tipo',
+                    'total' => (float) ($pago['total'] ?? 0),
+                    'cantidad' => (int) ($pago['cantidad'] ?? 0),
+                ];
+                $totalPagosCreditoPorTipos += (float) ($pago['total'] ?? 0);
+            }
+
+            // ✅ Obtener anulaciones del servicio (referencial)
+            $sumatorialAnulaciones = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
+
+            // ✅ NUEVO (2026-02-20): Obtener sumatoria de compras del servicio
+            $sumatorialCompras = (float) ($datosCalculados['sumatorialCompras'] ?? 0);
+
+            // ✅ NUEVO (2026-03-09): Obtener sumatoria de DEVOLUCION
+            $sumatorialDevoluciones = (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0);
+
             $datosResumen = [
                 'apertura'              => $montoApertura,
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
@@ -287,7 +287,7 @@ class CajaController extends Controller
                 'totalIngresos'         => $totalIngresos,         // Ventas + Pagos CxC
                 'totalEgresos'          => $totalEgresos,          // GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA
                 'efectivoEsperado'      => $efectivoEsperado,      // Apertura + Ingresos - Egresos
-                'ventasPorTipoPago'     => $ventasPorTipoPago,     // Desglose de ventas por tipo de pago
+                'ventasPorTipoPago'     => $detallesPagoDesglosado, // ✅ ACTUALIZADO: Ahora usa detalles_pago_venta (datos REALES)
                 'pagosCreditoPorTipoPago' => $sumatoriaPagosCreditoPorTipo,  // Desglose de pagos de crédito por tipo de pago
                 'totalPagosCreditoPorTipos' => (float) $totalPagosCreditoPorTipos,  // ✅ NUEVO: Sumatoria total de pagos por tipos
                 // ✅ NUEVO: Desglose de salidas

@@ -535,23 +535,41 @@ class VentaController extends Controller
             // 3. Delegar al Service (ÚNICA lógica de negocio)
             $ventaDTO = $this->ventaService->crear($dto, $cajaId);
 
-            // ✅ NUEVO (2026-04-21): Registrar múltiples pagos si vienen en el request
+            // Obtener la venta creada
+            $ventaCreada = Venta::findOrFail($ventaDTO->id);
+
+            // ✅ NUEVO: Registrar pago automático basado en tipo_pago (SIEMPRE se ejecuta)
+            try {
+                $this->pagoVentaService->registrarPagoAutomatico($ventaCreada);
+
+                Log::info('✅ Pago automático registrado para venta', [
+                    'venta_id' => $ventaCreada->id,
+                    'venta_numero' => $ventaCreada->numero,
+                    'tipo_pago_id' => $ventaCreada->tipo_pago_id,
+                ]);
+            } catch (\Exception $e) {
+                // Log del error pero no fallar la creación de venta
+                Log::error('⚠️ Error al registrar pago automático', [
+                    'venta_id' => $ventaDTO->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // ✅ NUEVO (2026-04-21): Registrar múltiples pagos SI VIENEN EN EL REQUEST
+            // (esto permite sobrescribir el pago automático con pagos desglosados)
             if ($request->has('pagos') && is_array($request->input('pagos')) && !empty($request->input('pagos'))) {
                 try {
-                    // Obtener la venta creada para registrar pagos
-                    $ventaCreada = Venta::findOrFail($ventaDTO->id);
-
                     // Registrar los pagos en detalles_pago_venta
                     $this->pagoVentaService->registrarPagos($ventaCreada, $request->input('pagos'));
 
-                    Log::info('✅ Pagos registrados para venta', [
+                    Log::info('✅ Pagos desglosados registrados para venta', [
                         'venta_id' => $ventaCreada->id,
                         'venta_numero' => $ventaCreada->numero,
                         'cantidad_pagos' => count($request->input('pagos')),
                     ]);
                 } catch (\Exception $e) {
                     // Log del error pero no fallar la creación de venta
-                    Log::error('⚠️ Error al registrar pagos para venta', [
+                    Log::error('⚠️ Error al registrar pagos desglosados para venta', [
                         'venta_id' => $ventaDTO->id,
                         'error' => $e->getMessage(),
                     ]);
@@ -647,7 +665,10 @@ class VentaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            return $this->respondNotFound('Venta no encontrada');
+            return response()->json([
+                'success' => false,
+                'message' => 'Venta no encontrada'
+            ], 404);
         }
     }
 
@@ -1275,6 +1296,9 @@ class VentaController extends Controller
 
         $formato = $request->input('formato', 'A4');      // A4, TICKET_80, TICKET_58
         $accion  = $request->input('accion', 'download'); // download | stream
+
+        // ✅ Cargar relaciones necesarias para impresión
+        $venta->load('detallesPagoVenta.tipoPago');
 
         // 🔍 DEBUG: Loguear información de la venta antes de imprimir
         \Log::info('📋 [VentaController::imprimir] Datos de venta para descargar/stream', [

@@ -593,6 +593,7 @@ class VentaService
             'direccionCliente.localidad', // ✅ Cargar localidad para mapas
             'estadoLogistica',            // ✅ NUEVO: Estado logístico
             'confirmaciones',             // ✅ NUEVO: Cargar confirmación de entrega (entregas_venta_confirmaciones)
+            'detallesPagoVenta.tipoPago', // ✅ NUEVO: Detalles de pagos con tipo de pago
         ])->findOrFail($ventaId));
 
         return VentaResponseDTO::fromModel($venta);

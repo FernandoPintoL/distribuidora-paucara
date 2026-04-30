@@ -347,11 +347,25 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
                                         <span className="text-green-700 dark:text-green-300">⬆️ Monto Inicial:</span>
                                         <span className="font-medium text-green-900 dark:text-green-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
                                     </div>
-                                    <div className="flex justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
-                                        <span className="text-green-700 dark:text-green-300">⬆️ Ventas Efectivo:</span>
-                                        <span className="font-medium text-green-900 dark:text-green-100">
-                                            {formatCurrency(ventasEnEfectivo)}
-                                        </span>
+
+                                    {/* ✅ NUEVO: Desglose de Ventas por Tipo de Pago */}
+                                    <div className="bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700 p-3 space-y-2">
+                                        <div className="flex justify-between font-semibold">
+                                            <span className="text-green-700 dark:text-green-300">⬆️ Ventas por Tipo de Pago:</span>
+                                            <span className="text-green-900 dark:text-green-100">{formatCurrency(ventasEnEfectivo)}</span>
+                                        </div>
+                                        {datosCierre?.movimientos_por_tipo_pago && Object.entries(datosCierre.movimientos_por_tipo_pago).length > 0 ? (
+                                            <div className="space-y-1 pl-4 border-l-2 border-green-300 dark:border-green-700">
+                                                {Object.entries(datosCierre.movimientos_por_tipo_pago).map(([tipo, datos]: [string, any]) => (
+                                                    <div key={tipo} className="flex justify-between text-sm">
+                                                        <span className="text-green-600 dark:text-green-400">{tipo}</span>
+                                                        <span className="text-green-700 dark:text-green-300">
+                                                            {formatCurrency(datos.total)} ({datos.cantidad})
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                     </div>
                                     <div className="flex justify-between px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
                                         <span className="text-blue-700 dark:text-blue-300">ℹ️ Ventas a Crédito:</span>

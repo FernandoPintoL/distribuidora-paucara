@@ -21,6 +21,17 @@
             <td><strong>Descuento:</strong></td>
             <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($documento->descuento, 2) }}</td>
         </tr>
+
+        {{-- ✅ NUEVO: Detalles de pagos (tipo de pago y monto) --}}
+        @if($documento->detallesPagoVenta && $documento->detallesPagoVenta->count() > 0)
+            @foreach($documento->detallesPagoVenta as $detallePago)
+            <tr style="font-size:11px;">
+                <td><strong>{{ $detallePago->tipoPago->nombre ?? 'Pago' }}:</strong></td>
+                <td class="text-right">{{ $documento->moneda->simbolo ?? 'Bs' }} {{ number_format($detallePago->monto, 2) }}</td>
+            </tr>
+            @endforeach
+        @endif
+
         {{-- TOTAL (final a pagar) --}}
         <tr class="total-final" style="font-size:12px;">
             <td><strong>Total:</strong></td>

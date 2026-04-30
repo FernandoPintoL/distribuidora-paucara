@@ -8,6 +8,57 @@ use Illuminate\Support\Facades\DB;
 
 class PagoVentaService
 {
+    /**
+     * ✅ NUEVO: Registrar pago automático basado en tipo_pago de la venta
+     *
+     * Se llama automáticamente después de crear cada venta
+     * - Si la venta tiene tipo_pago_id, crea un registro en detalles_pago_venta
+     * - Usa monto_pagado si existe, sino usa total
+     * - Esto asegura que TODAS las ventas tengan al menos un registro
+     */
+    public function registrarPagoAutomatico(Venta $venta): ?DetallePagoVenta
+    {
+        // Solo registrar si la venta tiene tipo_pago_id
+        if (!$venta->tipo_pago_id) {
+            return null;
+        }
+
+        // Usar monto_pagado si existe y es > 0, sino usar total
+        $monto = ($venta->monto_pagado && $venta->monto_pagado > 0)
+            ? $venta->monto_pagado
+            : $venta->total;
+
+        try {
+            // Crear el registro de pago
+            $detallePago = DetallePagoVenta::create([
+                'venta_id' => $venta->id,
+                'tipo_pago_id' => $venta->tipo_pago_id,
+                'monto' => $monto,
+                'fecha_pago' => now(),
+                'numero_comprobante' => null,
+                'observaciones' => 'Pago automático al crear la venta',
+            ]);
+
+            // Actualizar monto_pagado en la venta si no estaba establecido
+            if (!$venta->monto_pagado || $venta->monto_pagado <= 0) {
+                $venta->update([
+                    'monto_pagado' => $monto,
+                    'monto_pendiente' => max(0, $venta->total - $monto),
+                ]);
+            }
+
+            return $detallePago;
+        } catch (\Exception $e) {
+            // Log pero no fallar la creación de venta
+            \Log::error('⚠️ Error registrando pago automático', [
+                'venta_id' => $venta->id,
+                'tipo_pago_id' => $venta->tipo_pago_id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
     public function registrarPagos(Venta $venta, array $pagos): array
     {
         return DB::transaction(function () use ($venta, $pagos) {

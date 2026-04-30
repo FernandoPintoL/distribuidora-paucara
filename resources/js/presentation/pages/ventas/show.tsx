@@ -474,6 +474,21 @@ export default function VentaShow() {
                                     </div>
                                 </div>
 
+                                {/* Detalles de Pagos - Tipo y Monto */}
+                                {venta.detalles_pago_venta && venta.detalles_pago_venta.length > 0 && (
+                                    <div className="space-y-2 py-3 border-t border-gray-200 dark:border-zinc-700">
+                                        <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Pagos:</div>
+                                        {venta.detalles_pago_venta.map((detalle) => (
+                                            <div key={detalle.id} className="flex justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-gray-400">{detalle.tipo_pago?.nombre || '-'}</span>
+                                                <span className="font-semibold text-green-600 dark:text-green-400">
+                                                    {formatCurrencyWith2Decimals(detalle.monto, venta.moneda.codigo)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* Monto Pagado */}
                                 {venta.monto_pagado !== null && venta.monto_pagado > 0 && (
                                     <div className="flex justify-between bg-green-50 dark:bg-green-900/20 p-3 rounded">
@@ -508,7 +523,7 @@ export default function VentaShow() {
                         </div>
                     </div>
 
-                    {/* Pagos si existen */}
+{/* Pagos si existen */}
                     {venta.pagos && venta.pagos.length > 0 && (
                         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
                             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">

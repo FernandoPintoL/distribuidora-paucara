@@ -47,6 +47,7 @@ class VentaResponseDTO extends BaseDTO
         public ?array $entregaConfirmacion = null,  // ✅ NUEVO: Confirmación de entrega (entregas_venta_confirmaciones)
         public ?int $preventista_id = null,  // ✅ NUEVO (2026-03-01): ID del preventista
         public ?array $preventista = null,   // ✅ NUEVO (2026-03-01): Datos del preventista
+        public array $detalles_pago_venta = [],  // ✅ NUEVO: Detalles de pagos múltiples
     ) {}
 
     /**
@@ -125,6 +126,9 @@ class VentaResponseDTO extends BaseDTO
         }
         if (!isset($venta->preventista)) {
             $venta->load('preventista');  // ✅ NUEVO (2026-03-01): Cargar preventista
+        }
+        if (!isset($venta->detallesPagoVenta)) {
+            $venta->load('detallesPagoVenta.tipoPago');  // ✅ NUEVO: Cargar detalles de pagos
         }
         // ✅ NUEVO: Cargar datos completos de productos en detalles
         if (!isset($venta->detalles[0]->producto->categoria)) {
@@ -275,6 +279,20 @@ class VentaResponseDTO extends BaseDTO
                 'name' => $venta->preventista->name,
                 'email' => $venta->preventista->email,
             ] : null,
+            // ✅ NUEVO: Detalles de pagos múltiples
+            detalles_pago_venta: $venta->detallesPagoVenta ? $venta->detallesPagoVenta->map(fn($detallePago) => [
+                'id' => $detallePago->id,
+                'venta_id' => $detallePago->venta_id,
+                'tipo_pago_id' => $detallePago->tipo_pago_id,
+                'monto' => (float) $detallePago->monto,
+                'fecha_pago' => $detallePago->fecha_pago,
+                'numero_comprobante' => $detallePago->numero_comprobante ?? null,
+                'observaciones' => $detallePago->observaciones ?? null,
+                'tipo_pago' => $detallePago->tipoPago ? [
+                    'id' => $detallePago->tipoPago->id,
+                    'nombre' => $detallePago->tipoPago->nombre,
+                ] : null,
+            ])->toArray() : [],
         );
     }
 

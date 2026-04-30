@@ -74,6 +74,20 @@ export interface Pago extends BaseEntity {
     };
 }
 
+export interface DetallePagoVenta extends BaseEntity {
+    id: Id;
+    venta_id: Id;
+    tipo_pago_id: Id;
+    monto: number;
+    fecha_pago: string;
+    numero_comprobante?: string;
+    observaciones?: string;
+    tipo_pago?: {
+        id: Id;
+        nombre: string;
+    };
+}
+
 export interface CuentaPorCobrar extends BaseEntity {
     id: Id;
     monto: number;
@@ -376,6 +390,7 @@ export interface VentaShow extends Venta {
     detalles: DetalleVentaShow[]; // Obligatorio en show con productos completos
     tipo_pago?: TipoPago;
     direccion_cliente?: DireccionCliente;
+    detalles_pago_venta?: DetallePagoVenta[]; // ✅ NUEVO: Detalles de pagos múltiples
 }
 
 export interface VentaShowPageProps {
