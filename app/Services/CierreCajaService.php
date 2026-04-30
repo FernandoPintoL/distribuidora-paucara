@@ -1191,16 +1191,33 @@ class CierreCajaService
     /**
      * ✅ NUEVO (2026-04-30): Calcular pagos de ventas agrupados por tipo desde detalles_pago_venta
      * Esta es la FUENTE DE VERDAD para dinero real que entró por ventas
+     *
+     * Obtiene TODAS las ventas de esta caja en el período y suma sus detalles_pago_venta
      */
     private function calcularDetallesPagosVentaPorTipo(AperturaCaja $aperturaCaja): array
     {
         try {
+            // Obtener IDs de todas las ventas en esta caja durante el período
+            $ventasIds = DB::table('movimientos_caja')
+                ->where('caja_id', $aperturaCaja->caja_id)
+                ->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin])
+                ->whereIn('tipo_operacion_id', function($q) {
+                    $q->select('id')->from('tipo_operacion_caja')
+                      ->whereIn('codigo', ['VENTA', 'CREDITO']);
+                })
+                ->pluck('venta_id')
+                ->filter()
+                ->unique()
+                ->toArray();
+
+            if (empty($ventasIds)) {
+                return [];
+            }
+
+            // Obtener detalles de pago agrupados por tipo de pago
             $pagos = DB::table('detalles_pago_venta')
-                ->join('ventas', 'detalles_pago_venta.venta_id', '=', 'ventas.id')
                 ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
-                ->join('movimientos_caja', 'ventas.id', '=', 'movimientos_caja.venta_id')
-                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
-                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
                 ->select(
                     'tipos_pago.nombre',
                     'tipos_pago.codigo',
@@ -1221,6 +1238,7 @@ class CierreCajaService
 
             Log::info('💳 [calcularDetallesPagosVentaPorTipo]:', [
                 'apertura_id' => $aperturaCaja->id,
+                'ventas_count' => count($ventasIds),
                 'datos' => $resultado,
             ]);
 
@@ -1229,6 +1247,7 @@ class CierreCajaService
             Log::error('❌ [calcularDetallesPagosVentaPorTipo]:', [
                 'apertura_id' => $aperturaCaja->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return [];
         }
