@@ -49,6 +49,8 @@ interface Props {
     sumatorialCompras?: number;  // ✅ NUEVO: Sumatoria de compras de CierreCajaService
     sumatorialDevoluciones?: number;  // ✅ NUEVO (2026-03-09): Sumatoria de devoluciones
     sumatorialServicio?: number;  // ✅ NUEVO (2026-03-09): Sumatoria de servicios
+    detallesPagoDesglosado?: Array<{ tipo_pago_id: number; tipo: string; total: number; cantidad: number }>;  // ✅ NUEVO: Desglose de pagos desde detalles_pago_venta
+    totalDetallesPago?: number;  // ✅ NUEVO: Dinero real pagado por ventas (desde detalles_pago_venta)
     cargandoDatos?: boolean;  // ✅ NUEVO: Indicador si se están cargando datos del servidor
 }
 
@@ -82,7 +84,7 @@ const getTipoOperacionColor = (codigo: string): string => {
     }
 };
 
-export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, sumatorialCompras = 0, sumatorialDevoluciones = 0, sumatorialServicio = 0, cargandoDatos = false }: Props) {
+export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago = [], ventasPorEstado = [], pagosPorTipoPago = [], gastosPorTipoPago = [], ventasTotales = 0, ventasAnuladas = 0, ventasCredito = 0, sumatorialCompras = 0, sumatorialDevoluciones = 0, sumatorialServicio = 0, detallesPagoDesglosado = [], totalDetallesPago = 0, cargandoDatos = false }: Props) {
     console.log('MovimientosDelDiaTable - Props recibidos:', { cajaAbiertaHoy, movimientosHoy, efectivoEsperado, ventasPorTipoPago, ventasPorEstado, pagosPorTipoPago, gastosPorTipoPago, ventasTotales, ventasAnuladas, ventasCredito, cargandoDatos });
     const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
     const [filtroFechaDesde, setFiltroFechaDesde] = useState<string>('');
@@ -157,12 +159,12 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     // ✅ NUEVO: Obtener tipos únicos y calcular totales
     const tipos = Object.keys(movimientosAgrupados);
     const totalesPorTipo = Object.entries(movimientosAgrupados).map(([tipo, movs]) => {
-        // ✅ CORREGIDO (2026-03-03): Para VENTA, usar ventasTotales del backend que ya está correcto
+        // ✅ ACTUALIZADO (2026-04-29): Para VENTA, usar totalDetallesPago (dinero real pagado desde detalles_pago_venta)
         // Para otros tipos, sumar los montos localmente
         if (tipo === 'Venta' || tipo === 'VENTA') {
             return {
                 tipo,
-                total: ventasTotales || 0, // Usar el valor correcto del backend
+                total: totalDetallesPago || 0, // Usar dinero real pagado (desde detalles_pago_venta)
                 count: movs.length,
             };
         }
