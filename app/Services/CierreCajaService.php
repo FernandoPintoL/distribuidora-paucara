@@ -1305,15 +1305,17 @@ class CierreCajaService
     private function calcularDetallesPagosVentaPorTipo(AperturaCaja $aperturaCaja): array
     {
         try {
-            // Obtener IDs de todas las ventas en esta caja durante el período
+            // ✅ CORREGIDO (2026-04-30): Obtener SOLO ventas APROBADAS, no anuladas
+            // Obtener IDs de ventas APROBADAS en esta caja durante el período
             $ventasIds = DB::table('movimientos_caja')
-                ->where('caja_id', $aperturaCaja->caja_id)
-                ->whereBetween('fecha', [$this->fechaInicio, $this->fechaFin])
-                ->whereIn('tipo_operacion_id', function($q) {
-                    $q->select('id')->from('tipo_operacion_caja')
-                      ->whereIn('codigo', ['VENTA', 'CREDITO']);
-                })
-                ->pluck('venta_id')
+                ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
+                ->where('estados_documento.codigo', self::ESTADO_APROBADO)
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                ->pluck('ventas.id')
                 ->filter()
                 ->unique()
                 ->toArray();
@@ -1361,11 +1363,15 @@ class CierreCajaService
                     'cantidad_ventas_antiguas' => count($ventasAntiguasIds),
                 ]);
 
+                // ✅ CORREGIDO (2026-04-30): Validar también estado APROBADO en el fallback
                 $pagosAntiguos = DB::table('movimientos_caja')
                     ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
                     ->join('tipos_pago', 'movimientos_caja.tipo_pago_id', '=', 'tipos_pago.id')
+                    ->join('ventas', 'movimientos_caja.numero_documento', '=', 'ventas.numero')
+                    ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
                     ->whereIn('movimientos_caja.venta_id', $ventasAntiguasIds)
                     ->whereIn('tipo_operacion_caja.codigo', ['VENTA', 'CREDITO'])
+                    ->where('estados_documento.codigo', self::ESTADO_APROBADO)
                     ->select(
                         'tipos_pago.nombre',
                         'tipos_pago.codigo',
