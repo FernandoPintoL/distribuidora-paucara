@@ -108,6 +108,7 @@ class CierreCajaService
             'sumatoriasVentasPorTipoPago' => $this->calcularSumatoriasVentasPorTipoPago($movimientos),
             'movimientosPorTipoPago'    => $this->calcularMovimientosPorTipoPago($movimientos),
             'pagosCreditoPorTipoPago'   => $this->calcularPagosCreditoPorTipoPago($movimientos),
+            'detallesPagosVentaPorTipo' => $this->calcularDetallesPagosVentaPorTipo($aperturaCaja),  // ✅ NUEVO: Pagos desde detalles_pago_venta
             'gastosPorTipoPago'         => $this->calcularGastosPorTipoPago($movimientos),
             'ventasPorEstado'           => $this->calcularVentasPorEstado($aperturaCaja),
             'efectivoEsperado'          => $this->calcularEfectivoEsperado($aperturaCaja, $movimientos),
@@ -1184,6 +1185,52 @@ class CierreCajaService
                 'error' => $e->getMessage(),
             ]);
             return 0;
+        }
+    }
+
+    /**
+     * ✅ NUEVO (2026-04-30): Calcular pagos de ventas agrupados por tipo desde detalles_pago_venta
+     * Esta es la FUENTE DE VERDAD para dinero real que entró por ventas
+     */
+    private function calcularDetallesPagosVentaPorTipo(AperturaCaja $aperturaCaja): array
+    {
+        try {
+            $pagos = DB::table('detalles_pago_venta')
+                ->join('ventas', 'detalles_pago_venta.venta_id', '=', 'ventas.id')
+                ->join('tipos_pago', 'detalles_pago_venta.tipo_pago_id', '=', 'tipos_pago.id')
+                ->join('movimientos_caja', 'ventas.id', '=', 'movimientos_caja.venta_id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                ->select(
+                    'tipos_pago.nombre',
+                    'tipos_pago.codigo',
+                    DB::raw('SUM(detalles_pago_venta.monto) as total'),
+                    DB::raw('COUNT(detalles_pago_venta.id) as cantidad')
+                )
+                ->groupBy('tipos_pago.id', 'tipos_pago.nombre', 'tipos_pago.codigo')
+                ->get();
+
+            $resultado = [];
+            foreach ($pagos as $pago) {
+                $resultado[$pago->nombre] = [
+                    'codigo' => $pago->codigo,
+                    'cantidad' => (int) $pago->cantidad,
+                    'total' => (float) $pago->total,
+                ];
+            }
+
+            Log::info('💳 [calcularDetallesPagosVentaPorTipo]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'datos' => $resultado,
+            ]);
+
+            return $resultado;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularDetallesPagosVentaPorTipo]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return [];
         }
     }
 }

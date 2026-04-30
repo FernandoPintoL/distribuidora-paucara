@@ -641,6 +641,7 @@ class CajaController extends Controller
                         ->values()
                         ->toArray(),
                     'movimientos_por_tipo_pago' => $datos['movimientosPorTipoPago'] ?? [],
+                    'detalles_pagos_venta_por_tipo' => $datos['detallesPagosVentaPorTipo'] ?? [],  // ✅ NUEVO: Pagos desde detalles_pago_venta
                     'ventas_por_tipo_pago'      => $datos['ventasPorTipoPago'] ?? [],
                     'ventas_por_estado'         => $datos['ventasPorEstado'] ?? [],
                     'pagos_credito_por_tipo_pago' => $datos['pagosCreditoPorTipoPago'] ?? [],

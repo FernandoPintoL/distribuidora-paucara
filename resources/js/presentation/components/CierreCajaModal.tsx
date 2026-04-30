@@ -35,6 +35,7 @@ interface DatosCierre {
     monto_pagos_creditos: number;
     movimientos_agrupados: Array<{ tipo: string; total: number; cantidad: number }>;  // ← ACTUALIZADO
     movimientos_por_tipo_pago: Record<string, { cantidad: number; total: number }>;
+    detalles_pagos_venta_por_tipo?: Record<string, { codigo: string; cantidad: number; total: number }>;  // ✅ NUEVO: Pagos desde detalles_pago_venta
     ventas_por_tipo_pago: Record<string, { cantidad: number; total: number }>;
     ventas_por_estado: Array<{ estado: string; count: number; total: number }>;
     pagos_credito_por_tipo_pago: Array<{ tipo: string; cantidad: number; total: number }>;
@@ -348,15 +349,19 @@ export default function CierreCajaModal({ show, onClose, cajaAbierta, montoEsper
                                         <span className="font-medium text-green-900 dark:text-green-100">{formatCurrency(cajaAbierta.monto_apertura)}</span>
                                     </div>
 
-                                    {/* ✅ NUEVO: Desglose de Ventas por Tipo de Pago */}
+                                    {/* ✅ ACTUALIZADO: Desglose de Ventas por Tipo de Pago desde detalles_pago_venta */}
                                     <div className="bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700 p-3 space-y-2">
                                         <div className="flex justify-between font-semibold">
-                                            <span className="text-green-700 dark:text-green-300">⬆️ Ventas por Tipo de Pago:</span>
-                                            <span className="text-green-900 dark:text-green-100">{formatCurrency(ventasEnEfectivo)}</span>
+                                            <span className="text-green-700 dark:text-green-300">⬆️ Dinero Pagado por Tipo:</span>
+                                            <span className="text-green-900 dark:text-green-100">
+                                                {formatCurrency(
+                                                    Object.values(datosCierre?.detalles_pagos_venta_por_tipo || {}).reduce((sum, d: any) => sum + (d.total || 0), 0)
+                                                )}
+                                            </span>
                                         </div>
-                                        {datosCierre?.movimientos_por_tipo_pago && Object.entries(datosCierre.movimientos_por_tipo_pago).length > 0 ? (
+                                        {datosCierre?.detalles_pagos_venta_por_tipo && Object.entries(datosCierre.detalles_pagos_venta_por_tipo).length > 0 ? (
                                             <div className="space-y-1 pl-4 border-l-2 border-green-300 dark:border-green-700">
-                                                {Object.entries(datosCierre.movimientos_por_tipo_pago).map(([tipo, datos]: [string, any]) => (
+                                                {Object.entries(datosCierre.detalles_pagos_venta_por_tipo).map(([tipo, datos]: [string, any]) => (
                                                     <div key={tipo} className="flex justify-between text-sm">
                                                         <span className="text-green-600 dark:text-green-400">{tipo}</span>
                                                         <span className="text-green-700 dark:text-green-300">
