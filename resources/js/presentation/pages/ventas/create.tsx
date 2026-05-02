@@ -309,7 +309,7 @@ export default function VentaForm() {
         tipo_pago_nombre?: string;
     }
     const [pagos, setPagos] = useState<Pago[]>([]);
-    const formularioPagosRef = useRef<{ agregarFila: () => void }>(null);
+    const formularioPagosRef = useRef<{ agregarFila: () => void; reset: () => void }>(null);
 
     useEffect(() => {
         console.log('🚚 [VentaForm] requiere_envio cambió:', {
@@ -1160,6 +1160,9 @@ export default function VentaForm() {
                 setClienteValue(null); // Limpiar valor del cliente
                 setClienteDisplay(''); // Limpiar display del cliente
                 precioRango.reset(); // Limpiar estado del carrito de precios
+                // ✅ NUEVO: Limpiar formulario de pagos después de crear venta
+                formularioPagosRef.current?.reset();
+                setPagos([]);
 
                 // ✅ NUEVO: Guardar datos de la venta y mostrar modal de selección de salida
                 setVentaCreada({

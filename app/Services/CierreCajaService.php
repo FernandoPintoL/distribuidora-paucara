@@ -74,7 +74,7 @@ class CierreCajaService
         $pagosCredito = $this->calcularPagosCredito($movimientos);
         $salidasReales = $this->calcularSalidasReales($movimientos);
         $compras = $this->calcularCompras($movimientos);  // Referencial (promesa de pago)
-        $anulaciones = $this->calcularAnulaciones($movimientos);  // Referencial (transacción cancelada)
+        $anulaciones = $this->calcularAnulaciones($movimientos);  // ✅ CORREGIDO (2026-04-30): Suma directa de movimientos ANULACION
         $totalSalidas = $this->calcularTotalSalidas($movimientos);
 
         return [
@@ -374,24 +374,27 @@ class CierreCajaService
     }
 
     /**
-     * ✅ Calcular ANULACIONES (referencial, no afecta totalEfectivo)
-     * Dinero que sale por devoluciones/cancelaciones
+     * ✅ CORREGIDO (2026-04-30): Calcular ANULACIONES sumando movimientos directamente
+     * Suma directa de movimientos_caja donde tipo_operacion.codigo = 'ANULACION'
      * Se muestra como referencial para auditoría
      *
      * ⚠️ NOTA IMPORTANTE:
-     * - Venta anulada = transacción que nunca pasó
+     * - Suma TODOS los movimientos de tipo ANULACION sin filtro de venta
+     * - Incluye anulaciones y reversiones como movimientos contables
      * - No debe restar del totalEfectivo
      * - Solo referencial para análisis
      */
     private function calcularAnulaciones($movimientos): float
     {
         try {
-            $anulaciones = abs((float) $this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
-                ->filter(fn($m) => $this->esPagoValido($m) && $m->tipoOperacion?->codigo === 'ANULACION')
+            // ✅ Suma directa de movimientos donde tipo_operacion.codigo = 'ANULACION'
+            $anulaciones = abs((float) $movimientos
+                ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')
                 ->sum('monto'));
 
-            Log::info('🗑️ [calcularAnulaciones] (referencial, no afecta totalEfectivo):', [
+            Log::info('🗑️ [calcularAnulaciones] Suma directa desde movimientos_caja:', [
                 'total' => $anulaciones,
+                'cantidad_movimientos' => $movimientos->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')->count(),
             ]);
 
             return $anulaciones;
@@ -820,7 +823,8 @@ class CierreCajaService
             ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANTICIPO')
             ->sum('monto'));
 
-        $anulaciones = abs($this->obtenerMovimientosPorDireccion($movimientos, 'SALIDA')
+        // ✅ CORREGIDO (2026-04-30): Suma directa de movimientos ANULACION
+        $anulaciones = abs((float) $movimientos
             ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')
             ->sum('monto'));
 

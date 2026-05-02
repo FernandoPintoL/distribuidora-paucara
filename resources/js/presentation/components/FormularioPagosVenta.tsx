@@ -37,6 +37,11 @@ const FormularioPagosVenta = forwardRef(({
 
     useImperativeHandle(ref, () => ({
         agregarFila: handleAgregarFila,
+        // ✅ NUEVO: Método para resetear el formulario después de crear una venta
+        reset: () => {
+            setFilas([]);
+            setError('');
+        },
     }));
 
     const tiposPagoFiltrados = tiposPago.filter(tipo => tipo.codigo !== 'CREDITO');

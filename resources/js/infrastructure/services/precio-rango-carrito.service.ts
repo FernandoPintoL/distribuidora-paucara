@@ -68,7 +68,23 @@ class PrecioRangoCarritoService {
      */
     async calcularCarrito(items: ItemCarrito[]): Promise<CarritoCalculadoResponse> {
         try {
-            console.log('📤 Enviando solicitud a /api/carrito/calcular:', JSON.stringify({ items }, null, 2));
+            // ✅ NUEVO: Filtrar items con cantidad <= 0 para evitar enviar datos inválidos
+            const itemsValidos = items.filter(item => item.cantidad > 0);
+
+            // ✅ NUEVO: Si no hay items válidos después de filtrar, retornar carrito vacío sin hacer request
+            if (itemsValidos.length === 0) {
+                console.log('⚠️ Sin items válidos (todos tienen cantidad 0), retornando carrito vacío');
+                return {
+                    detalles: [],
+                    subtotal: 0,
+                    total: 0,
+                    cantidad_items: 0,
+                    ahorro_disponible: 0,
+                    tiene_ahorro_disponible: false,
+                };
+            }
+
+            console.log('📤 Enviando solicitud a /api/carrito/calcular:', JSON.stringify({ items: itemsValidos }, null, 2));
 
             const response = await fetch('/api/carrito/calcular', {
                 method: 'POST',
@@ -78,7 +94,7 @@ class PrecioRangoCarritoService {
                     'X-CSRF-TOKEN': this.getCsrfToken(),
                 },
                 body: JSON.stringify({
-                    items: items,
+                    items: itemsValidos,
                 }),
             });
 

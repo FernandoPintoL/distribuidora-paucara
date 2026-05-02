@@ -98,9 +98,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const [filtroEstadoVenta, setFiltroEstadoVenta] = useState<'todos' | 'APROBADO' | 'ANULADO'>('todos'); // ✅ NUEVO: Filtro estado venta
     const [ordenarPor, setOrdenarPor] = useState<'fecha' | 'monto' | 'tipo'>('fecha');
     const [filtrosVisibles, setFiltrosVisibles] = useState(false);
-    const [expandirVentasEstado, setExpandirVentasEstado] = useState(false);
-    const [expandirPagos, setExpandirPagos] = useState(false);
-    const [expandirGastos, setExpandirGastos] = useState(false);
     const [mostrarModalImpresion, setMostrarModalImpresion] = useState(false);
     const [mostrarModalMovimientoIndividual, setMostrarModalMovimientoIndividual] = useState(false);
     const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<MovimientoCaja | null>(null);
@@ -128,9 +125,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
             </div>
         );
     }
-
-    // ✅ MEJORADO: Usar datos frescos recibidos desde Cajas/Index.tsx (via props)
-    const efectivoActual = efectivoEsperado;
 
     // ✅ NUEVO: Determinar si la caja es de hoy o de otro día
     const fechaApertura = new Date(cajaAbiertaHoy.fecha);
@@ -160,7 +154,7 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const tipos = Object.keys(movimientosAgrupados);
     const totalesPorTipo = Object.entries(movimientosAgrupados).map(([tipo, movs]) => {
         // ✅ ACTUALIZADO (2026-04-29): Para VENTA, usar totalDetallesPago (dinero real pagado desde detalles_pago_venta)
-        // Para otros tipos, sumar los montos localmente
+        // Para otros tipos, sumar los montos localmente PERO solo si están APROBADOS
         if (tipo === 'Venta' || tipo === 'VENTA') {
             return {
                 tipo,
@@ -169,10 +163,20 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
             };
         }
 
+        // ✅ CORREGIDO (2026-04-30): Filtrar solo movimientos APROBADOS antes de sumar
+        const movsAprobados = movs.filter(m => {
+            // Para movimientos con venta asociada, verificar que esté aprobada
+            if (m.venta?.estado_documento) {
+                return m.venta.estado_documento.codigo === 'APROBADO';
+            }
+            // Para otros movimientos sin venta (gastos, etc.), incluirlos
+            return true;
+        });
+
         return {
             tipo,
-            total: movs.reduce((sum, m) => sum + m.monto, 0),
-            count: movs.length,
+            total: movsAprobados.reduce((sum, m) => sum + m.monto, 0),
+            count: movsAprobados.length,
         };
     });
 
@@ -189,6 +193,31 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
         console.log('💡 [MovimientosDelDiaTable] Agregando card de VENTA manual porque totalDetallesPago > 0', {
             totalDetallesPago,
             detallesCount: detallesPagoDesglosado.length,
+        });
+    }
+
+    // ✅ CORREGIDO (2026-04-30): Si hay ventasAnuladas pero el card de ANULACION tiene total=0,
+    // reemplazarlo con el valor correcto desde props (ventasAnuladas viene del backend calculado correctamente)
+    const anulacionIndex = totalesPorTipo.findIndex(t => t.tipo === 'Anulación' || t.tipo === 'ANULACION');
+    if (ventasAnuladas > 0) {
+        if (anulacionIndex >= 0) {
+            // Reemplazar si existe
+            totalesPorTipo[anulacionIndex] = {
+                tipo: 'Anulación',
+                total: -ventasAnuladas, // Negativo porque es salida
+                count: totalesPorTipo[anulacionIndex].count,
+            };
+        } else {
+            // Agregar si no existe
+            totalesPorTipo.push({
+                tipo: 'Anulación',
+                total: -ventasAnuladas, // Negativo porque es salida
+                count: 0,
+            });
+        }
+
+        console.log('💡 [MovimientosDelDiaTable] Agregando/Actualizando card de ANULACION desde props', {
+            ventasAnuladas,
         });
     }
 
@@ -448,7 +477,24 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         return (
                             <button
                                 key={tipo}
-                                onClick={() => setFiltroTipo(tipo)}
+                                onClick={() => {
+                                    setFiltroTipo(tipo);
+                                    // ✅ DEBUG: Mostrar en consola qué datos llegaron para este tipo
+                                    console.log(`\n📋 [MovimientosDelDiaTable] Datos del tipo: ${tipo}`, {
+                                        tipo,
+                                        cantidad: movimientosAgrupados[tipo].length,
+                                        movimientos: movimientosAgrupados[tipo],
+                                        detalles: movimientosAgrupados[tipo].map(m => ({
+                                            id: m.id,
+                                            numero_documento: m.numero_documento,
+                                            monto: m.monto,
+                                            venta_id: m.venta_id,
+                                            venta_numero: m.venta?.numero,
+                                            venta_estado: m.venta?.estado_documento?.codigo,
+                                            fecha: m.fecha,
+                                        })),
+                                    });
+                                }}
                                 className={`px-3 py-1 rounded-full text-sm font-medium transition ${filtroTipo === tipo
                                     ? 'bg-indigo-600 text-white dark:bg-indigo-500'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -469,41 +515,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                 {/* ✅ NUEVO: Filtros Avanzados */}
                 {filtrosVisibles && (
                     <div className="mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                        {/* Filtro por Signo */}
-                        <div>
-                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Tipo de Movimiento
-                            </p>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setFiltroSigno('todos')}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'todos'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    Todos
-                                </button>
-                                <button
-                                    onClick={() => setFiltroSigno('ingresos')}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'ingresos'
-                                        ? 'bg-green-600 text-white'
-                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    ⬆️ Ingresos
-                                </button>
-                                <button
-                                    onClick={() => setFiltroSigno('egresos')}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition ${filtroSigno === 'egresos'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    ⬇️ Egresos
-                                </button>
-                            </div>
-                        </div>
 
                         {/* Filtro por Rango de Fechas */}
                         <div>
@@ -535,30 +546,6 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                             setFiltroFechaDesde('');
                                             setFiltroFechaHasta('');
                                         }}
-                                        className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
-                                    >
-                                        Limpiar
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Búsqueda por Descripción */}
-                        <div>
-                            <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Buscar por Descripción
-                            </p>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Buscar en observaciones, documento, tipo..."
-                                    value={busquedaDescripcion}
-                                    onChange={(e) => setBusquedaDescripcion(e.target.value)}
-                                    className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
-                                />
-                                {busquedaDescripcion && (
-                                    <button
-                                        onClick={() => setBusquedaDescripcion('')}
                                         className="px-2 py-1 rounded text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400"
                                     >
                                         Limpiar
@@ -607,47 +594,15 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                             </div>
                         </div>
 
-                        {/* Filtro por Usuario */}
-                        {usuariosUnicos.length > 0 && (
-                            <div>
-                                <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Filtrar por Usuario
-                                </p>
-                                <div className="flex gap-2 flex-wrap">
-                                    <button
-                                        onClick={() => setFiltroUsuario('')}
-                                        className={`px-3 py-1 rounded text-sm font-medium transition ${!filtroUsuario
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                            }`}
-                                    >
-                                        Todos
-                                    </button>
-                                    {usuariosUnicos.map(usuario => (
-                                        <button
-                                            key={usuario}
-                                            onClick={() => setFiltroUsuario(usuario)}
-                                            className={`px-3 py-1 rounded text-sm font-medium transition ${filtroUsuario === usuario
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100'
-                                                }`}
-                                        >
-                                            {usuario}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Filtro por Documento */}
                         <div>
                             <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                Buscar por Documento
+                                Buscar por Folio
                             </p>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
-                                    placeholder="Número de comprobante..."
+                                    placeholder="Número de folio..."
                                     value={filtroDocumento}
                                     onChange={(e) => setFiltroDocumento(e.target.value)}
                                     className="flex-1 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm"
@@ -758,83 +713,8 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                     </div>
                 )}
 
-                {/* ✅ NUEVO (2026-03-09): Resumen de Entradas vs Salidas */}
-                {/* {movimientosHoy.length > 0 && (
-                    <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        
-                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-3">
-                                📈 Total de Entradas (Ingresos)
-                            </h4>
-                            <div className="space-y-2 text-sm">
-                                {ventasTotales > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700 dark:text-green-200">Ventas:</span>
-                                        <span className="font-semibold text-green-700 dark:text-green-200">{formatCurrency(ventasTotales)}</span>
-                                    </div>
-                                )}
-                                {ventasCredito > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700 dark:text-green-200">Pagos de Crédito:</span>
-                                        <span className="font-semibold text-green-700 dark:text-green-200">{formatCurrency(ventasCredito)}</span>
-                                    </div>
-                                )}
-                                {sumatorialServicio > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700 dark:text-green-200">Servicios:</span>
-                                        <span className="font-semibold text-green-700 dark:text-green-200">{formatCurrency(sumatorialServicio)}</span>
-                                    </div>
-                                )}
-                                <div className="border-t border-green-300 dark:border-green-600 pt-2 mt-2">
-                                    <div className="flex justify-between">
-                                        <span className="font-bold text-green-900 dark:text-green-100">Total Entradas:</span>
-                                        <span className="font-bold text-lg text-green-700 dark:text-green-200">
-                                            {formatCurrency(ventasTotales + ventasCredito + sumatorialServicio)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        
-                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-3">
-                                📉 Total de Salidas (Egresos)
-                            </h4>
-                            <div className="space-y-2 text-sm">
-                                {ventasAnuladas > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700 dark:text-red-200">Anulaciones:</span>
-                                        <span className="font-semibold text-red-700 dark:text-red-200">{formatCurrency(ventasAnuladas)}</span>
-                                    </div>
-                                )}
-                                {sumatorialCompras > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700 dark:text-red-200">Compras:</span>
-                                        <span className="font-semibold text-red-700 dark:text-red-200">{formatCurrency(sumatorialCompras)}</span>
-                                    </div>
-                                )}
-                                {sumatorialDevoluciones > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700 dark:text-red-200">Devoluciones:</span>
-                                        <span className="font-semibold text-red-700 dark:text-red-200">{formatCurrency(sumatorialDevoluciones)}</span>
-                                    </div>
-                                )}
-                                <div className="border-t border-red-300 dark:border-red-600 pt-2 mt-2">
-                                    <div className="flex justify-between">
-                                        <span className="font-bold text-red-900 dark:text-red-100">Total Salidas:</span>
-                                        <span className="font-bold text-lg text-red-700 dark:text-red-200">
-                                            -{formatCurrency(ventasAnuladas + sumatorialCompras + sumatorialDevoluciones)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )} */}
-
                 {/* ✅ NUEVO: Resumen por tipo de operación */}
-                {totalesPorTipo.length > 1 && (
+                {totalesPorTipo.length >= 1 && (
                     <div className="mb-6">
                         <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
                             📊 Sumatoria por Tipo de Operación

@@ -15,6 +15,7 @@ use App\Services\Reservas\ReservaDistribucionService;
 use App\Services\Stock\MovimientoInventarioService;
 use App\Services\Stock\StockService; // ✅ CORREGIDO: namespace correcto
 use App\Services\Venta\PrecioRangoProductoService;
+use App\Services\PagoVentaService; // ✅ NUEVO: Para registrar detalles de pago
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ class ApiProformaController extends Controller
 {
     public function __construct(
         private MovimientoInventarioService $movimientoService,
+        private PagoVentaService $pagoVentaService, // ✅ NUEVO: Para registrar detalles de pago
     ) {}
 
     public function store(Request $request)
@@ -3431,6 +3433,23 @@ class ApiProformaController extends Controller
 
                 // ✅ NUEVO: Disparar evento ProformaConvertida para notificar al cliente a través de WebSocket
                 event(new \App\Events\ProformaConvertida($proforma, $venta));
+
+                // ✅ NUEVO: Registrar pago automático basado en tipo_pago_id (igual que VentaController@store)
+                try {
+                    $this->pagoVentaService->registrarPagoAutomatico($venta);
+
+                    Log::info('✅ [convertirAVenta] Pago automático registrado para venta', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'tipo_pago_id' => $venta->tipo_pago_id,
+                    ]);
+                } catch (\Exception $e) {
+                    // Log del error pero no fallar la conversión
+                    Log::error('⚠️ [convertirAVenta] Error al registrar pago automático', [
+                        'venta_id' => $venta->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 // Crear detalles de la venta desde los detalles de la proforma
                 foreach ($proforma->detalles as $detalleProforma) {

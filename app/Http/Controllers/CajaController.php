@@ -165,7 +165,8 @@ class CajaController extends Controller
             // Extraer sumatorias principales
             $montoApertura = (float) $cajaAbiertaHoy->monto_apertura;
             $totalVentas = (float) $datosCalculados['totalVentas'];  // Todas las ventas APROBADAS
-            $ventasAnuladas = (float) $datosCalculados['datosReferenciales']['anulaciones'];
+            // ✅ CORREGIDO (2026-04-30): Usar sumatorialAnulaciones (que usa calcularVentasAnuladas)
+            $ventasAnuladas = (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0);
             $pagosCredito = (float) $datosCalculados['detalleEfectivo']['pagos_credito'];
 
             // ✅ NUEVO: Obtener TODAS las ventas a crédito DE ESTA CAJA (ya calculadas en datosCalculados)
@@ -308,7 +309,7 @@ class CajaController extends Controller
             'ventasPorTipoPago'         => $datosResumen ? $datosResumen['ventasPorTipoPago'] ?? [] : [],
             'ventasTotales'             => $datosResumen ? $datosResumen['totalVentas'] ?? 0 : 0,
             'ventasAnuladas'            => $datosResumen ? $datosResumen['ventasAnuladas'] ?? 0 : 0,
-            'ventasCredito'             => $datosResumen ? $datosResumen['pagosCredito'] ?? 0 : 0,
+            'ventasCredito'             => $datosResumen ? $datosResumen['datosReferenciales']['ventas_credito'] ?? 0 : 0,
             'ventasCreditoTotales'      => $datosResumen ? $datosResumen['ventasCreditoTotales'] ?? 0 : 0,  // ✅ NUEVO
             'sumatorialCompras'         => $datosResumen ? $datosResumen['sumatorialCompras'] ?? 0 : 0,  // ✅ NUEVO (2026-02-20)
             // ✅ ACTUALIZADO (2026-04-30): Agregar todos los egresos desglosados que faltaban
