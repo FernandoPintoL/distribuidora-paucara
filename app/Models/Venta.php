@@ -1023,13 +1023,13 @@ class Venta extends Model
                 return;
             }
 
-            // ✅ CORREGIDO (2026-03-02): Usar monto_pagado en lugar de total
+            // ✅ ACTUALIZADO (2026-05-03): Usar total de la venta (independiente de monto_pagado)
             MovimientoCaja::create([
                 'caja_id'           => $cajaId,
                 'tipo_operacion_id' => $tipoOperacion->id,
                 'numero_documento'  => $this->numero,
                 'descripcion'       => "Venta #{$this->numero} - Cliente: {$this->cliente?->nombre}",
-                'monto'             => $this->monto_pagado ?? 0,  // ✅ Usa monto efectivamente pagado, no total
+                'monto'             => $this->total,  // ✅ Registra total de la venta (no monto pagado)
                 'fecha'             => $this->fecha,
                 'user_id'           => $this->usuario_id,
                 'venta_id'          => $this->id,              // ✅ Asignar ID de venta
@@ -1037,8 +1037,9 @@ class Venta extends Model
             ]);
 
             Log::info("Movimiento de caja generado para venta {$this->numero}", [
-                'monto_pagado' => $this->monto_pagado,
-                'total' => $this->total,
+                'monto_registrado_en_caja' => $this->total,  // ✅ Total de la venta
+                'monto_pagado_por_cliente' => $this->monto_pagado,  // Información adicional
+                'total_venta' => $this->total,
                 'tipo_pago' => $this->tipoPago?->nombre,
             ]);
         } catch (Exception $e) {

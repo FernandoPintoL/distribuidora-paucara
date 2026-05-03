@@ -260,8 +260,9 @@ class RegisterCajaMovementFromVentaListener
                 default => 'ANTICIPO'
             };
 
-            // ✅ 7.5 Para CREDITO, registrar el monto total de la venta (no monto_pagado que sería 0)
-            $montoARegistrar = $esCREDITO ? $venta->total : $venta->monto_pagado;
+            // ✅ 7.5 SIEMPRE registrar el monto total de la venta (no monto_pagado)
+            // monto_pagado puede incluir cambio/vuelto que no es parte del movimiento_caja
+            $montoARegistrar = $venta->total;
 
             // ✅ 8. Crear movimiento de caja
             $movimiento = MovimientoCaja::create([

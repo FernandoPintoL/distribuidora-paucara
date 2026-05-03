@@ -277,7 +277,8 @@ class StoreVentaRequest extends FormRequest
                 }
             }
 
-            // ✅ NUEVO (2026-03-09): Validar que suma de pagos <= total de venta
+            // ✅ ACTUALIZADO (2026-05-03): Validar que suma de pagos sea >= total de venta
+            // Permite pagos mayores al total (genera cambio)
             if (isset($data['pagos']) && is_array($data['pagos'])) {
                 $totalPagos = 0;
                 $pagosValidos = [];
@@ -290,14 +291,14 @@ class StoreVentaRequest extends FormRequest
                     }
                 }
 
-                // Validar que suma de pagos no exceda el total
+                // Validar que suma de pagos sea >= al total (permite cambio)
                 if ($totalPagos > 0 && isset($data['total'])) {
                     $total = (float) $data['total'];
-                    if ($totalPagos > $total) {
+                    if ($totalPagos < $total) {
                         $validator->errors()->add(
                             'pagos',
                             "La suma de pagos (Bs. " . number_format($totalPagos, 2) .
-                            ") no puede exceder el total (Bs. " . number_format($total, 2) . ")"
+                            ") debe ser mayor o igual al total (Bs. " . number_format($total, 2) . ")"
                         );
                     }
                 }

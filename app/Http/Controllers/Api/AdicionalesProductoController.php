@@ -93,20 +93,63 @@ class AdicionalesProductoController extends Controller
     }
 
     /**
-     * Obtener productos de comida
+     * Obtener productos de comida con precios correctos
      */
     public function productosComida(): JsonResponse
     {
         $productos = Producto::where('es_producto_comida', true)
             ->where('activo', true)
-            ->with(['adicionales' => function($q) {
-                $q->activos()->ordenados();
-            }])
-            ->get(['id', 'nombre', 'descripcion', 'precio_venta', 'es_producto_comida']);
+            ->with([
+                'adicionales' => function($q) {
+                    $q->activos()->ordenados();
+                },
+                'precios' => function($q) {
+                    // Cargar precios activos con su tipo de precio
+                    $q->where('activo', true)
+                        ->with('tipoPrecio');
+                },
+                'imagenes' => function($q) {
+                    // Cargar imagen principal (es_principal = true) o la primera si no existe
+                    $q->orderBy('es_principal', 'desc')->orderBy('orden');
+                }
+            ])
+            ->get(['id', 'nombre', 'descripcion', 'precio_venta', 'es_producto_comida']); // ✨ Incluir precio_venta como fallback
+
+        // Mapear productos para incluir el precio de VENTA correcto
+        $productosFormatted = $productos->map(function($producto) {
+            // Buscar el precio de tipo VENTA (el que NO es precio base)
+            $precioVenta = $producto->precios
+                ->filter(function($p) {
+                    return $p->tipoPrecio && !$p->tipoPrecio->es_precio_base; // Es precio de venta (no base/costo)
+                })
+                ->first();
+
+            // Usar campo 'precio' de precios_producto, o fallback al precio_venta del modelo
+            $montoVenta = 0;
+            if ($precioVenta && $precioVenta->precio !== null) {
+                $montoVenta = (float) $precioVenta->precio; // ✅ Campo correcto: 'precio' no 'monto'
+            } else {
+                // ⚠️ FALLBACK: Si no hay precio en precios_producto, usar precio_venta del modelo
+                $montoVenta = (float) ($producto->precio_venta ?? 0);
+            }
+
+            // Obtener imagen principal o primera disponible
+            $imagenPrincipal = $producto->imagenes->isNotEmpty() ? $producto->imagenes[0]->url : null;
+
+            return [
+                'id' => $producto->id,
+                'nombre' => $producto->nombre,
+                'descripcion' => $producto->descripcion,
+                'precio_venta' => $montoVenta,
+                'es_producto_comida' => $producto->es_producto_comida,
+                'imagen_url' => $imagenPrincipal,
+                'adicionales' => $producto->adicionales,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'data' => $productos,
+            'data' => $productosFormatted,
         ]);
     }
 }

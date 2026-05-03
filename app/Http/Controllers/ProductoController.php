@@ -343,6 +343,7 @@ class ProductoController extends Controller
                 'stock_maximo'     => $data['stock_maximo'] ?? 0,
                 'activo'           => $data['activo'] ?? true,
                 'es_alquilable'    => false,
+                'es_producto_comida' => $data['es_producto_comida'] ?? false, // 🍦 NUEVO - Producto de comida/helado sin stock
                 'categoria_id'     => $data['categoria_id'] ?? null,
                 'marca_id'         => $data['marca_id'] ?? null,
                 'proveedor_id'     => $data['proveedor_id'] ?? null,
@@ -741,6 +742,7 @@ class ProductoController extends Controller
                 'stock_minimo'     => $data['stock_minimo'] ?? $producto->stock_minimo,
                 'stock_maximo'     => $data['stock_maximo'] ?? $producto->stock_maximo,
                 'limite_venta'     => $data['limite_venta'] ?? $producto->limite_venta, // ✨ NUEVO
+                'es_producto_comida' => $data['es_producto_comida'] ?? $producto->es_producto_comida, // 🍦 NUEVO - Producto de comida/helado sin stock
                 'principio_activo' => $data['principio_activo'] ?? $producto->principio_activo, // ✨ NUEVO - Campo para farmacias
                 'uso_de_medicacion' => $data['uso_de_medicacion'] ?? $producto->uso_de_medicacion, // ✨ NUEVO - Campo para farmacias
                 'visible_app'      => $data['visible_app'] ?? $producto->visible_app, // ✨ NUEVO - Visible en app

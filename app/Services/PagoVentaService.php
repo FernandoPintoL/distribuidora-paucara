@@ -62,14 +62,18 @@ class PagoVentaService
     public function registrarPagos(Venta $venta, array $pagos): array
     {
         return DB::transaction(function () use ($venta, $pagos) {
-            // Validar que la suma de pagos coincida con el total
+            // ✅ ACTUALIZADO (2026-05-03): Validar que la suma de pagos sea >= al total
+            // Permite pagos mayores (genera cambio/vuelto)
             $totalPagos = array_sum(array_column($pagos, 'monto'));
 
-            if ($totalPagos != $venta->total) {
+            if ($totalPagos < $venta->total) {
                 throw new \Exception(
-                    "Suma de pagos ({$totalPagos}) no coincide con el total de la venta ({$venta->total})"
+                    "Suma de pagos ({$totalPagos}) debe ser mayor o igual al total de la venta ({$venta->total})"
                 );
             }
+
+            // Calcular cambio si aplica
+            $cambio = $totalPagos - $venta->total;
 
             // Limpiar pagos anteriores si existen
             $venta->detallesPagoVenta()->delete();
@@ -93,14 +97,25 @@ class PagoVentaService
             // Actualizar monto_pagado en la venta
             $venta->update([
                 'monto_pagado' => $totalPagos,
-                'monto_pendiente' => $venta->total - $totalPagos,
+                'monto_pendiente' => max(0, $venta->total - $totalPagos), // Siempre >= 0
+            ]);
+
+            // Log con información del cambio
+            \Log::info('✅ Pagos desglosados registrados', [
+                'venta_id' => $venta->id,
+                'venta_numero' => $venta->numero,
+                'total_venta' => $venta->total,
+                'total_pagado' => $totalPagos,
+                'cambio' => $cambio,
+                'cantidad_formas_pago' => count($detallesPago),
             ]);
 
             return [
                 'venta_id' => $venta->id,
                 'total_venta' => $venta->total,
                 'total_pagado' => $totalPagos,
-                'monto_pendiente' => 0,
+                'cambio' => $cambio,
+                'monto_pendiente' => max(0, $venta->total - $totalPagos),
                 'detalles_pago' => $detallesPago,
             ];
         });

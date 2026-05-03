@@ -61,4 +61,18 @@ class EstadoDocumento extends Model
         // Si existe, retorna su ID, si no usa fallback 2
         return $estado?->id ?? 2;
     }
+
+    /**
+     * Obtener el estado APROBADO para documentos finalizados
+     * Busca por código APROBADA, si no existe usa id=3 como fallback
+     */
+    public static function obtenerEstadoAprobado(): int
+    {
+        $estado = self::whereIn('codigo', ['APROBADA', 'APROBADO'])
+            ->where('activo', true)
+            ->first();
+
+        // Si existe, retorna su ID, si no usa fallback 3
+        return $estado?->id ?? 3;
+    }
 }

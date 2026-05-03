@@ -14,7 +14,6 @@ import { useClienteSearch } from '@/infrastructure/hooks/use-api-search';
 import ModalCrearCliente from '@/presentation/components/ui/modal-crear-cliente';
 import ProductosTable, { DetalleProducto } from '@/presentation/components/ProductosTable';
 import EntregaSearchSelector from '@/presentation/components/entregas/EntregaSearchSelector';
-import FormularioPagosVenta from '@/presentation/components/FormularioPagosVenta';
 
 // Importar servicios adicionales
 import { NotificationService } from '@/infrastructure/services/notification.service';
@@ -288,18 +287,6 @@ export default function VentaForm() {
         entrega_id: (venta?.entrega_id ? Number(venta.entrega_id) : null) as number | null
     });
 
-    // ✅ NUEVO (2026-02-11): Estado local para input de monto_pagado_inicial
-    // Esto evita que se pierdan decimales al scrollear o hacer otros eventos
-    const [montoPagadoInput, setMontoPagadoInput] = useState<string>(
-        data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
-    );
-
-    // Sincronizar estado local cuando cambia data.monto_pagado_inicial desde otra fuente
-    useEffect(() => {
-        setMontoPagadoInput(
-            data.monto_pagado_inicial === 0 ? '' : data.monto_pagado_inicial.toString()
-        );
-    }, [data.monto_pagado_inicial]);
 
     // ✅ NUEVO (2026-04-21): Estado para múltiples pagos por venta
     interface Pago {
@@ -309,7 +296,61 @@ export default function VentaForm() {
         tipo_pago_nombre?: string;
     }
     const [pagos, setPagos] = useState<Pago[]>([]);
-    const formularioPagosRef = useRef<{ agregarFila: () => void; reset: () => void }>(null);
+
+    // ✅ NUEVO (2026-05-02): Estados para desglose de pago (Efectivo + Transferencia/QR)
+    const [montoEfectivo, setMontoEfectivo] = useState<number | ''>('');
+    const [montoTransferencia, setMontoTransferencia] = useState<number | ''> ('');
+
+    // ✅ NUEVO (2026-05-03): Auto-seleccionar tipo de pago y actualizar monto_pagado_inicial basado en montos de pago
+    useEffect(() => {
+        const efectivo = Number(montoEfectivo) || 0;
+        const transferencia = Number(montoTransferencia) || 0;
+        const totalPagado = efectivo + transferencia;
+
+        let tipoPagoIdAutomatico: number | null = null;
+
+        if (efectivo > 0 && transferencia > 0) {
+            // Ambos montos: MIXTO (id=4)
+            tipoPagoIdAutomatico = 4;
+        } else if (efectivo > 0) {
+            // Solo efectivo: EFECTIVO (id=1)
+            tipoPagoIdAutomatico = 1;
+        } else if (transferencia > 0) {
+            // Solo transferencia: TRANSFERENCIA/QR (id=2)
+            tipoPagoIdAutomatico = 2;
+        }
+
+        // Actualizar tipo de pago si hay cambio
+        if (tipoPagoIdAutomatico !== null && tipoPagoIdAutomatico !== data.tipo_pago_id) {
+            setData('tipo_pago_id', tipoPagoIdAutomatico);
+
+            console.log('💳 [VentaForm] Tipo de pago detectado automáticamente:', {
+                efectivo,
+                transferencia,
+                tipo_pago_id: tipoPagoIdAutomatico,
+                tipo_pago_nombre: tipoPagoIdAutomatico === 1 ? 'EFECTIVO' :
+                                  tipoPagoIdAutomatico === 2 ? 'TRANSFERENCIA/QR' :
+                                  tipoPagoIdAutomatico === 4 ? 'MIXTO' : 'OTRO'
+            });
+        }
+
+        // ✅ NUEVO (2026-05-03): Actualizar monto_pagado_inicial con la suma de pagos desglosados
+        if (totalPagado > 0) {
+            setData('monto_pagado_inicial', totalPagado);
+
+            console.log('💰 [VentaForm] Monto pagado (desglose) actualizado:', {
+                efectivo,
+                transferencia,
+                total_pagado: totalPagado,
+                cambio: totalPagado - data.total
+            });
+        } else if (totalPagado === 0 && data.monto_pagado_inicial > 0) {
+            // Si ambos inputs se vacían, resetear monto_pagado_inicial a 0
+            setData('monto_pagado_inicial', 0);
+
+            console.log('💰 [VentaForm] Monto pagado reseteado (inputs vacíos)');
+        }
+    }, [montoEfectivo, montoTransferencia, data.monto_pagado_inicial]);
 
     useEffect(() => {
         console.log('🚚 [VentaForm] requiere_envio cambió:', {
@@ -1073,12 +1114,38 @@ export default function VentaForm() {
             })
         };
 
-        // ✅ NUEVO (2026-04-21): Agregar pagos desglosados si existen
-        if (pagos.length > 0) {
-            (submitData as any).pagos = pagos.map(p => ({
-                tipo_pago_id: p.tipo_pago_id,
-                monto: p.monto
-            }));
+        // ✅ NUEVO (2026-05-03): Preparar pagos desde inputs de Efectivo y Transferencia
+        const pagosAEnviar = [];
+
+        const efectivo = Number(montoEfectivo) || 0;
+        const transferencia = Number(montoTransferencia) || 0;
+
+        if (efectivo > 0) {
+            pagosAEnviar.push({
+                tipo_pago_id: 1, // EFECTIVO
+                monto: efectivo
+            });
+        }
+
+        if (transferencia > 0) {
+            pagosAEnviar.push({
+                tipo_pago_id: 2, // TRANSFERENCIA/QR
+                monto: transferencia
+            });
+        }
+
+        if (pagosAEnviar.length > 0) {
+            (submitData as any).pagos = pagosAEnviar;
+
+            console.log('💳 [VentaForm] Pagos desglosados a enviar:', {
+                cantidad_formas_pago: pagosAEnviar.length,
+                detalle_pagos: pagosAEnviar.map(p => ({
+                    tipo_pago_id: p.tipo_pago_id,
+                    tipo_pago: p.tipo_pago_id === 1 ? 'EFECTIVO' : p.tipo_pago_id === 2 ? 'TRANSFERENCIA/QR' : 'OTRO',
+                    monto: p.monto
+                })),
+                total_pagado: pagosAEnviar.reduce((sum, p) => sum + p.monto, 0)
+            });
         }
 
         try {
@@ -1160,8 +1227,8 @@ export default function VentaForm() {
                 setClienteValue(null); // Limpiar valor del cliente
                 setClienteDisplay(''); // Limpiar display del cliente
                 precioRango.reset(); // Limpiar estado del carrito de precios
-                // ✅ NUEVO: Limpiar formulario de pagos después de crear venta
-                formularioPagosRef.current?.reset();
+                setMontoEfectivo(''); // Limpiar monto efectivo
+                setMontoTransferencia(''); // Limpiar monto transferencia
                 setPagos([]);
 
                 // ✅ NUEVO: Guardar datos de la venta y mostrar modal de selección de salida
@@ -1600,7 +1667,7 @@ export default function VentaForm() {
                 {detallesWithProducts.length > 0 && (
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 p-6">
 
-                        <div className={`grid grid-cols-1 gap-4 max-w-4xl ml-auto ${pagos.length > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-3`}>
                             {/* Descuento general */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1619,49 +1686,58 @@ export default function VentaForm() {
                                             setData('total', data.subtotal - descuento);
                                         }
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
+                                    className="w-full p-1 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right"
                                     placeholder="0.00"
                                 />
                             </div>
 
-                            {/* Monto pagado por el cliente */}
+                            {/* Desglose de Pagos: Efectivo */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Monto Pagado
+                                    Efectivo
                                 </label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={montoPagadoInput}
-                                    onChange={(e) => {
-                                        setMontoPagadoInput(e.target.value);
-                                    }}
-                                    onWheel={(e) => {
-                                        e.preventDefault();
-                                    }}
-                                    onBlur={(e) => {
-                                        const valor = e.target.value;
-                                        const monto = valor === '' ? 0 : parseFloat(valor);
-                                        if (!isNaN(monto) && monto >= 0) {
-                                            setData('monto_pagado_inicial', monto);
-                                        }
-                                    }}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right [&::-webkit-outer-spin-button]:[appearance:none] [&::-webkit-inner-spin-button]:[appearance:none] [appearance:textfield]"
-                                    placeholder="0.00"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Bs.</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={montoEfectivo}
+                                        onChange={(e) => {
+                                            const valor = e.target.value;
+                                            setMontoEfectivo(valor === '' ? '' : parseFloat(valor) || 0);
+                                        }}
+                                        onWheel={(e) => e.preventDefault()}
+                                        disabled={isSubmitting}
+                                        className="flex-1 p-1 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right disabled:opacity-50 [&::-webkit-outer-spin-button]:[appearance:none] [&::-webkit-inner-spin-button]:[appearance:none] [appearance:textfield]"
+                                        placeholder="0.00"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Desglose de Pagos - Modo Compacto */}
-                            <FormularioPagosVenta
-                                ref={formularioPagosRef}
-                                tiposPago={tiposPagoSeguro}
-                                totalVenta={data.total}
-                                pagosRegistrados={pagos}
-                                onPagosChange={setPagos}
-                                disabled={isSubmitting}
-                                compact={true}
-                            />
+                            {/* Desglose de Pagos: Transferencia/QR */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Transferencia/QR
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Bs.</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={montoTransferencia}
+                                        onChange={(e) => {
+                                            const valor = e.target.value;
+                                            setMontoTransferencia(valor === '' ? '' : parseFloat(valor) || 0);
+                                        }}
+                                        onWheel={(e) => e.preventDefault()}
+                                        disabled={isSubmitting}
+                                        className="flex-1 p-1 border border-gray-300 dark:border-zinc-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white text-right disabled:opacity-50 [&::-webkit-outer-spin-button]:[appearance:none] [&::-webkit-inner-spin-button]:[appearance:none] [appearance:textfield]"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* ✅ NUEVO: Resumen completo de la transacción */}
@@ -1697,7 +1773,7 @@ export default function VentaForm() {
                                         ? 'text-red-600 dark:text-red-400'
                                         : 'text-green-600 dark:text-green-400'
                                         }`}>
-                                        <span>Cambio / Vuelto:</span>
+                                        <span>Cambio:</span>
                                         <span className="text-right">{formatCurrencyMinimalDecimals(Math.max(0, data.monto_pagado_inicial - data.total))}</span>
                                     </div>
                                 </>
@@ -1723,20 +1799,6 @@ export default function VentaForm() {
                         title="Limpiar el borrador de venta guardado en localStorage"
                     >
                         🗑️ Limpiar borrador
-                    </button>
-
-                    {/* ✅ Botón para agregar forma de pago */}
-                    <button
-                        type="button"
-                        onClick={() => formularioPagosRef.current?.agregarFila()}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
-                        title="Agregar nueva forma de pago"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Agregar Pago
                     </button>
 
                     {/* ✅ NUEVO: Botón para refrescar datos desde el servidor */}

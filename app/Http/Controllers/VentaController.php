@@ -538,26 +538,37 @@ class VentaController extends Controller
             // Obtener la venta creada
             $ventaCreada = Venta::findOrFail($ventaDTO->id);
 
-            // ✅ NUEVO: Registrar pago automático basado en tipo_pago (SIEMPRE se ejecuta)
-            try {
-                $this->pagoVentaService->registrarPagoAutomatico($ventaCreada);
+            // ✅ NUEVO: Registrar pago automático basado en tipo_pago
+            // ⚠️ NO registrar si es CREDITO (ventas a crédito no tienen pago en detalles_pago_venta)
+            if ($ventaCreada->tipoPago && strtoupper($ventaCreada->tipoPago->codigo) !== 'CREDITO') {
+                try {
+                    $this->pagoVentaService->registrarPagoAutomatico($ventaCreada);
 
-                Log::info('✅ Pago automático registrado para venta', [
+                    Log::info('✅ Pago automático registrado para venta', [
+                        'venta_id' => $ventaCreada->id,
+                        'venta_numero' => $ventaCreada->numero,
+                        'tipo_pago_id' => $ventaCreada->tipo_pago_id,
+                    ]);
+                } catch (\Exception $e) {
+                    // Log del error pero no fallar la creación de venta
+                    Log::error('⚠️ Error al registrar pago automático', [
+                        'venta_id' => $ventaDTO->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            } else {
+                Log::info('⏭️ Pago automático OMITIDO: Venta a CREDITO', [
                     'venta_id' => $ventaCreada->id,
                     'venta_numero' => $ventaCreada->numero,
-                    'tipo_pago_id' => $ventaCreada->tipo_pago_id,
-                ]);
-            } catch (\Exception $e) {
-                // Log del error pero no fallar la creación de venta
-                Log::error('⚠️ Error al registrar pago automático', [
-                    'venta_id' => $ventaDTO->id,
-                    'error' => $e->getMessage(),
+                    'tipo_pago_codigo' => $ventaCreada->tipoPago?->codigo ?? 'SIN TIPO PAGO',
                 ]);
             }
 
             // ✅ NUEVO (2026-04-21): Registrar múltiples pagos SI VIENEN EN EL REQUEST
-            // (esto permite sobrescribir el pago automático con pagos desglosados)
-            if ($request->has('pagos') && is_array($request->input('pagos')) && !empty($request->input('pagos'))) {
+            // ⚠️ NO registrar si es CREDITO (ventas a crédito no tienen pagos desglosados)
+            $esCredito = $ventaCreada->tipoPago && strtoupper($ventaCreada->tipoPago->codigo) === 'CREDITO';
+
+            if (!$esCredito && $request->has('pagos') && is_array($request->input('pagos')) && !empty($request->input('pagos'))) {
                 try {
                     // Registrar los pagos en detalles_pago_venta
                     $this->pagoVentaService->registrarPagos($ventaCreada, $request->input('pagos'));
@@ -574,6 +585,12 @@ class VentaController extends Controller
                         'error' => $e->getMessage(),
                     ]);
                 }
+            } elseif ($esCredito && $request->has('pagos') && !empty($request->input('pagos'))) {
+                Log::info('⏭️ Pagos desglosados OMITIDOS: Venta a CREDITO (ignorando pagos en request)', [
+                    'venta_id' => $ventaCreada->id,
+                    'venta_numero' => $ventaCreada->numero,
+                    'pagos_en_request' => count($request->input('pagos')),
+                ]);
             }
 
             // 3.5 Imprimir ticket en impresora térmica

@@ -131,6 +131,7 @@ class UpdateProductoRequest extends FormRequest
 
             // Productos fraccionados
             'es_fraccionado'           => ['nullable', 'boolean'],
+            'es_producto_comida'       => ['nullable', 'boolean'], // 🍦 NUEVO - Producto de comida/helado sin stock
             'conversiones'             => ['nullable', 'array'],
             'conversiones.*.unidad_base_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id'],
             'conversiones.*.unidad_destino_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id', 'different:conversiones.*.unidad_base_id'],
@@ -216,6 +217,7 @@ class UpdateProductoRequest extends FormRequest
             'remove_perfil.boolean'                    => 'El indicador de eliminar perfil debe ser verdadero o falso.',
 
             'es_fraccionado.boolean'                   => 'El campo fraccionado debe ser verdadero o falso.',
+            'es_producto_comida.boolean'               => 'El campo producto de comida debe ser verdadero o falso.',
             'conversiones.array'                       => 'Las conversiones deben ser un arreglo.',
             'conversiones.*.unidad_base_id.required_with' => 'La unidad base es obligatoria en cada conversión.',
             'conversiones.*.unidad_base_id.integer'    => 'La unidad base debe ser un ID numérico.',
@@ -272,6 +274,7 @@ class UpdateProductoRequest extends FormRequest
             'remove_perfil'     => 'eliminar foto de perfil',
 
             'es_fraccionado'    => 'producto fraccionado',
+            'es_producto_comida' => 'producto de comida/helado',
             'conversiones'      => 'conversiones de unidad',
             'conversiones.*.unidad_base_id' => 'unidad base de conversión',
             'conversiones.*.unidad_destino_id' => 'unidad destino de conversión',

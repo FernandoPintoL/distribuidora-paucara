@@ -479,11 +479,11 @@ export default function ProductoTableRow({
                                         onUpdateDetail(index, 'precio_unitario', precioSeleccionado.precio || 0);
                                     }
                                 }}
-                                className="mt-1 px-1.5 py-1 text-xs border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="mt-1 px-1.5 py-1 border border-gray-300 dark:border-zinc-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {!valorInicial && <option value="">Seleccionar tipo de precio</option>}
                                 {preciosVenta.map((precio) => (
-                                    <option key={precio.id || precio.tipo_precio_id} value={String(precio.tipo_precio_id)}>
+                                    <option key={precio.id || precio.tipo_precio_id} value={String(precio.tipo_precio_id)} className='text-xs'>
                                         {precio.nombre || `Tipo ${precio.tipo_precio_id}`} - {formatCurrencyWith2Decimals(precio.precio || 0)}
                                     </option>
                                 ))}

@@ -176,6 +176,20 @@ $descuento = obtenerDescuento($venta);
     <p style="font-size: 10px; margin: 4px 0; font-weight: bold; color: #27ae60; border-top: 1px solid #333; padding-top: 4px;">
         TOTAL: Bs{{ number_format($total, 2) }}
     </p>
+
+    {{-- ✅ NUEVO: Mostrar cambio si existe --}}
+    @php
+    $montoPagado = is_array($venta) && isset($venta['monto_pagado'])
+        ? (float)$venta['monto_pagado']
+        : (is_object($venta) && isset($venta->monto_pagado) ? (float)$venta->monto_pagado : $total);
+    $vuelto = $montoPagado - $total;
+    @endphp
+
+    @if($vuelto > 0.01)
+    <p style="font-size: 9px; margin: 6px 0; color: #2980b9; font-weight: bold; border-top: 1px solid #333; padding-top: 4px;">
+        💵 Cambio: Bs{{ number_format($vuelto, 2) }}
+    </p>
+    @endif
 </div>
 
 {{-- Nota de documentación --}}

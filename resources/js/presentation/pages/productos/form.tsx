@@ -231,6 +231,7 @@ export default function ProductoForm({
       marca_id: data.marca_id || '',
       proveedor_id: data.proveedor_id || '',
       activo: data.activo ? 1 : 0,
+      es_producto_comida: data.es_producto_comida ? 1 : 0, // 🍦 NUEVO - Producto de comida/helado sin stock
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
       limite_venta: data.limite_venta ? String(data.limite_venta) : '', // ✨ NUEVO - Enviar solo si tiene valor

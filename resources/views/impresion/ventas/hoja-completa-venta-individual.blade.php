@@ -155,6 +155,19 @@
                 <strong style="color: #27ae60; font-size: 14px;">Bs{{ number_format($total, 2) }}</strong>
             </td>
         </tr>
+        {{-- ✅ NUEVO: Mostrar cambio si existe --}}
+        @php
+        $montoPagado = is_array($venta) && isset($venta['monto_pagado'])
+            ? (float)$venta['monto_pagado']
+            : (is_object($venta) && isset($venta->monto_pagado) ? (float)$venta->monto_pagado : $total);
+        $vuelto = $montoPagado - $total;
+        @endphp
+        @if($vuelto > 0.01)
+        <tr class="subtotal-row" style="background-color: #e8f4f8; border-top: 2px solid #2980b9;">
+            <td><strong>💵 Cambio:</strong></td>
+            <td class="text-right"><strong style="color: #2980b9;">Bs{{ number_format($vuelto, 2) }}</strong></td>
+        </tr>
+        @endif
     </table>
 </div>
 
