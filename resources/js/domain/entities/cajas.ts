@@ -66,14 +66,32 @@ export interface MovimientoCaja {
     usuario?: Usuario;   // ✅ NUEVO: Usuario que realizó el movimiento
     venta?: {           // ✅ NUEVO (2026-02-11): Venta asociada con su estado y tipo entrega
         id: number;
-        numero: string;
+        numero_documento?: string;
+        numero?: string;
         tipo_entrega?: string; // ✅ NUEVO: DELIVERY o PICKUP
+        total?: number;  // ✅ NUEVO: Total de la venta
+        monto_pagado?: number;  // ✅ NUEVO: Monto pagado
+        monto_pendiente?: number;  // ✅ NUEVO: Monto pendiente
+        tipo_pago_id?: number;  // ✅ NUEVO: ID del tipo de pago
         estado_documento?: {
             id: number;
             codigo: string;
             nombre: string;
         };
         estado_documento_id?: number;
+        cliente?: {  // ✅ NUEVO: Cliente asociado
+            id: number;
+            nombre: string;
+        };
+        detallesPagoVenta?: Array<{  // ✅ NUEVO: Detalles de pago
+            id: number;
+            monto: number;
+            tipo_pago_id: number;
+            tipoPago?: {
+                id: number;
+                nombre: string;
+            };
+        }>;
     };
 }
 
@@ -91,6 +109,8 @@ export interface AperturaHistorico {
     observaciones_cierre: string | null;
     estado: 'Abierta' | 'Cerrada';
     estado_cierre: string | null;
+    vendidas_aprobadas?: number;  // ✅ NUEVO: Cantidad de ventas aprobadas en esta apertura
+    vendidas_anuladas?: number;   // ✅ NUEVO: Cantidad de ventas anuladas en esta apertura
 }
 
 export interface Usuario {

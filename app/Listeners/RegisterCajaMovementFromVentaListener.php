@@ -260,25 +260,156 @@ class RegisterCajaMovementFromVentaListener
                 default => 'ANTICIPO'
             };
 
-            // ✅ 7.5 SIEMPRE registrar el monto total de la venta (no monto_pagado)
-            // monto_pagado puede incluir cambio/vuelto que no es parte del movimiento_caja
-            $montoARegistrar = $venta->total;
+            // ✅ 7.5 Calcular el vuelto/cambio
+            // Si monto_pagado > total, hay cambio que debe restarse de caja
+            $cambio = max(0, $venta->monto_pagado - $venta->total);
 
-            // ✅ 8. Crear movimiento de caja
-            $movimiento = MovimientoCaja::create([
-                'caja_id' => $cajaAbierta->caja_id,
-                'user_id' => $usuario->id,
-                'tipo_operacion_id' => $tipoOperacion->id,
-                'tipo_pago_id' => $venta->tipo_pago_id,  // ✅ NUEVO: Guardar tipo de pago para análisis
-                'numero_documento' => $venta->numero,
-                'monto' => $montoARegistrar,  // ✅ MODIFICADO: Usar montoARegistrar
-                'fecha' => now(),
-                'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Creada directamente",
-                'venta_id' => $venta->id,  // ✅ NUEVO: Guardar ID de venta para rango
-            ]);
+            // ✅ 8. GARANTIZAR: SIEMPRE registrar movimientos_caja.monto = ventas.total
+            // Los detalles_pago_venta son solo para desglose de tipos de pago
+            // pero el total en caja SIEMPRE debe ser el total de la venta, no lo que envíe el frontend
+
+            $movimientos = [];
+            $totalMovimientos = 0;
+
+            // Obtener los pagos desglosados de la venta
+            $detallesPago = $venta->detallesPagoVenta()->with('tipoPago')->get();
+
+            if ($detallesPago->isNotEmpty()) {
+                // ✅ GARANTÍA: Sumar detalles y compararlos con total
+                $sumaPagos = $detallesPago->sum('monto');
+
+                Log::info('🔍 Validación de montos desglosados vs total', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'total_venta' => $venta->total,
+                    'suma_detalles' => $sumaPagos,
+                    'diferencia' => abs($venta->total - $sumaPagos),
+                ]);
+
+                // ✅ CORRECCIÓN: Si hay diferencia, ajustar el último detalle
+                if (abs($venta->total - $sumaPagos) > 0.01) {
+                    $ultimoDetalle = $detallesPago->last();
+                    $diferencia = $venta->total - $sumaPagos;
+                    $montoCorregido = $ultimoDetalle->monto + $diferencia;
+
+                    Log::warning('⚠️ Diferencia detectada en detalles - ajustando último detalle', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'diferencia' => $diferencia,
+                        'monto_original' => $ultimoDetalle->monto,
+                        'monto_corregido' => $montoCorregido,
+                    ]);
+
+                    // Reemplazar el monto del último detalle en la colección
+                    $detallesPago[$detallesPago->count() - 1]->monto = $montoCorregido;
+                }
+
+                // Registrar cada pago desglosado (con montos corregidos si fue necesario)
+                foreach ($detallesPago as $detallePago) {
+                    $movimiento = MovimientoCaja::create([
+                        'caja_id' => $cajaAbierta->caja_id,
+                        'user_id' => $usuario->id,
+                        'apertura_caja_id' => $cajaAbierta->id,
+                        'tipo_operacion_id' => $tipoOperacion->id,
+                        'tipo_pago_id' => $detallePago->tipo_pago_id,
+                        'numero_documento' => $venta->numero,
+                        'monto' => (float) $detallePago->monto,
+                        'fecha' => now(),
+                        'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - {$detallePago->tipoPago->nombre}: {$detallePago->monto}",
+                        'venta_id' => $venta->id,
+                    ]);
+
+                    $movimientos[] = $movimiento;
+                    $totalMovimientos += (float) $detallePago->monto;
+
+                    Log::info('✅ Movimiento de pago desglosado registrado', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'tipo_pago' => $detallePago->tipoPago->nombre,
+                        'monto' => $detallePago->monto,
+                        'movimiento_id' => $movimiento->id,
+                    ]);
+                }
+            } else {
+                // Fallback: si no hay detalles_pago_venta, crear UN SOLO movimiento con el total
+                $movimiento = MovimientoCaja::create([
+                    'caja_id' => $cajaAbierta->caja_id,
+                    'user_id' => $usuario->id,
+                    'apertura_caja_id' => $cajaAbierta->id,
+                    'tipo_operacion_id' => $tipoOperacion->id,
+                    'tipo_pago_id' => $venta->tipo_pago_id,
+                    'numero_documento' => $venta->numero,
+                    'monto' => (float) $venta->total,
+                    'fecha' => now(),
+                    'observaciones' => "Venta #{$venta->numero} ({$descripcionPolitica}) - Total: {$venta->total}",
+                    'venta_id' => $venta->id,
+                ]);
+
+                $movimientos[] = $movimiento;
+                $totalMovimientos = (float) $venta->total;
+
+                Log::info('✅ Movimiento registrado (sin detalles desglosados)', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'monto_registrado' => $venta->total,
+                    'movimiento_id' => $movimiento->id,
+                ]);
+            }
+
+            // ✅ GARANTÍA FINAL: Verificar que la suma de movimientos = total de venta
+            if (abs($totalMovimientos - $venta->total) > 0.01) {
+                Log::error('❌ CRÍTICO: Discrepancia entre suma de movimientos y total de venta', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'total_venta' => $venta->total,
+                    'suma_movimientos' => $totalMovimientos,
+                    'diferencia' => abs($venta->total - $totalMovimientos),
+                ]);
+            }
+
+            // ✅ 8.5 Si hay cambio/vuelto, registrar como egreso
+            if ($cambio > 0) {
+                $tipoOperacionVuelto = TipoOperacionCaja::where('codigo', 'VUELTO')->first();
+
+                if ($tipoOperacionVuelto) {
+                    $movimientoVuelto = MovimientoCaja::create([
+                        'caja_id' => $cajaAbierta->caja_id,
+                        'user_id' => $usuario->id,
+                        'apertura_caja_id' => $cajaAbierta->id,  // ✅ NUEVO: Asignar apertura directa
+                        'tipo_operacion_id' => $tipoOperacionVuelto->id,
+                        'numero_documento' => $venta->numero . '-VUELTO',
+                        'monto' => -abs($cambio),  // Negativo: egreso
+                        'fecha' => now(),
+                        'observaciones' => "Vuelto venta #{$venta->numero} - Cambio: {$cambio}",
+                        'venta_id' => $venta->id,
+                    ]);
+
+                    Log::info('✅ Movimiento de vuelto registrado', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'monto_pagado' => $venta->monto_pagado,
+                        'total_venta' => $venta->total,
+                        'cambio_registrado' => $cambio,
+                        'movimiento_id' => $movimientoVuelto->id,
+                    ]);
+
+                    $movimientos[] = $movimientoVuelto;
+                } else {
+                    Log::warning('⚠️ TipoOperacionCaja VUELTO no existe - cambio no registrado', [
+                        'venta_id' => $venta->id,
+                        'venta_numero' => $venta->numero,
+                        'cambio' => $cambio,
+                    ]);
+                }
+            }
+
+            // Usar el primer movimiento para la variable de referencia
+            $movimiento = $movimientos[0] ?? null;
 
             // ✅ 9. REGISTRAR EN AUDITORÍA: Éxito
-            $accionAuditoria = $esCREDITO ? 'CREDITO_OTORGADO' : 'PAGO_REGISTRADO';  // ✅ NUEVO: Diferente acción para CREDITO
+            $accionAuditoria = $esCREDITO ? 'CREDITO_OTORGADO' : 'PAGO_REGISTRADO';
+            $netoEnCaja = $totalMovimientos - abs($cambio);
+
             AuditoriaCaja::create([
                 'user_id' => $usuario->id,
                 'caja_id' => $cajaAbierta->caja_id,
@@ -290,12 +421,15 @@ class RegisterCajaMovementFromVentaListener
                 'detalle_operacion' => [
                     'venta_id' => $venta->id,
                     'venta_numero' => $venta->numero,
-                    'movimiento_caja_id' => $movimiento->id,
+                    'cantidad_movimientos' => count($movimientos),
+                    'movimientos_caja_ids' => array_map(fn($m) => $m->id, $movimientos),
                     'caja_numero' => $cajaAbierta->caja?->nombre,
                     'politica' => $venta->politica_pago,
-                    'monto_registrado' => $montoARegistrar,  // ✅ NUEVO: Monto registrado en caja
-                    'monto_pagado_inicial' => $venta->monto_pagado,  // ✅ NUEVO: Monto pagado (0 para CREDITO)
-                    'es_credito' => $esCREDITO,  // ✅ NUEVO: Flag indicador
+                    'total_venta' => $venta->total,
+                    'monto_pagado_cliente' => $venta->monto_pagado,  // Lo que pagó
+                    'cambio' => $cambio,  // Lo que se devuelve
+                    'neto_en_caja' => $netoEnCaja,  // Lo que se queda (debe = total_venta)
+                    'es_credito' => $esCREDITO,
                     'descripcion_politica' => $descripcionPolitica,
                     'fuente' => 'Venta creada directamente (POST /ventas)',
                 ],
@@ -304,19 +438,22 @@ class RegisterCajaMovementFromVentaListener
                 'user_agent' => request()->userAgent(),
             ]);
 
-            Log::info('✅ RegisterCajaMovementFromVentaListener - Movimiento de caja registrado exitosamente', [
+            Log::info('✅ RegisterCajaMovementFromVentaListener - Movimientos desglosados registrados exitosamente', [
                 'venta_id' => $venta->id,
                 'venta_numero' => $venta->numero,
                 'caja_id' => $cajaAbierta->caja_id,
                 'caja_nombre' => $cajaAbierta->caja?->nombre,
                 'usuario_id' => $usuario->id,
                 'usuario_nombre' => $usuario->name,
-                'monto' => $montoARegistrar,  // ✅ MODIFICADO: Mostrar monto registrado (puede ser total para CREDITO)
-                'monto_pagado_inicial' => $venta->monto_pagado,  // ✅ NUEVO: Mostrar también monto pagado original
-                'es_credito' => $esCREDITO,  // ✅ NUEVO: Indicar si es crédito
+                'cantidad_movimientos' => count($movimientos),
+                'total_venta' => $venta->total,
+                'monto_pagado_cliente' => $venta->monto_pagado,  // Lo que pagó (40 + 70 = 110)
+                'cambio' => $cambio,  // Lo que se devuelve (14)
+                'neto_en_caja' => $netoEnCaja,  // Lo que se queda (96)
+                'es_credito' => $esCREDITO,
                 'politica' => $venta->politica_pago,
                 'tipo_pago' => $descripcionPolitica,
-                'movimiento_id' => $movimiento->id,
+                'movimiento_principal_id' => $movimiento?->id,
             ]);
 
         } catch (\Exception $e) {

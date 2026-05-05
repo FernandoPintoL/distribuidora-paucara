@@ -23,7 +23,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/presentation/components/ui/alert-dialog';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Eye } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/presentation/components/ui/dialog';
 
 interface Props {
     cajaAbiertaHoy: AperturaCaja | null;
@@ -53,6 +59,27 @@ interface Props {
     totalDetallesPago?: number;  // ✅ NUEVO: Dinero real pagado por ventas (desde detalles_pago_venta)
     cargandoDatos?: boolean;  // ✅ NUEVO: Indicador si se están cargando datos del servidor
 }
+
+// ✅ NUEVO: Función para detectar discrepancias en ventas
+const tieneDiscrepancia = (movimiento: MovimientoCaja): boolean => {
+    if (!movimiento.venta) return false;
+
+    const montoMovimiento = Number(movimiento.monto);
+    const totalVenta = Number(movimiento.venta.total ?? 0);
+    const montoPagado = Number(movimiento.venta.monto_pagado ?? 0);
+
+    // Discrepancia 1: El monto del movimiento no coincide con el total de la venta
+    if (Math.abs(montoMovimiento - totalVenta) > 0.01) {
+        return true;
+    }
+
+    // Discrepancia 2: El monto del movimiento no coincide con el monto pagado
+    if (Math.abs(montoMovimiento - montoPagado) > 0.01) {
+        return true;
+    }
+
+    return false;
+};
 
 // ✅ NUEVO: Función para obtener colores según el tipo de operación
 const getTipoOperacionColor = (codigo: string): string => {
@@ -104,6 +131,8 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
     const [mostrarDialogoEliminacion, setMostrarDialogoEliminacion] = useState(false);
     const [movimientoAEliminar, setMovimientoAEliminar] = useState<MovimientoCaja | null>(null);
     const [eliminandoMovimiento, setEliminandoMovimiento] = useState(false);
+    const [mostrarModalVenta, setMostrarModalVenta] = useState(false);
+    const [movimientoVentaSeleccionado, setMovimientoVentaSeleccionado] = useState<MovimientoCaja | null>(null);
 
 
     if (!cajaAbiertaHoy || movimientosHoy.length === 0) {
@@ -765,7 +794,12 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                                 {/* ✅ NUEVO (2026-04-30): Mostrar desglose de tipos de pago para VENTA */}
                                                 {mostrarDesglose && (
                                                     <div className="mt-2 space-y-1 border-t border-gray-300 dark:border-gray-600 pt-2">
-                                                        {detallesPagoDesglosado.map((detalle, idx) => (
+                                                        {/* ✅ ACTUALIZADO (2026-05-03): SOLO mostrar EFECTIVO + TRANSFERENCIA (CRÉDITO tiene su propio card) */}
+                                                        {detallesPagoDesglosado
+                                                            .filter((detalle) =>
+                                                                detalle.codigo === 'EFECTIVO' || detalle.codigo === 'TRANSFERENCIA/QR'
+                                                            )
+                                                            .map((detalle, idx) => (
                                                             <div key={idx} className="flex justify-between items-center text-xs">
                                                                 <span className="text-gray-600 dark:text-gray-400">{detalle.tipo}</span>
                                                                 <span className="font-semibold text-gray-700 dark:text-gray-300">
@@ -778,7 +812,11 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
 
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                     <span className="inline-block bg-white dark:bg-gray-800 px-2 py-1 rounded">
-                                                        {mostrarDesglose ? `${detallesPagoDesglosado.length} pagos` : `${count} mov.`}
+                                                        {/* ✅ ACTUALIZADO (2026-05-03): Si es VENTA, mostrar solo pagos de efectivo+transferencia */}
+                                                        {mostrarDesglose
+                                                            ? `${detallesPagoDesglosado.filter(d => d.codigo === 'EFECTIVO' || d.codigo === 'TRANSFERENCIA/QR').length} pagos`
+                                                            : `${count} mov.`
+                                                        }
                                                     </span>
                                                 </p>
                                             </div>
@@ -902,7 +940,25 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                                         <ComprobantesMovimiento comprobantes={movimiento.comprobantes} />
                                     </td> */}
                                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                                        <div className="flex items-center justify-end gap-4">
+                                        <div className="flex items-center justify-end gap-2">
+                                            {/* ✅ NUEVO: Botón Ver Detalles de Venta */}
+                                            {movimiento.venta && (
+                                                <button
+                                                    onClick={() => {
+                                                        setMovimientoVentaSeleccionado(movimiento);
+                                                        setMostrarModalVenta(true);
+                                                    }}
+                                                    className={`inline-flex items-center justify-center p-1.5 rounded-lg transition ${
+                                                        tieneDiscrepancia(movimiento)
+                                                            ? 'bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400'
+                                                            : 'bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-600 dark:text-purple-400'
+                                                    }`}
+                                                    title={tieneDiscrepancia(movimiento) ? '⚠️ Discrepancia detectada - Ver detalles' : 'Ver detalles de venta'}
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                            )}
+
                                             {/* Botón Imprimir Movimiento Individual */}
                                             <button
                                                 onClick={() => {
@@ -1046,6 +1102,127 @@ export function MovimientosDelDiaTable({ cajaAbiertaHoy, movimientosHoy, efectiv
                         </div>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                {/* ✅ NUEVO: Modal de Detalles de Venta */}
+                <Dialog open={mostrarModalVenta} onOpenChange={setMostrarModalVenta}>
+                    <DialogContent className="max-w-2xl dark:bg-slate-800 dark:border-slate-700">
+                        <DialogHeader>
+                            <DialogTitle className="dark:text-white">Detalles de Venta</DialogTitle>
+                        </DialogHeader>
+
+                        {movimientoVentaSeleccionado?.venta && (
+                            <div className="space-y-6 py-4">
+                                {/* IDs y Monto */}
+                                <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">ID Venta</p>
+                                        <p className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">
+                                            #{movimientoVentaSeleccionado.venta.id}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">ID Movimiento</p>
+                                        <p className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">
+                                            #{movimientoVentaSeleccionado.id}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">Monto Movimiento</p>
+                                        <p className={`text-lg font-bold mt-1 ${movimientoVentaSeleccionado.monto > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {movimientoVentaSeleccionado.monto > 0 ? '+' : ''}Bs. {Number(movimientoVentaSeleccionado.monto).toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Información General */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Número de Venta</p>
+                                        <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+                                            {movimientoVentaSeleccionado.venta.numero_documento || movimientoVentaSeleccionado.venta.numero}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Estado</p>
+                                        <p className="mt-1">
+                                            {movimientoVentaSeleccionado.venta.estado_documento ? (
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${movimientoVentaSeleccionado.venta.estado_documento.codigo === 'APROBADO'
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                                    : movimientoVentaSeleccionado.venta.estado_documento.codigo === 'ANULADO'
+                                                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                                }`}>
+                                                    {movimientoVentaSeleccionado.venta.estado_documento.nombre}
+                                                </span>
+                                            ) : '-'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Montos */}
+                                <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Total</p>
+                                        <p className="text-xl font-bold text-gray-900 dark:text-white mt-2">
+                                            Bs. {Number(movimientoVentaSeleccionado.venta.total ?? 0).toFixed(2)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Pagado</p>
+                                        <p className="text-xl font-bold text-green-600 dark:text-green-400 mt-2">
+                                            Bs. {Number(movimientoVentaSeleccionado.venta.monto_pagado ?? 0).toFixed(2)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Pendiente</p>
+                                        <p className={`text-xl font-bold mt-2 ${Number(movimientoVentaSeleccionado.venta.monto_pendiente ?? 0) > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                                            Bs. {Number(movimientoVentaSeleccionado.venta.monto_pendiente ?? 0).toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Detalles de Pago */}
+                                {movimientoVentaSeleccionado.venta.detallesPagoVenta && movimientoVentaSeleccionado.venta.detallesPagoVenta.length > 0 && (
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Desglose de Pagos</h3>
+                                        <div className="space-y-2">
+                                            {movimientoVentaSeleccionado.venta.detallesPagoVenta.map((detalle, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/50 rounded">
+                                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        {detalle.tipoPago?.nombre || 'Sin tipo'}
+                                                    </span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                                        Bs. {Number(detalle.monto).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Cliente */}
+                                {movimientoVentaSeleccionado.venta.cliente && (
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cliente</p>
+                                        <p className="text-gray-900 dark:text-white mt-1">
+                                            {movimientoVentaSeleccionado.venta.cliente.nombre}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Acciones */}
+                                <div className="flex justify-end gap-2 pt-4 border-t dark:border-slate-700">
+                                    <button
+                                        onClick={() => setMostrarModalVenta(false)}
+                                        className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 transition"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
     );

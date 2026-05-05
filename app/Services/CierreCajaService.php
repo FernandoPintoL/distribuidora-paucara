@@ -138,6 +138,8 @@ class CierreCajaService
             'sumatorialCompras'         => (float) $compras,  // Referencial
             'sumatorialSalidasReales'   => (float) $salidasReales,
             'ventasTotales'             => $totalVentas,
+            // ✅ NUEVO (2026-05-03): Cálculo de VUELTOS registrados como movimientos separados
+            'sumatorialVueltos'         => $this->calcularVueltos($aperturaCaja),
         ];
     }
 
@@ -253,6 +255,7 @@ class CierreCajaService
                 ->where('tipo_operacion_caja.codigo', 'VENTA')
                 ->where('estados_documento.codigo', self::ESTADO_APROBADO)
                 ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                ->distinct('ventas.id')
                 ->pluck('ventas.id')
                 ->toArray();
 
@@ -387,14 +390,21 @@ class CierreCajaService
     private function calcularAnulaciones($movimientos): float
     {
         try {
-            // ✅ Suma directa de movimientos donde tipo_operacion.codigo = 'ANULACION'
+            // ✅ ACTUALIZADO (2026-05-04): Suma directa de movimientos ANULACION
+            // EXCLUYE anulaciones de VUELTO (que se muestran aparte como informativos)
             $anulaciones = abs((float) $movimientos
-                ->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')
+                ->filter(fn($m) =>
+                    $m->tipoOperacion?->codigo === 'ANULACION' &&
+                    !str_contains($m->numero_documento ?? '', 'VUELTO-ANU')  // Excluir anulaciones de vuelto
+                )
                 ->sum('monto'));
 
-            Log::info('🗑️ [calcularAnulaciones] Suma directa desde movimientos_caja:', [
+            Log::info('🗑️ [calcularAnulaciones] (SIN anulaciones de vuelto):', [
                 'total' => $anulaciones,
-                'cantidad_movimientos' => $movimientos->filter(fn($m) => $m->tipoOperacion?->codigo === 'ANULACION')->count(),
+                'cantidad_movimientos' => $movimientos->filter(fn($m) =>
+                    $m->tipoOperacion?->codigo === 'ANULACION' &&
+                    !str_contains($m->numero_documento ?? '', 'VUELTO-ANU')
+                )->count(),
             ]);
 
             return $anulaciones;
@@ -488,11 +498,14 @@ class CierreCajaService
      */
     private function calcularTotalEgresos($movimientos): float
     {
+        // ✅ ACTUALIZADO (2026-05-04): Excluir VUELTO de los egresos
+        // Los vueltos NO son gastos, son cambio dado al cliente
+        // Se restan correctamente en calcularEfectivoEsperado()
         return abs((float) $movimientos
             ->filter(fn($m) =>
                 $m->tipoOperacion?->direccion === 'SALIDA' &&
                 $this->esPagoValido($m) &&
-                !in_array($m->tipoOperacion?->codigo, ['ANULACION'])  // ✅ Solo excluye ANULACION
+                !in_array($m->tipoOperacion?->codigo, ['ANULACION', 'VUELTO'])  // Excluye ANULACION y VUELTO
             )
             ->sum('monto'));
     }
@@ -615,6 +628,16 @@ class CierreCajaService
                 ->unique()
                 ->toArray();
 
+            // 🔍 DEBUG DETALLADO
+            Log::info('🔍 [calcularVentasPorTipoPago DEBUG - Ventas Únicas]', [
+                'total_movimientos_venta' => $movimientos->filter(fn($m) => $m->tipoOperacion?->codigo === 'VENTA')->count(),
+                'total_movimientos_aprobados' => $movimientos->filter(fn($m) => $this->esVentaAprobada($m) && $m->tipoOperacion?->codigo === 'VENTA')->count(),
+                'ventas_unicas_ids_count' => count($ventasIds),
+                'ventas_unicas_ids_min' => !empty($ventasIds) ? min($ventasIds) : null,
+                'ventas_unicas_ids_max' => !empty($ventasIds) ? max($ventasIds) : null,
+                'ventas_ids_sample' => array_slice($ventasIds, 0, 10),
+            ]);
+
             if (empty($ventasIds)) {
                 return collect();
             }
@@ -625,20 +648,25 @@ class CierreCajaService
                 ->whereIn('detalles_pago_venta.venta_id', $ventasIds)
                 ->select(
                     'tipos_pago.nombre',
-                    DB::raw('COUNT(detalles_pago_venta.id) as cantidad'),
+                    DB::raw('COUNT(DISTINCT detalles_pago_venta.venta_id) as cantidad'),
                     DB::raw('SUM(detalles_pago_venta.monto) as total')
                 )
                 ->groupBy('tipos_pago.id', 'tipos_pago.nombre')
                 ->get();
 
+            // ✅ OBTENER IDs de ventas que SÍ tienen detalles_pago_venta
+            $ventasConDetalles = DB::table('detalles_pago_venta')
+                ->whereIn('venta_id', $ventasIds)
+                ->pluck('venta_id')
+                ->unique()
+                ->toArray();
+
             $resultado = [];
-            $ventasConDetalles = [];
             foreach ($pagos as $pago) {
                 $resultado[$pago->nombre] = [
                     'cantidad' => (int) $pago->cantidad,
                     'total' => (float) $pago->total,
                 ];
-                $ventasConDetalles[] = $pago->venta_id ?? null;
             }
 
             // 2️⃣ FALLBACK: Ventas antiguas sin detalles_pago_venta - usar movimientos_caja
@@ -656,7 +684,7 @@ class CierreCajaService
                     )
                     ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
                     ->map(fn($grupo) => [
-                        'cantidad' => $grupo->count(),
+                        'cantidad' => $grupo->pluck('venta_id')->unique()->count(),
                         'total' => (float) $grupo->sum(fn($m) => $m->monto),
                     ]);
 
@@ -671,7 +699,13 @@ class CierreCajaService
                 }
             }
 
-            Log::info('📊 [calcularVentasPorTipoPago] (detalles_pago_venta + fallback):', $resultado);
+            Log::info('📊 [calcularVentasPorTipoPago] (detalles_pago_venta + fallback):', [
+                'ventasIds_count' => count($ventasIds),
+                'ventasConDetalles_count' => count($ventasConDetalles),
+                'ventasAntiguasIds_count' => count($ventasAntiguasIds),
+                'resultado_por_tipo' => $resultado,
+                'total_cantidad_calculada' => array_sum(array_map(fn($v) => $v['cantidad'], $resultado)),
+            ]);
             return collect($resultado);
         } catch (\Exception $e) {
             Log::error('❌ [calcularVentasPorTipoPago]:', ['error' => $e->getMessage()]);
@@ -841,11 +875,19 @@ class CierreCajaService
             ->filter(fn($m) => $m->tipoOperacion?->codigo === 'SERVICIO')
             ->sum('monto'));
 
+        // ✅ NUEVO (2026-05-04): Vueltos (cambio dado al cliente - INFORMATIVO SOLAMENTE)
+        // Se calcula y muestra pero NO afecta los totales (como las devoluciones)
+        // Después con la práctica real se definirá dónde incluirlo
+        $vueltos = $this->calcularVueltos($aperturaCaja);
+
         // ✅ ACTUALIZADO (2026-03-09): Incluye COMPRA + DEVOLUCION en los egresos, SERVICIO en los ingresos
         // EXCLUYE solo ANULACIONES (transacción cancelada que nunca pasó dinero real)
+        // Los VUELTOS se calculan aparte como dato informativo (no afectan los totales)
         $totalEgresos = $gastos + $pagosSueldo + $anticipos + $compras + $devoluciones;
         $totalIngresos = $ventasEfectivo + $pagosCreditoTotal + $servicio;
 
+        // ✅ ACTUALIZADO (2026-05-04): Vueltos NO se restan (informativo solamente)
+        // La fórmula es: Apertura + Ingresos - Egresos
         $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
 
         // ✅ NUEVO (2026-03-06): Logs detallados para verificar el cálculo
@@ -865,8 +907,12 @@ class CierreCajaService
         Log::info('  - Anticipos: Bs. ' . number_format($anticipos, 2));
         Log::info('  - Compras: Bs. ' . number_format($compras, 2));
         Log::info('  - Devoluciones: Bs. ' . number_format($devoluciones, 2));  // ✅ NUEVO (2026-03-09)
+        Log::info('  - Vueltos (Cambios): Bs. ' . number_format($vueltos, 2));  // ✅ NUEVO (2026-05-03)
         Log::info('  - Anulaciones (EXCLUIDAS del total): Bs. ' . number_format($anulaciones, 2));
         Log::info('  - Total Egresos: Bs. ' . number_format($totalEgresos, 2));
+        Log::info('───────────────────────────────────────────────────────────');
+        Log::info('📋 DATOS INFORMATIVOS (no afectan totales):');
+        Log::info('  - Vueltos (Cambios): Bs. ' . number_format($vueltos, 2) . ' [INFORMATIVO]');
         Log::info('───────────────────────────────────────────────────────────');
         Log::info('✅ FÓRMULA: Apertura + (VentasEfectivo + PagosCrédito + Servicios) - (Gastos + PagosSueldo + Anticipos + Compras + Devoluciones)');
         Log::info('✅ CÁLCULO: ' . number_format($montoApertura, 2) . ' + ' . number_format($totalIngresos, 2) . ' - ' . number_format($totalEgresos, 2));
@@ -886,9 +932,10 @@ class CierreCajaService
             'compras' => $compras,
             'devoluciones' => $devoluciones,  // ✅ NUEVO (2026-03-09)
             'servicio' => $servicio,  // ✅ NUEVO (2026-03-09)
+            'vueltos' => $vueltos,  // ✅ NUEVO (2026-05-03): Cambios dados al cliente
             'anulaciones' => $anulaciones,
             'total_egresos' => $totalEgresos,
-            // ✅ CORRECTO: monto_esperado = Apertura + Entradas - Salidas
+            // ✅ ACTUALIZADO (2026-05-03): monto_esperado = Apertura + Entradas - Salidas - Vueltos
             // Es la cantidad TOTAL de dinero que debería haber en caja al cierre
             'total' => $efectivoEsperado,
         ];
@@ -1240,7 +1287,7 @@ class CierreCajaService
                 })
                 ->groupBy(fn($m) => $m->tipoPago?->nombre ?? 'Sin tipo de pago')
                 ->map(function ($grupo) {
-                    $cantidad = $grupo->count();
+                    $cantidad = $grupo->pluck('venta_id')->unique()->count();
                     $total = (float) $grupo->sum('monto');
                     $promedio = $cantidad > 0 ? $total / $cantidad : 0;
 
@@ -1336,7 +1383,7 @@ class CierreCajaService
                     'tipos_pago.nombre',
                     'tipos_pago.codigo',
                     DB::raw('SUM(detalles_pago_venta.monto) as total'),
-                    DB::raw('COUNT(detalles_pago_venta.id) as cantidad')
+                    DB::raw('COUNT(DISTINCT detalles_pago_venta.venta_id) as cantidad')
                 )
                 ->groupBy('tipos_pago.id', 'tipos_pago.nombre', 'tipos_pago.codigo')
                 ->get();
@@ -1380,7 +1427,7 @@ class CierreCajaService
                         'tipos_pago.nombre',
                         'tipos_pago.codigo',
                         DB::raw('SUM(movimientos_caja.monto) as total'),
-                        DB::raw('COUNT(movimientos_caja.id) as cantidad')
+                        DB::raw('COUNT(DISTINCT movimientos_caja.venta_id) as cantidad')
                     )
                     ->groupBy('tipos_pago.id', 'tipos_pago.nombre', 'tipos_pago.codigo')
                     ->get();
@@ -1416,6 +1463,53 @@ class CierreCajaService
                 'trace' => $e->getTraceAsString(),
             ]);
             return [];
+        }
+    }
+
+    /**
+     * ✅ NUEVO (2026-05-03): Calcular suma de VUELTOS registrados
+     *
+     * Cuando cliente paga más de lo que cuesta la venta:
+     * - Ejemplo: Venta 96, Cliente paga 110, Vuelto 14
+     *
+     * Se registran como movimientos separados:
+     * - VENTA: +96 (desglosado por tipo de pago)
+     * - VUELTO: -14 (como movimiento único)
+     *
+     * Esta función suma TODOS los vueltos del período de la caja
+     * para que el frontend pueda mostrar: totalIngresos - vueltos = neto real
+     */
+    private function calcularVueltos(AperturaCaja $aperturaCaja): float
+    {
+        try {
+            // ✅ ACTUALIZADO (2026-05-04): Solo contar vueltos de ventas APROBADAS
+            // Si una venta está anulada, sus vueltos NO deben contarse
+            $totalVueltos = DB::table('movimientos_caja')
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->leftJoin('ventas', 'movimientos_caja.venta_id', '=', 'ventas.id')
+                ->leftJoin('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                ->where('movimientos_caja.caja_id', $aperturaCaja->caja_id)
+                ->where('tipo_operacion_caja.codigo', 'VUELTO')
+                ->whereBetween('movimientos_caja.fecha', [$this->fechaInicio, $this->fechaFin])
+                // ✅ SOLO vueltos de ventas APROBADAS (no anuladas, no rechazadas)
+                ->where(function ($query) {
+                    $query->whereNull('movimientos_caja.venta_id')  // Vueltos sin venta asociada
+                          ->orWhere('estados_documento.codigo', self::ESTADO_APROBADO);  // O ventas aprobadas
+                })
+                ->sum(DB::raw('ABS(movimientos_caja.monto)'));  // ABS porque se registran como negativos
+
+            Log::info('💸 [calcularVueltos] (SOLO de ventas APROBADAS):', [
+                'apertura_id' => $aperturaCaja->id,
+                'total_vueltos' => $totalVueltos,
+            ]);
+
+            return (float) $totalVueltos;
+        } catch (\Exception $e) {
+            Log::error('❌ [calcularVueltos]:', [
+                'apertura_id' => $aperturaCaja->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
         }
     }
 }

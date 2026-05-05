@@ -90,10 +90,26 @@ export function CajaEstadoCard({
         sumatorialAnticipos: datosActualizados?.sumatorialAnticipos,
         sumatorialCompras: datosActualizados?.sumatorialCompras,
         sumatorialAnulaciones: datosActualizados?.sumatorialAnulaciones,
+        sumatorialVueltos: datosActualizados?.sumatorialVueltos,  // ✅ NUEVO (2026-05-03)
     });
     console.log('');
     console.log('💳 VENTAS POR TIPO PAGO:');
     console.log(datosActualizados?.ventasPorTipoPago);
+    console.log('');
+    console.log('💰 DETALLES DE PAGO DESGLOSADO (detalles_pago_venta):');
+    console.log({
+        detallesPagoDesglosado: datosActualizados?.detallesPagoDesglosado,
+        totalDetallesPago: datosActualizados?.totalDetallesPago,
+    });
+    console.log('');
+    console.log('🎯 CÁLCULO DE INGRESOS NETOS:');
+    console.log({
+        'Pagos desglosados': datosActualizados?.totalDetallesPago,
+        'Pagos de Crédito': datosActualizados?.pagosCredito,
+        'Servicios': datosActualizados?.sumatorialServicio,
+        'Menos Vueltos': -datosActualizados?.sumatorialVueltos,
+        'Total Ingresos (mostrado)': datosActualizados?.totalIngresos,
+    });
     console.log('');
     console.log('═══════════════════════════════════════════════════════');
 
@@ -227,14 +243,19 @@ export function CajaEstadoCard({
                             </label>
                             {datosActualizados ? (
                                 <>
-                                    {/* ✅ CORREGIDO: Mostrar desglose de todos los tipos de pago */}
+                                    {/* ✅ CORREGIDO (2026-05-03): Mostrar SOLO EFECTIVO y TRANSFERENCIA en desglose */}
                                     {datosActualizados.ventasPorTipoPago && datosActualizados.ventasPorTipoPago.length > 0 ? (
                                         <div className="space-y-1">
-                                            {datosActualizados.ventasPorTipoPago.map((tipoPago: any, idx: number) => (
+                                            {datosActualizados.ventasPorTipoPago
+                                                .filter((tipoPago: any) =>
+                                                    tipoPago.codigo === 'EFECTIVO' || tipoPago.codigo === 'TRANSFERENCIA/QR'
+                                                )
+                                                .map((tipoPago: any, idx: number) => (
                                                 <p key={idx} className="text-sm text-gray-600 dark:text-gray-400">
                                                     {tipoPago.tipo}: {formatCurrency(tipoPago.total)}
                                                 </p>
                                             ))}
+                                            {/* ✅ MOSTRAR Pagos de Crédito - ES dinero real que entra cuando se cobra deuda anterior */}
                                             {(datosActualizados?.pagosCredito || 0) > 0 && (
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     Pagos de Crédito: {formatCurrency(datosActualizados.pagosCredito)}
@@ -333,6 +354,16 @@ export function CajaEstadoCard({
                                         </div>
                                     )}
 
+                                    {/* ✅ NUEVO (2026-05-05): Vueltos / Cambio - Solo Informativo */}
+                                    {(datosActualizados?.sumatorialVueltos ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-sm p-2 bg-gray-50 dark:bg-gray-900/10 rounded">
+                                            <span className="text-gray-700 dark:text-gray-300">• Vueltos / Cambio</span>
+                                            <span className="font-semibold text-gray-600 dark:text-gray-400">
+                                                {formatCurrency(datosActualizados.sumatorialVueltos)}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     {/* Total Egresos */}
                                     <div className="flex justify-between items-center text-sm p-2 bg-red-100 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-700 font-bold">
                                         <span className="text-red-800 dark:text-red-200">Total Egresos</span>
@@ -367,7 +398,8 @@ export function CajaEstadoCard({
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600 dark:text-gray-400">Ventas Contado (Efectivo + Transferencia/QR):</span>
-                                        <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(datosActualizados.totalVentas || 0)}</span>
+                                        {/* ✅ ACTUALIZADO (2026-05-03): Mostrar SOLO totalDetallesPago (efectivo+transferencia), no totalVentas que incluye crédito */}
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">{formatCurrency(datosActualizados.totalDetallesPago || 0)}</span>
                                     </div>
                                     {(datosActualizados?.ventasCreditoTotales || 0) > 0 && (
                                         <div className="flex justify-between text-sm">
@@ -378,7 +410,8 @@ export function CajaEstadoCard({
                                     <div className="flex justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700 font-bold">
                                         <span className="text-gray-900 dark:text-white">TOTAL VENTAS:</span>
                                         <span className="text-purple-600 dark:text-purple-400">
-                                            {formatCurrency((datosActualizados.totalVentas || 0) + (datosActualizados.ventasCreditoTotales || 0))}
+                                            {/* ✅ ACTUALIZADO (2026-05-03): Sumar totalDetallesPago (efectivo+transferencia) + ventasCreditoTotales */}
+                                            {formatCurrency((datosActualizados.totalDetallesPago || 0) + (datosActualizados.ventasCreditoTotales || 0))}
                                         </span>
                                     </div>
                                 </div>

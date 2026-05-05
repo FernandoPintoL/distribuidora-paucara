@@ -475,4 +475,7 @@ calcularETA.post = (args: { entregaId: string | number } | [entregaId: string | 
     calcularETA.form = calcularETAForm
 const TrackingController = { obtenerUbicaciones, ultimaUbicacion, calcularETA }
 
+export default TrackingControllerlcularETA.form = calcularETAForm
+const TrackingController = { obtenerUbicaciones, ultimaUbicacion, calcularETA }
+
 export default TrackingController

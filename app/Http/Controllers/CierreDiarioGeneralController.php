@@ -118,10 +118,8 @@ class CierreDiarioGeneralController extends Controller
         try {
             $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
 
-            $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
-                ->where('user_id', $cierre->user_id)
-                ->where('fecha', '>=', $cierre->apertura->fecha)
-                ->where('fecha', '<=', $cierre->fecha)
+            // ✅ ACTUALIZADO (2026-05-04): Usar apertura_id para filtrado preciso
+            $movimientos = \App\Models\MovimientoCaja::where('apertura_caja_id', $cierre->apertura->id)
                 ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'pago', 'comprobantes'])
                 ->orderBy('id', 'desc')
                 ->get();
@@ -169,14 +167,11 @@ class CierreDiarioGeneralController extends Controller
             // ✅ Obtener cierre directamente de cierres_caja
             $cierre = \App\Models\CierreCaja::with(['usuario', 'caja', 'apertura'])->findOrFail($id);
 
-            // ✅ Obtener movimientos de caja IGUAL QUE EN CajaController::index()
-            // Usa user_id + caja_id + fecha >= apertura
-            // ✅ Ordenamiento: por ID ascendente (menor a mayor)
-            $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cierre->caja_id)
-                ->where('user_id', $cierre->user_id)
-                ->where('fecha', '>=', $cierre->apertura->fecha)
-                ->where('fecha', '<=', $cierre->fecha)
-                ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'venta.estadoDocumento', 'pago', 'comprobantes'])
+            // ✅ ACTUALIZADO (2026-05-04): Usar apertura_id directamente para garantizar que solo se muestren movimientos de ESTA apertura
+            // Antes: Filtraba por rango de fechas, lo que podía incluir movimientos de aperturas anteriores
+            // Ahora: Filtra por apertura_id específica - mucho más preciso
+            $movimientos = \App\Models\MovimientoCaja::where('apertura_caja_id', $cierre->apertura->id)
+                ->with(['tipoOperacion', 'tipoPago', 'usuario', 'venta', 'venta.estadoDocumento', 'venta.cliente', 'venta.tipoPago', 'venta.detallesPagoVenta.tipoPago', 'pago', 'comprobantes'])  // ✅ NUEVO: Cargar tipoPago de venta también
                 ->orderBy('id', 'asc')
                 ->get();
 
@@ -209,11 +204,41 @@ class CierreDiarioGeneralController extends Controller
                 'observaciones' => $mov->observaciones,
                 'venta_id' => $mov->venta_id,
                 'pago_id' => $mov->pago_id,
-                // ✅ NUEVO: Incluir tipo de pago
-                'tipo_pago_id' => $mov->tipo_pago_id,
+                // ✅ ACTUALIZADO (2026-05-04): Incluir tipo de pago (fallback a venta.tipo_pago_id)
+                'tipo_pago_id' => $mov->tipo_pago_id ?? ($mov->venta?->tipo_pago_id ?? null),
                 'tipo_pago' => $mov->tipoPago ? [
                     'id' => $mov->tipoPago->id,
                     'nombre' => $mov->tipoPago->nombre,
+                ] : ($mov->venta?->tipoPago ? [
+                    'id' => $mov->venta->tipoPago->id,
+                    'nombre' => $mov->venta->tipoPago->nombre,
+                ] : null),
+                // ✅ NUEVO (2026-05-04): Incluir relación VENTA completa
+                'venta' => $mov->venta ? [
+                    'id' => $mov->venta->id,
+                    'numero_documento' => $mov->venta->numero ?? 'N/A',
+                    'total' => (float) ($mov->venta->total ?? 0),
+                    'monto_pagado' => (float) ($mov->venta->monto_pagado ?? 0),
+                    'monto_pendiente' => (float) ($mov->venta->monto_pendiente ?? 0),
+                    'tipo_pago_id' => (int) ($mov->venta->tipo_pago_id ?? 0),  // ✅ NUEVO (2026-05-04): Tipo de pago de la venta
+                    'estado_documento' => $mov->venta->estadoDocumento ? [
+                        'id' => $mov->venta->estadoDocumento->id,
+                        'codigo' => $mov->venta->estadoDocumento->codigo,
+                        'nombre' => $mov->venta->estadoDocumento->nombre,
+                    ] : null,
+                    'cliente' => $mov->venta->cliente ? [
+                        'id' => $mov->venta->cliente->id,
+                        'nombre' => $mov->venta->cliente->nombre,
+                    ] : null,
+                    'detallesPagoVenta' => $mov->venta->detallesPagoVenta ? $mov->venta->detallesPagoVenta->map(fn($detalle) => [
+                        'id' => $detalle->id,
+                        'monto' => (float) $detalle->monto,
+                        'tipo_pago_id' => $detalle->tipo_pago_id,
+                        'tipoPago' => $detalle->tipoPago ? [
+                            'id' => $detalle->tipoPago->id,
+                            'nombre' => $detalle->tipoPago->nombre,
+                        ] : null,
+                    ])->toArray() : [],
                 ] : null,
             ])->toArray();
 
@@ -226,6 +251,10 @@ class CierreDiarioGeneralController extends Controller
                 ->orderBy('nombre')
                 ->get(['id', 'nombre'])
                 ->toArray();
+
+            // ✅ NUEVO (2026-05-04): Obtener datos completos de CierreCajaService
+            $cierreCajaService = new \App\Services\CierreCajaService();
+            $datosCalculados = $cierreCajaService->calcularDatos($cierre->apertura);
 
             // ✅ Logging para debug
             \Log::info('CierreDiarioGeneralController::show', [
@@ -258,6 +287,21 @@ class CierreDiarioGeneralController extends Controller
                 'totales_por_tipo' => $totalesPorTipo->toArray(),
                 'tipos_operacion' => $tiposOperacionFlat,
                 'tipos_pago' => $tiposPago,  // ✅ NUEVO: Enviar tipos de pago al frontend
+                // ✅ NUEVO (2026-05-04): Datos completos del resumen de caja
+                'datosResumen' => [
+                    'totalVentas' => (float) ($datosCalculados['totalVentas'] ?? 0),
+                    'ventasAnuladas' => (float) ($datosCalculados['sumatorialAnulaciones'] ?? 0),
+                    'pagosCredito' => (float) ($datosCalculados['detalleEfectivo']['pagos_credito'] ?? 0),
+                    'totalIngresos' => (float) ($datosCalculados['totalIngresos'] ?? 0),
+                    'totalEgresos' => (float) ($datosCalculados['totalEgresos'] ?? 0),
+                    'sumatorialGastos' => (float) ($datosCalculados['sumatorialGastos'] ?? 0),
+                    'sumatorialPagosSueldo' => (float) ($datosCalculados['sumatorialPagosSueldo'] ?? 0),
+                    'sumatorialAnticipos' => (float) ($datosCalculados['sumatorialAnticipos'] ?? 0),
+                    'sumatorialCompras' => (float) ($datosCalculados['sumatorialCompras'] ?? 0),
+                    'sumatorialServicio' => (float) ($datosCalculados['sumatorialServicio'] ?? 0),
+                    'sumatorialDevoluciones' => (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0),
+                    'detallesPagosVentaPorTipo' => $datosCalculados['detallesPagosVentaPorTipo'] ?? [],
+                ],
             ]);
         } catch (\Throwable $e) {
             \Log::error('Error en show() de CierreDiarioGeneralController', [

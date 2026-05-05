@@ -75,16 +75,61 @@ class PagoVentaService
             // Calcular cambio si aplica
             $cambio = $totalPagos - $venta->total;
 
+            // ✅ NUEVO (2026-05-04): Escalar proporcionalmente los pagos
+            // Si el usuario paga 200 por una venta de 196, los pagos se escalan:
+            // - Efectivo 100 → 98
+            // - Transferencia 100 → 98
+            // - Vuelto 4 se registra en movimientos_caja como tipo VUELTO
+            $pagosEscalados = [];
+            if ($cambio > 0) {
+                $factorEscala = $venta->total / $totalPagos;
+
+                foreach ($pagos as $pago) {
+                    $pagosEscalados[] = [
+                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                        'monto' => round($pago['monto'] * $factorEscala, 2),
+                        'monto_original' => $pago['monto'],
+                        'referencia' => $pago['referencia'] ?? null,
+                        'fecha_pago' => $pago['fecha_pago'] ?? now(),
+                        'comprobante' => $pago['comprobante'] ?? null,
+                        'observaciones' => $pago['observaciones'] ?? null,
+                    ];
+                }
+
+                \Log::info('🔄 [registrarPagos] Pagos escalados proporcionalmente', [
+                    'venta_id' => $venta->id,
+                    'venta_numero' => $venta->numero,
+                    'total_venta' => $venta->total,
+                    'total_pagado_original' => $totalPagos,
+                    'factor_escala' => $factorEscala,
+                    'cambio' => $cambio,
+                    'detalle' => $pagosEscalados,
+                ]);
+            } else {
+                // Sin vuelto, registrar pagos tal como vienen
+                foreach ($pagos as $pago) {
+                    $pagosEscalados[] = [
+                        'tipo_pago_id' => $pago['tipo_pago_id'],
+                        'monto' => $pago['monto'],
+                        'monto_original' => $pago['monto'],
+                        'referencia' => $pago['referencia'] ?? null,
+                        'fecha_pago' => $pago['fecha_pago'] ?? now(),
+                        'comprobante' => $pago['comprobante'] ?? null,
+                        'observaciones' => $pago['observaciones'] ?? null,
+                    ];
+                }
+            }
+
             // Limpiar pagos anteriores si existen
             $venta->detallesPagoVenta()->delete();
 
-            // Registrar nuevos pagos
+            // Registrar nuevos pagos con montos escalados
             $detallesPago = [];
-            foreach ($pagos as $pago) {
+            foreach ($pagosEscalados as $pago) {
                 $detallePago = DetallePagoVenta::create([
                     'venta_id' => $venta->id,
                     'tipo_pago_id' => $pago['tipo_pago_id'],
-                    'monto' => $pago['monto'],
+                    'monto' => $pago['monto'],  // ✅ Monto escalado, no original
                     'referencia' => $pago['referencia'] ?? null,
                     'fecha_pago' => $pago['fecha_pago'] ?? now(),
                     'comprobante' => $pago['comprobante'] ?? null,
@@ -94,18 +139,20 @@ class PagoVentaService
                 $detallesPago[] = $detallePago;
             }
 
-            // Actualizar monto_pagado en la venta
+            // ✅ ACTUALIZADO (2026-05-04): monto_pagado = total de la venta (dinero real que entra)
+            // El vuelto se resta en el listener como movimiento VUELTO
             $venta->update([
-                'monto_pagado' => $totalPagos,
-                'monto_pendiente' => max(0, $venta->total - $totalPagos), // Siempre >= 0
+                'monto_pagado' => $venta->total,  // Dinero real que entra por la venta
+                'monto_pendiente' => 0,  // No hay pendiente si pagó (igual o más que el total)
             ]);
 
             // Log con información del cambio
-            \Log::info('✅ Pagos desglosados registrados', [
+            \Log::info('✅ Pagos desglosados registrados (con escalado proporcional)', [
                 'venta_id' => $venta->id,
                 'venta_numero' => $venta->numero,
                 'total_venta' => $venta->total,
-                'total_pagado' => $totalPagos,
+                'total_pagado_original' => $totalPagos,
+                'total_registrado_en_detalles' => array_sum(array_column($pagosEscalados, 'monto')),
                 'cambio' => $cambio,
                 'cantidad_formas_pago' => count($detallesPago),
             ]);
@@ -113,9 +160,10 @@ class PagoVentaService
             return [
                 'venta_id' => $venta->id,
                 'total_venta' => $venta->total,
-                'total_pagado' => $totalPagos,
+                'total_pagado_original' => $totalPagos,
+                'total_registrado' => array_sum(array_column($pagosEscalados, 'monto')),
                 'cambio' => $cambio,
-                'monto_pendiente' => max(0, $venta->total - $totalPagos),
+                'monto_pendiente' => 0,
                 'detalles_pago' => $detallesPago,
             ];
         });

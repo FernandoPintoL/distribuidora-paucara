@@ -130,16 +130,18 @@ class VentaService
             $monedaDefecto = \App\Models\Moneda::where('codigo', 'BOB')->first() ??
             \App\Models\Moneda::first();
 
-            // ✅ NUEVO (2026-02-10): Asignar estado_logistico_id = SIN_ENTREGA si no viene especificado
+            // ✅ CORREGIDO (2026-05-04): Asignar estado_logistico_id = PENDIENTE_ENVIO si no viene especificado
+            // Esto permite que la venta aparezca inmediatamente en searchVentas para crear entregas
             $estadoLogisticoId = $dto->estado_logistico_id;
             if (!$estadoLogisticoId) {
-                $estadoSinEntrega = \App\Models\EstadoLogistica::where('codigo', 'SIN_ENTREGA')
+                $estadoPendienteEnvio = \App\Models\EstadoLogistica::where('codigo', 'PENDIENTE_ENVIO')
                     ->where('categoria', 'venta_logistica')
                     ->first();
-                $estadoLogisticoId = $estadoSinEntrega?->id;
-                Log::info('📦 [VentaService::crear] Estado logístico asignado a SIN_ENTREGA', [
+                $estadoLogisticoId = $estadoPendienteEnvio?->id;
+                Log::info('📦 [VentaService::crear] Estado logístico asignado a PENDIENTE_ENVIO (por defecto)', [
                     'estado_id' => $estadoLogisticoId,
-                    'codigo'    => 'SIN_ENTREGA',
+                    'codigo'    => 'PENDIENTE_ENVIO',
+                    'razon'     => 'Permite que la venta aparezca en searchVentas para crear entregas',
                 ]);
             }
 

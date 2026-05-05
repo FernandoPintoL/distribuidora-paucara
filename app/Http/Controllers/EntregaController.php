@@ -821,6 +821,7 @@ class EntregaController extends Controller
         $tipoFecha = $request->input('tipo_fecha', 'fecha_entrega_comprometida'); // ✅ NUEVO
         $turno = $request->input('turno', ''); // ✅ NUEVO
         $hora = $request->input('hora', ''); // ✅ NUEVO: Hora específica (ej: "09:00")
+        $estadoLogisticoId = $request->input('estado_logistico_id'); // ✅ NUEVO (2026-05-04): Filtro de estado logístico
         $page = $request->input('page', 1);
         $perPage = 25;
 
@@ -832,10 +833,18 @@ class EntregaController extends Controller
             'tipo_fecha' => $tipoFecha, // ✅ NUEVO
             'turno' => $turno, // ✅ NUEVO
             'hora' => $hora, // ✅ NUEVO
+            'estado_logistico_id' => $estadoLogisticoId, // ✅ NUEVO
             'page' => $page,
         ]);
 
-        \Log::info('✅ [searchVentas] Filtro de estado logístico activo: Pendiente Retiro (7) o Pendiente Envío (8)');
+        // ✅ ACTUALIZADO (2026-05-04): Permitir filtrar por estado_logistico_id específico
+        // Si no se especifica, usa por defecto [7, 8, 9] (PENDIENTE_RETIRO, PENDIENTE_ENVIO, SIN_ENTREGA)
+        // Esto permite buscar ventas que necesitan ser asignadas a entregas
+        $estadosLogisticos = $estadoLogisticoId ? [$estadoLogisticoId] : [7, 8, 9];
+        \Log::info('✅ [searchVentas] Filtro de estado logístico:', [
+            'estados_ids' => $estadosLogisticos,
+            'descripcion' => $estadoLogisticoId ? "Estado específico: {$estadoLogisticoId}" : 'Por defecto: Pendiente Retiro (7), Pendiente Envío (8) o Sin Entrega (9)',
+        ]);
 
         $query = \App\Models\Venta::query()
             ->with([
@@ -851,8 +860,8 @@ class EntregaController extends Controller
             ->where('estado_documento_id', 3) // ✅ NUEVO: Solo ventas APROBADAS
             ->whereNotNull('cliente_id')
             ->whereHas('detalles')
-            // ✅ NUEVO: Filtrar solo ventas con estado logístico "Pendiente de Retiro" (7) o "Pendiente de Envío" (8)
-            ->whereIn('estado_logistico_id', [7, 8]);
+            // ✅ ACTUALIZADO (2026-05-04): Filtrar por estado(s) logístico(s) dinámicamente
+            ->whereIn('estado_logistico_id', $estadosLogisticos);
 
         // Aplicar búsqueda si existe término
         if ($searchTerm) {

@@ -848,7 +848,7 @@ class Venta extends Model
             // Obtener el tipo de operación ANULACION para la reversión
             $tipoOperacionAnulacion = TipoOperacionCaja::where('codigo', 'ANULACION')->firstOrFail();
 
-            // Crear movimiento de reversión con monto negativo
+            // 1️⃣ Crear movimiento de reversión con monto negativo (para el movimiento principal de la venta)
             MovimientoCaja::create([
                 'caja_id'             => $movimientoOriginal->caja_id,
                 'user_id'             => Auth::id(),
@@ -867,6 +867,39 @@ class Venta extends Model
                 'monto_original'         => $movimientoOriginal->monto,
                 'monto_reversa'          => -abs($movimientoOriginal->monto),
             ]);
+
+            // 2️⃣ ✅ NUEVO (2026-05-04): Anular movimientos de VUELTO asociados a la venta
+            // Si la venta tuvo vuelto (cambio), también debe anularse
+            $movimientosVuelto = MovimientoCaja::where('venta_id', $this->id)
+                ->join('tipo_operacion_caja', 'movimientos_caja.tipo_operacion_id', '=', 'tipo_operacion_caja.id')
+                ->where('tipo_operacion_caja.codigo', 'VUELTO')
+                ->select('movimientos_caja.*')
+                ->get();
+
+            if ($movimientosVuelto->isNotEmpty()) {
+                foreach ($movimientosVuelto as $vueltoOriginal) {
+                    // El vuelto está registrado como negativo, pero para anularlo necesitamos su opuesto
+                    // Vuelto original: -14 (salida)
+                    // Anulación de vuelto: +14 (entrada/reversión)
+                    MovimientoCaja::create([
+                        'caja_id'             => $vueltoOriginal->caja_id,
+                        'user_id'             => Auth::id(),
+                        'fecha'               => now(),
+                        'monto'               => abs($vueltoOriginal->monto), // Positivo (opuesto del vuelto)
+                        'observaciones'       => "Anulación de vuelto - venta #{$this->numero}",
+                        'numero_documento'    => $this->numero . '-VUELTO-ANU',
+                        'tipo_operacion_id'   => $tipoOperacionAnulacion->id,
+                        'venta_id'            => $this->id,
+                    ]);
+
+                    Log::info('✅ Movimiento de vuelto anulado al anular venta', [
+                        'venta'                  => $this->numero,
+                        'movimiento_vuelto_id'   => $vueltoOriginal->id,
+                        'monto_vuelto_original'  => $vueltoOriginal->monto,
+                        'monto_anulacion_vuelto' => abs($vueltoOriginal->monto),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             Log::error('Error al revertir movimiento de caja para venta ' . $this->numero, [
                 'error' => $e->getMessage(),

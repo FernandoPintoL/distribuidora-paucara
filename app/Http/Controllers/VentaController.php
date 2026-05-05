@@ -899,6 +899,24 @@ class VentaController extends Controller
                     }
                 }
 
+                // ✅ NUEVO (2026-05-04): Eliminar detalles_pago_venta al anular
+                // Los detalles de pago ya no son válidos después de anular la venta
+                try {
+                    $cantidadDetallesBorrados = $venta->detallesPagoVenta()->delete();
+
+                    if ($cantidadDetallesBorrados > 0) {
+                        Log::info('✅ Detalles de pago eliminados al anular venta', [
+                            'venta_id' => $venta->id,
+                            'cantidad_detalles_borrados' => $cantidadDetallesBorrados,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('⚠️ No se pudo eliminar detalles_pago_venta al anular venta', [
+                        'venta_id' => $venta->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 // 2️⃣.5️⃣ Anular Cuenta por Cobrar si la venta fue a crédito
                 if ($venta->politica_pago === 'CREDITO' && $venta->cuentaPorCobrar) {
                     try {

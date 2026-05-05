@@ -16,6 +16,7 @@ class MovimientoCaja extends Model
     protected $fillable = [
         'caja_id',
         'user_id',
+        'apertura_caja_id',  // ✅ NUEVO: Referencia directa a apertura
         'fecha',
         'monto',
         'observaciones',
@@ -43,6 +44,11 @@ class MovimientoCaja extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function apertura()  // ✅ NUEVO: Relación con apertura de caja
+    {
+        return $this->belongsTo(AperturaCaja::class, 'apertura_caja_id');
     }
 
     public function tipoOperacion()

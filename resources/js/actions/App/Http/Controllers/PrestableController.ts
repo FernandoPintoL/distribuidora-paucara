@@ -1034,4 +1034,6 @@ ajusteDocumento.head = (args: { prestable: number | { id: number } } | [prestabl
     ajusteDocumento.form = ajusteDocumentoForm
 const PrestableController = { index, historialAjustes, movimientos, store, show, update, destroy, obtenerStock, obtenerDisponibilidad, incrementarStock, ajustarStock, ajusteDocumento }
 
+export default PrestableControllershow, update, destroy, obtenerStock, obtenerDisponibilidad, incrementarStock, ajustarStock, ajusteDocumento }
+
 export default PrestableController

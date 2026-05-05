@@ -103,7 +103,7 @@ class CajaController extends Controller
                 ->where('user_id', $usuarioDestino->id)
                 ->where('fecha', '>=', $cajaAbiertaHoy->fecha)
                 ->with(['tipoOperacion', 'tipoPago', 'comprobantes', 'usuario', 'venta' => function($q) {
-                    $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
+                    $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega', 'total', 'monto_pagado', 'monto_pendiente'); // ✅ Agregar campos de monto
                 }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
                 ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
                 ->get()
@@ -126,6 +126,24 @@ class CajaController extends Controller
             ->limit(50)
             ->get()
             ->map(function ($apertura) {
+                // ✅ NUEVO: Calcular cantidad de ventas aprobadas y anuladas
+                $fechaApertura = $apertura->fecha;
+                $fechaCierre = $apertura->cierre?->created_at ?? now();
+
+                $ventasAprobadas = DB::table('ventas')
+                    ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                    ->whereBetween('ventas.fecha', [$fechaApertura, $fechaCierre])
+                    ->where('ventas.caja_id', $apertura->caja_id)
+                    ->whereIn('estados_documento.codigo', ['APROBADO', 'APROBADA'])
+                    ->count();
+
+                $ventasAnuladas = DB::table('ventas')
+                    ->join('estados_documento', 'ventas.estado_documento_id', '=', 'estados_documento.id')
+                    ->whereBetween('ventas.fecha', [$fechaApertura, $fechaCierre])
+                    ->where('ventas.caja_id', $apertura->caja_id)
+                    ->where('estados_documento.codigo', 'ANULADO')
+                    ->count();
+
                 return [
                     'id'                     => $apertura->id,
                     'caja_id'                => $apertura->caja_id,
@@ -140,6 +158,8 @@ class CajaController extends Controller
                     'observaciones_cierre'   => $apertura->cierre?->observaciones,
                     'estado'                 => $apertura->cierre ? 'Cerrada' : 'Abierta',
                     'estado_cierre'          => $apertura->cierre?->estado,
+                    'vendidas_aprobadas'     => $ventasAprobadas,
+                    'vendidas_anuladas'      => $ventasAnuladas,
                 ];
             });
 
@@ -192,7 +212,7 @@ class CajaController extends Controller
 
             // Transformar formato para compatibilidad con frontend
             $detallesPagoDesglosado = [];
-            $totalDetallesPago = 0;
+            $totalDetallesPago = 0;  // ✅ SOLO EFECTIVO + TRANSFERENCIA
 
             foreach ($detallesPagosVentaPorTipo as $tipo => $datos) {
                 $detallesPagoDesglosado[] = [
@@ -201,13 +221,20 @@ class CajaController extends Controller
                     'total'    => (float) ($datos['total'] ?? 0),
                     'cantidad' => (int) ($datos['cantidad'] ?? 0),
                 ];
-                $totalDetallesPago += (float) ($datos['total'] ?? 0);
+
+                // ✅ ACTUALIZADO (2026-05-03): totalDetallesPago SOLO suma EFECTIVO + TRANSFERENCIA
+                // El crédito se suma aparte en $pagosCredito
+                $codigo = $datos['codigo'] ?? '';
+                if (in_array($codigo, ['EFECTIVO', 'TRANSFERENCIA/QR'])) {
+                    $totalDetallesPago += (float) ($datos['total'] ?? 0);
+                }
             }
 
             Log::info('💳 [CajaController@index] Detalles de pago (CON FALLBACK):', [
                 'apertura_id' => $cajaAbiertaHoy->id,
                 'detalles_count' => count($detallesPagoDesglosado),
-                'total_pagos' => $totalDetallesPago,
+                'total_pagos_efectivo_transferencia' => $totalDetallesPago,  // ✅ SOLO EFECTIVO + TRANSFERENCIA
+                'detalles_completos' => $detallesPagosVentaPorTipo,
             ]);
 
             // ✅ CORREGIDO (2026-03-06): Usar SOLO ventas de efectivo, no totalVentas (que incluye crédito)
@@ -216,10 +243,17 @@ class CajaController extends Controller
             // ✅ NUEVO (2026-03-09): Obtener sumatoria de SERVICIO para incluir en totalIngresos
             $sumatorialServicio = (float) ($datosCalculados['sumatorialServicio'] ?? 0);
 
-            // ✅ FÓRMULA CORRECTA: Usar totalDetallesPago (desde detalles_pago_venta) que es la FUENTE DE VERDAD
-            // Esto incluye TODAS las ventas pagadas por cualquier tipo de pago (EFECTIVO + TRANSFERENCIA + etc)
-            // ✅ ACTUALIZADO (2026-04-29): Usar totalDetallesPago en lugar de ventasEfectivo (que estaba duplicando)
-            $totalIngresos = $totalDetallesPago + $pagosCredito + $sumatorialServicio;  // Pagos reales por tipo + Pagos CxC + Servicios
+            // ✅ FÓRMULA CORRECTA (2026-05-04): Calcular ingresos REALES (dinero que entra en caja)
+            // totalDetallesPago = SOLO EFECTIVO + TRANSFERENCIA (desde detalles_pago_venta)
+            // pagosCredito = PAGOS DE CRÉDITO (dinero que entra al cobrar deudas) ✅ ES DINERO REAL
+            // sumatorialServicio = Servicios
+            //
+            // ⚠️ NO incluir:
+            // - Ventas con tipo_pago = CRÉDITO (son promesas, no dinero real)
+            // - Vueltos (cambios) - NO afectan a los totales, son transparentes
+            //
+            // Total Ingresos = (EFECTIVO + TRANSFERENCIA) + Pagos CxC + Servicios
+            $totalIngresos = $totalDetallesPago + $pagosCredito + $sumatorialServicio;
             // ✅ Usar totalEgresos calculado por CierreCajaService (incluye GASTOS + PAGO_SUELDO + ANTICIPO + COMPRA)
             $totalEgresos = (float) ($datosCalculados['totalEgresos'] ?? 0);
             $efectivoEsperado = $montoApertura + $totalIngresos - $totalEgresos;
@@ -259,6 +293,10 @@ class CajaController extends Controller
             // ✅ NUEVO (2026-03-09): Obtener sumatoria de DEVOLUCION
             $sumatorialDevoluciones = (float) ($datosCalculados['sumatorialDevoluciones'] ?? 0);
 
+            // ✅ ACTUALIZADO (2026-05-04): Vueltos NO afectan los cálculos
+            // Se obtienen del servicio pero no se restan ni se suman a nada
+            $sumatorialVueltos = (float) ($datosCalculados['sumatorialVueltos'] ?? 0);
+
             $datosResumen = [
                 'apertura'              => $montoApertura,
                 'totalVentas'           => $totalVentas,           // Suma TODAS las ventas aprobadas
@@ -280,6 +318,7 @@ class CajaController extends Controller
                 'sumatorialServicio'    => $sumatorialServicio,     // ✅ NUEVO (2026-03-09): Servicios
                 'sumatorialCompras'     => $sumatorialCompras,      // ✅ NUEVO (2026-02-20): Compras a proveedores
                 'sumatorialAnulaciones' => $sumatorialAnulaciones,
+                'sumatorialVueltos'     => (float) ($datosCalculados['sumatorialVueltos'] ?? 0),  // ✅ NUEVO (2026-05-03): Vueltos/cambios
                 // ✅ NUEVO: Desglose de pagos desglosados por tipo de pago
                 'detallesPagoDesglosado' => $detallesPagoDesglosado,
                 'totalDetallesPago'     => (float) $totalDetallesPago,
@@ -318,6 +357,7 @@ class CajaController extends Controller
             'sumatorialAnticipos'       => $datosResumen ? $datosResumen['sumatorialAnticipos'] ?? 0 : 0,
             'sumatorialDevoluciones'    => $datosResumen ? $datosResumen['sumatorialDevoluciones'] ?? 0 : 0,
             'sumatorialServicio'        => $datosResumen ? $datosResumen['sumatorialServicio'] ?? 0 : 0,
+            'sumatorialVueltos'         => $datosResumen ? $datosResumen['sumatorialVueltos'] ?? 0 : 0,  // ✅ NUEVO (2026-05-03)
             // ✅ NUEVO: Desglose de pagos por tipo de pago (detalles_pago_venta)
             'detallesPagoDesglosado'    => $datosResumen ? $datosResumen['detallesPagoDesglosado'] ?? [] : [],
             'totalDetallesPago'         => $datosResumen ? $datosResumen['totalDetallesPago'] ?? 0 : 0,
@@ -388,12 +428,13 @@ class CajaController extends Controller
                 if ($tipoOperacion) {
                     MovimientoCaja::create([
                         'caja_id'           => $request->caja_id,
+                        'user_id'           => $usuarioDestino->id,
+                        'apertura_caja_id'  => $apertura->id,  // ✅ NUEVO: Asignar apertura directa
                         'tipo_operacion_id' => $tipoOperacion->id,
                         'numero_documento'  => 'APERTURA-' . date('Ymd') . '-' . $usuarioDestino->id,
                         'descripcion'       => 'Apertura de caja - ' . $caja->nombre,
                         'monto'             => $request->monto_apertura,
                         'fecha'             => now(),
-                        'user_id'           => $usuarioDestino->id,
                     ]);
                 }
             }
@@ -747,15 +788,18 @@ class CajaController extends Controller
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        // Calcular fecha fin: fecha de cierre si existe, si no, ahora mismo
-        $fechaFin = $apertura->cierre ? $apertura->cierre->created_at : now();
-
-        // Obtener movimientos desde apertura hasta cierre
-        $movimientos = MovimientoCaja::where('caja_id', $apertura->caja_id)
-            ->where('user_id', $apertura->user_id)
-            ->whereBetween('fecha', [$apertura->fecha, $fechaFin])
-            ->with('tipoOperacion')
-            ->orderBy('fecha', 'asc')
+        // ✅ ACTUALIZADO (2026-05-04): Usar apertura_caja_id directamente
+        // Obtener movimientos de esta apertura específica
+        $movimientos = MovimientoCaja::where('apertura_caja_id', $apertura->id)
+            ->with([
+                'tipoOperacion',
+                'tipoPago',
+                'venta',
+                'venta.estadoDocumento',      // ✅ NUEVO: Para mostrar si es aprobada/anulada
+                'venta.cliente',               // ✅ NUEVO: Para mostrar cliente
+                'venta.detallesPagoVenta.tipoPago',  // ✅ NUEVO: Para mostrar desglose de pagos
+            ])
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json([
@@ -925,7 +969,7 @@ class CajaController extends Controller
         $movimientosHoy = MovimientoCaja::where('user_id', $usuarioDestino->id)
             ->whereDate('fecha', today())
             ->with(['tipoOperacion', 'tipoPago', 'caja', 'usuario', 'venta' => function($q) {
-                $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega'); // ✅ Cargar tipo_entrega
+                $q->select('id', 'numero', 'estado_documento_id', 'tipo_entrega', 'total', 'monto_pagado', 'monto_pendiente'); // ✅ Agregar campos de monto
             }, 'venta.estadoDocumento']) // ✅ Cargar estado_documento con venta
             ->orderBy('id', 'desc')  // ✅ ACTUALIZADO: Ordenar por ID descendente
             ->get()
