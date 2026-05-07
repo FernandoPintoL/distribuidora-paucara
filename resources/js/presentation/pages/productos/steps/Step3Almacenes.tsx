@@ -237,7 +237,6 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           }, 0);
                         }}
                         readOnly={!canEditStockQuantities}
-                        disabled={!canEditStockQuantities}
                         className={`transition-colors ${
                           canEditStockQuantities
                             ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-100'
@@ -261,7 +260,6 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           setAlmacen(i, 'cantidad_disponible', valor);
                         }}
                         readOnly={!canEditStockQuantities}
-                        disabled={!canEditStockQuantities}
                         className={`transition-colors ${
                           canEditStockQuantities
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100'
@@ -291,7 +289,6 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           }, 0);
                         }}
                         readOnly={!canEditStockQuantities}
-                        disabled={!canEditStockQuantities}
                         className={`transition-colors ${
                           canEditStockQuantities
                             ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
