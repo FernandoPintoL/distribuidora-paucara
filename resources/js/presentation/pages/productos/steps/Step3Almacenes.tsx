@@ -228,6 +228,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'stock', valor);
+                          // Auto-calcular disponible: total - reservada
+                          const disponibleCalculado = valor - reservada;
+                          setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
                         }}
                         readOnly={!canEditStockQuantities}
                         disabled={!canEditStockQuantities}
@@ -276,6 +279,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'cantidad_reservada', valor);
+                          // Auto-calcular disponible: total - reservada
+                          const disponibleCalculado = totalStock - valor;
+                          setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
                         }}
                         readOnly={!canEditStockQuantities}
                         disabled={!canEditStockQuantities}
