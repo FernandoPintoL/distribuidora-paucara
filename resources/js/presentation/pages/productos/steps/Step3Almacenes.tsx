@@ -17,6 +17,7 @@ export interface Step3Props {
   removeAlmacen: (i: number) => void | Promise<void>;
   canEditStockQuantities?: boolean; // ✨ NUEVO: Permiso para editar cantidades
   setSectorConSincronizacion?: (i: number, sectorId: number | undefined) => void; // ✨ NUEVO: Sincronizar sector en todos los cards del mismo almacén
+  handleCantidadTotalChange?: (i: number, newValue: number | undefined) => void; // ✨ NUEVO: Auto-llenar disponible y reservada
 }
 
 function todayISO(): string {
@@ -34,7 +35,7 @@ export function validarYAjustarAlmacenes(almacenes: any[]): { validos: any[], aj
   const ajustes = new Map<number, any>();
 
   const almacenesAjustados = (almacenes || []).map((almacen, idx) => {
-    const total = Number(almacen.stock ?? 0);
+    const total = Number(almacen.cantidad ?? almacen.stock ?? 0);
     const disponible = Number(almacen.cantidad_disponible ?? 0);
     const reservada = Number(almacen.cantidad_reservada ?? 0);
     const suma = disponible + reservada;
@@ -62,16 +63,12 @@ export function validarYAjustarAlmacenes(almacenes: any[]): { validos: any[], aj
   return { validos: almacenesAjustados, ajustes };
 }
 
-export default function Step3Almacenes({ data, almacenesOptions, sectores, addAlmacen, setAlmacen, removeAlmacen, canEditStockQuantities = false, setSectorConSincronizacion }: Step3Props) {
-  // 🔍 LOGS para ver datos que llegan a Step3Almacenes
-  console.log('═'.repeat(60));
-  console.log('📦 STEP3ALMACENES - PROPS RECIBIDOS');
-  console.log('═'.repeat(60));
-  console.log('🏢 Almacenes Options:', almacenesOptions);
-  console.log('🏭 Sectores Pre-cargados del backend:', sectores);
-  console.log('📋 Data (almacenes del formulario):', data.almacenes);
-  console.log('✏️ canEditStockQuantities:', canEditStockQuantities);
-  console.log('═'.repeat(60));
+export default function Step3Almacenes({ data, almacenesOptions, sectores, addAlmacen, setAlmacen, removeAlmacen, canEditStockQuantities = false, setSectorConSincronizacion, handleCantidadTotalChange }: Step3Props) {
+  // console.log('🏢 Almacenes Options:', almacenesOptions);
+  // console.log('🏭 Sectores Pre-cargados del backend:', sectores);
+  // console.log('📋 Data (almacenes del formulario):', data.almacenes);
+  // console.log('✏️ canEditStockQuantities:', canEditStockQuantities);
+  // console.log('═'.repeat(60));
 
   // ✨ Inicializar con sectores pre-cargados del backend si están disponibles
   const [sectoresOptions, setSectoresOptions] = useState<Record<number | string, Option[]>>(sectores || {});
@@ -100,25 +97,25 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
       );
 
       if (todosTienenMismoSector && sectorDelPrimero) {
-        console.log(`✨ Auto-completando sector ${sectorDelPrimero} (otros cards tienen el mismo)`);
+        // console.log(`✨ Auto-completando sector ${sectorDelPrimero} (otros cards tienen el mismo)`);
         setAlmacen(i, 'sector_id', sectorDelPrimero);
       }
     }
 
     // ✨ Si ya tenemos los sectores (pre-cargados o en caché), no cargar de nuevo
     if (sectoresOptions[almacenId]) {
-      console.log(`✅ Sectores ya en caché para almacén ${almacenId}:`, sectoresOptions[almacenId]);
+      // console.log(`✅ Sectores ya en caché para almacén ${almacenId}:`, sectoresOptions[almacenId]);
       return;
     }
 
     // Cargar sectores del almacén si no están pre-cargados
-    console.log(`⏳ Cargando sectores desde API para almacén ${almacenId}...`);
+    // console.log(`⏳ Cargando sectores desde API para almacén ${almacenId}...`);
     setLoadingSectores(prev => ({ ...prev, [almacenId]: true }));
     try {
       const response = await fetch(`/api/almacenes/${almacenId}/sectores`);
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ Sectores cargados del API para almacén ${almacenId}:`, result);
+        // console.log(`✅ Sectores cargados del API para almacén ${almacenId}:`, result);
         const options = result.data?.map((s: any) => ({
           value: s.id,
           label: s.nombre,
@@ -127,7 +124,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
           stock_minimo: s.stock_minimo,
           stock_maximo: s.stock_maximo,
         })) || [];
-        console.log(`📦 Opciones formateadas:`, options);
+        // console.log(`📦 Opciones formateadas:`, options);
         setSectoresOptions(prev => ({ ...prev, [almacenId]: options }));
       }
     } catch (error) {
@@ -263,15 +260,12 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={totalStock}
+                        value={totalStock || ''}
                         onChange={(e) => {
-                          const valor = e.target.value ? Number(e.target.value) : 0;
-                          // ✨ Actualizar tanto 'cantidad' (para el backend) como 'stock' (para compatibilidad)
-                          setAlmacen(i, 'cantidad' as any, valor);
-                          setAlmacen(i, 'stock' as any, valor);
-                          // Auto-ajustar disponible: total - reservada
-                          const disponibleAjustado = Math.max(0, valor - reservada);
-                          setAlmacen(i, 'cantidad_disponible', disponibleAjustado);
+                          const newValue = e.target.value === '' ? undefined : Number(e.target.value);
+                          if (handleCantidadTotalChange) {
+                            handleCantidadTotalChange(i, newValue);
+                          }
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -291,10 +285,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={disponible}
+                        value={disponible || ''}
                         onChange={(e) => {
-                          const valor = e.target.value ? Number(e.target.value) : 0;
-                          setAlmacen(i, 'cantidad_disponible', valor);
+                          setAlmacen(i, 'cantidad_disponible', e.target.value === '' ? undefined : Number(e.target.value));
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -314,13 +307,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={reservada}
+                        value={reservada || ''}
                         onChange={(e) => {
-                          const valor = e.target.value ? Number(e.target.value) : 0;
-                          setAlmacen(i, 'cantidad_reservada', valor);
-                          // Auto-ajustar disponible: total - reservada
-                          const disponibleAjustado = Math.max(0, totalStock - valor);
-                          setAlmacen(i, 'cantidad_disponible', disponibleAjustado);
+                          setAlmacen(i, 'cantidad_reservada', e.target.value === '' ? undefined : Number(e.target.value));
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${

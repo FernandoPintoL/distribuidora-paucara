@@ -63,7 +63,7 @@ function Step1DatosProducto({
 
   // ✨ Función de búsqueda para productos - Busca en la API
   const searchProductos = async (query: string) => {
-    console.log('🔍 Buscando productos con query:', query);
+    // console.log('🔍 Buscando productos con query:', query);
     setLastProductSearchQuery(query);
 
     if (!query || query.length < 2) {
@@ -82,8 +82,8 @@ function Step1DatosProducto({
       }
 
       const result = await response.json();
-      console.log('✅ Productos encontrados:', result.data?.length || 0);
-      console.log('📝 Resultados:', result.data);
+      // console.log('✅ Productos encontrados:', result.data?.length || 0);
+      // console.log('📝 Resultados:', result.data);
 
       if (result.success && result.data) {
         const hasResults = result.data.length > 0;
@@ -124,7 +124,7 @@ function Step1DatosProducto({
     const productoId = Number(selectedValue);
     if (!isNaN(productoId) && productosCacheMap[productoId]) {
       const productoData = productosCacheMap[productoId];
-      console.log('✨ Cargando producto existente:', productoData);
+      // console.log('✨ Cargando producto existente:', productoData);
 
       // ✅ IMPORTANTE: Cargar TODOS los datos del producto existente
       setData('nombre', productoData.nombre);
@@ -149,7 +149,7 @@ function Step1DatosProducto({
 
   // 🔍 Función de búsqueda para proveedores - Busca en la API
   const searchProveedores = async (query: string) => {
-    console.log('🔍 Buscando proveedores con query:', query);
+    // console.log('🔍 Buscando proveedores con query:', query);
     setLastSearchQuery(query);
 
     if (!query || query.length < 2) {
@@ -168,8 +168,8 @@ function Step1DatosProducto({
       }
 
       const result = await response.json();
-      console.log('✅ Proveedores encontrados:', result.data?.length || 0);
-      console.log('📝 Resultados:', result.data);
+      // console.log('✅ Proveedores encontrados:', result.data?.length || 0);
+      // console.log('📝 Resultados:', result.data);
 
       if (result.success && result.data) {
         const hasResults = result.data.length > 0;

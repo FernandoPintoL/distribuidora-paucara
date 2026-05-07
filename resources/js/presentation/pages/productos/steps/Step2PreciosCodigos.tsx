@@ -153,18 +153,18 @@ function Step2PreciosCodigos(props: Step2Props) {
             return;
         }
 
-        console.log('💰 CÁLCULO DE PRECIOS POR UNIDAD INICIADO', {
+        /* console.log('💰 CÁLCULO DE PRECIOS POR UNIDAD INICIADO', {
             precioBase,
             tipoPrecioId,
             porcentajeGanancia,
             esFraccionado: props.data.es_fraccionado,
             unidadBaseId: props.data.unidad_medida_id,
             conversiones: props.data.conversiones.length,
-        });
+        }); */
 
         // Precio para la unidad base (ej: CAJA = 45 Bs)
         const precioUnidadBase = precioBase * (1 + porcentajeGanancia / 100);
-        console.log(`📦 Precio Unidad Base: ${precioBase} Bs × (1 + ${porcentajeGanancia}%) = ${precioUnidadBase.toFixed(2)} Bs`);
+        // console.log(`📦 Precio Unidad Base: ${precioBase} Bs × (1 + ${porcentajeGanancia}%) = ${precioUnidadBase.toFixed(2)} Bs`);
 
         // 1️⃣ PASO 1: Eliminar todos los precios de este tipo_precio_id (estrategia: eliminar y recrear)
         const preciosOtrosTipos = (props.data.precios || []).filter(
@@ -186,7 +186,7 @@ function Step2PreciosCodigos(props: Step2Props) {
             // Ej: 45 Bs / 30 = 1.5 Bs por tableta
             const precioUnidadDestino = precioUnidadBase / conv.factor_conversion;
 
-            console.log(`✨ Conversión ${idx + 1}: ${precioUnidadBase.toFixed(2)} Bs ÷ ${conv.factor_conversion} = ${precioUnidadDestino.toFixed(2)} Bs (Unidad destino ID: ${conv.unidad_destino_id})`);
+            // console.log(`✨ Conversión ${idx + 1}: ${precioUnidadBase.toFixed(2)} Bs ÷ ${conv.factor_conversion} = ${precioUnidadDestino.toFixed(2)} Bs (Unidad destino ID: ${conv.unidad_destino_id})`);
 
             nuevosPrecios.push({
                 tipo_precio_id: tipoPrecioId,
@@ -197,7 +197,7 @@ function Step2PreciosCodigos(props: Step2Props) {
 
         // 4️⃣ PASO 4: Actualizar estado con todos los precios (otros tipos + nuevos calculados)
         const preciosFinales = [...preciosOtrosTipos, ...nuevosPrecios];
-        console.log('📋 Precios finales (después de recalcular):', preciosFinales);
+        // console.log('📋 Precios finales (después de recalcular):', preciosFinales);
         setPrecios(preciosFinales);
 
         // 5️⃣ PASO 5: Actualizar estado visual de preciosPorUnidad para mostrar los calculados
@@ -226,12 +226,12 @@ function Step2PreciosCodigos(props: Step2Props) {
         unidadId: number,
         nuevoMonto: number
     ) => {
-        console.log(`🔧 PRECIO POR UNIDAD MODIFICADO MANUALMENTE`, {
+        /* console.log(`🔧 PRECIO POR UNIDAD MODIFICADO MANUALMENTE`, {
             tipoPrecioId,
             unidadId,
             nuevoMonto,
             marca: '🔒 AHORA ES MANUAL - No se recalculará automáticamente',
-        });
+        }); */
 
         setPreciosPorUnidad(prev => ({
             ...prev,
@@ -247,10 +247,11 @@ function Step2PreciosCodigos(props: Step2Props) {
 
     // ✨ Handler para cambio manual de porcentaje de ganancia
     const handlePorcentajeChange = (tipoPrecioId: number, nuevoPorcentaje: number) => {
-        console.log(`📊 PORCENTAJE MODIFICADO MANUALMENTE`, {
+        /* console.log(`📊 PORCENTAJE MODIFICADO MANUALMENTE`, {
             tipoPrecioId,
             nuevoPorcentaje,
         });
+         */
 
         setPorcentajesPorTipo(prev => ({
             ...prev,
@@ -271,11 +272,11 @@ function Step2PreciosCodigos(props: Step2Props) {
 
         // ✨ Si es producto fraccionado, recalcular TODOS los precios (base + conversiones)
         if (props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0) {
-            console.log(`🔄 RECALCULANDO TODOS LOS PRECIOS (producto fraccionado)`, {
+            /* console.log(`🔄 RECALCULANDO TODOS LOS PRECIOS (producto fraccionado)`, {
                 tipoPrecioId,
                 porcentaje: nuevoPct,
                 precioCosto: costo,
-            });
+            }); */
             calcularPreciosPorUnidad(costo, tipoPrecioId, nuevoPct);
             manualOverrideIdsRef.current.add(tipoPrecioId);
             return;

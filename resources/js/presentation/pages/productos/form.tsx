@@ -75,21 +75,21 @@ export default function ProductoForm({
   const canEditStockQuantities = userPermissions.some((p: any) => p.name === 'stock-productos.editar-cantidad');
 
   // 🔍 LOGS PARA DEBUG - Información completa del backend
-  console.log('='.repeat(60));
-  console.log('🎯 PRODUCTO FORM - DATOS DEL BACKEND');
-  console.log('='.repeat(60));
-  console.log('📦 Almacenes recibidos:', almacenes);
-  console.log('🏢 Sectores por almacén recibidos:', sectores);
-  console.log('💰 Tipos de precio:', tipos_precio);
-  console.log('🏭 Producto (si es edición):', producto);
-  console.log('📍 Almacenes/Sectores asignados al producto (stock_almacenes):', producto?.stock_almacenes);
-  console.log('👤 Proveedor en producto:', producto?.proveedor);
-  console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
-  console.log('✅ Permite productos fraccionados:', permite_productos_fraccionados);
-  console.log('⚕️ Es farmacia:', es_farmacia);
-  console.log('🔐 Permisos del usuario:', userPermissions);
-  console.log('✏️ Puede editar cantidades de stock:', canEditStockQuantities);
-  console.log('='.repeat(60));
+  // console.log('='.repeat(60));
+  // console.log('🎯 PRODUCTO FORM - DATOS DEL BACKEND');
+  // console.log('='.repeat(60));
+  // console.log('📦 Almacenes recibidos:', almacenes);
+  // console.log('🏢 Sectores por almacén recibidos:', sectores);
+  // console.log('💰 Tipos de precio:', tipos_precio);
+  // console.log('🏭 Producto (si es edición):', producto);
+  // console.log('📍 Almacenes/Sectores asignados al producto (stock_almacenes):', producto?.stock_almacenes);
+  // console.log('👤 Proveedor en producto:', producto?.proveedor);
+  // console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
+  // console.log('✅ Permite productos fraccionados:', permite_productos_fraccionados);
+  // console.log('⚕️ Es farmacia:', es_farmacia);
+  // console.log('🔐 Permisos de stock:', userPermissions.filter((p: any) => p.name.includes('stock')));
+  // console.log('✏️ Puede editar cantidades de stock:', canEditStockQuantities);
+  // console.log('='.repeat(60));
 
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
   const isEditing = !!producto?.id;
@@ -141,8 +141,8 @@ export default function ProductoForm({
     } : initialProductoData
   );
 
-  console.log('💾 useForm data inicializada:', data);
-  console.log('🆔 proveedor_id en data del useForm:', data.proveedor_id);
+  // console.log('💾 useForm data inicializada:', data);
+  // console.log('🆔 proveedor_id en data del useForm:', data.proveedor_id);
 
   // Autosave: restaurar borrador en carga inicial (solo creación)
   // Nota: Siempre abre en el tab "datos", solo restaura los datos del formulario
@@ -206,7 +206,7 @@ export default function ProductoForm({
     (clearErrors as unknown as () => void)();
 
     // ✅ VALIDACIÓN CRÍTICA: El nombre es obligatorio
-    console.log('📝 Nombre en data:', data.nombre, 'Tipo:', typeof data.nombre);
+    // console.log('📝 Nombre en data:', data.nombre, 'Tipo:', typeof data.nombre);
 
     const nombreTrimmed = data.nombre ? String(data.nombre).trim() : '';
     if (!nombreTrimmed) {
@@ -330,7 +330,7 @@ export default function ProductoForm({
         if (almacen.sector_id) {
           formData.append(`almacenes[${i}][sector_id]`, String(almacen.sector_id));
         }
-        formData.append(`almacenes[${i}][stock]`, String(almacen.stock ?? 0));
+        formData.append(`almacenes[${i}][stock]`, String(almacen.cantidad ?? almacen.stock ?? 0));
         // ✨ NUEVO: Incluir cantidad_disponible y cantidad_reservada
         if (almacen.cantidad_disponible !== undefined) {
           formData.append(`almacenes[${i}][cantidad_disponible]`, String(almacen.cantidad_disponible ?? 0));
@@ -500,6 +500,21 @@ export default function ProductoForm({
   const setAlmacen = (i: number, key: string, value: any) => {
     const nuevosAlmacenes = [...(data.almacenes || [])];
     nuevosAlmacenes[i] = { ...nuevosAlmacenes[i], [key]: value };
+    setData('almacenes', nuevosAlmacenes);
+  };
+
+  // ✨ NUEVO: Actualizar cantidad total y auto-llenar disponible manteniendo reservada
+  const handleCantidadTotalChange = (i: number, newValue: number | undefined) => {
+    const nuevosAlmacenes = [...(data.almacenes || [])];
+    const almacenActual = nuevosAlmacenes[i];
+    const reservadaActual = Number(almacenActual?.cantidad_reservada ?? 0);
+
+    nuevosAlmacenes[i] = {
+      ...almacenActual,
+      cantidad: newValue,
+      cantidad_disponible: newValue !== undefined ? Math.max(0, newValue - reservadaActual) : 0,
+      cantidad_reservada: reservadaActual
+    };
     setData('almacenes', nuevosAlmacenes);
   };
 
@@ -723,6 +738,7 @@ export default function ProductoForm({
                     removeAlmacen={removeAlmacen}
                     setSectorConSincronizacion={setSectorConSincronizacion}
                     canEditStockQuantities={canEditStockQuantities} // ✨ NUEVO: Pasar permiso para editar cantidades
+                    handleCantidadTotalChange={handleCantidadTotalChange}
                   />
                 </TabsContent>
 
