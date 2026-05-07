@@ -1,7 +1,7 @@
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import Step1DatosProducto from './steps/Step1DatosProducto';
 import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
-import Step3Almacenes from './steps/Step3Almacenes'; // ✨ NUEVO: Almacenes y sectores
+import Step3Almacenes, { validarYAjustarAlmacenes } from './steps/Step3Almacenes'; // ✨ NUEVO: Almacenes y sectores
 import Step3Conversiones from './steps/Step3Conversiones'; // ✨ NUEVO
 import Step4Imagenes from './steps/Step4Imagenes';
 import Step5PrecioRango from './steps/Step5PrecioRango'; // ✨ NUEVO
@@ -293,9 +293,22 @@ export default function ProductoForm({
       // No enviamos nada, el backend se encargará
     }
 
-    // ✨ NUEVO: Almacenes y sectores
+    // ✨ NUEVO: Almacenes y sectores - CON VALIDACIÓN Y AJUSTE
     if (data.almacenes && data.almacenes.length > 0) {
-      (data.almacenes as any[]).forEach((almacen, i) => {
+      // 🔄 Validar y ajustar almacenes antes de enviar
+      const { validos, ajustes } = validarYAjustarAlmacenes(data.almacenes as any[]);
+
+      // 📢 Si hay ajustes, notificar al usuario
+      if (ajustes.size > 0) {
+        const mensajes = Array.from(ajustes.values()).map(a => a.mensaje);
+        console.warn('⚠️ AJUSTES REALIZADOS EN ALMACENES:', mensajes);
+        NotificationService.info(
+          `✅ Se ajustaron ${ajustes.size} almacén(es) para mantener la consistencia de datos:\n${mensajes.join('\n')}`
+        );
+      }
+
+      // Construir formData con almacenes validados
+      validos.forEach((almacen, i) => {
         console.log(`🔍 ALMACÉN ${i} - ANTES DE AGREGAR AL FORMDATA:`, {
           id: almacen.id,
           almacen_id: almacen.almacen_id,
@@ -333,7 +346,7 @@ export default function ProductoForm({
         }
       });
 
-      console.log('✅ Almacenes y sectores - FormData construido:', data.almacenes);
+      console.log('✅ Almacenes validados y ajustados - FormData construido:', validos);
     }
 
     // Conversiones de unidad (si es fraccionado)

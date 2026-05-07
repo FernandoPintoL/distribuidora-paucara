@@ -25,6 +25,43 @@ function todayISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/**
+ * ✨ NUEVO: Validar y ajustar almacenes antes de guardar
+ * Asegura que: total >= (disponible + reservada)
+ * Si no cumple, ajusta disponible = total - reservada
+ */
+export function validarYAjustarAlmacenes(almacenes: any[]): { validos: any[], ajustes: Map<number, any> } {
+  const ajustes = new Map<number, any>();
+
+  const almacenesAjustados = (almacenes || []).map((almacen, idx) => {
+    const total = Number(almacen.stock ?? 0);
+    const disponible = Number(almacen.cantidad_disponible ?? 0);
+    const reservada = Number(almacen.cantidad_reservada ?? 0);
+    const suma = disponible + reservada;
+
+    // Validar invariante
+    if (suma > total) {
+      // Ajustar disponible para cumplir: total = disponible + reservada
+      const disponibleAjustado = Math.max(0, total - reservada);
+
+      ajustes.set(idx, {
+        original: { disponible, reservada, total },
+        ajustado: { disponible: disponibleAjustado, reservada, total },
+        mensaje: `Almacén ${idx + 1}: Se ajustó Disponible de ${disponible.toFixed(2)} a ${disponibleAjustado.toFixed(2)} (Reservada: ${reservada.toFixed(2)}, Total: ${total.toFixed(2)})`
+      });
+
+      return {
+        ...almacen,
+        cantidad_disponible: disponibleAjustado
+      };
+    }
+
+    return almacen;
+  });
+
+  return { validos: almacenesAjustados, ajustes };
+}
+
 export default function Step3Almacenes({ data, almacenesOptions, sectores, addAlmacen, setAlmacen, removeAlmacen, canEditStockQuantities = false, setSectorConSincronizacion }: Step3Props) {
   // 🔍 LOGS para ver datos que llegan a Step3Almacenes
   console.log('═'.repeat(60));
