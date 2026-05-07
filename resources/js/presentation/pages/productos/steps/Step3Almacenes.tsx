@@ -240,7 +240,8 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
 
             {/* Fila 3: Información de Stock */}
             {(() => {
-              const totalStock = Number(a.stock ?? 0);
+              // ✨ CORREGIDO: Usar 'cantidad' del backend (no 'stock')
+              const totalStock = Number(a.cantidad ?? a.stock ?? 0);
               const disponible = Number(a.cantidad_disponible ?? 0);
               const reservada = Number(a.cantidad_reservada ?? 0);
               const esValido = totalStock >= (disponible + reservada);
@@ -265,7 +266,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         value={totalStock}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
-                          setAlmacen(i, 'stock', valor);
+                          // ✨ Actualizar tanto 'cantidad' (para el backend) como 'stock' (para compatibilidad)
+                          setAlmacen(i, 'cantidad' as any, valor);
+                          setAlmacen(i, 'stock' as any, valor);
                           // Auto-ajustar disponible: total - reservada
                           const disponibleAjustado = Math.max(0, valor - reservada);
                           setAlmacen(i, 'cantidad_disponible', disponibleAjustado);
