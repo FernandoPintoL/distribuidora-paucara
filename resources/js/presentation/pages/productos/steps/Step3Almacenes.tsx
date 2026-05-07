@@ -266,6 +266,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'stock', valor);
+                          // Auto-ajustar disponible: total - reservada
+                          const disponibleAjustado = Math.max(0, valor - reservada);
+                          setAlmacen(i, 'cantidad_disponible', disponibleAjustado);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -312,6 +315,9 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'cantidad_reservada', valor);
+                          // Auto-ajustar disponible: total - reservada
+                          const disponibleAjustado = Math.max(0, totalStock - valor);
+                          setAlmacen(i, 'cantidad_disponible', disponibleAjustado);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
