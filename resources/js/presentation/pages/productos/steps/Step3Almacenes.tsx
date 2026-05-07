@@ -209,6 +209,20 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
               const esValido = totalStock >= (disponible + reservada);
               const hasError = canEditStockQuantities && !esValido;
 
+              const handleTotalChange = (valor: number) => {
+                setAlmacen(i, 'stock', valor);
+                // Auto-calcular disponible: total - reservada (mantener el valor actual de reservada)
+                const disponibleCalculado = valor - reservada;
+                setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+              };
+
+              const handleReservadaChange = (valor: number) => {
+                setAlmacen(i, 'cantidad_reservada', valor);
+                // Auto-calcular disponible: total - reservada (mantener el valor actual de total)
+                const disponibleCalculado = totalStock - valor;
+                setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+              };
+
               return (
                 <>
                   <div className={`grid grid-cols-1 md:grid-cols-3 gap-2 p-3 rounded border transition-colors ${
@@ -225,16 +239,10 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={totalStock || ''}
+                        value={totalStock === 0 && !a.stock ? '' : totalStock}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
-                          setAlmacen(i, 'stock', valor);
-                          setTimeout(() => {
-                            // Auto-calcular disponible: total - reservada
-                            const reservadaActual = Number((data.almacenes[i]?.cantidad_reservada ?? 0));
-                            const disponibleCalculado = valor - reservadaActual;
-                            setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
-                          }, 0);
+                          handleTotalChange(valor);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -254,7 +262,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={disponible || ''}
+                        value={disponible === 0 && !a.cantidad_disponible ? '' : disponible}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'cantidad_disponible', valor);
@@ -277,16 +285,10 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={reservada || ''}
+                        value={reservada === 0 && !a.cantidad_reservada ? '' : reservada}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
-                          setAlmacen(i, 'cantidad_reservada', valor);
-                          setTimeout(() => {
-                            // Auto-calcular disponible: total - reservada
-                            const totalActual = Number(data.almacenes[i]?.stock ?? 0);
-                            const disponibleCalculado = totalActual - valor;
-                            setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
-                          }, 0);
+                          handleReservadaChange(valor);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
