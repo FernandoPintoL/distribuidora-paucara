@@ -33,6 +33,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
   console.log('🏢 Almacenes Options:', almacenesOptions);
   console.log('🏭 Sectores Pre-cargados del backend:', sectores);
   console.log('📋 Data (almacenes del formulario):', data.almacenes);
+  console.log('✏️ canEditStockQuantities:', canEditStockQuantities);
   console.log('═'.repeat(60));
 
   // ✨ Inicializar con sectores pre-cargados del backend si están disponibles
@@ -228,9 +229,12 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'stock', valor);
-                          // Auto-calcular disponible: total - reservada
-                          const disponibleCalculado = valor - reservada;
-                          setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+                          setTimeout(() => {
+                            // Auto-calcular disponible: total - reservada
+                            const reservadaActual = Number((data.almacenes[i]?.cantidad_reservada ?? 0));
+                            const disponibleCalculado = valor - reservadaActual;
+                            setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+                          }, 0);
                         }}
                         readOnly={!canEditStockQuantities}
                         disabled={!canEditStockQuantities}
@@ -279,9 +283,12 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'cantidad_reservada', valor);
-                          // Auto-calcular disponible: total - reservada
-                          const disponibleCalculado = totalStock - valor;
-                          setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+                          setTimeout(() => {
+                            // Auto-calcular disponible: total - reservada
+                            const totalActual = Number(data.almacenes[i]?.stock ?? 0);
+                            const disponibleCalculado = totalActual - valor;
+                            setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
+                          }, 0);
                         }}
                         readOnly={!canEditStockQuantities}
                         disabled={!canEditStockQuantities}
