@@ -246,20 +246,6 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
               const esValido = totalStock >= (disponible + reservada);
               const hasError = canEditStockQuantities && !esValido;
 
-              const handleTotalChange = (valor: number) => {
-                setAlmacen(i, 'stock', valor);
-                // Auto-calcular disponible: total - reservada (mantener el valor actual de reservada)
-                const disponibleCalculado = valor - reservada;
-                setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
-              };
-
-              const handleReservadaChange = (valor: number) => {
-                setAlmacen(i, 'cantidad_reservada', valor);
-                // Auto-calcular disponible: total - reservada (mantener el valor actual de total)
-                const disponibleCalculado = totalStock - valor;
-                setAlmacen(i, 'cantidad_disponible', Math.max(0, disponibleCalculado));
-              };
-
               return (
                 <>
                   <div className={`grid grid-cols-1 md:grid-cols-3 gap-2 p-3 rounded border transition-colors ${
@@ -276,10 +262,10 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={totalStock === 0 && !a.stock ? '' : totalStock}
+                        value={totalStock}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
-                          handleTotalChange(valor);
+                          setAlmacen(i, 'stock', valor);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -299,7 +285,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={disponible === 0 && !a.cantidad_disponible ? '' : disponible}
+                        value={disponible}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
                           setAlmacen(i, 'cantidad_disponible', valor);
@@ -322,10 +308,10 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                         type="number"
                         inputMode="decimal"
                         step="0.01"
-                        value={reservada === 0 && !a.cantidad_reservada ? '' : reservada}
+                        value={reservada}
                         onChange={(e) => {
                           const valor = e.target.value ? Number(e.target.value) : 0;
-                          handleReservadaChange(valor);
+                          setAlmacen(i, 'cantidad_reservada', valor);
                         }}
                         readOnly={!canEditStockQuantities}
                         className={`transition-colors ${
@@ -341,14 +327,14 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                   {/* ⚠️ Mensaje de validación */}
                   {hasError && (
                     <div className="bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded p-2 text-xs text-red-700 dark:text-red-300">
-                      ⚠️ Error: La cantidad total ({totalStock.toFixed(2)}) debe ser mayor o igual a disponible ({disponible.toFixed(2)}) + reservada ({reservada.toFixed(2)}) = {(disponible + reservada).toFixed(2)}
+                      ⚠️ Advertencia: La cantidad total ({totalStock.toFixed(2)}) debe ser mayor o igual a disponible ({disponible.toFixed(2)}) + reservada ({reservada.toFixed(2)}) = {(disponible + reservada).toFixed(2)}
                     </div>
                   )}
 
                   {/* 💡 Información para usuarios con permiso */}
                   {canEditStockQuantities && !hasError && (
                     <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded p-2 text-xs text-blue-700 dark:text-blue-300">
-                      ✅ Puedes editar las cantidades. Cambios se guardarán al hacer clic en "Guardar producto"
+                      ✅ Puedes editar las cantidades. Los valores se validarán al guardar el producto.
                     </div>
                   )}
                 </>
