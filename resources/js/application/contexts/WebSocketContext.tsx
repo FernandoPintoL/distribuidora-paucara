@@ -48,13 +48,13 @@ export function WebSocketProvider({
   const connect = React.useCallback(async (token?: string, userId?: number) => {
     // Si ya hay una conexión activa, no hacer nada
     if (websocketService.isSocketConnected()) {
-      console.log('✅ WebSocket ya está conectado. Reutilizando conexión.');
+      // console.log('✅ WebSocket ya está conectado. Reutilizando conexión.');
       return;
     }
 
     // Si hay una conexión en progreso, esperar a que termine
     if (connectionPromiseRef.current) {
-      console.log('⏳ Conexión en progreso. Esperando...');
+      // console.log('⏳ Conexión en progreso. Esperando...');
       return connectionPromiseRef.current;
     }
 
@@ -69,7 +69,7 @@ export function WebSocketProvider({
       setError(null);
 
       // 🔍 DEBUG: Verificar dónde viene el token
-      console.log('🔍 [WebSocketContext Debug] Token recibido como parámetro:', token ? `${token.substring(0, 20)}...` : 'undefined');
+      // console.log('🔍 [WebSocketContext Debug] Token recibido como parámetro:', token ? `${token.substring(0, 20)}...` : 'undefined');
 
       // Obtener el token del sessionStorage si no se proporciona
       const authToken = token || sessionStorage.getItem('auth_token');
@@ -78,8 +78,8 @@ export function WebSocketProvider({
         throw new Error('No authentication token found. Por favor inicia sesión nuevamente.');
       }
 
-      console.log('✅ [WebSocketContext] Token seleccionado:', `${authToken.substring(0, 20)}...`);
-      console.log('✅ [WebSocketContext] Usando token de:', token ? 'parámetro directo' : 'localStorage');
+      // console.log('✅ [WebSocketContext] Token seleccionado:', `${authToken.substring(0, 20)}...`);
+      // console.log('✅ [WebSocketContext] Usando token de:', token ? 'parámetro directo' : 'localStorage');
 
       // Crear promesa de conexión y almacenarla
       // Note: websocketService.connect() automatically resolves the URL from runtime config
@@ -98,10 +98,11 @@ export function WebSocketProvider({
 
       // Suscribirse a canales iniciales
       channels.forEach(channel => {
+        // console.log(`📡 Suscribiendo a canal: ${channel}`);
         websocketService.subscribeTo(channel);
       });
 
-      console.log('🎉 WebSocket conectado exitosamente en el Context');
+      // console.log('🎉 WebSocket conectado exitosamente en el Context');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection failed';

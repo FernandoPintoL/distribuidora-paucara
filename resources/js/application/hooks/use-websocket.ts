@@ -60,7 +60,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const connect = useCallback(async () => {
     // ✅ Si el websocket ya está conectado, simplemente actualizar estado
     if (websocketService.isSocketConnected()) {
-      console.log('✅ WebSocket ya está conectado globalmente, reutilizando...');
+      // console.log('✅ WebSocket ya está conectado globalmente, reutilizando...');
       setStatus('connected');
       setSocketId(websocketService.getSocketId());
       return;
@@ -76,12 +76,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     try {
       // 🔍 DEBUG: Log completo del props y sus contenidos
-      console.log('🔍 [WebSocket Debug] props completo:', JSON.stringify(props, null, 2));
+      /* console.log('🔍 [WebSocket Debug] props completo:', JSON.stringify(props, null, 2));
       console.log('🔍 [WebSocket Debug] props.auth:', (props?.auth as any));
       console.log('🔍 [WebSocket Debug] props.auth.sanctumToken:', (props?.auth as any)?.sanctumToken);
       console.log('🔍 [WebSocket Debug] props.auth.sanctumToken tipo:', typeof (props?.auth as any)?.sanctumToken);
       console.log('🔍 [WebSocket Debug] props.auth.sanctumToken es null?:', (props?.auth as any)?.sanctumToken === null);
-      console.log('🔍 [WebSocket Debug] props.auth.sanctumToken es undefined?:', (props?.auth as any)?.sanctumToken === undefined);
+      console.log('🔍 [WebSocket Debug] props.auth.sanctumToken es undefined?:', (props?.auth as any)?.sanctumToken === undefined); */
 
       // ✅ PRIORIDAD 1: Obtener token desde props de Inertia (más rápido y confiable)
       let token = (props?.auth as any)?.sanctumToken;
@@ -101,9 +101,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
           console.error('❌ [WebSocket] Usuario no autenticado. Esto puede causar error TOKEN_NOT_FOUND en WebSocket');
         }
       } else {
-        console.log('✅ [WebSocket] Token obtenido de props de Inertia (CORRECTO)');
+        /* console.log('✅ [WebSocket] Token obtenido de props de Inertia (CORRECTO)');
         console.log(`✅ [WebSocket] Token: ${token.substring(0, 20)}...`);
-        console.log(`✅ [WebSocket] Usuario ID: ${user?.id}`);
+        console.log(`✅ [WebSocket] Usuario ID: ${user?.id}`); */
         // Guardar en sessionStorage para futuras referencias (se limpia al cerrar navegador)
         sessionStorage.setItem('auth_token', token);
       }
@@ -112,8 +112,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         throw new Error('No authentication token found. Por favor inicia sesión nuevamente.');
       }
 
-      console.log('🔐 [WebSocket] Conectando con token:', `${token.substring(0, 20)}...`);
-      console.log('🔐 [WebSocket] Usuario ID:', user?.id);
+      /* console.log('🔐 [WebSocket] Conectando con token:', `${token.substring(0, 20)}...`);
+      console.log('🔐 [WebSocket] Usuario ID:', user?.id); */
 
       await websocketService.connect({
         url: import.meta.env.VITE_WEBSOCKET_URL,

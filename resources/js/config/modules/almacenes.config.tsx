@@ -19,6 +19,7 @@ export const almacenesConfig: ModuleConfig<Almacen, AlmacenFormData> = {
     { key: 'nombre', label: 'Nombre', type: 'text' },
     { key: 'direccion', label: 'Dirección', type: 'text' },
     { key: 'ubicacion_fisica', label: 'Ubicación', type: 'text' },
+    { key: 'sectores_count', label: 'Sectores', type: 'number' },
     { key: 'requiere_transporte_externo', label: 'Transporte Ext.', type: 'boolean' },
     { key: 'activo', label: 'Estado', type: 'boolean' },
   ],

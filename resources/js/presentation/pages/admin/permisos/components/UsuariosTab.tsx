@@ -67,7 +67,7 @@ export function UsuariosTab({
   return (
     <>
       {/* Barra de búsqueda y acciones */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-6 border border-gray-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-2 border border-gray-200 dark:border-slate-700">
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

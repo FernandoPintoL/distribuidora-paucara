@@ -124,11 +124,16 @@ class SectorController extends Controller
                     }),
                 ],
                 'descripcion' => 'nullable|string|max:500',
+                'stock_minimo' => 'sometimes|integer|min:0',
+                'stock_maximo' => 'sometimes|integer|min:0|gte:stock_minimo',
             ], [
                 'almacen_id.required' => 'El almacén es requerido',
                 'almacen_id.exists' => 'El almacén no existe',
                 'nombre.required' => 'El nombre del sector es requerido',
                 'nombre.unique' => 'Ya existe un sector con ese nombre en este almacén',
+                'stock_minimo.min' => 'El stock mínimo no puede ser negativo',
+                'stock_maximo.min' => 'El stock máximo no puede ser negativo',
+                'stock_maximo.gte' => 'El stock máximo debe ser mayor o igual al mínimo',
             ]);
 
             // Crear sector (es_generico siempre false para creaciones manuales)
@@ -209,8 +214,13 @@ class SectorController extends Controller
                         ->ignore($sector->id),
                 ],
                 'descripcion' => 'nullable|string|max:500',
+                'stock_minimo' => 'sometimes|integer|min:0',
+                'stock_maximo' => 'sometimes|integer|min:0|gte:stock_minimo',
             ], [
                 'nombre.unique' => 'Ya existe un sector con ese nombre en este almacén',
+                'stock_minimo.min' => 'El stock mínimo no puede ser negativo',
+                'stock_maximo.min' => 'El stock máximo no puede ser negativo',
+                'stock_maximo.gte' => 'El stock máximo debe ser mayor o igual al mínimo',
             ]);
 
             // Actualizar solo campos permitidos

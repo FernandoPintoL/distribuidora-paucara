@@ -5,9 +5,9 @@ export default function AppLogo() {
     const { auth } = usePage().props as any;
 
     // ✅ DEBUG: Ver qué llega del backend
-    console.log('🔍 [AppLogo] Auth completo:', auth);
-    console.log('🔍 [AppLogo] Usuario:', auth?.user);
-    console.log('🔍 [AppLogo] Empresa:', auth?.user?.empresa);
+    // console.log('🔍 [AppLogo] Auth completo:', auth);
+    // console.log('🔍 [AppLogo] Usuario:', auth?.user);
+    // console.log('🔍 [AppLogo] Empresa:', auth?.user?.empresa);
 
     // ✅ MEJORADO (2026-04-16): Obtener empresa del usuario dinámicamente
     // El logo y nombre cambian según la empresa a la que pertenece el usuario
@@ -38,7 +38,7 @@ export default function AppLogo() {
                 logo: logoUsado
             };
 
-            console.log('✅ [AppLogo] Empresa encontrada:', {
+            /* console.log('✅ [AppLogo] Empresa encontrada:', {
                 ...empresaData,
                 fuente_logo: logoFuente,
                 logos_disponibles: {
@@ -46,7 +46,7 @@ export default function AppLogo() {
                     logo_compacto: !!auth.user.empresa.logo_compacto,
                     logo_footer: !!auth.user.empresa.logo_footer
                 }
-            });
+            }); */
 
             return empresaData;
         }
@@ -56,7 +56,7 @@ export default function AppLogo() {
             nombre: import.meta.env.VITE_LOGO_ALT || 'Distribuidora Paucara',
             logo: import.meta.env.VITE_LOGO_SVG || '/logo.svg'
         };
-        console.log('⚠️ [AppLogo] Usando fallback (sin empresa):', fallback);
+        /* console.log('⚠️ [AppLogo] Usando fallback (sin empresa):', fallback); */
         return fallback;
     }, [auth?.user?.empresa]);
 

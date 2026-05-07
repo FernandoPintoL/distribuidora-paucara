@@ -268,18 +268,37 @@ class ProductoController extends Controller
     {
         $empresa = auth()->user()?->empresa;
 
-        // ✨ Cargar todos los sectores organizados por almacén para el frontend
-        $almacenes = Almacen::orderBy('nombre')->get(['id', 'nombre']);
-        $sectoresPorAlmacen = [];
+        // ✨ Cargar almacenes activos con sus sectores (eager loading eficiente)
+        $almacenes = Almacen::where('activo', true)
+            ->with(['sectores' => function ($q) {
+                $q->orderBy('es_generico', 'desc')
+                  ->orderBy('nombre', 'asc');
+            }])
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'ubicacion_fisica']);
 
+        // Transformar sectores a formato esperado por frontend con información enriquecida
+        $sectoresPorAlmacen = [];
         foreach ($almacenes as $almacen) {
-            $sectoresPorAlmacen[$almacen->id] = Sector::where('almacen_id', $almacen->id)
-                ->orderBy('es_generico', 'desc')
-                ->orderBy('nombre', 'asc')
-                ->get(['id', 'nombre', 'es_generico'])
-                ->map(fn($s) => ['value' => $s->id, 'label' => $s->nombre])
+            $sectoresPorAlmacen[$almacen->id] = $almacen->sectores
+                ->map(fn($s) => [
+                    'value' => $s->id,
+                    'label' => $s->nombre,
+                    'descripcion' => $s->descripcion,
+                    'es_generico' => (bool) $s->es_generico,
+                    'stock_minimo' => $s->stock_minimo,
+                    'stock_maximo' => $s->stock_maximo,
+                    'badge' => $s->es_generico ? '📦 General' : null, // Marcador visual para sector genérico
+                ])
                 ->toArray();
         }
+
+        // Simplificar almacenes para select (solo id y nombre)
+        $almacenesSelect = $almacenes->map(fn($a) => [
+            'id' => $a->id,
+            'nombre' => $a->nombre,
+            'ubicacion_fisica' => $a->ubicacion_fisica,
+        ]);
 
         return Inertia::render('productos/form', [
             'producto'                      => null,
@@ -289,10 +308,10 @@ class ProductoController extends Controller
             'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio'                  => TipoPrecio::getOptions(),
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                     => $almacenes,
-            'sectores'                      => $sectoresPorAlmacen, // ✨ NUEVO: Sectores pre-cargados por almacén
-            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
-            'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
+            'almacenes'                     => $almacenesSelect, // ✨ MEJORADO: Solo almacenes activos
+            'sectores'                      => $sectoresPorAlmacen, // ✨ MEJORADO: Con descripción, stock limits e indicador de genérico
+            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false,
+            'es_farmacia'                   => $empresa?->es_farmacia ?? false,
         ]);
     }
 
@@ -513,6 +532,62 @@ class ProductoController extends Controller
                     ]);
                 }
             }
+
+            // ✨ NUEVO: Procesar array de almacenes para crear StockProducto records
+            if (!empty($data['almacenes']) && is_array($data['almacenes'])) {
+                // ✨ NUEVO: Verificar permiso para crear stocks con cantidades
+                $canEditQuantities = auth()->user()?->hasPermissionTo('stock-productos.editar-cantidad');
+
+                if (!$canEditQuantities) {
+                    Log::warning('❌ Usuario intenta crear producto con StockProducto sin permisos:', [
+                        'user_id' => auth()->id(),
+                        'producto_id' => $producto->id,
+                        'almacenes_count' => count($data['almacenes']),
+                    ]);
+                } else {
+                    foreach ($data['almacenes'] as $almacenData) {
+                        // Validar datos requeridos
+                        if (empty($almacenData['almacen_id'])) {
+                            continue; // Saltar almacenes sin ID
+                        }
+
+                        $almacenId = (int) $almacenData['almacen_id'];
+                        $sectorId = !empty($almacenData['sector_id']) ? (int) $almacenData['sector_id'] : null;
+
+                        // Convertir stock a números
+                        $cantidadTotal = (int) ($almacenData['stock'] ?? 0);
+                        $cantidadDisponible = (int) ($almacenData['cantidad_disponible'] ?? $cantidadTotal);
+                        $cantidadReservada = (int) ($almacenData['cantidad_reservada'] ?? 0);
+
+                        // Validar que cantidad_total >= (disponible + reservada)
+                        $suma = $cantidadDisponible + $cantidadReservada;
+                        if ($suma > $cantidadTotal) {
+                            Log::warning('StockProducto: Invariante roto en creación', [
+                                'producto_id' => $producto->id,
+                                'almacen_id' => $almacenId,
+                                'cantidad_total' => $cantidadTotal,
+                                'cantidad_disponible' => $cantidadDisponible,
+                                'cantidad_reservada' => $cantidadReservada,
+                            ]);
+                            // Ajustar disponible para cumplir invariante
+                            $cantidadDisponible = $cantidadTotal - $cantidadReservada;
+                        }
+
+                        // Crear StockProducto
+                        StockProducto::create([
+                            'producto_id' => $producto->id,
+                            'almacen_id' => $almacenId,
+                            'sector_id' => $sectorId, // El boot del modelo asignará genérico si es null
+                            'cantidad' => $cantidadTotal,
+                            'cantidad_disponible' => $cantidadDisponible,
+                            'cantidad_reservada' => $cantidadReservada,
+                            'lote' => $almacenData['lote'] ?? null,
+                            'fecha_vencimiento' => !empty($almacenData['fecha_vencimiento']) ? $almacenData['fecha_vencimiento'] : null,
+                            'fecha_actualizacion' => now(),
+                        ]);
+                    }
+                }
+            }
         });
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
@@ -639,21 +714,32 @@ class ProductoController extends Controller
             'galeria'           => $galeria,
             'precios'           => $precios,
             'codigos'           => $codigos, // Array de códigos de barra con metadata
-            // mapear stock por almacén para el frontend
-            'stock_almacenes'   => StockProducto::where('producto_id', $producto->id)
-                ->with(['almacen:id,nombre', 'sector:id,nombre'])
-                ->get(['almacen_id', 'sector_id', 'cantidad as stock', 'cantidad_disponible', 'cantidad_reservada', 'lote', 'fecha_vencimiento'])
+            // mapear stock por almacén para el frontend (con información enriquecida del sector)
+            'stock_almacenes'   => StockProducto::withTrashed() // ✨ NUEVO: Incluir soft-deleted para obtener todos los registros
+                ->where('producto_id', $producto->id)
+                ->with([
+                    'almacen:id,nombre,ubicacion_fisica',
+                    'sector:id,nombre,descripcion,es_generico,stock_minimo,stock_maximo'
+                ])
+                ->get(['id', 'producto_id', 'almacen_id', 'sector_id', 'cantidad', 'cantidad_disponible', 'cantidad_reservada', 'lote', 'fecha_vencimiento', 'deleted_at'])
                 ->map(function ($s) {
                     return [
-                        'almacen_id' => $s->almacen_id,
+                        'id' => (int) $s->id, // ✨ ASEGURADO: ID numérico de StockProducto
+                        'almacen_id' => (int) $s->almacen_id,
                         'almacen_nombre' => $s->almacen?->nombre,
-                        'sector_id' => $s->sector_id,
+                        'almacen_ubicacion_fisica' => $s->almacen?->ubicacion_fisica,
+                        'sector_id' => (int) $s->sector_id,
                         'sector_nombre' => $s->sector?->nombre,
-                        'stock' => $s->stock,
-                        'cantidad_disponible' => $s->cantidad_disponible,
-                        'cantidad_reservada' => $s->cantidad_reservada,
+                        'sector_descripcion' => $s->sector?->descripcion,
+                        'sector_es_generico' => (bool) ($s->sector?->es_generico ?? false),
+                        'sector_stock_minimo' => $s->sector?->stock_minimo,
+                        'sector_stock_maximo' => $s->sector?->stock_maximo,
+                        'cantidad' => (float) $s->cantidad, // ✨ CORREGIDO: usar 'cantidad' del modelo
+                        'cantidad_disponible' => (float) $s->cantidad_disponible,
+                        'cantidad_reservada' => (float) $s->cantidad_reservada,
                         'lote' => $s->lote,
-                        'fecha_vencimiento' => $s->fecha_vencimiento ? $s->fecha_vencimiento->format('Y-m-d') : null
+                        'fecha_vencimiento' => $s->fecha_vencimiento ? $s->fecha_vencimiento->format('Y-m-d') : null,
+                        'is_deleted' => (bool) $s->deleted_at // ✨ NUEVO: Indicar si está soft-deleted
                     ];
                 })->toArray(),
             'historial_precios' => $historialPrecios,
@@ -689,18 +775,37 @@ class ProductoController extends Controller
 
         $empresa = auth()->user()?->empresa;
 
-        // ✨ Cargar todos los sectores organizados por almacén para el frontend
-        $almacenes = Almacen::orderBy('nombre')->get(['id', 'nombre']);
-        $sectoresPorAlmacen = [];
+        // ✨ Cargar almacenes activos con sus sectores (eager loading eficiente)
+        $almacenes = Almacen::where('activo', true)
+            ->with(['sectores' => function ($q) {
+                $q->orderBy('es_generico', 'desc')
+                  ->orderBy('nombre', 'asc');
+            }])
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'ubicacion_fisica']);
 
+        // Transformar sectores a formato esperado por frontend con información enriquecida
+        $sectoresPorAlmacen = [];
         foreach ($almacenes as $almacen) {
-            $sectoresPorAlmacen[$almacen->id] = Sector::where('almacen_id', $almacen->id)
-                ->orderBy('es_generico', 'desc')
-                ->orderBy('nombre', 'asc')
-                ->get(['id', 'nombre', 'es_generico'])
-                ->map(fn($s) => ['value' => $s->id, 'label' => $s->nombre])
+            $sectoresPorAlmacen[$almacen->id] = $almacen->sectores
+                ->map(fn($s) => [
+                    'value' => $s->id,
+                    'label' => $s->nombre,
+                    'descripcion' => $s->descripcion,
+                    'es_generico' => (bool) $s->es_generico,
+                    'stock_minimo' => $s->stock_minimo,
+                    'stock_maximo' => $s->stock_maximo,
+                    'badge' => $s->es_generico ? '📦 General' : null,
+                ])
                 ->toArray();
         }
+
+        // Simplificar almacenes para select (solo id y nombre)
+        $almacenesSelect = $almacenes->map(fn($a) => [
+            'id' => $a->id,
+            'nombre' => $a->nombre,
+            'ubicacion_fisica' => $a->ubicacion_fisica,
+        ]);
 
         return Inertia::render('productos/form', [
             'producto'                      => $payload,
@@ -710,10 +815,10 @@ class ProductoController extends Controller
             'unidades'                      => UnidadMedida::orderBy('nombre')->get(['id', 'codigo', 'nombre']),
             'tipos_precio'                  => TipoPrecio::getOptions(),
             'configuraciones_ganancias'     => \App\Models\ConfiguracionGlobal::configuracionesGanancias(),
-            'almacenes'                     => $almacenes,
-            'sectores'                      => $sectoresPorAlmacen, // ✨ NUEVO: Sectores pre-cargados por almacén
-            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false, // ✨ NUEVO
-            'es_farmacia'                   => $empresa?->es_farmacia ?? false, // ✨ NUEVO
+            'almacenes'                     => $almacenesSelect, // ✨ MEJORADO: Solo almacenes activos
+            'sectores'                      => $sectoresPorAlmacen, // ✨ MEJORADO: Con descripción, stock limits e indicador de genérico
+            'permite_productos_fraccionados' => $empresa?->permite_productos_fraccionados ?? false,
+            'es_farmacia'                   => $empresa?->es_farmacia ?? false,
         ]);
     }
 
@@ -933,6 +1038,161 @@ class ProductoController extends Controller
                         'es_principal' => false,
                         'orden'        => $currentMaxOrden + 1 + $idx,
                     ]);
+                }
+            }
+
+            // ✨ NUEVO: Procesar array de almacenes para actualizar/crear StockProducto records
+            if (!empty($data['almacenes']) && is_array($data['almacenes'])) {
+                Log::info('📦 UPDATE PRODUCTO - Almacenes recibidos del frontend:', [
+                    'producto_id' => $producto->id,
+                    'almacenes_count' => count($data['almacenes']),
+                ]);
+
+                foreach ($data['almacenes'] as $idx => $almacenRaw) {
+                    Log::info("🔍 Almacén [$idx] datos crudos del request:", [
+                        'keys' => array_keys((array) $almacenRaw),
+                        'full' => $almacenRaw,
+                    ]);
+                }
+
+                // Obtener IDs de almacenes en el nuevo array para identificar cuáles se eliminaron
+                $nuevosAlmacenIds = array_filter(array_map(function ($a) {
+                    return !empty($a['almacen_id']) ? (int) $a['almacen_id'] : null;
+                }, $data['almacenes']));
+
+                // Soft delete almacenes que no están en el nuevo array
+                StockProducto::where('producto_id', $producto->id)
+                    ->whereNotIn('almacen_id', $nuevosAlmacenIds)
+                    ->delete(); // SoftDelete
+
+                // Crear o actualizar StockProducto para cada almacén en el array
+                foreach ($data['almacenes'] as $almacenData) {
+                    if (empty($almacenData['almacen_id'])) {
+                        continue; // Saltar almacenes sin ID
+                    }
+
+                    $almacenId = (int) $almacenData['almacen_id'];
+                    $sectorId = !empty($almacenData['sector_id']) ? (int) $almacenData['sector_id'] : null;
+
+                    // Convertir stock a números
+                    $cantidadTotal = (int) ($almacenData['stock'] ?? 0);
+                    $cantidadDisponible = (int) ($almacenData['cantidad_disponible'] ?? $cantidadTotal);
+                    $cantidadReservada = (int) ($almacenData['cantidad_reservada'] ?? 0);
+
+                    // Validar que cantidad_total >= (disponible + reservada)
+                    $suma = $cantidadDisponible + $cantidadReservada;
+                    if ($suma > $cantidadTotal) {
+                        Log::warning('StockProducto: Invariante roto en actualización', [
+                            'producto_id' => $producto->id,
+                            'almacen_id' => $almacenId,
+                            'cantidad_total' => $cantidadTotal,
+                            'cantidad_disponible' => $cantidadDisponible,
+                            'cantidad_reservada' => $cantidadReservada,
+                        ]);
+                        // Ajustar disponible para cumplir invariante
+                        $cantidadDisponible = $cantidadTotal - $cantidadReservada;
+                    }
+
+                    // Buscar StockProducto existente (incluyendo soft-deleted)
+                    // ✨ IMPORTANTE: Si viene con ID del frontend, usarlo directamente. Si no, buscar por la combinación
+                    $lote = $almacenData['lote'] ?? '';
+                    $stockIdFromFrontend = $almacenData['id'] ?? null; // ✨ NUEVO: Obtener ID del frontend si existe
+
+                    Log::info('🔍 Buscando StockProducto:', [
+                        'stock_id_from_frontend' => $stockIdFromFrontend,
+                        'producto_id' => $producto->id,
+                        'almacen_id' => $almacenId,
+                        'sector_id' => $sectorId,
+                        'lote' => $lote,
+                    ]);
+
+                    // Si viene el ID del frontend, usarlo para búsqueda directa (más eficiente y seguro)
+                    if ($stockIdFromFrontend) {
+                        $stockExistente = StockProducto::withTrashed()->find($stockIdFromFrontend);
+                        Log::info('✅ Búsqueda por ID:', [
+                            'stock_id' => $stockIdFromFrontend,
+                            'encontrado' => $stockExistente ? 'SÍ' : 'NO',
+                            'deleted_at' => $stockExistente?->deleted_at,
+                        ]);
+                    } else {
+                        // Si no viene ID, buscar por la combinación completa de constraint
+                        $stockExistente = StockProducto::withTrashed()
+                            ->where('producto_id', $producto->id)
+                            ->where('almacen_id', $almacenId)
+                            ->where('sector_id', $sectorId)
+                            ->where('lote', $lote)
+                            ->first();
+                        Log::info('✅ Búsqueda por combinación:', [
+                            'encontrado' => $stockExistente ? 'SÍ' : 'NO',
+                            'coincidencias' => StockProducto::withTrashed()
+                                ->where('producto_id', $producto->id)
+                                ->where('almacen_id', $almacenId)
+                                ->where('sector_id', $sectorId)
+                                ->where('lote', $lote)
+                                ->count(),
+                        ]);
+                    }
+
+                    if ($stockExistente) {
+                        Log::info('✅ StockProducto encontrado - ACTUALIZANDO:', [
+                            'stock_id' => $stockExistente->id,
+                            'anterior_cantidad' => $stockExistente->cantidad,
+                            'nueva_cantidad' => $cantidadTotal,
+                        ]);
+                        // Restaurar si estaba soft-deleted, luego actualizar
+                        $stockExistente->restore();
+
+                        // ✨ NUEVO: Verificar permiso para editar cantidades
+                        $canEditQuantities = auth()->user()?->hasPermissionTo('stock-productos.editar-cantidad');
+
+                        $updateData = [
+                            'sector_id' => $sectorId,
+                            'lote' => $almacenData['lote'] ?? $stockExistente->lote,
+                            'fecha_vencimiento' => !empty($almacenData['fecha_vencimiento']) ? $almacenData['fecha_vencimiento'] : $stockExistente->fecha_vencimiento,
+                            'fecha_actualizacion' => now(),
+                        ];
+
+                        // Solo actualizar cantidades si el usuario tiene permisos
+                        if ($canEditQuantities) {
+                            $updateData['cantidad'] = $cantidadTotal;
+                            $updateData['cantidad_disponible'] = $cantidadDisponible;
+                            $updateData['cantidad_reservada'] = $cantidadReservada;
+                        }
+
+                        $stockExistente->update($updateData);
+                    } else {
+                        Log::info('➕ StockProducto NO encontrado - CREANDO:', [
+                            'producto_id' => $producto->id,
+                            'almacen_id' => $almacenId,
+                            'sector_id' => $sectorId,
+                            'lote' => $lote,
+                        ]);
+
+                        // ✨ NUEVO: Solo crear si el usuario tiene permiso para editar cantidades
+                        $canEditQuantities = auth()->user()?->hasPermissionTo('stock-productos.editar-cantidad');
+
+                        if (!$canEditQuantities) {
+                            Log::warning('❌ Usuario intenta crear StockProducto sin permisos:', [
+                                'user_id' => auth()->id(),
+                                'producto_id' => $producto->id,
+                                'almacen_id' => $almacenId,
+                            ]);
+                            continue; // Saltar si no tiene permiso
+                        }
+
+                        // Crear nuevo StockProducto
+                        StockProducto::create([
+                            'producto_id' => $producto->id,
+                            'almacen_id' => $almacenId,
+                            'sector_id' => $sectorId,
+                            'cantidad' => $cantidadTotal,
+                            'cantidad_disponible' => $cantidadDisponible,
+                            'cantidad_reservada' => $cantidadReservada,
+                            'lote' => $almacenData['lote'] ?? null,
+                            'fecha_vencimiento' => !empty($almacenData['fecha_vencimiento']) ? $almacenData['fecha_vencimiento'] : null,
+                            'fecha_actualizacion' => now(),
+                        ]);
+                    }
                 }
             }
         });

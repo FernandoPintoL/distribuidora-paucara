@@ -56,6 +56,22 @@ class Almacen extends Model
     }
 
     /**
+     * Contar total de sectores en el almacén
+     */
+    public function getCountSectoresAttribute(): int
+    {
+        return $this->sectores()->count();
+    }
+
+    /**
+     * Contar sectores personalizados (excluyendo genérico)
+     */
+    public function countSectoresPersonalizados(): int
+    {
+        return $this->sectores()->where('es_generico', false)->count();
+    }
+
+    /**
      * Boot del modelo - Crear sector genérico automáticamente
      */
     protected static function booted()

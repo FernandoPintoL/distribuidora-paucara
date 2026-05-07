@@ -278,10 +278,14 @@ class ModuloSidebarSeeder extends Seeder
                     'titulo'      => 'Almacenes',
                     'ruta'        => '/almacenes',
                     'icono'       => 'Building2',
-                    'descripcion' => 'Gestión de almacenes',
+                    'descripcion' => 'Gestión de almacenes y sectores',
                     'orden'       => 12,
                     'categoria'   => 'Logística',
-                    'permisos'    => ['almacenes.manage'],
+                    'permisos'    => ['almacenes.manage', 'sectores.manage'],
+                ],
+                'submenu' => [
+                    ['titulo' => 'Almacenes', 'ruta' => '/almacenes', 'icono' => 'Building2', 'orden' => 1, 'permisos' => ['almacenes.manage']],
+                    ['titulo' => 'Sectores', 'ruta' => '/sectores', 'icono' => 'FolderOpen', 'orden' => 2, 'permisos' => ['sectores.manage']],
                 ],
             ],
             'proveedores'     => [

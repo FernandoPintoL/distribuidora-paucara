@@ -146,6 +146,17 @@ class UpdateProductoRequest extends FormRequest
             // Visibilidad en app
             'visible_app'              => ['nullable', 'boolean'], // ✨ NUEVO
 
+            // ✨ NUEVO: Almacenes y stock (TODOS OPCIONALES)
+            'almacenes'                => ['nullable', 'array'],
+            'almacenes.*.id'           => ['nullable', 'integer', 'exists:stock_productos,id'], // ✨ NUEVO: ID del StockProducto para actualizar
+            'almacenes.*.almacen_id'   => ['required_with:almacenes', 'integer', 'exists:almacenes,id'],
+            'almacenes.*.sector_id'    => ['nullable', 'integer', 'exists:sectores,id'],
+            'almacenes.*.stock'        => ['nullable', 'numeric', 'min:0'],
+            'almacenes.*.cantidad_disponible' => ['nullable', 'numeric', 'min:0'],
+            'almacenes.*.cantidad_reservada' => ['nullable', 'numeric', 'min:0'],
+            'almacenes.*.lote'         => ['nullable', 'string', 'max:255'],
+            'almacenes.*.fecha_vencimiento' => ['nullable', 'date'],
+
             'activo'                   => ['nullable', 'boolean'],
         ];
     }
@@ -238,6 +249,27 @@ class UpdateProductoRequest extends FormRequest
 
             'visible_app.boolean'                      => 'La visibilidad en app debe ser verdadero o falso.',
 
+            'almacenes.array'                          => 'Los almacenes deben ser un arreglo.',
+            'almacenes.*.id.integer'                   => 'El ID del stock debe ser un número entero.',
+            'almacenes.*.id.exists'                    => 'El registro de stock seleccionado no existe.',
+            'almacenes.*.almacen_id.required_with'     => 'El ID del almacén es obligatorio en cada entrada.',
+            'almacenes.*.almacen_id.integer'           => 'El ID del almacén debe ser un número entero.',
+            'almacenes.*.almacen_id.exists'            => 'El almacén seleccionado no existe.',
+            'almacenes.*.sector_id.integer'            => 'El ID del sector debe ser un número entero.',
+            'almacenes.*.sector_id.exists'             => 'El sector seleccionado no existe.',
+            'almacenes.*.stock.required_with'          => 'La cantidad total de stock es obligatoria.',
+            'almacenes.*.stock.integer'                => 'La cantidad total debe ser un número entero.',
+            'almacenes.*.stock.min'                    => 'La cantidad total no puede ser negativa.',
+            'almacenes.*.cantidad_disponible.required_with' => 'La cantidad disponible es obligatoria.',
+            'almacenes.*.cantidad_disponible.integer'  => 'La cantidad disponible debe ser un número entero.',
+            'almacenes.*.cantidad_disponible.min'      => 'La cantidad disponible no puede ser negativa.',
+            'almacenes.*.cantidad_reservada.required_with' => 'La cantidad reservada es obligatoria.',
+            'almacenes.*.cantidad_reservada.integer'   => 'La cantidad reservada debe ser un número entero.',
+            'almacenes.*.cantidad_reservada.min'       => 'La cantidad reservada no puede ser negativa.',
+            'almacenes.*.lote.string'                  => 'El lote debe ser texto.',
+            'almacenes.*.lote.max'                     => 'El lote no puede exceder 255 caracteres.',
+            'almacenes.*.fecha_vencimiento.date'       => 'La fecha de vencimiento debe ser una fecha válida.',
+
             'activo.boolean'                           => 'El estado activo debe ser verdadero o falso.',
         ];
     }
@@ -287,6 +319,16 @@ class UpdateProductoRequest extends FormRequest
 
             'visible_app'       => 'visible en app',
 
+            'almacenes'         => 'almacenes',
+            'almacenes.*.id'    => 'ID del stock',
+            'almacenes.*.almacen_id' => 'ID del almacén',
+            'almacenes.*.sector_id' => 'ID del sector',
+            'almacenes.*.stock' => 'cantidad total de stock',
+            'almacenes.*.cantidad_disponible' => 'cantidad disponible',
+            'almacenes.*.cantidad_reservada' => 'cantidad reservada',
+            'almacenes.*.lote' => 'lote',
+            'almacenes.*.fecha_vencimiento' => 'fecha de vencimiento',
+
             'activo'            => 'estado activo',
         ];
     }
@@ -304,6 +346,7 @@ class UpdateProductoRequest extends FormRequest
             $this->validarMarcaActiva($validator);
             $this->validarCategoriaActiva($validator);
             $this->validarConversiones($validator);
+            $this->validarAlmacenes($validator); // ✨ NUEVO
         });
     }
 
@@ -502,6 +545,36 @@ class UpdateProductoRequest extends FormRequest
             $validator->errors()->add('conversiones',
                 'Solo puede existir una conversión principal.'
             );
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Validar el array de almacenes
+     * Valida que cantidad_total >= (cantidad_disponible + cantidad_reservada)
+     */
+    private function validarAlmacenes(Validator $validator): void
+    {
+        $almacenes = $this->input('almacenes', []);
+
+        if (empty($almacenes) || !is_array($almacenes)) {
+            return;
+        }
+
+        foreach ($almacenes as $index => $almacen) {
+            if (!is_array($almacen)) {
+                continue;
+            }
+
+            $stock = (int) ($almacen['stock'] ?? 0);
+            $disponible = (int) ($almacen['cantidad_disponible'] ?? 0);
+            $reservada = (int) ($almacen['cantidad_reservada'] ?? 0);
+            $suma = $disponible + $reservada;
+
+            if ($suma > $stock) {
+                $validator->errors()->add("almacenes.{$index}.stock",
+                    "La cantidad total ({$stock}) debe ser mayor o igual a disponible ({$disponible}) + reservada ({$reservada}) = {$suma}."
+                );
+            }
         }
     }
 

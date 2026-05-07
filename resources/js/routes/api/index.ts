@@ -1,6 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 import proformas from './proformas'
+import tiposPago from './tipos-pago'
 import modulosSidebar from './modulos-sidebar'
+import sectores from './sectores'
 import combos from './combos'
 import productos from './productos'
 import app from './app'
@@ -179,7 +181,7 @@ dashboardRedirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
     
     dashboardRedirect.form = dashboardRedirectForm
 /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
 export const preventistas = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -193,7 +195,7 @@ preventistas.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
 preventistas.url = (options?: RouteQueryOptions) => {
@@ -201,7 +203,7 @@ preventistas.url = (options?: RouteQueryOptions) => {
 }
 
 /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
 preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -209,7 +211,7 @@ preventistas.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     method: 'get',
 })
 /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
 preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -218,7 +220,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
     /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
     const preventistasForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -227,7 +229,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     })
 
             /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
         preventistasForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -235,7 +237,7 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             method: 'get',
         })
             /**
- * @see routes/api.php:344
+ * @see routes/api.php:357
  * @route '/api/preventistas'
  */
         preventistasForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -251,8 +253,10 @@ preventistas.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     preventistas.form = preventistasForm
 const api = {
     proformas,
+tiposPago,
 modulosSidebar,
 dashboardRedirect,
+sectores,
 combos,
 productos,
 app,

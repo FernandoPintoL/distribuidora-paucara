@@ -39,6 +39,8 @@ class SectorController extends Controller
             'almacen_id' => ['required', 'integer', 'exists:almacenes,id'],
             'nombre' => ['required', 'string', 'max:100'],
             'descripcion' => ['nullable', 'string', 'max:500'],
+            'stock_minimo' => ['sometimes', 'integer', 'min:0'],
+            'stock_maximo' => ['sometimes', 'integer', 'min:0', 'gte:stock_minimo'],
         ];
     }
 

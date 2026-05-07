@@ -165,10 +165,10 @@ export default function PermisosIndex() {
     <AppLayout>
       <Head title="Centro de Permisos y Roles" />
 
-      <div className="py-12">
+      <div className="py-2">
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-700 dark:to-blue-700 text-white rounded-lg p-8 mb-8 shadow-lg">
+          <div className="bg-white dark:bg-slate-800 text-white rounded-lg p-4 mb-1 shadow-lg">
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-4xl font-bold mb-2">Centro de Permisos</h1>
@@ -180,7 +180,7 @@ export default function PermisosIndex() {
           </div>
 
           {/* Tabs */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-1 border border-gray-200 dark:border-slate-700">
             <div className="flex border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
               <button
                 onClick={() => handleTabChange('usuarios')}

@@ -1,4 +1,4 @@
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import Step1DatosProducto from './steps/Step1DatosProducto';
 import Step2PreciosCodigos from './steps/Step2PreciosCodigos';
 import Step3Almacenes from './steps/Step3Almacenes'; // ✨ NUEVO: Almacenes y sectores
@@ -69,12 +69,27 @@ export default function ProductoForm({
   almacenes = [], // ✨ NUEVO - Almacenes disponibles
   sectores = {} // ✨ NUEVO - Sectores pre-cargados por almacén
 }: ProductoFormPagePropsExtended) {
-  // 🔍 LOGS PARA DEBUG
-  console.log('🎯 ProductoForm - Producto recibido del backend:', producto);
+  // 🔐 Obtener permisos del usuario desde Inertia
+  const { auth } = usePage().props as any;
+  const userPermissions = auth?.user?.permissions || [];
+  const canEditStockQuantities = userPermissions.some((p: any) => p.name === 'stock-productos.editar-cantidad');
+
+  // 🔍 LOGS PARA DEBUG - Información completa del backend
+  console.log('='.repeat(60));
+  console.log('🎯 PRODUCTO FORM - DATOS DEL BACKEND');
+  console.log('='.repeat(60));
+  console.log('📦 Almacenes recibidos:', almacenes);
+  console.log('🏢 Sectores por almacén recibidos:', sectores);
+  console.log('💰 Tipos de precio:', tipos_precio);
+  console.log('🏭 Producto (si es edición):', producto);
+  console.log('📍 Almacenes/Sectores asignados al producto (stock_almacenes):', producto?.stock_almacenes);
   console.log('👤 Proveedor en producto:', producto?.proveedor);
   console.log('🆔 proveedor_id en producto:', producto?.proveedor_id);
-  console.log('💰 tipos_precio recibidos del backend:', tipos_precio);
-  // Nota: Los proveedores se buscan por API, no se precarga aquí
+  console.log('✅ Permite productos fraccionados:', permite_productos_fraccionados);
+  console.log('⚕️ Es farmacia:', es_farmacia);
+  console.log('🔐 Permisos del usuario:', userPermissions);
+  console.log('✏️ Puede editar cantidades de stock:', canEditStockQuantities);
+  console.log('='.repeat(60));
 
   // Normalizadores para compatibilidad: el backend puede enviar {id,nombre,...} o {value,label,...}
   const isEditing = !!producto?.id;
@@ -281,11 +296,35 @@ export default function ProductoForm({
     // ✨ NUEVO: Almacenes y sectores
     if (data.almacenes && data.almacenes.length > 0) {
       (data.almacenes as any[]).forEach((almacen, i) => {
+        console.log(`🔍 ALMACÉN ${i} - ANTES DE AGREGAR AL FORMDATA:`, {
+          id: almacen.id,
+          almacen_id: almacen.almacen_id,
+          sector_id: almacen.sector_id,
+          stock: almacen.stock,
+          cantidad_disponible: almacen.cantidad_disponible,
+          cantidad_reservada: almacen.cantidad_reservada,
+        });
+
+        // ✨ NUEVO: Incluir ID si existe (para identificar si es actualizar)
+        if (almacen.id) {
+          console.log(`✅ Agregando id: ${almacen.id} a almacenes[${i}][id]`);
+          formData.append(`almacenes[${i}][id]`, String(almacen.id));
+        } else {
+          console.log(`⚠️ SIN ID en almacén ${i}`);
+        }
+
         formData.append(`almacenes[${i}][almacen_id]`, String(almacen.almacen_id));
         if (almacen.sector_id) {
           formData.append(`almacenes[${i}][sector_id]`, String(almacen.sector_id));
         }
         formData.append(`almacenes[${i}][stock]`, String(almacen.stock ?? 0));
+        // ✨ NUEVO: Incluir cantidad_disponible y cantidad_reservada
+        if (almacen.cantidad_disponible !== undefined) {
+          formData.append(`almacenes[${i}][cantidad_disponible]`, String(almacen.cantidad_disponible ?? 0));
+        }
+        if (almacen.cantidad_reservada !== undefined) {
+          formData.append(`almacenes[${i}][cantidad_reservada]`, String(almacen.cantidad_reservada ?? 0));
+        }
         if (almacen.lote) {
           formData.append(`almacenes[${i}][lote]`, almacen.lote);
         }
@@ -294,7 +333,7 @@ export default function ProductoForm({
         }
       });
 
-      console.log('✅ Almacenes y sectores enviados:', data.almacenes);
+      console.log('✅ Almacenes y sectores - FormData construido:', data.almacenes);
     }
 
     // Conversiones de unidad (si es fraccionado)
@@ -448,6 +487,24 @@ export default function ProductoForm({
   const setAlmacen = (i: number, key: string, value: any) => {
     const nuevosAlmacenes = [...(data.almacenes || [])];
     nuevosAlmacenes[i] = { ...nuevosAlmacenes[i], [key]: value };
+    setData('almacenes', nuevosAlmacenes);
+  };
+
+  // ✨ NUEVO: Sincronizar sector en todos los cards del mismo almacén
+  const setSectorConSincronizacion = (i: number, sectorId: number | undefined) => {
+    const nuevosAlmacenes = [...(data.almacenes || [])];
+    const almacenIdActual = nuevosAlmacenes[i]?.almacen_id;
+
+    console.log(`🔄 Sincronizando sector ${sectorId} en almacén ${almacenIdActual}, índice ${i}`);
+
+    // ✨ Sincronizar a TODOS los cards con el mismo almacen_id
+    nuevosAlmacenes.forEach((almacen, index) => {
+      if (almacen.almacen_id === almacenIdActual) {
+        nuevosAlmacenes[index] = { ...almacen, sector_id: sectorId };
+        console.log(`✅ Sector actualizado en índice ${index}`);
+      }
+    });
+
     setData('almacenes', nuevosAlmacenes);
   };
 
@@ -651,6 +708,8 @@ export default function ProductoForm({
                     addAlmacen={addAlmacen}
                     setAlmacen={setAlmacen}
                     removeAlmacen={removeAlmacen}
+                    setSectorConSincronizacion={setSectorConSincronizacion}
+                    canEditStockQuantities={canEditStockQuantities} // ✨ NUEVO: Pasar permiso para editar cantidades
                   />
                 </TabsContent>
 

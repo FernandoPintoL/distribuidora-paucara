@@ -8,6 +8,8 @@ export interface Sector extends BaseEntity {
   nombre: string;
   es_generico: boolean;
   descripcion?: string | null;
+  stock_minimo?: number;
+  stock_maximo?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -18,6 +20,8 @@ export interface SectorFormData extends BaseFormData {
   nombre: string;
   es_generico?: boolean;
   descripcion?: string | null;
+  stock_minimo?: number;
+  stock_maximo?: number;
 }
 
 // Para mostrar nombre formateado en selects

@@ -27,6 +27,7 @@ export interface Imagen {
 }
 
 export interface StockAlmacen {
+  id?: number; // ✨ NUEVO: ID del registro StockProducto (para identificar si es crear o actualizar)
   almacen_id: number | string;
   almacen_nombre?: string;
   sector_id?: number | string | null;

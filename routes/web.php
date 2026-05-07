@@ -60,7 +60,7 @@ Route::middleware(['auth', 'verified', 'platform'])->group(function () {
     Route::resource('categorias', CategoriaController::class)->middleware('permission:categorias.manage');
     Route::resource('marcas', \App\Http\Controllers\MarcaController::class)->middleware('permission:marcas.manage');
     Route::resource('almacenes', \App\Http\Controllers\AlmacenController::class)->middleware('permission:almacenes.manage');
-    // ⚠️ REMOVIDO: Ruta de sectores (duplicada en api.php) - usar API en su lugar
+    Route::resource('sectores', \App\Http\Controllers\SectorController::class)->middleware('permission:sectores.manage');
     Route::resource('localidades', \App\Http\Controllers\LocalidadController::class)->middleware('permission:localidades.manage');
     Route::get('localidades/api/active', [\App\Http\Controllers\LocalidadController::class, 'getActiveLocalidades'])->name('localidades.api.active');
 

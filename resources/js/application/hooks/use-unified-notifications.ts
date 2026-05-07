@@ -391,7 +391,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
 
     // Cleanup
     return () => {
-      console.log('🧹 Limpiando listeners de notificaciones...');
+      // console.log('🧹 Limpiando listeners de notificaciones...');
       listenersConfiguredRef.current = false;
       listenersRef.current.forEach(cleanup => cleanup());
       listenersRef.current.clear();
@@ -427,7 +427,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
         const data = await response.json();
 
         if (!data.cuentas || data.cuentas.length === 0) {
-          console.log('✅ No hay cuentas vencidas');
+          // console.log('✅ No hay cuentas vencidas');
           return;
         }
 
@@ -451,7 +451,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
             notificationsRef.current.set(notification.id, notification);
             setNotifications(Array.from(notificationsRef.current.values()));
 
-            console.log(`📬 Notificación de cuenta vencida agregada: ${notification.id}`);
+            // console.log(`📬 Notificación de cuenta vencida agregada: ${notification.id}`);
 
             // Callback si está configurado
             if (onNotification) {
@@ -460,7 +460,7 @@ export const useUnifiedNotifications = (options: UseUnifiedNotificationsOptions 
           }
         });
 
-        console.log(`✅ ${data.cuentas.length} notificaciones de cuentas vencidas cargadas`);
+        // console.log(`✅ ${data.cuentas.length} notificaciones de cuentas vencidas cargadas`);
       } catch (error) {
         console.error('❌ Error fetching alertas de cuentas vencidas:', error);
         if (onError) {

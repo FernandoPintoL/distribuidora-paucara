@@ -18,6 +18,8 @@ class Sector extends Model
         'nombre',
         'es_generico',
         'descripcion',
+        'stock_minimo',
+        'stock_maximo',
     ];
 
     protected function casts(): array

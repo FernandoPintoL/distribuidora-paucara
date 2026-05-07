@@ -312,6 +312,7 @@ trait SimpleCrudController
             'productos' => 'producto',
             'ventas' => 'venta',
             'compras' => 'compra',
+            'sectores' => 'sector',
         ];
 
         // Si está en el mapa, usar el singular correspondiente

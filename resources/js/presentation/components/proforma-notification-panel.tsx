@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/presentation/components/ui/dropdown-menu';
-import { Bell, Trash2, Volume2, VolumeX, BellRing, BellOff } from 'lucide-react';
+import { Bell, Trash2, BellRing } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEffect } from 'react';

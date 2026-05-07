@@ -25,14 +25,16 @@ export const sectoresConfig: ModuleConfig<Sector, SectorFormData> = {
         return createElement('span', { className: 'font-medium text-blue-600 dark:text-blue-400' }, almacenNombre);
       }
     },
-    { key: 'nombre', label: 'Nombre', type: 'text' },
-    {
+    { key: 'nombre', label: 'Sigla', type: 'text' },
+    /* {
       key: 'es_generico',
       label: 'Tipo',
       type: 'boolean',
       render: (value: boolean) => value ? '✅ General' : '📁 Clasificado'
-    },
-    { key: 'descripcion', label: 'Descripción', type: 'text' },
+    }, */
+    { key: 'stock_minimo', label: 'Stock Mín', type: 'number' },
+    { key: 'stock_maximo', label: 'Stock Máx', type: 'number' },
+    { key: 'descripcion', label: 'Nombre', type: 'text' },
   ],
 
   // Form configuration
@@ -48,18 +50,32 @@ export const sectoresConfig: ModuleConfig<Sector, SectorFormData> = {
     },
     {
       key: 'nombre',
-      label: 'Nombre del Sector',
+      label: 'Sigla',
       type: 'text',
       required: true,
-      placeholder: 'Ej: Bebidas, Refrigeración, Lácteos',
+      placeholder: 'Ej: BEB, REF, LAC',
       validation: { maxLength: 100 }
     },
     {
       key: 'descripcion',
-      label: 'Descripción',
-      type: 'textarea',
-      placeholder: 'Descripción detallada del sector',
+      label: 'Nombre del Sector',
+      type: 'text',
+      placeholder: 'Ej: Bebidas, Refrigeración, Lácteos',
       validation: { maxLength: 500 }
+    },
+    {
+      key: 'stock_minimo',
+      label: 'Stock Mínimo del Sector',
+      type: 'number',
+      placeholder: 'Cantidad mínima permitida',
+      validation: { min: 0 }
+    },
+    {
+      key: 'stock_maximo',
+      label: 'Stock Máximo del Sector',
+      type: 'number',
+      placeholder: 'Capacidad máxima del sector',
+      validation: { min: 0 }
     },
   ],
 

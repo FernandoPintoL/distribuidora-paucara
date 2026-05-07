@@ -45,4 +45,33 @@ class AlmacenController extends Controller
             'activo' => ['boolean'],
         ];
     }
+
+    /**
+     * Override para cargar conteo de sectores en el listado
+     */
+    public function index(\Illuminate\Http\Request $request): \Inertia\Response
+    {
+        $modelClass = $this->getModel();
+        $q = $request->string('q');
+
+        // Construir query con búsqueda opcional y cargar relaciones
+        $items = $modelClass::query()
+            ->withCount('sectores') // ✅ Cargar conteo de sectores
+            ->when($q, function ($query) use ($q, $modelClass) {
+                // Usar searchByName scope si el modelo lo tiene
+                if (method_exists($modelClass, 'searchByName')) {
+                    return $query->searchByName($q);
+                }
+                // Fallback: búsqueda manual
+                return $query->whereRaw('LOWER(nombre) like ?', ['%' . strtolower($q) . '%']);
+            })
+            ->orderBy('id', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return inertia($this->getViewPath() . '/index', [
+            $this->getResourceName() => $items,
+            'filters' => ['q' => $q],
+        ]);
+    }
 }

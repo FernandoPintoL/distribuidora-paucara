@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\BannerPublicitarioController;
 use App\Http\Controllers\Api\EstadoMermaController;
 use App\Http\Controllers\Api\StockDisponiblePdfController;
 use App\Http\Controllers\Api\SectorController;
+use App\Http\Controllers\Api\TipoPagoController;
 use App\Http\Controllers\ReporteCargaPdfController;
 use App\Http\Controllers\ReporteCargoListController;
 use App\Http\Controllers\Api\NotificationController;
@@ -299,20 +300,32 @@ Route::middleware(['auth:sanctum,web', 'platform'])->group(function () {
     ]);
 
     // ==========================================
-    // 🏢 SECTORES DE ALMACÉN
+    // 💳 TIPOS DE PAGO (API CRUD)
+    // ==========================================
+    // Listar tipos de pago: GET /api/tipos-pago
+    // Obtener tipo de pago: GET /api/tipos-pago/{id}
+    // Crear tipo de pago: POST /api/tipos-pago
+    // Actualizar tipo de pago: PUT /api/tipos-pago/{id}
+    // Eliminar tipo de pago: DELETE /api/tipos-pago/{id}
+    // Tipos activos: GET /api/tipos-pago/activos/listar
+    Route::apiResource('tipos-pago', TipoPagoController::class)->names('api.tipos-pago');
+    Route::get('/tipos-pago/activos/listar', [TipoPagoController::class, 'activos'])->name('api.tipos-pago.activos');
+
+    // ==========================================
+    // 🏢 SECTORES DE ALMACÉN (API CRUD)
     // ==========================================
     // Listar sectores por almacén: GET /api/sectores?almacen_id=2
     // Obtener sector: GET /api/sectores/{id}
     // Crear sector: POST /api/sectores
     // Actualizar sector: PUT /api/sectores/{id}
     // Eliminar sector: DELETE /api/sectores/{id}
-    Route::apiResource('sectores', SectorController::class);
+    Route::apiResource('sectores', SectorController::class)->names('api.sectores');
 
     // Obtener sector genérico de un almacén
-    Route::get('/almacenes/{almacenId}/sector-generico', [SectorController::class, 'obtenerGenerico']);
+    Route::get('/almacenes/{almacenId}/sector-generico', [SectorController::class, 'obtenerGenerico'])->name('api.sectores.obtener-generico');
 
     // Obtener sectores de un almacén (para formularios)
-    Route::get('/almacenes/{almacenId}/sectores', [SectorController::class, 'obtenerSectoresPorAlmacen']);
+    Route::get('/almacenes/{almacenId}/sectores', [SectorController::class, 'obtenerSectoresPorAlmacen'])->name('api.sectores.obtener-por-almacen');
 
     // Productos para la app
     Route::get('/app/productos', [ProductoController::class, 'indexApi']);
