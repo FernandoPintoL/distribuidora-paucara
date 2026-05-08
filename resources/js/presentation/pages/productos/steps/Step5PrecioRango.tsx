@@ -3,7 +3,6 @@ import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Checkbox } from '@/presentation/components/ui/checkbox';
 import SearchSelect, { SelectOption } from '@/presentation/components/ui/search-select';
 import { AlertCircle, Plus, Trash2, Edit2 } from 'lucide-react';
 import { PrecioRango, PrecioRangoFormData } from '@/domain/entities/precio-rango';
@@ -179,8 +178,6 @@ export default function Step5PrecioRango({
   };
 
   const handleEdit = (rango: PrecioRango) => {
-    console.log('✏️ Editando rango:', rango);
-    console.log('✏️ tipo_precio_id:', rango.tipo_precio_id);
 
     // Asegurar que tipo_precio_id es un número válido
     const tipoPrecioId = Number(rango.tipo_precio_id) || 0;
@@ -198,13 +195,6 @@ export default function Step5PrecioRango({
     });
 
     setShowForm(true);
-
-    // 🔍 DEBUG: Verificar estado después de setData
-    console.log('✏️ Data después de setEdit:', {
-      tipo_precio_id: tipoPrecioId,
-      cantidad_minima: rango.cantidad_minima,
-      cantidad_maxima: rango.cantidad_maxima,
-    });
   };
 
   const handleDelete = async (id: number) => {
@@ -229,7 +219,7 @@ export default function Step5PrecioRango({
     setErrors({});
   };
 
-  const tipoPrecioSeleccionado = tiposPrecio.find((t) => t.id === data.tipo_precio_id);
+  /* const tipoPrecioSeleccionado = tiposPrecio.find((t) => t.id === data.tipo_precio_id);
   const rango_texto =
     data.cantidad_maxima && data.cantidad_maxima > 0
       ? `${data.cantidad_minima}-${data.cantidad_maxima}`
@@ -238,7 +228,7 @@ export default function Step5PrecioRango({
   // 🔧 Helper para obtener el tipo de precio (soporta ambos formatos: tipoPrecio y tipo_precio)
   const getTipoPrecio = (rango: any) => {
     return rango.tipo_precio || rango.tipoPrecio;
-  };
+  }; */
 
   if (!isEditing) {
     return (

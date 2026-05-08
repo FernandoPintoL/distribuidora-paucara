@@ -135,12 +135,12 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
   };
 
   return (
-    <div className="bg-secondary border border-border rounded p-4">
-      <div className="text-sm font-semibold text-foreground mb-1">Paso 3: Ajustes de almacén, sector y stock</div>
+    <div className="space-x-3">
+      {/* <div className="text-sm font-semibold text-foreground mb-1">Paso 3: Ajustes de almacén, sector y stock</div>
       <div className="text-xs text-muted-foreground mb-3">Complete información por almacén: seleccione un sector (opcional), defina stock, número de lote y fecha de vencimiento.
         <span className="block mt-1">💡 Tip: Los sectores se cargan automáticamente al seleccionar un almacén. Si gestionas lotes constantemente, usa el control de inventario.</span>
-      </div>
-      <div className="space-y-3">
+      </div> */}
+      <div>
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Almacenes y Sectores</Label>
           <Button type="button" size="sm" onClick={() => addAlmacen()} variant="outline" aria-label="Agregar almacén">Añadir almacén</Button>
@@ -200,7 +200,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                   value={a.lote || ''}
                   onChange={e => setAlmacen(i, 'lote', e.target.value)}
                   placeholder="Código de lote"
-                  aria-label={`Lote almacén ${i+1}`}
+                  aria-label={`Lote almacén ${i + 1}`}
                 />
               </div>
 
@@ -220,7 +220,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           setAlmacen(i, 'fecha_vencimiento', '');
                         }
                       }}
-                      aria-label={`Tiene vencimiento almacén ${i+1}`}
+                      aria-label={`Tiene vencimiento almacén ${i + 1}`}
                     />
                     <Label htmlFor={`has-exp-${i}`} className="text-xs cursor-pointer">Tiene vencimiento</Label>
                   </div>
@@ -229,7 +229,7 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                   type="date"
                   value={a.fecha_vencimiento || ''}
                   onChange={e => setAlmacen(i, 'fecha_vencimiento', e.target.value)}
-                  aria-label={`Fecha de vencimiento almacén ${i+1}`}
+                  aria-label={`Fecha de vencimiento almacén ${i + 1}`}
                   disabled={!a.fecha_vencimiento}
                 />
               </div>
@@ -246,11 +246,10 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
 
               return (
                 <>
-                  <div className={`grid grid-cols-1 md:grid-cols-3 gap-2 p-3 rounded border transition-colors ${
-                    hasError
+                  <div className={`grid grid-cols-1 md:grid-cols-3 gap-2 p-3 rounded border transition-colors ${hasError
                       ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800'
                       : 'bg-muted/50 dark:bg-muted/30 border-border dark:border-border'
-                  }`}>
+                    }`}>
                     <div>
                       <Label className="text-xs font-semibold text-foreground">
                         Cantidad Total
@@ -268,12 +267,11 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           }
                         }}
                         readOnly={!canEditStockQuantities}
-                        className={`transition-colors ${
-                          canEditStockQuantities
+                        className={`transition-colors ${canEditStockQuantities
                             ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-100'
                             : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/50 text-blue-900 dark:text-blue-300 cursor-not-allowed opacity-60'
-                        }`}
-                        aria-label={`Cantidad total almacén ${i+1}`}
+                          }`}
+                        aria-label={`Cantidad total almacén ${i + 1}`}
                       />
                     </div>
                     <div>
@@ -290,12 +288,11 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           setAlmacen(i, 'cantidad_disponible', e.target.value === '' ? undefined : Number(e.target.value));
                         }}
                         readOnly={!canEditStockQuantities}
-                        className={`transition-colors ${
-                          canEditStockQuantities
+                        className={`transition-colors ${canEditStockQuantities
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100'
                             : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-300 cursor-not-allowed opacity-60'
-                        }`}
-                        aria-label={`Cantidad disponible almacén ${i+1}`}
+                          }`}
+                        aria-label={`Cantidad disponible almacén ${i + 1}`}
                       />
                     </div>
                     <div>
@@ -312,12 +309,11 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
                           setAlmacen(i, 'cantidad_reservada', e.target.value === '' ? undefined : Number(e.target.value));
                         }}
                         readOnly={!canEditStockQuantities}
-                        className={`transition-colors ${
-                          canEditStockQuantities
+                        className={`transition-colors ${canEditStockQuantities
                             ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100'
                             : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-300 cursor-not-allowed opacity-60'
-                        }`}
-                        aria-label={`Cantidad reservada almacén ${i+1}`}
+                          }`}
+                        aria-label={`Cantidad reservada almacén ${i + 1}`}
                       />
                     </div>
                   </div>
@@ -339,30 +335,6 @@ export default function Step3Almacenes({ data, almacenesOptions, sectores, addAl
               );
             })()}
 
-
-
-            {/* Botones de acciones */}
-            <div className="flex gap-2 justify-between pt-2 border-t">
-              {/* <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addAlmacen({
-                  almacen_id: a.almacen_id ?? '',
-                  almacen_nombre: a.almacen_nombre ?? '',
-                  sector_id: a.sector_id,
-                  sector_nombre: a.sector_nombre,
-                  lote: '',
-                  fecha_vencimiento: ''
-                })}
-                aria-label={`Añadir lote para almacén ${i+1}`}
-              >
-                ➕ Añadir lote
-              </Button> */}
-              {/* <Button type="button" variant="destructive" size="sm" onClick={() => removeAlmacen(i)} aria-label={`Eliminar almacén ${i+1}`}>
-                🗑️ Eliminar
-              </Button> */}
-            </div>
           </div>
         ))}
 

@@ -69,11 +69,11 @@ export default function Step4Imagenes({ data, setPerfil, addGaleria, removeGaler
 
   return (
     <div>
-      <div className="bg-secondary border border-border rounded p-3">
+      {/* <div className="bg-secondary border border-border rounded p-3">
         <div className="text-sm font-semibold text-foreground">Paso 4: Imágenes</div>
         <div className="text-xs text-muted-foreground">Agrega la foto de perfil y las imágenes de la galería</div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 lg:mt-8">
+      </div> */}
+      <div className="grid grid-cols-1 lg:grid-cols-2">
         <div className="space-y-4">
           <Label className="text-base font-semibold">Foto de perfil</Label>
           <div className="relative space-y-2">

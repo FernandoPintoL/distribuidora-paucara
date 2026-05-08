@@ -292,12 +292,12 @@ function Step2PreciosCodigos(props: Step2Props) {
             // Recalcular el monto: costo × (1 + porcentaje%)
             const nuevoMonto = Number((costo * (1 + nuevoPct / 100)).toFixed(2));
 
-            console.log(`🔄 RECALCULANDO MONTO (producto no fraccionado)`, {
+            /* console.log(`🔄 RECALCULANDO MONTO (producto no fraccionado)`, {
                 tipoPrecioId,
                 porcentaje: nuevoPct,
                 precioBase: costo,
                 nuevoMonto,
-            });
+            }); */
 
             // Actualizar el monto del precio base
             setPrecio(precioBaseIdx, 'monto', nuevoMonto);
@@ -748,235 +748,227 @@ function Step2PreciosCodigos(props: Step2Props) {
     }, [props.precioCosto, tipos_precio, setPrecios]);
 
     return (
-        <div>
-            <div className="-mb-2 sm:col-span-2">
-                <div className="rounded border border-border bg-secondary p-3">
-                    <div className="text-sm font-semibold text-foreground">Paso 2: Precios y códigos</div>
-                    <div className="text-xs text-muted-foreground">Seleccione tipos de precio, defina montos y agregue códigos de barra</div>
-                </div>
-            </div>
-            <div className="space-y-4">
-                <div className="space-y-6">
+        <div className="p-4 w-full">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <div className={`rounded border border-border bg-secondary p-3 ${compactCodigos ? 'hidden' : ''}`}>
+                    <div className="mb-3 flex items-center justify-between">
+                        <div className="text-sm font-medium text-foreground">Elegir tipos de precio a usar</div>
+                        <Button asChild size="sm" variant="outline">
+                            <Link href={tiposPrecioService.createUrl()}>
+                                <span className="flex items-center gap-1">
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Nuevo tipo de precio
+                                </span>
+                            </Link>
+                        </Button>
+                    </div>
 
-                    <div className={`rounded border border-border bg-secondary p-3 ${compactCodigos ? 'hidden' : ''}`}>
-                        <div className="mb-3 flex items-center justify-between">
-                            <div className="text-sm font-medium text-foreground">Elegir tipos de precio a usar</div>
-                            <Button asChild size="sm" variant="outline">
-                                <Link href={tiposPrecioService.createUrl()}>
-                                    <span className="flex items-center gap-1">
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        Nuevo tipo de precio
-                                    </span>
-                                </Link>
-                            </Button>
-                        </div>
+                    {/* Table Layout */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-muted">
+                                    <th className="px-2 py-2 text-left font-medium text-foreground w-8"></th>
+                                    <th className="px-2 py-2 text-left font-medium text-foreground w-8">Icono</th>
+                                    <th className="px-2 py-2 text-left font-medium text-foreground">Tipo de Precio</th>
+                                    <th className="px-2 py-2 text-center font-medium text-foreground w-16">%</th>
+                                    <th className="px-2 py-2 text-left font-medium text-foreground">Monto (BOB)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tipos_precio.map((tp: TipoPrecioOption) => {
+                                    const currId = tpId(tp);
+                                    const checked = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === currId);
+                                    const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
+                                    const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
+                                    const pct = Number.isFinite(pctNum) ? pctNum : 0;
+                                    const precioIdx = (data.precios || []).findIndex((p: Precio) => Number(p.tipo_precio_id) === currId);
+                                    const precioSel = precioIdx >= 0 ? (data.precios as Precio[])[precioIdx] : null;
+                                    const hasUnits = props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0;
 
-                        {/* Table Layout */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse text-sm">
-                                <thead>
-                                    <tr className="border-b border-border bg-muted">
-                                        <th className="px-2 py-2 text-left font-medium text-foreground w-8"></th>
-                                        <th className="px-2 py-2 text-left font-medium text-foreground w-8">Icono</th>
-                                        <th className="px-2 py-2 text-left font-medium text-foreground">Tipo de Precio</th>
-                                        <th className="px-2 py-2 text-center font-medium text-foreground w-16">%</th>
-                                        <th className="px-2 py-2 text-left font-medium text-foreground">Monto (BOB)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tipos_precio.map((tp: TipoPrecioOption) => {
-                                        const currId = tpId(tp);
-                                        const checked = (data.precios || []).some((p: Precio) => Number(p.tipo_precio_id) === currId);
-                                        const pctRaw = (tp?.porcentaje_ganancia as unknown as number | string);
-                                        const pctNum = pctRaw !== undefined && pctRaw !== null && pctRaw !== '' ? Number(pctRaw) : 0;
-                                        const pct = Number.isFinite(pctNum) ? pctNum : 0;
-                                        const precioIdx = (data.precios || []).findIndex((p: Precio) => Number(p.tipo_precio_id) === currId);
-                                        const precioSel = precioIdx >= 0 ? (data.precios as Precio[])[precioIdx] : null;
-                                        const hasUnits = props.data.es_fraccionado && props.data.conversiones && props.data.conversiones.length > 0;
-
-                                        return (
-                                            <React.Fragment key={currId}>
-                                                <tr
-                                                    className={`border-b-2 border-border transition-all duration-200 cursor-pointer group
+                                    return (
+                                        <React.Fragment key={currId}>
+                                            <tr
+                                                className={`border-b-2 border-border transition-all duration-200 cursor-pointer group
                                                         ${checked
-                                                            ? 'bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border-blue-400 dark:border-blue-600 shadow-sm'
-                                                            : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50 dark:hover:from-gray-900/30 dark:hover:to-gray-900/10'
-                                                        }`}
-                                                    onClick={(e) => {
-                                                        // Solo toggle si hacemos click en el nombre, icono o porcentaje, NO en checkbox ni input
-                                                        const target = e.target as HTMLElement;
-                                                        if (target.closest('input') || target.closest('[role="checkbox"]')) {
-                                                            return; // No hacer nada, dejar que el checkbox maneje su propio evento
-                                                        }
+                                                        ? 'bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border-blue-400 dark:border-blue-600 shadow-sm'
+                                                        : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50 dark:hover:from-gray-900/30 dark:hover:to-gray-900/10'
+                                                    }`}
+                                                onClick={(e) => {
+                                                    // Solo toggle si hacemos click en el nombre, icono o porcentaje, NO en checkbox ni input
+                                                    const target = e.target as HTMLElement;
+                                                    if (target.closest('input') || target.closest('[role="checkbox"]')) {
+                                                        return; // No hacer nada, dejar que el checkbox maneje su propio evento
+                                                    }
 
-                                                        const isChecked = !checked;
-                                                        if (!isChecked) {
-                                                            manualOverrideIdsRef.current.delete(currId);
-                                                        } else {
-                                                            manualOverrideIdsRef.current.delete(currId);
-                                                        }
-                                                        toggleTipoPrecio(currId, isChecked);
-                                                    }}
-                                                >
-                                                    <td className="px-3 py-3 w-12">
-                                                        <div className="flex items-center justify-center">
-                                                            <Checkbox
-                                                                id={`tp-${currId}`}
-                                                                checked={checked}
-                                                                onCheckedChange={(v) => {
-                                                                    const isChecked = !!v;
-                                                                    if (!isChecked) {
-                                                                        manualOverrideIdsRef.current.delete(currId);
-                                                                    } else {
-                                                                        manualOverrideIdsRef.current.delete(currId);
-                                                                    }
-                                                                    toggleTipoPrecio(currId, isChecked);
-                                                                }}
-                                                                className={`w-5 h-5 cursor-pointer transition-all ${checked ? 'ring-2 ring-blue-500 ring-offset-2' : 'group-hover:ring-2 group-hover:ring-blue-300'}`}
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-xl group-hover:scale-110 transition-transform">{tpIcono(tp)}</td>
-                                                    <td className="px-3 py-3 font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tpNombre(tp)}</td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        {checked ? (
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    min="0"
-                                                                    data-precio-porcentaje
-                                                                    value={porcentajesPorTipo[currId] ?? pct}
-                                                                    onChange={(e) => {
-                                                                        handlePorcentajeChange(currId, Number(e.target.value) || 0);
-                                                                    }}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.preventDefault();
-                                                                            // Enfocar el siguiente input de monto en la misma fila
-                                                                            const tr = e.currentTarget.closest('tr');
-                                                                            const montoInput = tr?.querySelector('input[data-precio-monto]') as HTMLInputElement;
-                                                                            if (montoInput) {
-                                                                                setTimeout(() => montoInput.focus(), 0);
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    onFocus={(e) => {
-                                                                        e.stopPropagation();
-                                                                        e.target.select();
-                                                                    }}
-                                                                    className="w-20 h-8 text-xs font-mono text-center"
-                                                                    title="Editar porcentaje de ganancia"
-                                                                />
-                                                                <span className="text-xs font-bold text-foreground">%</span>
-                                                                {/* ✨ Botón de refresh para recalcular monto */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleRecalcularPorcentaje(currId);
-                                                                    }}
-                                                                    className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                                                    title="Recalcular monto con el porcentaje especificado"
-                                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold transition-all bg-secondary text-foreground group-hover:bg-gray-300 dark:group-hover:bg-gray-600`}>
-                                                                {pct}%
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-3 py-3">
-                                                        {checked ? (
+                                                    const isChecked = !checked;
+                                                    if (!isChecked) {
+                                                        manualOverrideIdsRef.current.delete(currId);
+                                                    } else {
+                                                        manualOverrideIdsRef.current.delete(currId);
+                                                    }
+                                                    toggleTipoPrecio(currId, isChecked);
+                                                }}
+                                            >
+                                                <td className="px-3 py-3 w-12">
+                                                    <div className="flex items-center justify-center">
+                                                        <Checkbox
+                                                            id={`tp-${currId}`}
+                                                            checked={checked}
+                                                            onCheckedChange={(v) => {
+                                                                const isChecked = !!v;
+                                                                if (!isChecked) {
+                                                                    manualOverrideIdsRef.current.delete(currId);
+                                                                } else {
+                                                                    manualOverrideIdsRef.current.delete(currId);
+                                                                }
+                                                                toggleTipoPrecio(currId, isChecked);
+                                                            }}
+                                                            className={`w-5 h-5 cursor-pointer transition-all ${checked ? 'ring-2 ring-blue-500 ring-offset-2' : 'group-hover:ring-2 group-hover:ring-blue-300'}`}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3 text-xl group-hover:scale-110 transition-transform">{tpIcono(tp)}</td>
+                                                <td className="px-3 py-3 font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tpNombre(tp)}</td>
+                                                <td className="px-3 py-3 text-center">
+                                                    {checked ? (
+                                                        <div className="flex items-center justify-center gap-1">
                                                             <Input
                                                                 type="number"
                                                                 step="0.01"
                                                                 min="0"
-                                                                data-precio-monto
-                                                                value={precioSel ? (precioSel.monto === 0 ? '' : precioSel.monto) : ''}
+                                                                data-precio-porcentaje
+                                                                value={porcentajesPorTipo[currId] ?? pct}
                                                                 onChange={(e) => {
-                                                                    if (precioIdx >= 0) {
-                                                                        manualOverrideIdsRef.current.add(currId);
-                                                                        setPrecio(precioIdx, 'monto', e.target.value);
-                                                                        if (precioSel && (precioSel.moneda === undefined || precioSel.moneda === '')) {
-                                                                            setPrecio(precioIdx, 'moneda', 'BOB');
-                                                                        }
-                                                                    }
+                                                                    handlePorcentajeChange(currId, Number(e.target.value) || 0);
                                                                 }}
                                                                 onKeyDown={(e) => {
                                                                     if (e.key === 'Enter') {
                                                                         e.preventDefault();
-                                                                        // Enfocar el siguiente input de porcentaje en la siguiente fila
+                                                                        // Enfocar el siguiente input de monto en la misma fila
                                                                         const tr = e.currentTarget.closest('tr');
-                                                                        const nextTr = tr?.nextElementSibling as HTMLElement;
-                                                                        // Si la siguiente es una fila de error, saltar a la siguiente
-                                                                        if (nextTr?.classList.contains('bg-red-50') || nextTr?.classList.contains('bg-blue-50')) {
-                                                                            const nextNextTr = nextTr.nextElementSibling as HTMLElement;
-                                                                            if (nextNextTr) {
-                                                                                const porcentajeInput = nextNextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
-                                                                                if (porcentajeInput) {
-                                                                                    setTimeout(() => porcentajeInput.focus(), 0);
-                                                                                }
-                                                                            }
-                                                                        } else if (nextTr) {
-                                                                            const porcentajeInput = nextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
-                                                                            if (porcentajeInput) {
-                                                                                setTimeout(() => porcentajeInput.focus(), 0);
-                                                                            }
+                                                                        const montoInput = tr?.querySelector('input[data-precio-monto]') as HTMLInputElement;
+                                                                        if (montoInput) {
+                                                                            setTimeout(() => montoInput.focus(), 0);
                                                                         }
-                                                                    }
-                                                                }}
-                                                                onFocus={(e) => {
-                                                                    e.stopPropagation();
-                                                                    e.target.select();
-                                                                }}
-                                                                onBlur={(e) => {
-                                                                    if (precioIdx >= 0 && e.target.value === '') {
-                                                                        manualOverrideIdsRef.current.add(currId);
-                                                                        setPrecio(precioIdx, 'monto', 0);
                                                                     }
                                                                 }}
                                                                 onMouseDown={(e) => e.stopPropagation()}
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className={`h-8 w-full text-sm font-mono ${errors[`precios.${precioIdx}.monto`] ? 'border-red-500' : ''}`}
-                                                                placeholder="0.00"
-                                                                inputMode="decimal"
-                                                                pattern="\d+(\.\d{1,2})?"
+                                                                onFocus={(e) => {
+                                                                    e.stopPropagation();
+                                                                    e.target.select();
+                                                                }}
+                                                                className="w-20 h-8 text-xs font-mono text-center"
+                                                                title="Editar porcentaje de ganancia"
                                                             />
-                                                        ) : (
-                                                            <span className="text-muted-foreground">-</span>
-                                                        )}
+                                                            <span className="text-xs font-bold text-foreground">%</span>
+                                                            {/* ✨ Botón de refresh para recalcular monto */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRecalcularPorcentaje(currId);
+                                                                }}
+                                                                className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                title="Recalcular monto con el porcentaje especificado"
+                                                                onMouseDown={(e) => e.stopPropagation()}
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold transition-all bg-secondary text-foreground group-hover:bg-gray-300 dark:group-hover:bg-gray-600`}>
+                                                            {pct}%
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    {checked ? (
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            data-precio-monto
+                                                            value={precioSel ? (precioSel.monto === 0 ? '' : precioSel.monto) : ''}
+                                                            onChange={(e) => {
+                                                                if (precioIdx >= 0) {
+                                                                    manualOverrideIdsRef.current.add(currId);
+                                                                    setPrecio(precioIdx, 'monto', e.target.value);
+                                                                    if (precioSel && (precioSel.moneda === undefined || precioSel.moneda === '')) {
+                                                                        setPrecio(precioIdx, 'moneda', 'BOB');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    // Enfocar el siguiente input de porcentaje en la siguiente fila
+                                                                    const tr = e.currentTarget.closest('tr');
+                                                                    const nextTr = tr?.nextElementSibling as HTMLElement;
+                                                                    // Si la siguiente es una fila de error, saltar a la siguiente
+                                                                    if (nextTr?.classList.contains('bg-red-50') || nextTr?.classList.contains('bg-blue-50')) {
+                                                                        const nextNextTr = nextTr.nextElementSibling as HTMLElement;
+                                                                        if (nextNextTr) {
+                                                                            const porcentajeInput = nextNextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
+                                                                            if (porcentajeInput) {
+                                                                                setTimeout(() => porcentajeInput.focus(), 0);
+                                                                            }
+                                                                        }
+                                                                    } else if (nextTr) {
+                                                                        const porcentajeInput = nextTr.querySelector('input[data-precio-porcentaje]') as HTMLInputElement;
+                                                                        if (porcentajeInput) {
+                                                                            setTimeout(() => porcentajeInput.focus(), 0);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }}
+                                                            onFocus={(e) => {
+                                                                e.stopPropagation();
+                                                                e.target.select();
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                if (precioIdx >= 0 && e.target.value === '') {
+                                                                    manualOverrideIdsRef.current.add(currId);
+                                                                    setPrecio(precioIdx, 'monto', 0);
+                                                                }
+                                                            }}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className={`h-8 w-full text-sm font-mono ${errors[`precios.${precioIdx}.monto`] ? 'border-red-500' : ''}`}
+                                                            placeholder="0.00"
+                                                            inputMode="decimal"
+                                                            pattern="\d+(\.\d{1,2})?"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+
+                                            {/* Error row */}
+                                            {checked && errors[`precios.${precioIdx}.monto`] && (
+                                                <tr className="border-b border-border bg-red-50 dark:bg-red-900/20">
+                                                    <td colSpan={5} className="px-2 py-2">
+                                                        <div className="text-xs text-red-600 dark:text-red-400">⚠️ {errors[`precios.${precioIdx}.monto`]}</div>
                                                     </td>
                                                 </tr>
+                                            )}
 
-                                                {/* Error row */}
-                                                {checked && errors[`precios.${precioIdx}.monto`] && (
-                                                    <tr className="border-b border-border bg-red-50 dark:bg-red-900/20">
-                                                        <td colSpan={5} className="px-2 py-2">
-                                                            <div className="text-xs text-red-600 dark:text-red-400">⚠️ {errors[`precios.${precioIdx}.monto`]}</div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-
-                                                {/* Unit prices row (if fractioned product) */}
-                                                {checked && hasUnits && (
-                                                    <tr className="border-b border-border bg-blue-50 dark:bg-blue-900/20">
-                                                        <td colSpan={5} className="px-4 py-3">
-                                                            <div className="space-y-2">
-                                                                <div className="flex items-center justify-between">
-                                                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                                                        Precios por unidad:
-                                                                    </p>
-                                                                    {/* <button
+                                            {/* Unit prices row (if fractioned product) */}
+                                            {checked && hasUnits && (
+                                                <tr className="border-b border-border bg-blue-50 dark:bg-blue-900/20">
+                                                    <td colSpan={5} className="px-4 py-3">
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                                                    Precios por unidad:
+                                                                </p>
+                                                                {/* <button
                                                                         type="button"
                                                                         onClick={() => {
                                                                             const pct = porcentajesPorTipo[currId] ?? 0;
@@ -995,88 +987,76 @@ function Step2PreciosCodigos(props: Step2Props) {
                                                                     >
                                                                         🔄 Recalcular
                                                                     </button> */}
-                                                                </div>
-
-                                                                {/* Base unit price */}
-                                                                <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-200 dark:border-blue-700">
-                                                                    <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[70px] font-medium">
-                                                                        {props.unidades?.find(u => u.id === props.data.unidad_medida_id)?.codigo || 'Base'}:
-                                                                    </span>
-                                                                    <Input
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        value={preciosPorUnidad[currId]?.[Number(props.data.unidad_medida_id)]?.monto || (precioSel?.monto === 0 ? '' : precioSel?.monto) || ''}
-                                                                        onChange={(e) => {
-                                                                            handlePrecioUnidadChange(currId, Number(props.data.unidad_medida_id), Number(e.target.value) || 0);
-                                                                            setPrecio(precioIdx, 'monto', e.target.value);
-                                                                        }}
-                                                                        className="flex-1 text-xs h-7 font-mono"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                    <span className="text-xs text-gray-500 min-w-[30px]">Bs</span>
-                                                                </div>
-
-                                                                {/* Other unit prices in a grid */}
-                                                                {props.data.conversiones && props.data.conversiones.length > 0 && (
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        {props.data.conversiones.map((conv: any, convIndex: number) => {
-                                                                            const unidadDestino = props.unidades?.find(u => u.id === conv.unidad_destino_id);
-                                                                            const esManual = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.manual;
-                                                                            const monto = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.monto || 0;
-
-                                                                            return (
-                                                                                <div key={`conv-${convIndex}-${conv.unidad_destino_id}`} className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-100 dark:border-blue-800">
-                                                                                    <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[50px] font-medium">
-                                                                                        {unidadDestino?.codigo || `ID:${conv.unidad_destino_id}`}:
-                                                                                    </span>
-                                                                                    <Input
-                                                                                        type="number"
-                                                                                        step="0.01"
-                                                                                        value={monto === 0 ? '' : monto}
-                                                                                        onChange={(e) => {
-                                                                                            handlePrecioUnidadChange(currId, conv.unidad_destino_id, Number(e.target.value) || 0);
-                                                                                        }}
-                                                                                        className="flex-1 text-xs h-7 font-mono"
-                                                                                        placeholder="0.00"
-                                                                                    />
-                                                                                    <span className="text-xs text-gray-500 min-w-[25px]">Bs</span>
-                                                                                    {!esManual && monto > 0 && (
-                                                                                        <span className="text-xs text-blue-600 dark:text-blue-400 min-w-fit font-medium">
-                                                                                            Auto ✓
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                )}
                                                             </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+
+                                                            {/* Base unit price */}
+                                                            <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-200 dark:border-blue-700">
+                                                                <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[70px] font-medium">
+                                                                    {props.unidades?.find(u => u.id === props.data.unidad_medida_id)?.codigo || 'Base'}:
+                                                                </span>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={preciosPorUnidad[currId]?.[Number(props.data.unidad_medida_id)]?.monto || (precioSel?.monto === 0 ? '' : precioSel?.monto) || ''}
+                                                                    onChange={(e) => {
+                                                                        handlePrecioUnidadChange(currId, Number(props.data.unidad_medida_id), Number(e.target.value) || 0);
+                                                                        setPrecio(precioIdx, 'monto', e.target.value);
+                                                                    }}
+                                                                    className="flex-1 text-xs h-7 font-mono"
+                                                                    placeholder="0.00"
+                                                                />
+                                                                <span className="text-xs text-gray-500 min-w-[30px]">Bs</span>
+                                                            </div>
+
+                                                            {/* Other unit prices in a grid */}
+                                                            {props.data.conversiones && props.data.conversiones.length > 0 && (
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    {props.data.conversiones.map((conv: any, convIndex: number) => {
+                                                                        const unidadDestino = props.unidades?.find(u => u.id === conv.unidad_destino_id);
+                                                                        const esManual = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.manual;
+                                                                        const monto = preciosPorUnidad[currId]?.[conv.unidad_destino_id]?.monto || 0;
+
+                                                                        return (
+                                                                            <div key={`conv-${convIndex}-${conv.unidad_destino_id}`} className="flex items-center gap-2 bg-white dark:bg-neutral-800 p-2 rounded border border-blue-100 dark:border-blue-800">
+                                                                                <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[50px] font-medium">
+                                                                                    {unidadDestino?.codigo || `ID:${conv.unidad_destino_id}`}:
+                                                                                </span>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    step="0.01"
+                                                                                    value={monto === 0 ? '' : monto}
+                                                                                    onChange={(e) => {
+                                                                                        handlePrecioUnidadChange(currId, conv.unidad_destino_id, Number(e.target.value) || 0);
+                                                                                    }}
+                                                                                    className="flex-1 text-xs h-7 font-mono"
+                                                                                    placeholder="0.00"
+                                                                                />
+                                                                                <span className="text-xs text-gray-500 min-w-[25px]">Bs</span>
+                                                                                {!esManual && monto > 0 && (
+                                                                                    <span className="text-xs text-blue-600 dark:text-blue-400 min-w-fit font-medium">
+                                                                                        Auto ✓
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
-
                 </div>
-
-                <div className="space-y-4">
+                <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <Label className="text-base font-semibold">Códigos de barra</Label>
                         <div className="flex items-center gap-2">
-                            {/*<Button
-                                type="button"
-                                size="sm"
-                                variant={compactCodigos ? 'default' : 'outline'}
-                                onClick={() => setCompactCodigos(!compactCodigos)}
-                                title={compactCodigos ? 'Cambiar a modo amplio' : 'Cambiar a modo compacto'}
-                            >
-                                {compactCodigos ? 'Modo amplio' : 'Modo compacto'}
-                            </Button>*/}
                             <Button type="button" size="sm" onClick={addCodigo} variant="outline">
                                 <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1162,15 +1142,6 @@ function Step2PreciosCodigos(props: Step2Props) {
                             </div>
                         ))}
                     </div>
-                    {/*<div className="rounded-lg bg-blue-50 p-3 text-xs text-muted-foreground dark:bg-blue-900/20">
-                        <p className="font-medium text-blue-800 dark:text-blue-200">ℹ️ Información sobre códigos de barra:</p>
-                        <ul className="mt-1 space-y-1 text-blue-700 dark:text-blue-200">
-                            <li>• Los códigos de barra son opcionales al crear un producto</li>
-                            <li>• Si no se proporciona ningún código, se usará el ID del producto automáticamente</li>
-                            <li>• El primer código ingresado será marcado como principal</li>
-                            <li>• Puedes agregar múltiples códigos por producto si es necesario</li>
-                        </ul>
-                    </div>*/}
                     {photos.length > 0 && (
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">Fotos del producto</Label>

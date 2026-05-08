@@ -151,28 +151,31 @@ class ReporteVentasController extends Controller
             $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
                 // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
                 $movimientoAnterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'asc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'asc')
                     ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
                     ->first();
 
                 // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
                 $movimientoPosterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'desc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'desc')
                     ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
                     ->first();
 
                 // Si no hay movimientos en el período, traer el último movimiento antes del período
                 if (!$movimientoAnterior) {
                     $movimientoAnterior = DB::table('movimientos_inventario')
-                        ->where('producto_id', $producto['id'])
-                        ->whereDate('created_at', '<', $fechaDesde)
-                        ->orderBy('created_at', 'desc')
+                        ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                        ->where('stock_productos.producto_id', $producto['id'])
+                        ->whereDate('movimientos_inventario.created_at', '<', $fechaDesde)
+                        ->orderBy('movimientos_inventario.created_at', 'desc')
                         ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
                         ->first();
                 }
@@ -910,28 +913,31 @@ class ReporteVentasController extends Controller
             $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
                 // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
                 $movimientoAnterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'asc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'asc')
                     ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
                     ->first();
 
                 // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
                 $movimientoPosterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'desc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'desc')
                     ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
                     ->first();
 
                 // Si no hay movimientos en el período, traer el último movimiento antes del período
                 if (!$movimientoAnterior) {
                     $movimientoAnterior = DB::table('movimientos_inventario')
-                        ->where('producto_id', $producto['id'])
-                        ->whereDate('created_at', '<', $fechaDesde)
-                        ->orderBy('created_at', 'desc')
+                        ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                        ->where('stock_productos.producto_id', $producto['id'])
+                        ->whereDate('movimientos_inventario.created_at', '<', $fechaDesde)
+                        ->orderBy('movimientos_inventario.created_at', 'desc')
                         ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
                         ->first();
                 }
@@ -1209,28 +1215,31 @@ class ReporteVentasController extends Controller
             $productos = $productos->map(function ($producto) use ($fechaDesde, $fechaHasta) {
                 // Movimiento ANTERIOR: primer movimiento EN el período (captura estado inicial del período)
                 $movimientoAnterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'asc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'asc')
                     ->select('cantidad_total_anterior', 'cantidad_disponible_anterior', 'cantidad_reservada_anterior')
                     ->first();
 
                 // Movimiento POSTERIOR: último movimiento EN el período (captura estado final del período)
                 $movimientoPosterior = DB::table('movimientos_inventario')
-                    ->where('producto_id', $producto['id'])
-                    ->whereDate('created_at', '>=', $fechaDesde)
-                    ->whereDate('created_at', '<=', $fechaHasta)
-                    ->orderBy('created_at', 'desc')
+                    ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                    ->where('stock_productos.producto_id', $producto['id'])
+                    ->whereDate('movimientos_inventario.created_at', '>=', $fechaDesde)
+                    ->whereDate('movimientos_inventario.created_at', '<=', $fechaHasta)
+                    ->orderBy('movimientos_inventario.created_at', 'desc')
                     ->select('cantidad_total_posterior', 'cantidad_disponible_posterior', 'cantidad_reservada_posterior')
                     ->first();
 
                 // Si no hay movimientos en el período, traer el último movimiento antes del período
                 if (!$movimientoAnterior) {
                     $movimientoAnterior = DB::table('movimientos_inventario')
-                        ->where('producto_id', $producto['id'])
-                        ->whereDate('created_at', '<', $fechaDesde)
-                        ->orderBy('created_at', 'desc')
+                        ->join('stock_productos', 'movimientos_inventario.stock_producto_id', '=', 'stock_productos.id')
+                        ->where('stock_productos.producto_id', $producto['id'])
+                        ->whereDate('movimientos_inventario.created_at', '<', $fechaDesde)
+                        ->orderBy('movimientos_inventario.created_at', 'desc')
                         ->select('cantidad_total_posterior as cantidad_total_anterior', 'cantidad_disponible_posterior as cantidad_disponible_anterior', 'cantidad_reservada_posterior as cantidad_reservada_anterior')
                         ->first();
                 }

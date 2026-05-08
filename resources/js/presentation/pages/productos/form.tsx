@@ -615,7 +615,7 @@ export default function ProductoForm({
       <Head title={isEditing ? `Editar: ${producto.nombre}` : 'Nuevo producto'} />
 
       <div className="flex justify-center items-center min-h-screen">
-        <Card className="max-w-5xl w-full">
+        <Card className="p-2 w-full">
           <CardHeader className="flex-row items-center justify-between">
             <div>
               <CardTitle className="text-xl">
@@ -644,7 +644,7 @@ export default function ProductoForm({
 
           <CardContent>
             <Tabs defaultValue="datos" className="w-full">
-              <TabsList className={`grid w-full grid-cols-5`}>
+              <TabsList className={`flex w-full flex-wrap`}>
                 <TabsTrigger value="datos">Datos del producto</TabsTrigger>
 
                 {permite_productos_fraccionados && data.es_fraccionado && (
@@ -663,7 +663,7 @@ export default function ProductoForm({
                 )}
               </TabsList>
 
-              <form onSubmit={submit} className="space-y-6">
+              <form onSubmit={submit} className="space-y-2">
                 <TabsContent value="datos" className="space-y-6 mt-6">
                   <Step1DatosProducto
                     data={data}
@@ -679,7 +679,7 @@ export default function ProductoForm({
                   />
                 </TabsContent>
 
-                <TabsContent value="precios" className="space-y-6 mt-6">
+                <TabsContent value="precios" className="space-y-2">
                   <Step2PreciosCodigos
                     data={{
                       precios: data.precios,
@@ -725,7 +725,7 @@ export default function ProductoForm({
                   </TabsContent>
                 )}
 
-                <TabsContent value="almacenes" className="space-y-6 mt-6">
+                <TabsContent value="almacenes" className="space-y-6">
                   <Step3Almacenes
                     data={{ almacenes: data.almacenes || [] }}
                     almacenesOptions={almacenes.map(a => ({
