@@ -60,7 +60,8 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
         setDeleteConfirm(null);
       },
       onError: (error) => {
-        toast.error('Error al eliminar el combo', {
+        const errorMessage = error?.message || 'Error al eliminar el combo';
+        toast.error(errorMessage, {
           position: 'top-right',
           autoClose: 4000,
         });
