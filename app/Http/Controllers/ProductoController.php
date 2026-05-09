@@ -2740,6 +2740,7 @@ class ProductoController extends Controller
                     'unidad_medida_nombre' => $producto->unidad?->nombre ?? null,
                     'principio_activo'     => $producto->principio_activo, // ✅ NUEVO: Campo para medicamentos (farmacia)
                     'uso_de_medicacion'    => $producto->uso_de_medicacion, // ✅ NUEVO: Campo para medicamentos (farmacia)
+                    'permite_venta_sin_stock' => (bool) $producto->permite_venta_sin_stock, // ✅ NUEVO (2026-05-08): Para productos de farmacia sin stock
                     'conversiones'     => $producto->conversiones
                         ->where('activo', true)
                         ->map(fn($c) => [
