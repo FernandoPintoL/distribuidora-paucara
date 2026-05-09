@@ -28,6 +28,7 @@ export default function ProductSearchBar({
     const [showScannerModal, setShowScannerModal] = useState(false);
     const [scannerError, setScannerError] = useState<string | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(true);
+    const [loadingInyectables, setLoadingInyectables] = useState(false); // ✅ NUEVO (2026-05-08)
 
     const {
         productSearch,
@@ -102,6 +103,41 @@ export default function ProductSearchBar({
         setShowSuggestions(false);
     };
 
+    // ✅ NUEVO (2026-05-08): Cargar productos inyectables directamente
+    const handleCargarInyectables = async () => {
+        setLoadingInyectables(true);
+        try {
+            const params = new URLSearchParams({
+                q: 'INYECTABLE',
+                tipo: tipo,
+                limite: '50'
+            });
+
+            if (almacen_id) params.append('almacen_id', almacen_id.toString());
+
+            const response = await fetch(`/api/app/productos/buscar?${params.toString()}`);
+            if (!response.ok) throw new Error('Error al cargar inyectables');
+
+            const data = await response.json();
+            const productos = data.data || [];
+
+            if (productos.length === 0) {
+                alert('No se encontraron productos con SKU INYECTABLE');
+                return;
+            }
+
+            console.log(`💊 [ProductSearchBar] Cargando ${productos.length} productos inyectables`);
+            productos.forEach((producto: Producto) => {
+                handleAgregarProductoYLimpiar(producto);
+            });
+        } catch (error) {
+            console.error('Error cargando inyectables:', error);
+            alert('Error al cargar los productos inyectables');
+        } finally {
+            setLoadingInyectables(false);
+        }
+    };
+
     return (
         <>
             {/* Buscador de productos */}
@@ -154,6 +190,22 @@ export default function ProductSearchBar({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01M12 18h4.01M12 9h4.01M12 6h4.01M12 3h4.01" />
                         </svg>
                     </button>
+
+                    {/* ✅ NUEVO (2026-05-08): Botón para cargar inyectables (solo en farmacias) */}
+                    {es_farmacia && (
+                        <button
+                            type="button"
+                            disabled={readOnly || loadingInyectables}
+                            onClick={handleCargarInyectables}
+                            className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                            title="Cargar todos los productos inyectables"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6h-6" />
+                            </svg>
+                            <span className="hidden sm:inline text-sm font-medium">💊 Inyectables</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* ✅ Mostrar resultados solo si hay búsqueda realizada */}
