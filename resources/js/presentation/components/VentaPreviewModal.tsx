@@ -235,7 +235,7 @@ export default function VentaPreviewModal({
                                                             : (detalle.combo_items_seleccionados?.filter(item => item.incluido) || []);
 
                                                         return (
-                                                            <Fragment key={index}>
+                                                            <Fragment key={`detalle-${detalle.producto?.id}-${index}`}>
                                                                 {/* Fila del Producto / Combo */}
                                                                 <tr className={esCombo ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
                                                                     <td className="px-3 py-2 text-sm">
