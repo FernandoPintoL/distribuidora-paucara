@@ -201,6 +201,17 @@ export default function ProductoForm({
     }
   }, [recentlySuccessful, isEditing]);
 
+  // ✅ Mostrar errores de validación como toast
+  useEffect(() => {
+    if (errors.precios) {
+      NotificationService.error(`❌ Error en Precios:\n${errors.precios}`);
+      setActiveTab('precios');
+    } else if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0] as string;
+      NotificationService.error(`❌ ${firstError}`);
+    }
+  }, [errors]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 

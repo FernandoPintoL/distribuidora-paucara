@@ -337,7 +337,8 @@ class ProductoController extends Controller
 
         $producto = null;
 
-        DB::transaction(function () use ($data, $request, &$producto) {
+        try {
+            DB::transaction(function () use ($data, $request, &$producto) {
             // Filtrar y limpiar códigos válidos de manera más robusta
             $codigosValidos = [];
             if (isset($data['codigos']) && is_array($data['codigos'])) {
@@ -633,6 +634,14 @@ class ProductoController extends Controller
                 }
             }
         });
+        } catch (\Exception $e) {
+            // Capturar excepciones de validación de precios (margen de ganancia)
+            if (str_contains($e->getMessage(), 'margen de ganancia')) {
+                return back()->withErrors(['precios' => $e->getMessage()]);
+            }
+            // Re-lanzar otras excepciones
+            throw $e;
+        }
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
     }
@@ -878,7 +887,8 @@ class ProductoController extends Controller
         // Data already validated and prepared by UpdateProductoRequest
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, $request, $producto) {
+        try {
+            DB::transaction(function () use ($data, $request, $producto) {
             $producto->update([
                 'nombre'           => $data['nombre'],
                 'sku'              => $data['sku'] ?? $producto->sku,
@@ -1251,6 +1261,14 @@ class ProductoController extends Controller
                 }
             }
         });
+        } catch (\Exception $e) {
+            // Capturar excepciones de validación de precios (margen de ganancia)
+            if (str_contains($e->getMessage(), 'margen de ganancia')) {
+                return back()->withErrors(['precios' => $e->getMessage()]);
+            }
+            // Re-lanzar otras excepciones
+            throw $e;
+        }
 
         return redirect()->route('productos.edit', $producto->id)->with('success', 'Producto actualizado correctamente');
     }
