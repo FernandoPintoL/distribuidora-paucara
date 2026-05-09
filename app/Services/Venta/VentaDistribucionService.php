@@ -743,6 +743,24 @@ class VentaDistribucionService
                 continue;
             }
 
+            // ✅ NUEVO (2026-05-08): Validar que productos sin stock SOLO se vendan en farmacias
+            if ($producto->permite_venta_sin_stock && !$esFarmacia) {
+                $errores[] = [
+                    'producto_id' => $productoId,
+                    'cantidad_necesaria' => $cantidad,
+                    'stock_disponible' => 0,
+                    'error' => "El producto '{$producto->nombre}' solo puede venderse en empresas de farmacia. Esta empresa no está configurada como farmacia.",
+                ];
+
+                Log::warning('⚠️ [VentaDistribucionService] Intento de vender producto sin stock en empresa no-farmacia', [
+                    'producto_id' => $productoId,
+                    'producto_nombre' => $producto->nombre,
+                    'es_farmacia' => $esFarmacia,
+                    'permite_venta_sin_stock' => $producto->permite_venta_sin_stock,
+                ]);
+                continue;
+            }
+
             // ✅ NUEVO (2026-05-08): Permitir venta sin stock para farmacias si producto lo permite
             if ($esFarmacia && $producto->puedeVenderseSinStock($esFarmacia)) {
                 Log::info('✅ [VentaDistribucionService] Venta sin stock permitida en farmacia', [
