@@ -25,6 +25,7 @@ export interface Step1Props {
     limite_venta?: number | null; // ✨ NUEVO - Límite de cantidad por venta
     es_fraccionado?: boolean; // ✨ NUEVO
     es_producto_comida?: boolean; // ✨ NUEVO - Producto de comida/helado sin stock
+    permite_venta_sin_stock?: boolean; // ✅ NUEVO (2026-05-08) - Para servicios/inyectables en farmacias
     principio_activo?: string | null; // ✨ NUEVO - Ingrediente activo para medicamentos
     uso_de_medicacion?: string | null; // ✨ NUEVO - Indicaciones de uso para medicamentos
     visible_app?: boolean; // ✨ NUEVO - Visible en app
@@ -140,6 +141,7 @@ function Step1DatosProducto({
       setData('limite_venta', productoData.limite_venta || null); // ✨ NUEVO
       setData('principio_activo', productoData.principio_activo || null); // ✨ NUEVO
       setData('uso_de_medicacion', productoData.uso_de_medicacion || null); // ✨ NUEVO
+      setData('permite_venta_sin_stock', productoData.permite_venta_sin_stock || false); // ✅ NUEVO (2026-05-08)
       setData('activo', productoData.activo ?? true);
 
       NotificationService.success(`Producto "${productoData.nombre}" cargado correctamente`);
@@ -590,6 +592,42 @@ function Step1DatosProducto({
           </div>
         )}
       </div>
+
+      {/* ✅ NUEVA SECCIÓN: Venta sin Stock (solo para farmacias) */}
+      {es_farmacia && (
+        <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border-2 border-purple-200 dark:border-purple-700 rounded-lg shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 pt-0.5">
+              <Checkbox
+                id="permite_venta_sin_stock"
+                checked={!!data.permite_venta_sin_stock}
+                onCheckedChange={(v) => setData('permite_venta_sin_stock', !!v)}
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="permite_venta_sin_stock" className="font-semibold cursor-pointer flex items-center gap-2 text-base">
+                <span>💉</span> Permitir Venta sin Stock
+              </Label>
+              <p className="text-sm text-purple-700 dark:text-purple-300 mt-2 leading-relaxed">
+                Marca este producto si es un servicio que se puede vender incluso sin inventario disponible.
+              </p>
+              <p className="text-sm text-purple-600 dark:text-purple-400 mt-1 font-medium">
+                💊 Ejemplo: Inyecciones, curaciones, aplicación de medicamentos
+              </p>
+            </div>
+          </div>
+          {data.permite_venta_sin_stock && (
+            <div className="ml-6 mt-3 p-3 bg-white dark:bg-slate-900 rounded-md border-l-4 border-purple-400 dark:border-purple-600 shadow-sm">
+              <p className="text-sm text-purple-900 dark:text-purple-100 font-medium">
+                ✅ <strong>Servicio Habilitado:</strong> Este producto se puede vender sin stock disponible
+              </p>
+              <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                Se permitirá crear ventas incluso si el inventario es 0 o negativo
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ✨ NUEVA SECCIÓN: Información de Medicamentos (solo para farmacias) */}
       {es_farmacia && (

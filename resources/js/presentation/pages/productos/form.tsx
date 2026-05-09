@@ -36,6 +36,7 @@ const initialProductoData: ProductoFormData = {
   activo: true,
   es_fraccionado: false, // ✨ NUEVO
   es_producto_comida: false, // 🍦 NUEVO - Producto de comida/helado sin stock
+  permite_venta_sin_stock: false, // ✅ NUEVO (2026-05-08) - Para servicios/inyectables en farmacias
   stock_minimo: 0,
   stock_maximo: 50,
   limite_venta: null, // ✨ NUEVO

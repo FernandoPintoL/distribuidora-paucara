@@ -363,6 +363,7 @@ class ProductoController extends Controller
                 'activo'           => $data['activo'] ?? true,
                 'es_alquilable'    => false,
                 'es_producto_comida' => $data['es_producto_comida'] ?? false, // 🍦 NUEVO - Producto de comida/helado sin stock
+                'permite_venta_sin_stock' => $data['permite_venta_sin_stock'] ?? false, // ✅ NUEVO (2026-05-08) - Para servicios/inyectables
                 'categoria_id'     => $data['categoria_id'] ?? null,
                 'marca_id'         => $data['marca_id'] ?? null,
                 'proveedor_id'     => $data['proveedor_id'] ?? null,
@@ -481,6 +482,39 @@ class ProductoController extends Controller
                         'porcentaje_ganancia'        => $porcentaje,
                         'activo'                     => true,
                         'fecha_ultima_actualizacion' => now(),
+                    ]);
+                }
+            }
+
+            // ✅ NUEVO (2026-05-08): Crear stock automático en todos los almacenes si no se proporcionan
+            // Si no hay almacenes especificados, crear uno por cada almacén de la empresa
+            if (empty($data['almacenes'])) {
+                $empresa = auth()->user()?->empresa;
+                if ($empresa) {
+                    // Obtener todos los almacenes de la empresa
+                    $almacenes = Almacen::where('empresa_id', $empresa->id)
+                        ->where('activo', true)
+                        ->get();
+
+                    foreach ($almacenes as $almacen) {
+                        StockProducto::create([
+                            'producto_id' => $producto->id,
+                            'almacen_id' => $almacen->id,
+                            'sector_id' => null, // Sin sector específico
+                            'cantidad' => 0,
+                            'cantidad_disponible' => 0,
+                            'cantidad_reservada' => 0,
+                            'lote' => null,
+                            'fecha_vencimiento' => null,
+                            'fecha_actualizacion' => now(),
+                        ]);
+                    }
+
+                    Log::info('✅ Stock automático creado en todos los almacenes', [
+                        'producto_id' => $producto->id,
+                        'producto_nombre' => $producto->nombre,
+                        'almacenes_count' => $almacenes->count(),
+                        'empresa_id' => $empresa->id,
                     ]);
                 }
             }
@@ -848,6 +882,7 @@ class ProductoController extends Controller
                 'stock_maximo'     => $data['stock_maximo'] ?? $producto->stock_maximo,
                 'limite_venta'     => $data['limite_venta'] ?? $producto->limite_venta, // ✨ NUEVO
                 'es_producto_comida' => $data['es_producto_comida'] ?? $producto->es_producto_comida, // 🍦 NUEVO - Producto de comida/helado sin stock
+                'permite_venta_sin_stock' => $data['permite_venta_sin_stock'] ?? $producto->permite_venta_sin_stock, // ✅ NUEVO - Permitir venta sin stock
                 'principio_activo' => $data['principio_activo'] ?? $producto->principio_activo, // ✨ NUEVO - Campo para farmacias
                 'uso_de_medicacion' => $data['uso_de_medicacion'] ?? $producto->uso_de_medicacion, // ✨ NUEVO - Campo para farmacias
                 'visible_app'      => $data['visible_app'] ?? $producto->visible_app, // ✨ NUEVO - Visible en app

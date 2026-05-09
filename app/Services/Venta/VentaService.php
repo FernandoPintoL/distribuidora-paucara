@@ -75,6 +75,9 @@ class VentaService
         // ✅ MODIFICADO: NO validar stock para CREDITO (son promesas de pago, no ventas inmediatas)
         $esCREDITO = strtoupper($dto->politica_pago ?? '') === 'CREDITO';
 
+        // ✅ NUEVO (2026-05-08): Obtener si la empresa es farmacia
+        $esFarmacia = (bool) auth()->user()?->empresa?->es_farmacia;
+
         // COMBO: expandir antes de validar y decrementar stock.
         // $dto->detalles se preserva sin cambios para DetalleVenta.
         $detallesParaStock = $this->stockService->expandirCombos($dto->detalles);
@@ -84,11 +87,14 @@ class VentaService
                 'detalles_count' => count($dto->detalles),
                 'politica_pago'  => $dto->politica_pago,
                 'almacen_id'     => auth()->user()?->empresa?->almacen_id ?? 1,
+                'es_farmacia'    => $esFarmacia,
             ]);
 
             // ✅ NUEVO (2026-02-11): Usar VentaDistribucionService para validar
+            // ✅ MODIFICADO (2026-05-08): Pasar parámetro es_farmacia para permitir venta sin stock
             $validacionStock = $this->ventaDistribucionService->validarDisponible(
-                $detallesParaStock
+                $detallesParaStock,
+                $esFarmacia
             );
 
             if (! $validacionStock['valido']) {
@@ -379,7 +385,8 @@ class VentaService
             $movimientosStock = $this->ventaDistribucionService->consumirStock(
                 $detallesParaStock,
                 $venta->numero,
-                permitirStockNegativo: $esCREDITO  // ✅ Permite stock negativo para CREDITO
+                permitirStockNegativo: $esCREDITO,  // ✅ Permite stock negativo para CREDITO
+                esFarmacia: $esFarmacia              // ✅ NUEVO (2026-05-08): Permite venta sin stock en farmacia
             );
 
             // ✅ NUEVO (2026-03-28): Validar que se registraron movimientos para TODOS los productos

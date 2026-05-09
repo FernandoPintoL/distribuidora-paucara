@@ -31,6 +31,25 @@ class StoreProductoRequest extends FormRequest
             }
         }
 
+        // ✅ NUEVO (2026-05-08): Filtrar almacenes vacíos
+        // Si no hay almacenes o todos están vacíos, no enviar nada
+        if ($this->has('almacenes')) {
+            $almacenes = $this->input('almacenes', []);
+            if (is_array($almacenes)) {
+                // Filtrar almacenes que tengan al menos almacen_id
+                $almacenesValidos = array_filter($almacenes, function ($almacen) {
+                    return is_array($almacen) && !empty($almacen['almacen_id']);
+                });
+
+                // Si no hay almacenes válidos, no enviar el array
+                if (empty($almacenesValidos)) {
+                    $this->merge(['almacenes' => null]);
+                } else {
+                    $this->merge(['almacenes' => array_values($almacenesValidos)]);
+                }
+            }
+        }
+
         // Manejo simplificado y robusto de códigos
         if ($this->has('codigos')) {
             $codigosLimpios = [];
@@ -115,6 +134,7 @@ class StoreProductoRequest extends FormRequest
             // Productos fraccionados
             'es_fraccionado'           => ['nullable', 'boolean'],
             'es_producto_comida'       => ['nullable', 'boolean'], // 🍦 NUEVO - Producto de comida/helado sin stock
+            'permite_venta_sin_stock'  => ['nullable', 'boolean'], // ✅ NUEVO (2026-05-08) - Para servicios/inyectables
             'conversiones'             => ['nullable', 'array'],
             'conversiones.*.unidad_base_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id'],
             'conversiones.*.unidad_destino_id' => ['required_with:conversiones', 'integer', 'exists:unidades_medida,id', 'different:conversiones.*.unidad_base_id'],
@@ -201,6 +221,7 @@ class StoreProductoRequest extends FormRequest
 
             'es_fraccionado.boolean'                   => 'El campo fraccionado debe ser verdadero o falso.',
             'es_producto_comida.boolean'               => 'El campo producto de comida debe ser verdadero o falso.',
+            'permite_venta_sin_stock.boolean'          => 'El campo venta sin stock debe ser verdadero o falso.', // ✅ NUEVO (2026-05-08)
             'conversiones.array'                       => 'Las conversiones deben ser un arreglo.',
             'conversiones.*.unidad_base_id.required_with' => 'La unidad base es obligatoria en cada conversión.',
             'conversiones.*.unidad_base_id.integer'    => 'La unidad base debe ser un ID numérico.',
@@ -274,6 +295,7 @@ class StoreProductoRequest extends FormRequest
 
             'es_fraccionado'   => 'producto fraccionado',
             'es_producto_comida' => 'producto de comida/helado',
+            'permite_venta_sin_stock' => 'permitir venta sin stock', // ✅ NUEVO (2026-05-08)
             'conversiones'     => 'conversiones de unidad',
             'conversiones.*.unidad_base_id' => 'unidad base de conversión',
             'conversiones.*.unidad_destino_id' => 'unidad destino de conversión',

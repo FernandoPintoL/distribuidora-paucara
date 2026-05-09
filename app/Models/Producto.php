@@ -33,6 +33,7 @@ class Producto extends Model
         'es_fraccionado',
         'es_combo',
         'es_producto_comida', // ✨ NUEVO - Producto de comida/helado sin stock
+        'permite_venta_sin_stock', // ✨ NUEVO - Permite vender sin stock (servicios, inyectables)
         'categoria_id',
         'marca_id',
         'proveedor_id',
@@ -54,6 +55,7 @@ class Producto extends Model
             'es_fraccionado' => 'boolean',
             'es_combo' => 'boolean',
             'es_producto_comida' => 'boolean', // ✨ NUEVO
+            'permite_venta_sin_stock' => 'boolean', // ✨ NUEVO
             'visible_app' => 'boolean',
             'fecha_creacion' => 'datetime',
             'precio_compra' => 'decimal:2',
@@ -978,6 +980,48 @@ class Producto extends Model
     public function scopeFraccionados($query)
     {
         return $query->where('es_fraccionado', true);
+    }
+
+    /**
+     * Scope: Productos que permiten venta sin stock
+     */
+    public function scopePermiteSinStock($query)
+    {
+        return $query->where('permite_venta_sin_stock', true);
+    }
+
+    /**
+     * Verificar si el producto puede venderse sin stock en una farmacia
+     *
+     * Retorna true si:
+     * - El producto tiene permite_venta_sin_stock = true Y
+     * - La empresa es farmacia
+     */
+    public function puedeVenderseSinStock(bool $esFarmacia = false): bool
+    {
+        return $this->permite_venta_sin_stock && $esFarmacia;
+    }
+
+    /**
+     * Verificar si hay stock suficiente para vender una cantidad
+     *
+     * Retorna true si:
+     * - Hay suficiente stock disponible, O
+     * - El producto puede venderse sin stock (servicios/inyectables)
+     */
+    public function tieneStockSuficiente(int $cantidad, int $almacenId = null, bool $esFarmacia = false): bool
+    {
+        // Si es un producto que permite venta sin stock en farmacia, siempre hay "stock"
+        if ($this->puedeVenderseSinStock($esFarmacia)) {
+            return true;
+        }
+
+        // Si no, verificar stock real
+        $stockDisponible = $almacenId
+            ? $this->stock()->where('almacen_id', $almacenId)->sum('cantidad_disponible')
+            : $this->stockTotal();
+
+        return $stockDisponible >= $cantidad;
     }
 
     // ======================== MÉTODOS DE CONVERSIÓN ========================

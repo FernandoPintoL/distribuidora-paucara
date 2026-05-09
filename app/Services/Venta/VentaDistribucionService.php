@@ -138,7 +138,7 @@ class VentaDistribucionService
      * 1. Validar datos
      * 2. Para cada producto:
      *    a. Obtener stocks con FIFO (vencimiento cercano primero)
-     *    b. Validar si hay disponible (excepto CREDITO)
+     *    b. Validar si hay disponible (excepto CREDITO o farmacia con producto sin stock)
      *    c. Consumir según FIFO, recolectando detalles de cada lote
      *    d. Registrar UN SOLO movimiento AGRUPADO por producto con detalles de lotes en JSON
      * 3. Retornar movimientos creados
@@ -146,26 +146,29 @@ class VentaDistribucionService
      * @param array $detalles Array de productos: [['producto_id' => X, 'cantidad' => Y], ...]
      * @param string $numeroVenta Referencia para movimiento (ej: VEN20260211-0001)
      * @param bool $permitirStockNegativo Para CREDITO (permite stock negativo)
+     * @param bool $esFarmacia Permite venta sin stock para productos configurados (2026-05-08)
      * @return array Movimientos creados en movimientos_inventario (AGRUPADOS por producto)
      * @throws Exception Si stock insuficiente o error en proceso
      */
     public function consumirStock(
         array $detalles,
         string $numeroVenta,
-        bool $permitirStockNegativo = false
+        bool $permitirStockNegativo = false,
+        bool $esFarmacia = false
     ): array {
         Log::info('🔄 [VentaDistribucionService::consumirStock] Iniciando consumo de stock', [
             'numero_venta' => $numeroVenta,
             'cantidad_productos' => count($detalles),
             'almacen_id' => auth()->user()?->empresa?->almacen_id ?? 1,
             'permite_stock_negativo' => $permitirStockNegativo,
+            'es_farmacia' => $esFarmacia,
             'timestamp' => now()->toIso8601String(),
         ]);
 
         $almacenId = auth()->user()?->empresa?->almacen_id ?? 1;
         $movimientos = [];
 
-        return DB::transaction(function () use ($detalles, $numeroVenta, $almacenId, $permitirStockNegativo, &$movimientos) {
+        return DB::transaction(function () use ($detalles, $numeroVenta, $almacenId, $permitirStockNegativo, $esFarmacia, &$movimientos) {
             foreach ($detalles as $item) {
                 $productoId = $item['producto_id'] ?? $item['id'];
                 // ✅ CAMBIO (2026-02-16): Permitir decimales en lugar de truncar a entero
@@ -206,17 +209,27 @@ class VentaDistribucionService
 
                 // 2. Obtener stocks disponibles con FIFO (vencimiento cercano primero)
                 // ✅ FIFO: ordenar por fecha_vencimiento ASC (vence primero), luego id (creado primero)
-                $stocks = StockProducto::where('producto_id', $productoId)
-                    ->where('almacen_id', $almacenId)
-                    ->where('cantidad_disponible', '>', 0)
+                // ✅ NUEVO (2026-05-08): Para farmacias sin stock, permitir cantidad_disponible <= 0
+                $stockQuery = StockProducto::where('producto_id', $productoId)
+                    ->where('almacen_id', $almacenId);
+
+                // Solo filtrar por cantidad_disponible si NO es farmacia con venta sin stock
+                if (!$permitirSinStock) {
+                    $stockQuery->where('cantidad_disponible', '>', 0);
+                }
+
+                $stocks = $stockQuery
                     ->orderBy('fecha_vencimiento', 'asc')  // ← Vencimiento más cercano primero
                     ->orderBy('id', 'asc')                  // ← Creado primero
                     ->lockForUpdate()                       // ← Lock pesimista
                     ->get();
 
                 // 3. Validar stock disponible (en unidad de almacenamiento)
+                // ✅ NUEVO (2026-05-08): Permitir stock negativo para farmacias con productos sin stock
                 $stockTotal = $stocks->sum('cantidad_disponible');
-                if (!$permitirStockNegativo && $stockTotal < $cantidadAConsumir) {
+                $permitirSinStock = $esFarmacia && $producto->puedeVenderseSinStock($esFarmacia);
+
+                if (!$permitirStockNegativo && !$permitirSinStock && $stockTotal < $cantidadAConsumir) {
                     Log::error('❌ [VentaDistribucionService] Stock insuficiente', [
                         'producto_id' => $productoId,
                         'cantidad_solicitada' => $cantidad,
@@ -232,7 +245,7 @@ class VentaDistribucionService
                     );
                 }
 
-                // Log si es CREDITO (stock negativo permitido)
+                // ✅ Log si es CREDITO (stock negativo permitido)
                 if ($permitirStockNegativo && $stockTotal < $cantidadAConsumir) {
                     Log::info('ℹ️ [VentaDistribucionService] Stock negativo permitido (CREDITO)', [
                         'producto_id' => $productoId,
@@ -241,6 +254,19 @@ class VentaDistribucionService
                         'stock_disponible' => $stockTotal,
                         'numero_venta' => $numeroVenta,
                         'conversion_aplicada' => $conversionAplicada,
+                    ]);
+                }
+
+                // ✅ NUEVO (2026-05-08): Log si es FARMACIA con producto sin stock
+                if ($permitirSinStock && $stockTotal < $cantidadAConsumir) {
+                    Log::info('✅ [VentaDistribucionService] Stock negativo permitido (FARMACIA - Producto sin stock)', [
+                        'producto_id' => $productoId,
+                        'producto_nombre' => $producto->nombre,
+                        'cantidad_solicitada' => $cantidad,
+                        'cantidad_a_consumir' => $cantidadAConsumir,
+                        'stock_disponible' => $stockTotal,
+                        'numero_venta' => $numeroVenta,
+                        'permite_venta_sin_stock' => $producto->permite_venta_sin_stock,
                     ]);
                 }
 
@@ -265,6 +291,37 @@ class VentaDistribucionService
                     'disponible_anterior' => $totalDisponibleProductoAnterior,
                     'reservado_anterior' => $totalReservadoProductoAnterior,
                 ]);
+
+                // ✅ NUEVO (2026-05-08): Para farmacias sin stock, crear registro si no existe
+                if ($permitirSinStock && $stocks->isEmpty()) {
+                    $stock = StockProducto::firstOrCreate(
+                        [
+                            'producto_id' => $productoId,
+                            'almacen_id' => $almacenId,
+                            'lote' => null,
+                        ],
+                        [
+                            'cantidad' => 0,
+                            'cantidad_disponible' => 0,
+                            'cantidad_reservada' => 0,
+                            'fecha_actualizacion' => now(),
+                        ]
+                    );
+
+                    Log::info('✅ [VentaDistribucionService] Registro de stock creado para farmacia sin stock', [
+                        'producto_id' => $productoId,
+                        'almacen_id' => $almacenId,
+                        'stock_id' => $stock->id,
+                    ]);
+
+                    // Recargar stocks para incluir el nuevo registro
+                    $stocks = StockProducto::where('producto_id', $productoId)
+                        ->where('almacen_id', $almacenId)
+                        ->orderBy('fecha_vencimiento', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+                }
 
                 // 4. ✅ REFACTORIZADO (2026-03-27): Consumir stock según FIFO y recolectar detalles de lotes
                 $cantidadRestante = (float) $cantidadAConsumir;
@@ -633,14 +690,18 @@ class VentaDistribucionService
     /**
      * Validar si hay stock disponible para una venta
      *
+     * ✅ NUEVO (2026-05-08): Soporte para farmacias que pueden vender sin stock
+     *
      * @param array $detalles Array de productos a validar
+     * @param bool $esFarmacia Si la empresa es farmacia, permite venta sin stock para productos configurados
      * @return array ['valido' => bool, 'detalles' => array de errores si aplica]
      */
-    public function validarDisponible(array $detalles): array
+    public function validarDisponible(array $detalles, bool $esFarmacia = false): array
     {
         Log::debug('🔍 [VentaDistribucionService::validarDisponible] Validando disponibilidad', [
             'cantidad_productos' => count($detalles),
             'almacen_id' => auth()->user()?->empresa?->almacen_id ?? 1,
+            'es_farmacia' => $esFarmacia,
         ]);
 
         $almacenId = auth()->user()?->empresa?->almacen_id ?? 1;
@@ -680,6 +741,17 @@ class VentaDistribucionService
                     'error' => $e->getMessage(),
                 ];
                 continue;
+            }
+
+            // ✅ NUEVO (2026-05-08): Permitir venta sin stock para farmacias si producto lo permite
+            if ($esFarmacia && $producto->puedeVenderseSinStock($esFarmacia)) {
+                Log::info('✅ [VentaDistribucionService] Venta sin stock permitida en farmacia', [
+                    'producto_id' => $productoId,
+                    'producto_nombre' => $producto->nombre,
+                    'cantidad' => $cantidad,
+                    'permitir_venta_sin_stock' => $producto->permite_venta_sin_stock,
+                ]);
+                continue;  // Saltarse validación de stock para este producto
             }
 
             $stockTotal = StockProducto::where('producto_id', $productoId)

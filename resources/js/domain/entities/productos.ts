@@ -56,6 +56,7 @@ export interface Producto extends BaseEntity {
   es_alquilable?: boolean;
   es_combo?: boolean; // Indica si es un combo de productos
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
+  permite_venta_sin_stock?: boolean; // ✅ NUEVO (2026-05-08): Para servicios/inyectables en farmacias
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
   visible_app?: boolean; // ✨ NUEVO: Visible en app móvil
@@ -112,6 +113,7 @@ export interface ProductoFormData extends BaseFormData {
   es_combo?: boolean; // Indica si es un combo de productos
   es_fraccionado?: boolean; // ✨ NUEVO: Permite conversiones de unidades
   es_producto_comida?: boolean; // 🍦 NUEVO: Producto de comida/helado sin stock
+  permite_venta_sin_stock?: boolean; // ✅ NUEVO (2026-05-08): Para servicios/inyectables en farmacias
   principio_activo?: string | null; // ✨ NUEVO: Ingrediente activo para medicamentos
   uso_de_medicacion?: string | null; // ✨ NUEVO: Indicaciones de uso para medicamentos
   visible_app?: boolean; // ✨ NUEVO: Visible en app móvil
