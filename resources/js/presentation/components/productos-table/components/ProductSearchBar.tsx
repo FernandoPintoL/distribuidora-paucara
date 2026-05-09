@@ -200,10 +200,7 @@ export default function ProductSearchBar({
                             className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                             title="Cargar todos los productos inyectables"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6h-6" />
-                            </svg>
-                            <span className="hidden sm:inline text-sm font-medium">💊 Inyectables</span>
+                            <span className="hidden sm:inline text-sm font-medium">💊</span>
                         </button>
                     )}
                 </div>

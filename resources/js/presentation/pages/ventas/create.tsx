@@ -1006,15 +1006,26 @@ export default function VentaForm() {
         }
     };
 
+    // ✅ NUEVO (2026-05-08): Verificar si es farmacia y todos los productos permiten venta sin stock
+    const puedeVenderSinStock = (): boolean => {
+        if (!es_farmacia) return false;
+
+        // Si es farmacia, verificar que TODOS los productos permitan venta sin stock
+        return detallesWithProducts.every(detalle =>
+            (detalle.producto as any)?.permite_venta_sin_stock === true
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // ✅ NUEVO: Permitir stock insuficiente para créditos
+        // ✅ NUEVO: Permitir stock insuficiente para créditos O farmacias con productos sin stock
         const tipoPagoSeleccionado = tipos_pago?.find((t: any) => t.id === data.tipo_pago_id);
         const isCreditoPayment = tipoPagoSeleccionado?.codigo === 'CREDITO';
+        const permiteSinStockFarmacia = puedeVenderSinStock(); // ✅ NUEVO (2026-05-08)
 
-        // Validar stock antes de continuar (SOLO si NO es crédito)
-        if (!stockValido && !isCreditoPayment) {
+        // Validar stock antes de continuar (SOLO si NO es crédito Y NO es farmacia con productos sin stock)
+        if (!stockValido && !isCreditoPayment && !permiteSinStockFarmacia) {
             NotificationService.error('No se puede proceder con la venta debido a stock insuficiente');
             return;
         }
