@@ -19,7 +19,7 @@ export function useProductSearch({
     cliente_id,
     readOnly,
     onAddProduct,
-    useFuseSearch = true, // ✅ NIVEL 2: Habilitado por defecto
+    useFuseSearch = false, // ✅ DESACTIVADO (2026-05-08): Usar búsqueda por API en lugar de cargar todos los productos al inicio
     isClienteGeneral = false // ✅ NUEVO: Por defecto NO es cliente general
 }: UseProductSearchProps) {
     const [productSearch, setProductSearch] = useState('');
