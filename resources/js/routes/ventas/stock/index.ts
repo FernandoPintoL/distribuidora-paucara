@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\VentaController::verificar
- * @see app/Http/Controllers/VentaController.php:1212
+ * @see app/Http/Controllers/VentaController.php:1213
  * @route '/ventas/stock/verificar'
  */
 export const verificar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ verificar.definition = {
 
 /**
 * @see \App\Http\Controllers\VentaController::verificar
- * @see app/Http/Controllers/VentaController.php:1212
+ * @see app/Http/Controllers/VentaController.php:1213
  * @route '/ventas/stock/verificar'
  */
 verificar.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ verificar.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\VentaController::verificar
- * @see app/Http/Controllers/VentaController.php:1212
+ * @see app/Http/Controllers/VentaController.php:1213
  * @route '/ventas/stock/verificar'
  */
 verificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ verificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
     /**
 * @see \App\Http\Controllers\VentaController::verificar
- * @see app/Http/Controllers/VentaController.php:1212
+ * @see app/Http/Controllers/VentaController.php:1213
  * @route '/ventas/stock/verificar'
  */
     const verificarForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ verificar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
             /**
 * @see \App\Http\Controllers\VentaController::verificar
- * @see app/Http/Controllers/VentaController.php:1212
+ * @see app/Http/Controllers/VentaController.php:1213
  * @route '/ventas/stock/verificar'
  */
         verificarForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

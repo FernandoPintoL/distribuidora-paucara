@@ -1208,12 +1208,25 @@ class VentaController extends Controller
      * Verificar stock disponible
      *
      * POST /ventas/stock/verificar
+     * ✅ NUEVO (2026-05-08): Considera permite_venta_sin_stock para farmacias
      */
     public function verificarStock(Request $request): JsonResponse
     {
         try {
             $productos = $request->input('productos', []);
             $almacenId = $request->input('almacen_id');
+
+            // ✅ NUEVO: Obtener si la empresa es farmacia
+            $esFarmacia = (bool) auth()->user()?->empresa?->es_farmacia;
+
+            Log::info('🔍 [VentaController::verificarStock] Iniciando validación', [
+                'usuario_id' => auth()->id(),
+                'empresa_id' => auth()->user()?->empresa_id,
+                'es_farmacia' => $esFarmacia,
+                'cantidad_productos' => count($productos),
+                'almacen_id' => $almacenId,
+                'productos_ids' => array_map(fn($p) => $p['producto_id'] ?? null, $productos),
+            ]);
 
             $errores  = [];
             $detalles = [];
@@ -1226,6 +1239,35 @@ class VentaController extends Controller
                 }
 
                 $cantidadSolicitada = $producto['cantidad'];
+
+                Log::info('🔍 [VentaController::verificarStock] Validando producto', [
+                    'producto_id' => $producto['producto_id'],
+                    'producto_nombre' => $productoData->nombre,
+                    'permite_venta_sin_stock_raw' => $productoData->permite_venta_sin_stock,
+                    'permite_venta_sin_stock_type' => gettype($productoData->permite_venta_sin_stock),
+                    'es_farmacia' => $esFarmacia,
+                    'es_farmacia_type' => gettype($esFarmacia),
+                    'puedeVenderseSinStock_result' => $productoData->puedeVenderseSinStock($esFarmacia),
+                ]);
+
+                // ✅ NUEVO (2026-05-08): Permitir venta sin stock para farmacias si producto lo permite
+                if ($esFarmacia && $productoData->puedeVenderseSinStock($esFarmacia)) {
+                    Log::info('✅ [VentaController::verificarStock] Venta sin stock permitida', [
+                        'producto_id' => $producto['producto_id'],
+                        'producto_nombre' => $productoData->nombre,
+                    ]);
+
+                    $detalles[] = [
+                        'producto_id'         => $producto['producto_id'],
+                        'producto_nombre'     => $productoData->nombre,
+                        'cantidad_solicitada' => $cantidadSolicitada,
+                        'stock_disponible'    => 0,
+                        'es_combo'            => false,
+                        'permitido_sin_stock' => true,
+                        'diferencia'          => 0,
+                    ];
+                    continue;  // Saltarse validación de stock
+                }
 
                 // ✅ COMBOS: Validar capacidad en lugar de stock directo
                 if ($productoData->es_combo) {

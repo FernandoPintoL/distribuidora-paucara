@@ -113,7 +113,8 @@ class VentaService
 
         // 3. Crear dentro de transacción
         // ✅ NUEVO: Pasar $esCREDITO al closure para permitir stock negativo
-        $venta = $this->transaction(function () use ($dto, $cajaId, $esCREDITO, $detallesParaStock) {
+        // ✅ NUEVO (2026-05-08): Pasar $esFarmacia para permitir venta sin stock en farmacia
+        $venta = $this->transaction(function () use ($dto, $cajaId, $esCREDITO, $detallesParaStock, $esFarmacia) {
             Log::debug('🔄 [VentaService::crear] Iniciando transacción', [
                 'proforma_id' => $dto->proforma_id,
             ]);

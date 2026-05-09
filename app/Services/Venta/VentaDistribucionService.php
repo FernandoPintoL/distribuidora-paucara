@@ -207,6 +207,9 @@ class VentaDistribucionService
                     throw $e;
                 }
 
+                // ✅ NUEVO (2026-05-08): Determinar si se permite venta sin stock (debe estar ANTES de usar en query)
+                $permitirSinStock = $esFarmacia && $producto->puedeVenderseSinStock($esFarmacia);
+
                 // 2. Obtener stocks disponibles con FIFO (vencimiento cercano primero)
                 // ✅ FIFO: ordenar por fecha_vencimiento ASC (vence primero), luego id (creado primero)
                 // ✅ NUEVO (2026-05-08): Para farmacias sin stock, permitir cantidad_disponible <= 0
@@ -227,7 +230,6 @@ class VentaDistribucionService
                 // 3. Validar stock disponible (en unidad de almacenamiento)
                 // ✅ NUEVO (2026-05-08): Permitir stock negativo para farmacias con productos sin stock
                 $stockTotal = $stocks->sum('cantidad_disponible');
-                $permitirSinStock = $esFarmacia && $producto->puedeVenderseSinStock($esFarmacia);
 
                 if (!$permitirStockNegativo && !$permitirSinStock && $stockTotal < $cantidadAConsumir) {
                     Log::error('❌ [VentaDistribucionService] Stock insuficiente', [
