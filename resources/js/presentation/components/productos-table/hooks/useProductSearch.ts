@@ -11,6 +11,7 @@ interface UseProductSearchProps {
     onAddProduct: (producto: Producto) => void;
     useFuseSearch?: boolean; // ✅ NIVEL 2: Permitir deshabilitar Fuse.js si es necesario
     isClienteGeneral?: boolean; // ✅ NUEVO: Indicar si es cliente GENERAL para seleccionar tipo de precio
+    es_farmacia?: boolean; // ✅ NUEVO (2026-05-08): Indicar si es farmacia para permitir productos sin stock
 }
 
 export function useProductSearch({
@@ -20,7 +21,8 @@ export function useProductSearch({
     readOnly,
     onAddProduct,
     useFuseSearch = false, // ✅ DESACTIVADO (2026-05-08): Usar búsqueda por API en lugar de cargar todos los productos al inicio
-    isClienteGeneral = false // ✅ NUEVO: Por defecto NO es cliente general
+    isClienteGeneral = false, // ✅ NUEVO: Por defecto NO es cliente general
+    es_farmacia = false // ✅ NUEVO (2026-05-08): Por defecto NO es farmacia
 }: UseProductSearchProps) {
     const [productSearch, setProductSearch] = useState('');
     const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
@@ -203,12 +205,17 @@ export function useProductSearch({
             if (tipo === 'venta') {
                 const esCombo = (p as any).es_combo || false;
                 const tieneComponentes = ((p as any).combo_items?.length || 0) > 0;
+                const permiteSinStock = (p as any).permite_venta_sin_stock || false; // ✅ NUEVO (2026-05-08)
 
                 if (esCombo) {
                     return tieneComponentes;
                 }
 
-                return p.stock > 0 && p.precio_venta > 0;
+                // ✅ MODIFICADO (2026-05-08): Permitir productos sin stock si es farmacia y el producto lo permite
+                const tieneStockSuficiente = p.stock > 0;
+                const esProductoFarmacia = es_farmacia && permiteSinStock;
+
+                return (tieneStockSuficiente || esProductoFarmacia) && p.precio_venta > 0;
             }
             return true;
         });

@@ -46,6 +46,7 @@ export default function ProductSearchBar({
         cliente_id,
         isClienteGeneral,
         readOnly,
+        es_farmacia, // ✅ NUEVO (2026-05-08): Pasar es_farmacia para permitir productos sin stock
         onAddProduct: onProductSelected
     });
 
