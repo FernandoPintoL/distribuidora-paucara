@@ -13,16 +13,10 @@ class StoreVisitaPreventistaRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // El preventista solo puede registrar visitas a SUS clientes
-        $cliente = Cliente::find($this->cliente_id);
-
-        if (!$cliente) {
-            return false;
-        }
-
+        // ✅ ACTUALIZADO (2026-05-08): Cualquier preventista puede registrar visitas a cualquier cliente
+        // Solo se valida que el usuario esté autenticado y tenga un empleado asociado
         $empleado = auth()->user()->empleado;
-
-        return $empleado && $empleado->id === $cliente->preventista_id;
+        return (bool) $empleado;
     }
 
     public function rules(): array

@@ -175,10 +175,33 @@ class ComboController extends Controller
     public function destroy(Producto $combo): RedirectResponse
     {
         abort_unless($combo->es_combo, 404);
-        $combo->delete(); // cascade borra combo_items
 
-        return redirect()->route('combos.index')
-            ->with('success', 'Combo eliminado exitosamente.');
+        // Verificar si el combo está siendo usado en detalle_proformas
+        $tieneReferencias = DB::table('detalle_proformas')
+            ->where('producto_id', $combo->id)
+            ->exists();
+
+        if ($tieneReferencias) {
+            return back()
+                ->with('error', 'No se puede eliminar este combo porque ya ha sido utilizado en una proforma o documento. Debes eliminar primero las referencias existentes.');
+        }
+
+        try {
+            $combo->delete(); // cascade borra combo_items
+            Log::info('✅ [ComboController::destroy] Combo eliminado', [
+                'combo_id' => $combo->id,
+                'nombre' => $combo->nombre,
+            ]);
+            return redirect()->route('combos.index')
+                ->with('success', 'Combo eliminado exitosamente.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('❌ [ComboController::destroy] Error al eliminar combo', [
+                'combo_id' => $combo->id,
+                'error' => $e->getMessage(),
+            ]);
+            return back()
+                ->with('error', 'Ocurrió un error al eliminar el combo. Por favor, intenta nuevamente.');
+        }
     }
 
     // ── Privados ────────────────────────────────────────────────
