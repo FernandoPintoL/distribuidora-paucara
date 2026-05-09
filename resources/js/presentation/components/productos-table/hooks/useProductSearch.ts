@@ -238,7 +238,17 @@ export function useProductSearch({
                 if (cliente_id) params.append('cliente_id', cliente_id.toString());
 
                 const url = `/api/app/productos/listar?${params.toString()}`;
-                console.log('📥 [useProductSearch] Cargando todos los productos para Fuse.js:', url);
+
+                // 📤 LOG: Mostrar exactamente qué se envía
+                console.log('📤 [useProductSearch] PARÁMETROS ENVIADOS AL BACKEND:', {
+                    url,
+                    parametros: {
+                        limite: params.get('limite'),
+                        tipo: params.get('tipo'),
+                        almacen_id: params.get('almacen_id'),
+                        cliente_id: params.get('cliente_id')
+                    }
+                });
 
                 const response = await fetch(url);
 
@@ -249,14 +259,22 @@ export function useProductSearch({
                 }
 
                 const data = await response.json();
-                console.log('📥 [useProductSearch] Respuesta cruda para inicialización:', {
+
+                // 📥 LOG: Mostrar exactamente qué llega del backend
+                console.log('📥 [useProductSearch] RESPUESTA COMPLETA DEL BACKEND:', {
+                    success: data.success,
                     total: data.data?.length,
-                    primera: data.data?.[0] ? {
-                        nombre: data.data[0].nombre,
-                        codigo: data.data[0].sku || data.data[0].codigo_barras,
-                        stock: data.data[0].stock_disponible || data.data[0].stock
-                    } : null
+                    permiteSinStock: data.data?.filter((p: any) => p.permite_venta_sin_stock)?.length || 0,
+                    primerosProductos: data.data?.slice(0, 5).map((p: any) => ({
+                        id: p.id,
+                        nombre: p.nombre,
+                        permiteSinStock: p.permite_venta_sin_stock,
+                        stock: p.stock_disponible || p.stock,
+                        precios: p.precios?.length || 0
+                    })) || []
                 });
+
+                console.log('📊 [useProductSearch] DATOS CRUDOS:', data);
 
                 const productosAPI = data.data.map(transformarProductoAPI);
                 console.log(`📊 [useProductSearch] Productos transformados: ${productosAPI.length}`);

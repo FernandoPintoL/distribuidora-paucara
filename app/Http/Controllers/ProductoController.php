@@ -2748,7 +2748,24 @@ class ProductoController extends Controller
                 ];
             });
 
-        return ApiResponse::success($productosConRelaciones->values()->all());
+        // 📤 LOG: Mostrar lo que se retorna al frontend
+        $resultado = $productosConRelaciones->values()->all();
+        $permiteSinStockEnRespuesta = collect($resultado)
+            ->where('permite_venta_sin_stock', true)
+            ->count();
+
+        Log::info('📤 [listarApi] RESPUESTA A ENVIAR AL FRONTEND', [
+            'total_productos' => count($resultado),
+            'con_permite_venta_sin_stock' => $permiteSinStockEnRespuesta,
+            'primeros_5' => array_slice(array_map(fn($p) => [
+                'id' => $p['id'],
+                'nombre' => $p['nombre'],
+                'permite_venta_sin_stock' => $p['permite_venta_sin_stock'],
+                'precios_count' => count($p['precios'] ?? [])
+            ], $resultado), 0, 5)
+        ]);
+
+        return ApiResponse::success($resultado);
     }
 
     /**
@@ -4063,14 +4080,18 @@ class ProductoController extends Controller
         $userEmpresaId = auth()->user()?->empresa_id;
         $esFarmacia = (bool) auth()->user()?->empresa?->es_farmacia;
 
-        Log::info('📥 ProductoController::listarApi - Cargando productos para Fuse.js', [
+        // 📤 LOG: Mostrar exactamente qué se recibió del frontend
+        Log::info('📤 [listarApi] PARÁMETROS RECIBIDOS DEL FRONTEND', [
             'limite' => $limite,
             'tipo' => $tipo,
             'almacen_id' => $almacenId,
             'cliente_id' => $clienteId ?? 'sin especificar',
             'empresa_id' => $userEmpresaId,
-            'es_farmacia' => $esFarmacia
+            'es_farmacia' => $esFarmacia,
+            'usuario' => auth()->user()?->name
         ]);
+
+        \Log::info('🔍 [listarApi] DEBUG REQUEST', $request->all());
 
         // ✅ Query base reutilizable
         $query = Producto::query()
@@ -4108,6 +4129,20 @@ class ProductoController extends Controller
             })
             ->limit($limite)
             ->get();
+
+        // 📥 LOG: Mostrar resultados obtenidos
+        $permiteSinStock = $query->where('permite_venta_sin_stock', true)->count();
+        Log::info('📥 [listarApi] RESULTADOS DE LA BÚSQUEDA', [
+            'total_productos' => $query->count(),
+            'con_permite_venta_sin_stock' => $permiteSinStock,
+            'sin_stock_pero_permitidos' => $query->where('permite_venta_sin_stock', true)->count(),
+            'primeros_5' => $query->take(5)->get()->map(fn($p) => [
+                'id' => $p->id,
+                'nombre' => $p->nombre,
+                'permite_venta_sin_stock' => $p->permite_venta_sin_stock,
+                'activo' => $p->activo
+            ])->toArray()
+        ]);
 
         // ✅ Mapear productos con todas las relaciones
         return $this->mapearProductos($query, $almacenId, $tipo, $clienteId);
