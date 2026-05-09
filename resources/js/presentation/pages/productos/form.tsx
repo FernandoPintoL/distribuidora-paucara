@@ -129,6 +129,7 @@ export default function ProductoForm({
       activo: producto.activo ?? true,
       es_fraccionado: producto.es_fraccionado ?? false, // ✨ NUEVO
       es_producto_comida: producto.es_producto_comida ?? false, // 🍦 NUEVO - Producto de comida/helado
+      permite_venta_sin_stock: producto.permite_venta_sin_stock ?? false, // ✅ NUEVO (2026-05-08) - Para servicios/inyectables en farmacias
       stock_minimo: producto.stock_minimo ?? 0,
       stock_maximo: producto.stock_maximo ?? 50,
       limite_venta: producto.limite_venta ?? null, // ✨ NUEVO
@@ -248,6 +249,7 @@ export default function ProductoForm({
       proveedor_id: data.proveedor_id || '',
       activo: data.activo ? 1 : 0,
       es_producto_comida: data.es_producto_comida ? 1 : 0, // 🍦 NUEVO - Producto de comida/helado sin stock
+      permite_venta_sin_stock: data.permite_venta_sin_stock ? 1 : 0, // ✅ NUEVO (2026-05-08) - Para servicios/inyectables en farmacias
       stock_minimo: data.stock_minimo ?? '',
       stock_maximo: data.stock_maximo ?? '',
       limite_venta: data.limite_venta ? String(data.limite_venta) : '', // ✨ NUEVO - Enviar solo si tiene valor
