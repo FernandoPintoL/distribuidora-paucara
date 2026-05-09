@@ -419,9 +419,9 @@ export default function VentasPorProducto() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y dark:divide-slate-700">
-                                            {ventasFiltradas.map((venta) => (
+                                            {ventasFiltradas.map((venta, index) => (
                                                 <tr
-                                                    key={venta.detalle_id}
+                                                    key={`${venta.venta_id}-${venta.detalle_id}-${index}`}
                                                     className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
                                                 >
                                                     <td className="px-4 py-3 font-medium text-blue-600 dark:text-blue-400">
