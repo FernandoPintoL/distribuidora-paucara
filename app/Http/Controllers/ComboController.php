@@ -172,7 +172,7 @@ class ComboController extends Controller
             ->with('success', "Combo \"{$combo->nombre}\" actualizado exitosamente.");
     }
 
-    public function destroy(Producto $combo)
+    public function destroy(Producto $combo): RedirectResponse
     {
         abort_unless($combo->es_combo, 404);
 
@@ -182,10 +182,8 @@ class ComboController extends Controller
             ->exists();
 
         if ($tieneReferencias) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se puede eliminar este combo porque ya ha sido utilizado en una proforma o documento. Debes eliminar primero las referencias existentes.'
-            ], 422);
+            return back()
+                ->withErrors(['delete' => 'No se puede eliminar este combo porque ya ha sido utilizado en una proforma o documento. Debes eliminar primero las referencias existentes.']);
         }
 
         try {
@@ -201,10 +199,8 @@ class ComboController extends Controller
                 'combo_id' => $combo->id,
                 'error' => $e->getMessage(),
             ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Ocurrió un error al eliminar el combo. Por favor, intenta nuevamente.'
-            ], 500);
+            return back()
+                ->withErrors(['delete' => 'Ocurrió un error al eliminar el combo. Por favor, intenta nuevamente.']);
         }
     }
 

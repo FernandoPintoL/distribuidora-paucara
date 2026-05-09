@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Link, usePage } from '@inertiajs/react';
 import { toast } from 'react-toastify';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/presentation/components/ui/button';
@@ -46,8 +46,18 @@ interface CombosIndexProps {
 }
 
 export default function CombosIndex({ combos }: CombosIndexProps) {
+  const { errors } = usePage().props;
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (errors?.delete) {
+      toast.error(errors.delete as string, {
+        position: 'top-right',
+        autoClose: 4000,
+      });
+    }
+  }, [errors?.delete]);
 
   const handleDelete = (id: number) => {
     setIsDeleting(true);
@@ -59,12 +69,8 @@ export default function CombosIndex({ combos }: CombosIndexProps) {
         });
         setDeleteConfirm(null);
       },
-      onError: (error) => {
-        const errorMessage = error?.message || 'Error al eliminar el combo';
-        toast.error(errorMessage, {
-          position: 'top-right',
-          autoClose: 4000,
-        });
+      onError: () => {
+        // Los errores se manejan a través del useEffect de arriba
       },
       onFinish: () => {
         setIsDeleting(false);
