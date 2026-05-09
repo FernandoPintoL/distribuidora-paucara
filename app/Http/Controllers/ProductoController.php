@@ -4061,13 +4061,15 @@ class ProductoController extends Controller
         }
 
         $userEmpresaId = auth()->user()?->empresa_id;
+        $esFarmacia = (bool) auth()->user()?->empresa?->es_farmacia;
 
         Log::info('📥 ProductoController::listarApi - Cargando productos para Fuse.js', [
             'limite' => $limite,
             'tipo' => $tipo,
             'almacen_id' => $almacenId,
             'cliente_id' => $clienteId ?? 'sin especificar',
-            'empresa_id' => $userEmpresaId
+            'empresa_id' => $userEmpresaId,
+            'es_farmacia' => $esFarmacia
         ]);
 
         // ✅ Query base reutilizable
@@ -4076,14 +4078,23 @@ class ProductoController extends Controller
                 'id', 'nombre', 'codigo_barras', 'sku', 'categoria_id', 'marca_id',
                 'descripcion', 'peso', 'unidad_medida_id', 'proveedor_id',
                 'stock_minimo', 'stock_maximo', 'limite_venta', 'activo', 'es_fraccionado', 'empresa_id', 'es_combo',
-                'principio_activo', 'uso_de_medicacion'
+                'principio_activo', 'uso_de_medicacion', 'permite_venta_sin_stock'
             ])
             ->when($userEmpresaId, fn($q) => $q->where('empresa_id', $userEmpresaId))
             ->where('activo', true)
-            ->when($tipo === 'venta', function ($q) use ($almacenId) {
-                // ✅ Para ventas: solo productos con stock disponible
-                return $q->whereHas('stock', function ($sq) use ($almacenId) {
-                    $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+            ->when($tipo === 'venta', function ($q) use ($almacenId, $esFarmacia) {
+                // ✅ Para ventas: productos con stock disponible
+                // ✅ O productos de farmacia con permite_venta_sin_stock = true (servicios sin stock)
+                return $q->where(function ($subQ) use ($almacenId, $esFarmacia) {
+                    // Opción 1: Productos con stock disponible
+                    $subQ->whereHas('stock', function ($sq) use ($almacenId) {
+                        $sq->where('almacen_id', $almacenId)->where('cantidad_disponible', '>', 0);
+                    });
+
+                    // Opción 2: Servicios de farmacia sin stock (permite_venta_sin_stock = true)
+                    if ($esFarmacia) {
+                        $subQ->orWhere('permite_venta_sin_stock', true);
+                    }
                 });
             })
             ->when($tipo === 'venta', function ($q) use ($clienteId) {
