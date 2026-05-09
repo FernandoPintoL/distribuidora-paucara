@@ -2760,7 +2760,7 @@ class ProductoController extends Controller
             'primeros_5' => array_slice(array_map(fn($p) => [
                 'id' => $p['id'],
                 'nombre' => $p['nombre'],
-                'permite_venta_sin_stock' => $p['permite_venta_sin_stock'],
+                'permite_venta_sin_stock' => $p['permite_venta_sin_stock'] ?? false,
                 'precios_count' => count($p['precios'] ?? [])
             ], $resultado), 0, 5)
         ]);
@@ -4131,12 +4131,12 @@ class ProductoController extends Controller
             ->get();
 
         // 📥 LOG: Mostrar resultados obtenidos
-        $permiteSinStock = $query->where('permite_venta_sin_stock', true)->count();
+        $permiteSinStock = $query->filter(fn($p) => $p->permite_venta_sin_stock)->count();
         Log::info('📥 [listarApi] RESULTADOS DE LA BÚSQUEDA', [
             'total_productos' => $query->count(),
             'con_permite_venta_sin_stock' => $permiteSinStock,
-            'sin_stock_pero_permitidos' => $query->where('permite_venta_sin_stock', true)->count(),
-            'primeros_5' => $query->take(5)->get()->map(fn($p) => [
+            'sin_stock_pero_permitidos' => $query->filter(fn($p) => $p->permite_venta_sin_stock)->count(),
+            'primeros_5' => $query->take(5)->map(fn($p) => [
                 'id' => $p->id,
                 'nombre' => $p->nombre,
                 'permite_venta_sin_stock' => $p->permite_venta_sin_stock,

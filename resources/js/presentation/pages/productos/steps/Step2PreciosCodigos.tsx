@@ -1080,7 +1080,7 @@ function Step2PreciosCodigos(props: Step2Props) {
                                                     Principal
                                                 </span>
                                             )}
-                                            {c.tipo && <span className="rounded bg-secondary px-2 py-1 text-xs text-foreground">{c.tipo}</span>}
+                                            {/* {c.tipo && <span className="rounded bg-secondary px-2 py-1 text-xs text-foreground">{c.tipo}</span>} */}
                                         </div>
                                         <Button
                                             type="button"
@@ -1094,7 +1094,7 @@ function Step2PreciosCodigos(props: Step2Props) {
                                         <Button type="button" className="mr-2" size="sm" variant="outline" onClick={() => useModernScanner ? startModernScanner(i) : startCamera('scan', i)} disabled={!scanSupported && !useModernScanner}>
                                             {useModernScanner ? 'Escanear QR/Código' : (scanSupported ? 'Escanear (Fallback)' : 'Escaneo no soportado')}
                                         </Button>
-                                        {useModernScanner && (
+                                        {/* {useModernScanner && (
                                             <Button type="button" className="mr-2" size="sm" variant="ghost" onClick={switchToFallbackScanner} title="Cambiar a escáner alternativo">
                                                 🔄
                                             </Button>
@@ -1103,7 +1103,7 @@ function Step2PreciosCodigos(props: Step2Props) {
                                             <Button type="button" className="mr-2" size="sm" variant="ghost" onClick={switchToModernScanner} title="Cambiar a escáner moderno">
                                                 ⚡
                                             </Button>
-                                        )}
+                                        )} */}
                                         {/*<Button type="button" className="mr-2" size="sm" variant="outline" onClick={() => startCamera('photo', null)}>
                                             Tomar foto
                                         </Button>*/}
