@@ -172,7 +172,7 @@ class ComboController extends Controller
             ->with('success', "Combo \"{$combo->nombre}\" actualizado exitosamente.");
     }
 
-    public function destroy(Produto $combo)
+    public function destroy(Producto $combo)
     {
         abort_unless($combo->es_combo, 404);
 
