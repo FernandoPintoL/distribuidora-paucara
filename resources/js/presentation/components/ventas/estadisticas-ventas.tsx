@@ -91,7 +91,7 @@ export default function EstadisticasVentasComponent({ estadisticas }: Estadistic
                     </h3>
                     <div className="space-y-3">
                         {estadisticas.ventas_por_estado.map((item, index) => (
-                            <div key={index} className="flex items-center justify-between">
+                            <div key={`estado-${item.estado}`} className="flex items-center justify-between">
                                 <div className="flex items-center">
                                     <div
                                         className="w-3 h-3 rounded-full mr-3"
@@ -123,7 +123,7 @@ export default function EstadisticasVentasComponent({ estadisticas }: Estadistic
                     </h3>
                     <div className="space-y-3">
                         {estadisticas.top_productos.slice(0, 5).map((item, index) => (
-                            <div key={index} className="flex items-center justify-between">
+                            <div key={`producto-${item.producto}`} className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {item.producto}
@@ -149,7 +149,7 @@ export default function EstadisticasVentasComponent({ estadisticas }: Estadistic
                     </h3>
                     <div className="space-y-3">
                         {estadisticas.top_clientes.slice(0, 5).map((item, index) => (
-                            <div key={index} className="flex items-center justify-between">
+                            <div key={`cliente-${item.cliente}`} className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {item.cliente}
@@ -175,7 +175,7 @@ export default function EstadisticasVentasComponent({ estadisticas }: Estadistic
                     </h3>
                     <div className="space-y-3">
                         {estadisticas.ventas_por_mes.slice(0, 6).map((item, index) => (
-                            <div key={index} className="flex items-center justify-between">
+                            <div key={`mes-${item.mes}`} className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                                         {item.mes}

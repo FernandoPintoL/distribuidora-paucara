@@ -129,7 +129,7 @@ export default function StockManager({
                         <h4 className="text-sm font-medium text-red-800 dark:text-red-300">Problemas de Stock:</h4>
                         <ul className="space-y-1 text-sm text-red-700 dark:text-red-400">
                             {(stockValidation.errores || []).map((error, index) => (
-                                <li key={index} className="flex items-start space-x-2">
+                                <li key={`error-${error}-${index}`} className="flex items-start space-x-2">
                                     <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-600 dark:text-red-500" />
                                     <span>{error}</span>
                                 </li>
@@ -153,7 +153,7 @@ export default function StockManager({
                             <div className="mt-3 bg-gray-50 dark:bg-zinc-800 rounded-lg p-3">
                                 <div className="space-y-3">
                                     {stockValidation.detalles.map((detalle, index) => (
-                                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-zinc-700 last:border-b-0">
+                                        <div key={`detalle-${detalle.producto_id}-${index}`} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-zinc-700 last:border-b-0">
                                             <div className="flex-1">
                                                 <span className="font-medium text-gray-900 dark:text-white">
                                                     {detalle.producto_nombre}

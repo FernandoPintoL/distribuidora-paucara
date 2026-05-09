@@ -107,7 +107,7 @@ export function VentaComidas({ onProductosComidaChange }: VentaComidasProps) {
                         {/* Items del carrito */}
                         {carrito.items.map((item, index) => (
                             <DetalleProductoComida
-                                key={index}
+                                key={`item-${item.nombre_producto}-${index}`}
                                 nombreProducto={item.nombre_producto}
                                 precioBase={item.precio_base}
                                 adicionales={item.adicionales_detalles || []}

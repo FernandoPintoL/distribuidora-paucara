@@ -130,7 +130,7 @@ export default function StockBajoAlerts({
                                                         <div className="flex flex-wrap gap-1 mt-1">
                                                             {producto.almacenes.map((almacen, index) => (
                                                                 <span
-                                                                    key={index}
+                                                                    key={`almacen-${almacen.almacen}-${index}`}
                                                                     className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
                                                                 >
                                                                     {almacen.almacen}: {almacen.cantidad}
