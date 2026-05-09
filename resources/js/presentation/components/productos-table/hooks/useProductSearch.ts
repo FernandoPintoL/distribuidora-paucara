@@ -481,9 +481,16 @@ export function useProductSearch({
     }, []);
 
     // ✅ AUTO-DISPARAR búsqueda cuando productSearch cambia (para que funcione sin presionar botón)
+    // ⚠️ PERO: Solo buscar si hay más de 1 carácter (evitar búsquedas innecesarias en page load)
     useEffect(() => {
-        buscarProductos(productSearch);
-    }, [productSearch]);
+        if (productSearch.trim().length >= 1) {
+            buscarProductos(productSearch);
+        } else if (productSearch.trim().length === 0) {
+            // Limpiar resultados si se borra todo
+            setProductosDisponibles([]);
+            setSearchError(null);
+        }
+    }, [productSearch, buscarProductos]);
 
     // ✅ Manejar resultado del escáner (búsqueda EXACTA por código de barras)
     const handleScannerResult = useCallback(async (result: string) => {
