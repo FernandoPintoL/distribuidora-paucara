@@ -560,7 +560,7 @@ function Step1DatosProducto({
       )}
 
       {/* 🍦 NUEVA SECCIÓN: Producto de Comida/Helado */}
-      <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/30 dark:to-pink-950/30 border-2 border-orange-200 dark:border-orange-700 rounded-lg shadow-sm">
+      {/* <div className="space-y-3 mt-6 p-5 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/30 dark:to-pink-950/30 border-2 border-orange-200 dark:border-orange-700 rounded-lg shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 pt-0.5">
             <Checkbox
@@ -591,7 +591,7 @@ function Step1DatosProducto({
             </p>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* ✅ NUEVA SECCIÓN: Venta sin Stock (solo para farmacias) */}
       {es_farmacia && (

@@ -219,16 +219,10 @@ export default function Step5PrecioRango({
     setErrors({});
   };
 
-  /* const tipoPrecioSeleccionado = tiposPrecio.find((t) => t.id === data.tipo_precio_id);
-  const rango_texto =
-    data.cantidad_maxima && data.cantidad_maxima > 0
-      ? `${data.cantidad_minima}-${data.cantidad_maxima}`
-      : `${data.cantidad_minima}+`;
-
-  // 🔧 Helper para obtener el tipo de precio (soporta ambos formatos: tipoPrecio y tipo_precio)
+  // 🔧 Helper para obtener el tipo de precio por ID
   const getTipoPrecio = (rango: any) => {
-    return rango.tipo_precio || rango.tipoPrecio;
-  }; */
+    return tiposPrecio.find((t) => t.id === rango.tipo_precio_id);
+  };
 
   if (!isEditing) {
     return (
