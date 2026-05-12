@@ -178,14 +178,15 @@ export default function Step5PrecioRango({
   };
 
   const handleEdit = (rango: PrecioRango) => {
-
-    // Asegurar que tipo_precio_id es un número válido
-    const tipoPrecioId = Number(rango.tipo_precio_id) || 0;
+    // Extraer tipo_precio_id del objeto tipo_precio que viene del backend
+    const tipoPrecioId = Number(
+      (rango.tipo_precio as any)?.id || rango.tipo_precio_id || 0
+    );
 
     setEditingId(rango.id);
     setData({
       producto_id: rango.producto_id,
-      tipo_precio_id: tipoPrecioId, // ✅ Forzar tipo número
+      tipo_precio_id: tipoPrecioId,
       cantidad_minima: rango.cantidad_minima,
       cantidad_maxima: rango.cantidad_maxima,
       fecha_vigencia_inicio: rango.fecha_vigencia_inicio,
@@ -219,9 +220,9 @@ export default function Step5PrecioRango({
     setErrors({});
   };
 
-  // 🔧 Helper para obtener el tipo de precio por ID
+  // 🔧 Helper para obtener el tipo de precio (viene del backend en rango.tipo_precio)
   const getTipoPrecio = (rango: any) => {
-    return tiposPrecio.find((t) => t.id === rango.tipo_precio_id);
+    return rango.tipo_precio || tiposPrecio.find((t) => t.id === rango.tipo_precio_id);
   };
 
   if (!isEditing) {
