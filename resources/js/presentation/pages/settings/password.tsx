@@ -10,12 +10,11 @@ import HeadingSmall from '@/presentation/components/heading-small';
 import { Button } from '@/presentation/components/ui/button';
 import { Input } from '@/presentation/components/ui/input';
 import { Label } from '@/presentation/components/ui/label';
-import { edit } from '@/routes/password';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Configuración de contraseña',
-        href: edit().url,
+        href: '/settings/password',
     },
 ];
 
