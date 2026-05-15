@@ -128,7 +128,7 @@ class StoreClienteRequest extends FormRequest
 
             // Direcciones
             'direcciones'                    => 'nullable|array',
-            'direcciones.*.direccion'        => 'required_with:direcciones|string|max:500',
+            'direcciones.*.direccion'        => 'nullable|string|max:500', // ✅ Opcional - usuario puede dejar en blanco
             'direcciones.*.latitud'          => 'required_with:direcciones|numeric|between:-90,90',
             'direcciones.*.longitud'         => 'required_with:direcciones|numeric|between:-180,180',
             'direcciones.*.observaciones'    => 'nullable|string|max:1000',
@@ -179,7 +179,6 @@ class StoreClienteRequest extends FormRequest
             'ci_reverso.max'                            => 'El CI reverso no puede exceder 5MB.',
 
             'direcciones.array'                         => 'Las direcciones deben ser un arreglo.',
-            'direcciones.*.direccion.required_with'     => 'La dirección es obligatoria cuando se proporciona ubicación.',
             'direcciones.*.direccion.string'            => 'La dirección debe ser texto.',
             'direcciones.*.direccion.max'               => 'La dirección no puede exceder 500 caracteres.',
             'direcciones.*.latitud.required_with'       => 'La latitud es obligatoria cuando se proporciona dirección.',
