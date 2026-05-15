@@ -580,11 +580,18 @@ class ClienteController extends Controller
                     'direcciones' => $data['direcciones'] ?? [],
                 ]);
 
-                // Eliminar direcciones existentes
-                $cliente->direcciones()->delete();
+                // ✅ VALIDACIÓN: Solo procesar si hay direcciones válidas (no vacías)
+                $direccionesValidas = is_array($data['direcciones']) && count($data['direcciones']) > 0;
 
-                // Crear nuevas direcciones
-                if (is_array($data['direcciones']) && count($data['direcciones']) > 0) {
+                if ($direccionesValidas) {
+                    // ✅ SEGURIDAD: Solo eliminar si hay nuevas direcciones para reemplazar
+                    Log::info('🗑️ Eliminando direcciones antiguas para reemplazar con nuevas', [
+                        'cliente_id' => $cliente->id,
+                        'direcciones_nuevas' => count($data['direcciones']),
+                    ]);
+                    $cliente->direcciones()->delete();
+
+                    // Crear nuevas direcciones
                     foreach ($data['direcciones'] as $index => $direccionData) {
                         Log::info("📍 Procesando dirección $index:", ['data' => $direccionData]);
 
@@ -598,6 +605,14 @@ class ClienteController extends Controller
                             'observaciones' => $createdDireccion->observaciones,
                         ]);
                     }
+                } else {
+                    // ⚠️ ADVERTENCIA: Se intentó actualizar con direcciones vacías o inválidas
+                    Log::warning('⚠️ Intento de actualizar direcciones con datos vacíos o inválidos - operación ignorada', [
+                        'cliente_id' => $cliente->id,
+                        'direcciones_recibidas' => count($data['direcciones'] ?? []),
+                        'direcciones_validas' => 0,
+                    ]);
+                    // NO eliminar direcciones antiguas si no hay nuevas válidas
                 }
             }
 
@@ -886,15 +901,38 @@ class ClienteController extends Controller
         ]);
 
         // Crear direcciones si se proporcionaron y se deben manejar
-        if ($handleDirecciones && isset($data['direcciones']) && is_array($data['direcciones'])) {
-            foreach ($data['direcciones'] as $direccionData) {
+        if ($handleDirecciones && isset($data['direcciones']) && is_array($data['direcciones']) && count($data['direcciones']) > 0) {
+            Log::info('📍 Creando direcciones para cliente', [
+                'cliente_id' => $cliente->id,
+                'direcciones_count' => count($data['direcciones']),
+            ]);
+
+            foreach ($data['direcciones'] as $index => $direccionData) {
+                // ✅ VALIDACIÓN: Verificar que al menos tenga dirección o coordenadas
+                $tieneDirectly = !empty($direccionData['direccion']);
+                $tieneCoordenadas = !empty($direccionData['latitud']) && !empty($direccionData['longitud']);
+
+                if (!$tieneDirectly && !$tieneCoordenadas) {
+                    Log::warning("⚠️ Dirección $index ignorada - está vacía", [
+                        'cliente_id' => $cliente->id,
+                        'index' => $index,
+                    ]);
+                    continue;
+                }
+
                 // Asegurar que tenga el campo activa con valor por defecto
                 $direccionData['activa'] = $direccionData['activa'] ?? true;
                 // Asignar localidad_id del cliente a la dirección
                 $direccionData['localidad_id'] = $cliente->localidad_id;
 
-                $cliente->direcciones()->create($direccionData);
+                $createdDireccion = $cliente->direcciones()->create($direccionData);
+                Log::info("✅ Dirección creada en store:", [
+                    'direccion_id' => $createdDireccion->id,
+                    'direccion_text' => $createdDireccion->direccion,
+                ]);
             }
+        } elseif ($handleDirecciones && (!isset($data['direcciones']) || count($data['direcciones'] ?? []) === 0)) {
+            Log::info('ℹ️ No hay direcciones para crear', ['cliente_id' => $cliente->id]);
         }
 
         // Procesar archivos de imagen con ruta dinámica si se solicita
