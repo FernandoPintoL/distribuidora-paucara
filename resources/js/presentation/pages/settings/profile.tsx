@@ -30,8 +30,8 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                     <HeadingSmall title="Información de perfil" description="Actualice su nombre y dirección de correo electrónico" />
 
                     <Form
-                        method="PUT"
-                        action="/profile"
+                        method="PATCH"
+                        action="/settings/profile"
                         options={{
                             preserveScroll: true,
                         }}
